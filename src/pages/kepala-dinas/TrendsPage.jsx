@@ -316,7 +316,7 @@ const Sparkline = ({ points = [], color = FALLBACK_COLOR, width = 132, height = 
 };
 
 const TooltipShell = ({ title, children }) => (
-	<div className="rounded-xl border border-slate-200 bg-white/95 px-3.5 py-2.5 shadow-xl backdrop-blur">
+	<div className="rounded-xl border border-slate-200 bg-white/95 px-3.5 py-2.5 shadow-sm backdrop-blur">
 		<p className="text-xs font-semibold text-slate-900">{title}</p>
 		<div className="mt-1 space-y-1">{children}</div>
 	</div>
@@ -364,7 +364,7 @@ const MetricCard = ({ series, active, onSelect, index }) => {
 						>
 							<Icon className="h-4 w-4" />
 						</span>
-						<p className="truncate text-xs font-semibold uppercase tracking-wider text-slate-500">
+						<p className="truncate text-xs font-semibold uppercase tracking-wider text-brand-600">
 							{series.short_label || series.label}
 						</p>
 					</div>
@@ -804,13 +804,13 @@ const TrendsPage = () => {
 		return (
 			<div className="p-4 sm:p-6">
 				<div className="mx-auto max-w-7xl space-y-5">
-					<div className="h-44 animate-pulse rounded-3xl bg-slate-200/70" />
+					<div className="h-44 animate-pulse rounded-2xl bg-slate-200/70" />
 					<div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
 						{[0, 1, 2, 3].map((key) => (
 							<div key={key} className="h-40 animate-pulse rounded-2xl bg-white/80" />
 						))}
 					</div>
-					<div className="h-96 animate-pulse rounded-3xl bg-white/80" />
+					<div className="h-96 animate-pulse rounded-2xl bg-white/80" />
 				</div>
 			</div>
 		);
@@ -860,10 +860,10 @@ const TrendsPage = () => {
 
 			<div className="mx-auto max-w-7xl space-y-6">
 				{/* ---------- Header ---------- */}
-				<header className="trend-enter relative overflow-hidden rounded-3xl bg-gradient-to-br from-indigo-700 via-violet-700 to-fuchsia-700 p-6 text-white shadow-xl sm:p-8">
-					<div className="trend-aurora pointer-events-none absolute -right-10 -top-24 h-64 w-64 rounded-full bg-cyan-400/30 blur-3xl" />
+				<header className="trend-enter relative overflow-hidden rounded-2xl bg-slate-900 p-6 text-white shadow-sm sm:p-8">
+					<div className="trend-aurora pointer-events-none absolute -right-10 -top-24 h-64 w-64 rounded-full bg-slate-800/30 blur-3xl" />
 					<div
-						className="trend-aurora pointer-events-none absolute -bottom-24 left-10 h-56 w-56 rounded-full bg-fuchsia-400/25 blur-3xl"
+						className="trend-aurora pointer-events-none absolute -bottom-24 left-10 h-56 w-56 rounded-full bg-white/25 blur-3xl"
 						style={{ animationDelay: '1.6s' }}
 					/>
 
@@ -904,7 +904,7 @@ const TrendsPage = () => {
 										onClick={() => setMonths(option.months)}
 										className={`rounded-lg px-3.5 py-2 text-sm font-medium transition-all ${
 											months === option.months
-												? 'bg-white text-indigo-700 shadow'
+												? 'bg-white text-brand-700 shadow'
 												: 'text-white/75 hover:text-white'
 										}`}
 									>
@@ -980,7 +980,7 @@ const TrendsPage = () => {
 
 				{/* ---------- Grafik utama ---------- */}
 				{active && (
-					<section className="trend-enter rounded-3xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
+					<section className="trend-enter rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
 						<div className="mb-5 flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
 							<div className="min-w-0">
 								<div className="flex flex-wrap items-center gap-2">
@@ -1226,7 +1226,7 @@ const TrendsPage = () => {
 								},
 							].map((item) => (
 								<div key={item.label}>
-									<p className="text-[11px] uppercase tracking-wider text-slate-400">{item.label}</p>
+									<p className="text-[11px] uppercase tracking-wider text-brand-600">{item.label}</p>
 									<p className="mt-0.5 text-sm font-bold text-slate-900">{item.value}</p>
 								</div>
 							))}
@@ -1236,7 +1236,7 @@ const TrendsPage = () => {
 						{showTable && (
 							<div className="mt-4 max-h-72 overflow-auto rounded-xl border border-slate-200">
 								<table className="w-full text-sm">
-									<thead className="sticky top-0 bg-slate-50 text-left text-xs uppercase tracking-wider text-slate-500">
+									<thead className="sticky top-0 bg-slate-50 text-left text-xs uppercase tracking-wider text-brand-600">
 										<tr>
 											<th className="px-3 py-2 font-semibold">Bulan</th>
 											<th className="px-3 py-2 text-right font-semibold">{active.unit}</th>
@@ -1393,7 +1393,7 @@ const TrendsPage = () => {
 
 							<InsightCard
 								icon={GitCompareArrows}
-								tone="bg-indigo-50 text-indigo-600"
+								tone="bg-slate-100 text-brand-600"
 								title="Dibanding Periode Lalu"
 								index={1}
 							>
@@ -1425,7 +1425,7 @@ const TrendsPage = () => {
 							)}
 
 							{busiest && (
-								<InsightCard icon={Layers} tone="bg-violet-50 text-violet-600" title="Modul Tersibuk" index={3}>
+								<InsightCard icon={Layers} tone="bg-slate-100 text-brand-600" title="Modul Tersibuk" index={3}>
 									Dari {series.length} modul yang dipantau, <strong>{busiest.label}</strong> paling banyak bergerak
 									dengan {fmt(busiest.total)} {busiest.unit} dalam {months} bulan terakhir.
 									{fastestGrowing && fastestGrowing.key !== busiest.key && (
@@ -1439,7 +1439,7 @@ const TrendsPage = () => {
 							)}
 
 							{totalRealisasi > 0 && (
-								<InsightCard icon={Wallet} tone="bg-blue-50 text-blue-600" title="Uang yang Sudah Jalan" index={4}>
+								<InsightCard icon={Wallet} tone="bg-slate-100 text-brand-600" title="Uang yang Sudah Jalan" index={4}>
 									Rekap penyaluran ADD, BHPRD, DD dan Bankeu menunjukkan{' '}
 									<strong>{rupiahRingkas(totalRealisasi)}</strong> realisasi di seluruh tahap. Persentase pencairan
 									tertinggi ada di{' '}

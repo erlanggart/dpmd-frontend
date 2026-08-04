@@ -1,10 +1,10 @@
-// src/pages/core-dashboard/StatistikBumdes.jsx
+// src/pages/kepala-dinas/StatistikBumdes.jsx
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import BumdesCharts from './components/BumdesCharts';
 import BumdesStatsCards from './components/BumdesStatsCards';
-import { Users, TrendingUp, Building2, BarChart3, Activity } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { Store, TrendingUp, Building2, PauseCircle, AlertCircle } from 'lucide-react';
+import PageHeader from '../../components/statistik/PageHeader';
 import { useDataCache } from '../../context/DataCacheContext';
 import { isVpnUser } from '../../utils/vpnHelper';
 
@@ -18,11 +18,34 @@ const API_CONFIG = {
 
 const CACHE_KEY = 'statistik-bumdes';
 
+const SummaryCard = ({ icon: Icon, label, value, sub, tone = 'default' }) => {
+  const iconClass =
+    tone === 'positive'
+      ? 'bg-emerald-50 text-emerald-600 ring-emerald-100'
+      : tone === 'muted'
+        ? 'bg-slate-100 text-slate-500 ring-slate-200'
+        : 'bg-slate-900 text-white';
+
+  return (
+    <div className="rounded-2xl border border-slate-200 bg-white p-5 transition-colors hover:border-slate-300">
+      <div className="flex items-start justify-between gap-3">
+        <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-brand-600">
+          {label}
+        </p>
+        <span className={`flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg ring-1 ${iconClass}`}>
+          <Icon className="h-4 w-4" />
+        </span>
+      </div>
+      <p className="mt-3 text-3xl font-semibold tracking-tight text-slate-900">{value}</p>
+      <p className="mt-1 text-xs text-slate-500">{sub}</p>
+    </div>
+  );
+};
+
 const StatistikBumdes = () => {
   const [loading, setLoading] = useState(true);
   const [bumdesData, setBumdesData] = useState(null);
   const [error, setError] = useState(null);
-  const navigate = useNavigate();
   const { getCachedData, setCachedData, isCached } = useDataCache();
 
   useEffect(() => {
@@ -40,14 +63,14 @@ const StatistikBumdes = () => {
     try {
       setLoading(true);
       const token = localStorage.getItem('expressToken');
-      
+
       const config = {};
       if (token !== 'VPN_ACCESS_TOKEN') {
         config.headers = {
           Authorization: `Bearer ${token}`
         };
       }
-      
+
       const response = await axios.get(
         API_CONFIG.getEndpoint('/dashboard'),
         config
@@ -67,10 +90,10 @@ const StatistikBumdes = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
+      <div className="flex min-h-screen items-center justify-center bg-slate-50 px-4">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-blue-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600 font-medium">Memuat Data BUMDes...</p>
+          <div className="mx-auto h-10 w-10 animate-spin rounded-full border-[3px] border-slate-200 border-t-slate-900" />
+          <p className="mt-3 text-sm text-slate-500">Memuat data BUMDes…</p>
         </div>
       </div>
     );
@@ -78,135 +101,70 @@ const StatistikBumdes = () => {
 
   if (error) {
     return (
-      <div className="min-h-screen flex items-center justify-center p-4">
-        <div className="bg-white rounded-lg shadow-lg p-8 max-w-md w-full">
-          <div className="text-center">
-            <div className="text-red-500 text-5xl mb-4">⚠️</div>
-            <h2 className="text-2xl font-bold text-gray-800 mb-2">Error</h2>
-            <p className="text-gray-600 mb-4">{error}</p>
-            <button
-              onClick={fetchBumdesData}
-              className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition-colors"
-            >
-              Coba Lagi
-            </button>
+      <div className="flex min-h-screen items-center justify-center bg-slate-50 p-4">
+        <div className="w-full max-w-md rounded-2xl border border-slate-200 bg-white p-8 text-center">
+          <div className="mx-auto flex h-11 w-11 items-center justify-center rounded-full bg-rose-50 ring-1 ring-rose-100">
+            <AlertCircle className="h-5 w-5 text-rose-600" />
           </div>
+          <h2 className="mt-4 text-base font-semibold text-slate-900">Data gagal dimuat</h2>
+          <p className="mt-1.5 text-sm leading-relaxed text-slate-500">{error}</p>
+          <button
+            onClick={fetchBumdesData}
+            className="mt-5 w-full rounded-lg bg-slate-900 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-slate-800"
+          >
+            Coba Lagi
+          </button>
         </div>
       </div>
     );
   }
 
+  const total = bumdesData?.total || 0;
+  const aktif = bumdesData?.aktif || 0;
+  const nonAktif = bumdesData?.non_aktif || 0;
+  const persen = (n) => (total > 0 ? `${((n / total) * 100).toFixed(1)}% dari total` : '0% dari total');
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50 to-indigo-50 p-6">
-      <div className="max-w-7xl mx-auto">
-        {/* Hero Header Card */}
-        <div className="relative bg-gradient-to-r from-blue-600 via-blue-700 to-indigo-700 rounded-3xl shadow-2xl p-8 mb-8 overflow-hidden">
-          {/* Animated Background Patterns */}
-          <div className="absolute top-0 right-0 w-64 h-64 bg-white opacity-10 rounded-full -mr-32 -mt-32 animate-pulse"></div>
-          <div className="absolute bottom-0 left-0 w-96 h-96 bg-white opacity-5 rounded-full -ml-48 -mb-48"></div>
-          <div className="absolute top-1/2 right-1/4 w-40 h-40 bg-white opacity-5 rounded-full animate-pulse"></div>
-          
-          <div className="relative z-10">
-            <div className="mb-4">
-              <h1 className="text-3xl md:text-4xl font-bold text-white drop-shadow-lg">
-                📊 Statistik BUMDes
-              </h1>
-              <p className="text-white text-opacity-90 text-lg">
-                Data BUMDes Kabupaten Bogor
-              </p>
-            </div>
+    <div className="min-h-screen bg-slate-50 p-4 pt-20 sm:p-6 lg:p-8 lg:pt-8">
+      <div className="mx-auto max-w-7xl space-y-5">
+        {/* Header */}
+        <PageHeader
+          icon={Store}
+          title="Statistik BUMDes"
+          subtitle="Badan Usaha Milik Desa se-Kabupaten Bogor"
+          stats={[
+            { label: 'Total BUMDes', value: total.toLocaleString('id-ID') },
+            { label: 'Aktif', value: aktif.toLocaleString('id-ID') },
+            { label: 'Non-Aktif', value: nonAktif.toLocaleString('id-ID') },
+            {
+              label: 'Berbadan Hukum',
+              value: (bumdesData?.berbadan_hukum || 0).toLocaleString('id-ID'),
+            },
+          ]}
+        />
 
-            {/* Quick Stats Pills */}
-            <div className="mt-6 flex flex-wrap gap-3">
-              <div className="bg-blue-600 bg-opacity-80 backdrop-blur-md rounded-xl px-4 py-2 border border-blue-400 border-opacity-50 flex items-center gap-2 shadow-lg">
-                <Activity className="w-4 h-4 text-white animate-pulse" />
-                <span className="text-white text-sm font-semibold">Real-time Data</span>
-              </div>
-              <div className="bg-indigo-600 bg-opacity-80 backdrop-blur-md rounded-xl px-4 py-2 border border-indigo-400 border-opacity-50 flex items-center gap-2 shadow-lg">
-                <BarChart3 className="w-4 h-4 text-white animate-pulse" />
-                <span className="text-white text-sm font-semibold">Visualisasi Lengkap</span>
-              </div>
-              <div className="bg-purple-600 bg-opacity-80 backdrop-blur-md rounded-xl px-4 py-2 border border-purple-400 border-opacity-50 flex items-center gap-2 shadow-lg">
-                <TrendingUp className="w-4 h-4 text-white animate-pulse" />
-                <span className="text-white text-sm font-semibold">Analisis Mendalam</span>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Summary Card - Modern Design */}
-        <div className="relative bg-white rounded-2xl shadow-xl p-8 mb-8 overflow-hidden border border-gray-100">
-          {/* Background Decoration */}
-          <div className="absolute top-0 right-0 w-64 h-64 bg-gradient-to-br from-blue-100 to-indigo-100 opacity-30 rounded-full -mr-32 -mt-32"></div>
-          <div className="absolute bottom-0 left-0 w-96 h-96 bg-gradient-to-tr from-blue-50 to-indigo-50 opacity-40 rounded-full -ml-48 -mb-48"></div>
-          
-          <div className="relative z-10">
-            <div className="flex items-center justify-between mb-6">
-              <div>
-                <h2 className="text-2xl font-bold text-gray-800 mb-1">Total BUMDes Terdaftar</h2>
-                <p className="text-gray-600">Kabupaten Bogor</p>
-              </div>
-              <div className="bg-gradient-to-r from-green-400 to-emerald-500 text-white px-4 py-2 rounded-xl shadow-lg flex items-center gap-2 animate-pulse">
-                <div className="w-2 h-2 bg-white rounded-full"></div>
-                <span className="text-sm font-semibold">Live Data</span>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              {/* Total BUMDes */}
-              <div className="bg-gradient-to-br from-blue-500 to-indigo-600 rounded-2xl p-6 shadow-lg text-white">
-                <div className="flex items-center justify-between mb-4">
-                  <Building2 className="w-10 h-10 text-white opacity-90 animate-pulse" />
-                  <div className="bg-blue-700 bg-opacity-60 backdrop-blur-sm rounded-lg px-3 py-1 border border-blue-300 border-opacity-30">
-                    <span className="text-xs font-bold text-white">TOTAL</span>
-                  </div>
-                </div>
-                <p className="text-white text-opacity-90 text-sm mb-2 font-medium">Total BUMDes</p>
-                <p className="text-3xl sm:text-4xl md:text-5xl font-bold mb-2">
-                  {(bumdesData?.total || 0).toLocaleString('id-ID')}
-                </p>
-                <p className="text-white text-opacity-80 text-sm">Unit Usaha</p>
-              </div>
-
-              {/* BUMDes Aktif */}
-              <div className="bg-gradient-to-br from-green-500 to-emerald-600 rounded-2xl p-6 shadow-lg text-white">
-                <div className="flex items-center justify-between mb-4">
-                  <TrendingUp className="w-10 h-10 text-white opacity-90 animate-bounce" />
-                  <div className="bg-green-700 bg-opacity-60 backdrop-blur-sm rounded-lg px-3 py-1 border border-green-300 border-opacity-30">
-                    <span className="text-xs font-bold text-white">AKTIF</span>
-                  </div>
-                </div>
-                <p className="text-white text-opacity-90 text-sm mb-2 font-medium">BUMDes Aktif</p>
-                <p className="text-3xl sm:text-4xl md:text-5xl font-bold mb-2">
-                  {(bumdesData?.aktif || 0).toLocaleString('id-ID')}
-                </p>
-                <p className="text-white text-opacity-80 text-sm">
-                  {bumdesData?.total > 0 
-                    ? `${((bumdesData?.aktif / bumdesData?.total) * 100).toFixed(1)}% dari total`
-                    : '0% dari total'}
-                </p>
-              </div>
-
-              {/* BUMDes Non-Aktif */}
-              <div className="bg-gradient-to-br from-gray-500 to-gray-700 rounded-2xl p-6 shadow-lg text-white">
-                <div className="flex items-center justify-between mb-4">
-                  <Users className="w-10 h-10 text-white opacity-90 animate-pulse" />
-                  <div className="bg-gray-800 bg-opacity-60 backdrop-blur-sm rounded-lg px-3 py-1 border border-gray-400 border-opacity-30">
-                    <span className="text-xs font-bold text-white">NON-AKTIF</span>
-                  </div>
-                </div>
-                <p className="text-white text-opacity-90 text-sm mb-2 font-medium">BUMDes Non-Aktif</p>
-                <p className="text-3xl sm:text-4xl md:text-5xl font-bold mb-2">
-                  {(bumdesData?.non_aktif || 0).toLocaleString('id-ID')}
-                </p>
-                <p className="text-white text-opacity-80 text-sm">
-                  {bumdesData?.total > 0 
-                    ? `${((bumdesData?.non_aktif / bumdesData?.total) * 100).toFixed(1)}% dari total`
-                    : '0% dari total'}
-                </p>
-              </div>
-            </div>
-          </div>
+        {/* Ringkasan */}
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+          <SummaryCard
+            icon={Building2}
+            label="Total BUMDes"
+            value={total.toLocaleString('id-ID')}
+            sub="Unit usaha terdaftar"
+          />
+          <SummaryCard
+            icon={TrendingUp}
+            label="BUMDes Aktif"
+            value={aktif.toLocaleString('id-ID')}
+            sub={persen(aktif)}
+            tone="positive"
+          />
+          <SummaryCard
+            icon={PauseCircle}
+            label="BUMDes Non-Aktif"
+            value={nonAktif.toLocaleString('id-ID')}
+            sub={persen(nonAktif)}
+            tone="muted"
+          />
         </div>
 
         {/* Charts */}
@@ -214,16 +172,6 @@ const StatistikBumdes = () => {
 
         {/* Stats Cards */}
         <BumdesStatsCards bumdes={bumdesData} />
-
-        {/* Footer */}
-        <div className="mt-8 text-center bg-white rounded-2xl shadow-md p-6 border border-gray-100">
-          <div className="flex items-center justify-center gap-2 text-gray-600">
-            <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-            <p className="text-sm font-medium">
-              Data diperbarui secara real-time dari database DPMD
-            </p>
-          </div>
-        </div>
       </div>
     </div>
   );

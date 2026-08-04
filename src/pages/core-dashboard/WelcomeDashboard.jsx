@@ -1,24 +1,47 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import './WelcomeDashboard.css';
-import { 
-  Sparkles, 
-  TrendingUp, 
-  Users, 
-  UserCheck,
-  Building2,
-  MapPin, 
-  DollarSign,
-  BarChart3,
-  Activity,
-  Zap,
-  ArrowRight,
-  FileText,
-  Scale,
-  Target,
-  Star,
-  Calendar
+import {
+  Sunrise,
+  Sun,
+  Sunset,
+  Moon,
+  Layers,
+  RefreshCw,
+  Compass,
+  PanelLeft,
 } from 'lucide-react';
+
+const GREETINGS = [
+  { until: 11, text: 'Selamat pagi', Icon: Sunrise },
+  { until: 15, text: 'Selamat siang', Icon: Sun },
+  { until: 18, text: 'Selamat sore', Icon: Sunset },
+  { until: 24, text: 'Selamat malam', Icon: Moon },
+];
+
+const HIGHLIGHTS = [
+  {
+    no: '01',
+    Icon: Layers,
+    title: 'Semua data, satu pintu',
+    description:
+      'Kelembagaan, profil desa, keuangan desa, BUMDes, sampai aparatur. Nggak perlu buka aplikasi satu per satu.',
+  },
+  {
+    no: '02',
+    Icon: RefreshCw,
+    title: 'Angkanya ikut yang terbaru',
+    description:
+      'Ditarik langsung dari data yang diinput desa dan kecamatan, jadi yang kamu lihat ya kondisi terkini.',
+  },
+  {
+    no: '03',
+    Icon: Compass,
+    title: 'Siap dipakai ambil keputusan',
+    description:
+      'Baca tren, bandingkan antar wilayah, siapkan bahan rapat. Semua tanpa rekap manual lagi.',
+  },
+];
 
 const WelcomeDashboard = () => {
   const { user } = useAuth();
@@ -29,284 +52,140 @@ const WelcomeDashboard = () => {
     return () => clearInterval(timer);
   }, []);
 
-  const getGreeting = () => {
-    const hour = currentTime.getHours();
-    if (hour < 11) return { text: 'Selamat Pagi', emoji: '☀️', emojiColor: 'text-orange-500', color: 'from-orange-500 to-yellow-500' };
-    if (hour < 15) return { text: 'Selamat Siang', emoji: '🌤️', emojiColor: 'text-amber-500', color: 'from-yellow-500 to-amber-500' };
-    if (hour < 18) return { text: 'Selamat Sore', emoji: '🌆', emojiColor: 'text-orange-600', color: 'from-amber-500 to-orange-600' };
-    return { text: 'Selamat Malam', emoji: '🌙', emojiColor: 'text-indigo-500', color: 'from-indigo-500 to-purple-600' };
-  };
+  const greeting =
+    GREETINGS.find((item) => currentTime.getHours() < item.until) ||
+    GREETINGS[GREETINGS.length - 1];
+  const GreetingIcon = greeting.Icon;
 
-  const formatTime = () => {
-    return currentTime.toLocaleTimeString('id-ID', {
-      hour: '2-digit',
-      minute: '2-digit',
-      second: '2-digit'
-    });
-  };
+  const formattedTime = currentTime.toLocaleTimeString('id-ID', {
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+  });
 
-  const formatDate = () => {
-    return currentTime.toLocaleDateString('id-ID', {
-      weekday: 'long',
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric'
-    });
-  };
+  const formattedDate = currentTime.toLocaleDateString('id-ID', {
+    weekday: 'long',
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric',
+  });
 
-  const greeting = getGreeting();
-
-  const features = [
-    {
-      icon: <MapPin className="w-10 h-10" />,
-      title: "Kelembagaan",
-      description: "Statistik LKD - RW, RT, Posyandu, Karang Taruna, LPM & PKK",
-      gradient: "from-sky-400 via-blue-500 to-cyan-600",
-      bgGradient: "from-sky-500/20 to-cyan-600/20",
-      iconBg: "bg-gradient-to-br from-sky-400 to-blue-500",
-      path: "/core-dashboard/statistik-kelembagaan",
-      stat: "6 Jenis LKD"
-    },
-    {
-      icon: <Building2 className="w-10 h-10" />,
-      title: "Profil Desa",
-      description: "Pantau kelengkapan profil, status desa, dan kualitas data wilayah",
-      gradient: "from-amber-400 via-orange-500 to-red-500",
-      bgGradient: "from-amber-500/20 to-red-500/20",
-      iconBg: "bg-gradient-to-br from-amber-400 to-orange-500",
-      path: "/core-dashboard/statistik-profil-desa",
-      stat: "Profil Wilayah"
-    },
-    {
-      icon: <Scale className="w-10 h-10" />,
-      title: "Produk Hukum",
-      description: "Lihat rekap peraturan desa, jenis dokumen, dan status keberlakuan",
-      gradient: "from-violet-400 via-purple-500 to-indigo-600",
-      bgGradient: "from-violet-500/20 to-indigo-600/20",
-      iconBg: "bg-gradient-to-br from-violet-400 to-purple-500",
-      path: "/core-dashboard/statistik-produk-hukum",
-      stat: "Perdes & Perkades"
-    },
-    {
-      icon: <BarChart3 className="w-10 h-10" />,
-      title: "Bantuan Keuangan",
-      description: "Monitor bantuan keuangan desa tahap 1 & 2",
-      gradient: "from-cyan-400 via-blue-500 to-indigo-600",
-      bgGradient: "from-cyan-500/20 to-blue-600/20",
-      iconBg: "bg-gradient-to-br from-orange-400 to-amber-500",
-      path: "/core-dashboard/statistik-bankeu",
-      stat: "120 Desa"
-    },
-    {
-      icon: <TrendingUp className="w-10 h-10" />,
-      title: "Alokasi Dana Desa",
-      description: "Analisis dan monitoring ADD",
-      gradient: "from-emerald-400 via-green-500 to-teal-600",
-      bgGradient: "from-emerald-500/20 to-green-600/20",
-      iconBg: "bg-gradient-to-br from-rose-400 to-pink-500",
-      path: "/core-dashboard/statistik-add",
-      stat: "100% Tersalur"
-    },
-    {
-      icon: <DollarSign className="w-10 h-10" />,
-      title: "BHPRD",
-      description: "Bagi Hasil Pajak & Retribusi Daerah",
-      gradient: "from-purple-400 via-violet-500 to-indigo-600",
-      bgGradient: "from-purple-500/20 to-indigo-600/20",
-      iconBg: "bg-gradient-to-br from-amber-400 to-orange-500",
-      path: "/core-dashboard/statistik-bhprd",
-      stat: "Aktif"
-    },
-    {
-      icon: <Activity className="w-10 h-10" />,
-      title: "Dana Desa",
-      description: "Monitoring dana desa earmarked & non-earmarked",
-      gradient: "from-pink-400 via-rose-500 to-red-600",
-      bgGradient: "from-pink-500/20 to-red-600/20",
-      iconBg: "bg-gradient-to-br from-cyan-400 to-blue-500",
-      path: "/core-dashboard/statistik-dd",
-      stat: "Monitoring"
-    },
-    {
-      icon: <Users className="w-10 h-10" />,
-      title: "BUMDes",
-      description: "Data Badan Usaha Milik Desa",
-      gradient: "from-orange-400 via-amber-500 to-yellow-600",
-      bgGradient: "from-orange-500/20 to-yellow-600/20",
-      iconBg: "bg-gradient-to-br from-purple-400 to-violet-500",
-      path: "/core-dashboard/statistik-bumdes",
-      stat: "85 Unit"
-    },
-    {
-      icon: <UserCheck className="w-10 h-10" />,
-      title: "Aparatur Desa",
-      description: "Bandingkan data aparatur dari database aplikasi dan Dapur Desa",
-      gradient: "from-teal-400 via-emerald-500 to-green-600",
-      bgGradient: "from-teal-500/20 to-green-600/20",
-      iconBg: "bg-gradient-to-br from-teal-400 to-emerald-500",
-      path: "/core-dashboard/statistik-aparatur-desa",
-      stat: "2 Sumber Data"
-    },
-    {
-      icon: <FileText className="w-10 h-10" />,
-      title: "Laporan Desa",
-      description: "Rekapitulasi laporan per desa",
-      gradient: "from-fuchsia-400 via-pink-500 to-rose-600",
-      bgGradient: "from-fuchsia-500/20 to-rose-600/20",
-      iconBg: "bg-gradient-to-br from-emerald-400 to-teal-500",
-      path: "/core-dashboard/laporan-desa",
-      stat: "Updated"
-    }
-  ];
+  const roleLabel = user?.role?.replace(/_/g, ' ') || 'Pengguna';
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 overflow-y-auto relative flex items-center p-4 sm:p-6">
-      {/* Animated Gradient Background */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute -top-1/2 -left-1/2 w-full h-full bg-gradient-to-br from-cyan-400/20 via-blue-400/10 to-transparent blur-3xl animate-blob"></div>
-        <div className="absolute -bottom-1/2 -right-1/2 w-full h-full bg-gradient-to-tl from-purple-400/20 via-pink-400/10 to-transparent blur-3xl animate-blob animation-delay-2000"></div>
-        <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-full h-full bg-gradient-to-br from-pink-400/15 via-transparent to-transparent blur-3xl animate-blob animation-delay-4000"></div>
-      </div>
-
-      {/* Gradient Orbs */}
-      <div className="absolute top-10 left-10 w-96 h-96 bg-gradient-to-br from-cyan-300/40 to-blue-400/40 rounded-full blur-3xl animate-float"></div>
-      <div className="absolute top-20 right-10 w-80 h-80 bg-gradient-to-br from-purple-300/40 to-pink-400/40 rounded-full blur-3xl animate-float animation-delay-2000"></div>
-      <div className="absolute bottom-10 left-1/3 w-72 h-72 bg-gradient-to-br from-emerald-300/40 to-teal-400/40 rounded-full blur-3xl animate-float animation-delay-4000"></div>
-
-      {/* Main Container with Border Radius */}
-      <div className="relative z-10 w-full max-w-7xl mx-auto bg-white/40 backdrop-blur-xl rounded-3xl shadow-2xl border border-white/60 p-6 sm:p-8 my-4">
-        {/* Header with Clock */}
-        <div className="text-center mb-6 space-y-3 animate-fade-in">
-          {/* Badge */}
-          <div className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-cyan-500/30 to-blue-500/30 backdrop-blur-md rounded-full border border-cyan-500/50 shadow-lg">
-            <Sparkles className="w-4 h-4 text-cyan-600 animate-pulse" />
-            <span className="text-cyan-700 text-xs font-bold tracking-wide">CORE DASHBOARD DPMD</span>
-            <div className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse"></div>
+    <div className="min-h-screen bg-slate-50 px-4 pb-12 pt-20 sm:px-6 lg:px-10 lg:pb-16 lg:pt-12">
+      <div className="mx-auto w-full max-w-5xl space-y-6 sm:space-y-8">
+        {/* Panel utama */}
+        <section className="welcome-hero welcome-rise rounded-2xl px-6 py-8 shadow-xl shadow-slate-900/10 ring-1 ring-slate-900/10 sm:rounded-3xl sm:px-9 sm:py-11">
+          <div className="flex items-center gap-2.5">
+            <span className="relative flex h-2 w-2">
+              <span className="welcome-ping absolute inline-flex h-full w-full rounded-full bg-white" />
+              <span className="relative inline-flex h-2 w-2 rounded-full bg-white" />
+            </span>
+            <span className="text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-300">
+              Core Dashboard DPMD
+            </span>
           </div>
 
-          {/* Greeting */}
-          <div className="space-y-1.5">
-            <div className="flex items-center justify-center gap-3 py-2">
-              <span className={`text-4xl md:text-5xl ${greeting.emojiColor} drop-shadow-lg`}>{greeting.emoji}</span>
-              <h1 className={`text-3xl md:text-5xl font-black bg-gradient-to-r ${greeting.color} bg-clip-text text-transparent drop-shadow-lg animate-gradient-shift leading-tight pb-1`}>
+          <div className="mt-7 flex flex-col gap-8 lg:flex-row lg:items-end lg:justify-between lg:gap-12">
+            <div className="min-w-0">
+              <p className="flex items-center gap-2 text-sm font-medium text-slate-400 sm:text-base">
+                <GreetingIcon className="h-4 w-4 shrink-0" />
                 {greeting.text}
+                {user?.nama ? ',' : ''}
+              </p>
+              <h1 className="mt-2 break-words text-3xl font-semibold leading-[1.1] tracking-tight text-white sm:text-5xl lg:text-6xl">
+                {user?.nama || 'Selamat datang'}
               </h1>
-            </div>
-            {user?.nama && (
-              <h2 className="text-2xl md:text-3xl font-bold text-gray-800 py-1">
-                {user.nama}! 👋
-              </h2>
-            )}
-          </div>
-
-          {/* Info Cards Container - Responsive */}
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-4 w-full max-w-4xl mx-auto">
-            {/* Clock Card */}
-            <div className="w-full sm:w-auto animate-scale-in">
-              <div className="bg-gradient-to-br from-white/70 to-white/50 backdrop-blur-md rounded-xl px-6 py-3 border border-white/80 shadow-xl">
-                <div className="flex flex-col sm:flex-row items-center gap-3">
-                  <div className="text-2xl md:text-3xl font-bold bg-gradient-to-r from-cyan-600 via-blue-600 to-purple-600 bg-clip-text text-transparent font-mono">
-                    {formatTime()}
-                  </div>
-                  <div className="hidden sm:block w-px h-8 bg-gray-300"></div>
-                  <div className="flex items-center gap-2">
-                    <Calendar className="w-4 h-4 text-cyan-600" />
-                    <span className="text-gray-600 text-xs md:text-sm font-medium">{formatDate()}</span>
-                  </div>
-                </div>
-              </div>
+              <p className="mt-4 inline-flex items-center rounded-full border border-white/15 bg-white/5 px-3 py-1 text-xs font-medium capitalize tracking-wide text-slate-300">
+                {roleLabel}
+              </p>
             </div>
 
-            {/* User Info Bar */}
-            <div className="w-full sm:w-auto">
-              <div className="inline-flex items-center gap-4 px-6 py-3 bg-gradient-to-r from-purple-500/30 via-pink-500/30 to-rose-500/30 backdrop-blur-md rounded-xl border border-purple-400/50 shadow-xl">
-                <div className="flex items-center gap-2">
-                  <Target className="w-4 h-4 text-purple-700" />
-                  <span className="text-gray-800 text-sm font-bold capitalize">{user?.role?.replace(/_/g, ' ')}</span>
-                </div>
-                <div className="w-px h-5 bg-gray-400"></div>
-                <div className="flex items-center gap-2">
-                  <Zap className="w-4 h-4 text-yellow-600 animate-pulse" />
-                  <span className="text-gray-700 text-sm font-semibold">Aktif</span>
-                </div>
-              </div>
+            {/* Jam & tanggal */}
+            <div className="shrink-0 border-t border-white/10 pt-6 lg:border-l lg:border-t-0 lg:pl-12 lg:pt-0 lg:text-right">
+              <p className="font-mono text-4xl font-semibold tabular-nums tracking-tight text-white sm:text-5xl">
+                {formattedTime}
+              </p>
+              <p className="mt-2 text-xs uppercase tracking-[0.16em] text-brand-400 sm:text-sm sm:tracking-[0.12em]">
+                {formattedDate}
+              </p>
             </div>
           </div>
-        </div>
+        </section>
 
-        {/* Quick Access Title */}
-        <div className="text-center mb-6">
-          <h3 className="text-xl md:text-2xl font-bold text-gray-800 mb-2 flex items-center justify-center gap-2.5">
-            <div className="w-8 h-8 bg-gradient-to-br from-cyan-500 to-blue-600 rounded-lg flex items-center justify-center shadow-lg">
-              <BarChart3 className="w-5 h-5 text-white" />
-            </div>
-            <span>Akses Cepat Statistik</span>
-            <div className="w-8 h-8 bg-gradient-to-br from-purple-500 to-pink-600 rounded-lg flex items-center justify-center shadow-lg">
-              <Activity className="w-5 h-5 text-white" />
-            </div>
-          </h3>
-          <p className="text-gray-600 text-sm">Pilih modul untuk melihat data statistik</p>
-        </div>
+        {/* Penjelasan singkat */}
+        <section className="welcome-rise welcome-delay-1">
+          <div className="flex items-center gap-3">
+            <span className="h-3.5 w-1 rounded-full bg-slate-900" />
+            <span className="text-[11px] font-semibold uppercase tracking-[0.2em] text-brand-700">
+              Sekilas
+            </span>
+            <span className="h-px flex-1 bg-slate-200" />
+          </div>
 
-        {/* Feature Cards Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-5">
-          {features.map((feature, index) => (
-            <a
-              key={index}
-              href={feature.path}
-              className="group relative"
-              style={{
-                animation: `slideUpBounce 0.6s ease-out ${index * 0.1}s both`
-              }}
-            >
-              {/* Glow Effect */}
-              <div className={`absolute -inset-0.5 bg-gradient-to-r ${feature.gradient} rounded-2xl blur opacity-40 group-hover:opacity-70 transition duration-500`}></div>
-              
-              {/* Card */}
-              <div className="relative bg-white/80 backdrop-blur-md rounded-xl p-5 border border-white/90 hover:border-white/100 transition-all duration-500 group-hover:scale-105 group-hover:shadow-2xl overflow-hidden">
-                {/* Background Gradient */}
-                <div className={`absolute inset-0 bg-gradient-to-br ${feature.bgGradient} opacity-50 group-hover:opacity-70 transition-opacity duration-500`}></div>
-                
-                {/* Animated Corner Accent */}
-                <div className={`absolute top-0 right-0 w-20 h-20 bg-gradient-to-br ${feature.gradient} opacity-30 rounded-bl-full transform translate-x-10 -translate-y-10 group-hover:translate-x-5 group-hover:-translate-y-5 transition-transform duration-500`}></div>
-                
-                <div className="relative z-10">
-                  {/* Icon */}
-                  <div className={`w-14 h-14 ${feature.iconBg} rounded-lg flex items-center justify-center mb-3 group-hover:scale-110 group-hover:rotate-6 transition-all duration-500 shadow-lg`}>
-                    <div className="text-white">
-                      {feature.icon}
-                    </div>
-                  </div>
+          <h2 className="mt-5 text-xl font-semibold tracking-tight text-slate-900 sm:text-2xl">
+            Jadi, Core Dashboard itu apa?
+          </h2>
+          <p className="mt-3 max-w-3xl text-[15px] leading-relaxed text-slate-600 sm:text-base">
+            Anggap aja ini ruang kontrolnya DPMD. Semua data dari tiap bidang dikumpulin
+            di satu layar, sudah dirapikan jadi angka dan grafik yang gampang dibaca.
+            Tinggal lihat, nggak perlu ngolah dari nol.
+          </p>
 
-                  {/* Title & Description */}
-                  <h4 className="text-lg font-bold text-gray-800 mb-1.5 group-hover:translate-x-1 transition-transform duration-300">
-                    {feature.title}
-                  </h4>
-                  <p className="text-gray-600 text-xs mb-2.5 group-hover:text-gray-700 transition-colors leading-relaxed">
-                    {feature.description}
-                  </p>
-
-                  {/* Stat Badge */}
-                  <div className={`inline-flex items-center gap-1.5 px-3 py-1 bg-gradient-to-r ${feature.gradient} rounded-full text-white text-xs font-bold shadow-md`}>
-                    <Star className="w-3 h-3" />
-                    {feature.stat}
-                  </div>
-
-                  {/* Arrow */}
-                  <div className="absolute bottom-5 right-5 w-8 h-8 bg-gradient-to-br from-gray-800/80 to-gray-900/80 backdrop-blur-sm rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transform translate-x-3 group-hover:translate-x-0 transition-all duration-300 shadow-lg">
-                    <ArrowRight className="w-4 h-4 text-white" />
-                  </div>
+          <div className="mt-7 grid overflow-hidden rounded-2xl border border-slate-200 bg-white sm:grid-cols-3">
+            {HIGHLIGHTS.map(({ no, Icon, title, description }, index) => (
+              <article
+                key={no}
+                tabIndex={0}
+                className={`welcome-row welcome-rise group relative p-5 outline-none transition-colors duration-200 hover:bg-slate-50 focus-visible:bg-slate-50 sm:p-6 ${
+                  index > 0
+                    ? 'border-t border-slate-200 sm:border-l sm:border-t-0'
+                    : ''
+                } ${
+                  index === 0
+                    ? 'welcome-delay-2'
+                    : index === 1
+                    ? 'welcome-delay-3'
+                    : 'welcome-delay-4'
+                }`}
+              >
+                <span className="welcome-row-mark absolute inset-x-0 top-0 h-0.5" />
+                <div className="flex items-center justify-between">
+                  <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-slate-900 text-white">
+                    <Icon className="h-[18px] w-[18px]" />
+                  </span>
+                  <span className="font-mono text-xs tabular-nums text-slate-300">
+                    {no}
+                  </span>
                 </div>
-              </div>
-            </a>
-          ))}
-        </div>
+                <h3 className="mt-4 text-sm font-semibold text-slate-900">{title}</h3>
+                <p className="mt-2 text-sm leading-relaxed text-slate-500">
+                  {description}
+                </p>
+              </article>
+            ))}
+          </div>
+        </section>
 
-        {/* Footer */}
-        <div className="text-center space-y-0.5">
-          <p className="text-gray-700 text-xs font-semibold">Dinas Pemberdayaan Masyarakat dan Desa</p>
-          <p className="text-gray-500 text-xs">Dashboard Terpadu Monitoring & Evaluasi © 2024</p>
-        </div>
+        {/* Petunjuk mulai + footer */}
+        <footer className="welcome-rise welcome-delay-4 flex flex-col gap-5 border-t border-slate-200 pt-6 sm:flex-row sm:items-center sm:justify-between">
+          <p className="flex items-start gap-2.5 text-sm leading-relaxed text-slate-600 sm:items-center">
+            <PanelLeft className="mt-0.5 h-4 w-4 shrink-0 text-brand-600 sm:mt-0" />
+            <span>
+              Mau mulai dari mana? Pilih modulnya lewat{' '}
+              <span className="font-medium text-slate-900">menu di samping kiri</span>.
+            </span>
+          </p>
+          <p className="text-xs leading-relaxed text-slate-400 sm:text-right">
+            <span className="font-medium text-slate-500">
+              Dinas Pemberdayaan Masyarakat dan Desa
+            </span>
+            <span className="hidden sm:inline"> · </span>
+            <br className="sm:hidden" />
+            Monitoring &amp; Evaluasi © {currentTime.getFullYear()}
+          </p>
+        </footer>
       </div>
     </div>
   );

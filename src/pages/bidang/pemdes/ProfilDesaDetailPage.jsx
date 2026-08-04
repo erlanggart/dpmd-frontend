@@ -64,20 +64,20 @@ const getCompletionTone = (statusKey) => {
   if (statusKey === 'lengkap') {
     return {
       badge: 'border-emerald-200 bg-emerald-50 text-emerald-700',
-      bar: 'from-emerald-500 to-teal-500',
+      bar: 'bg-emerald-600',
     };
   }
 
   if (statusKey === 'perlu_dilengkapi') {
     return {
       badge: 'border-amber-200 bg-amber-50 text-amber-700',
-      bar: 'from-amber-500 to-orange-500',
+      bar: 'bg-amber-500',
     };
   }
 
   return {
     badge: 'border-slate-200 bg-slate-50 text-slate-600',
-    bar: 'from-slate-300 to-slate-400',
+    bar: 'bg-slate-300',
   };
 };
 
@@ -103,7 +103,7 @@ const OverviewCard = ({ icon, title, value, subtitle, tone }) => {
     <div className="rounded-lg border border-white/70 bg-white/90 p-5 shadow-sm backdrop-blur-sm">
       <div className="flex items-start justify-between gap-3">
         <div>
-          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">{title}</p>
+          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-brand-600">{title}</p>
           <p className="mt-3 text-2xl font-black tracking-tight text-slate-900">{value}</p>
           <p className="mt-2 text-sm text-slate-500">{subtitle}</p>
         </div>
@@ -144,13 +144,13 @@ const InfoRow = ({ icon, label, value, href }) => {
         <IconComponent className="h-4 w-4" />
       </div>
       <div className="min-w-0 flex-1">
-        <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400">{label}</p>
+        <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-brand-600">{label}</p>
         {hasValue && href ? (
           <a
             href={href}
             target="_blank"
             rel="noopener noreferrer"
-            className="mt-1 inline-flex items-center gap-2 break-all font-medium text-slate-700 transition hover:text-teal-700"
+            className="mt-1 inline-flex items-center gap-2 break-all font-medium text-slate-700 transition hover:text-brand-700"
           >
             <span>{value}</span>
             <ExternalLink className="h-3.5 w-3.5 shrink-0" />
@@ -180,7 +180,7 @@ const NarrativeCard = ({ title, icon, value, emptyText, accentClass }) => {
 
   return (
     <article className="overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm">
-      <div className={`h-1.5 w-full bg-gradient-to-r ${accentClass}`} />
+      <div className={`h-1.5 w-full ${accentClass}`} />
       <div className="p-6">
         <div className="flex items-start gap-3">
           <div className="flex h-11 w-11 items-center justify-center rounded-lg bg-slate-900 text-white shadow-sm">
@@ -259,7 +259,7 @@ const ProfilDesaDetailPage = ({
     return (
       <div className="flex min-h-screen items-center justify-center bg-slate-50 px-4">
         <div className="flex items-center gap-3 rounded-lg border border-slate-200 bg-white px-5 py-4 text-slate-600 shadow-sm">
-          <Loader2 className="h-5 w-5 animate-spin text-teal-600" />
+          <Loader2 className="h-5 w-5 animate-spin text-brand-600" />
           Memuat detail profil desa...
         </div>
       </div>
@@ -290,9 +290,9 @@ const ProfilDesaDetailPage = ({
   const profileImageUrl = getProfileImageUrl(data.foto_kantor_desa_path);
 
   return (
-    <div className="min-h-screen bg-[radial-gradient(circle_at_top_left,_rgba(13,148,136,0.14),_transparent_26%),radial-gradient(circle_at_bottom_right,_rgba(249,115,22,0.14),_transparent_28%),#f8fafc] px-4 py-6 sm:px-6 lg:px-8">
+    <div className="min-h-screen bg-slate-50 px-4 pb-8 pt-20 sm:px-6 lg:px-8 lg:pt-6">
       <div className="space-y-6">
-        <div className="relative overflow-hidden rounded-xl bg-gradient-to-br from-teal-700 via-cyan-700 to-slate-900 p-7 text-white shadow-[0_24px_80px_-32px_rgba(15,118,110,0.55)] sm:p-8">
+        <div className="relative overflow-hidden rounded-xl bg-slate-900 p-7 text-white shadow-[0_24px_80px_-32px_rgba(15,118,110,0.55)] sm:p-8">
           <div className="absolute inset-y-0 right-0 w-1/2 bg-[radial-gradient(circle_at_top_right,_rgba(255,255,255,0.22),_transparent_42%)]" />
           <div className="absolute -right-12 bottom-0 h-44 w-44 rounded-full bg-white/10 blur-3xl" />
           <div className="absolute -left-8 top-8 h-32 w-32 rounded-full bg-white/10 blur-3xl" />
@@ -369,7 +369,7 @@ const ProfilDesaDetailPage = ({
             title="Klasifikasi"
             value={formatText(data.klasifikasi_desa_label)}
             subtitle="kategori perkembangan desa"
-            tone="bg-sky-100 text-sky-700"
+            tone="bg-slate-100 text-slate-700"
           />
           <OverviewCard
             icon={BadgeCheck}
@@ -390,7 +390,7 @@ const ProfilDesaDetailPage = ({
             title="Jumlah Penduduk"
             value={data.jumlah_penduduk ? `${formatNumber(data.jumlah_penduduk)} jiwa` : 'Belum diisi'}
             subtitle="data populasi yang dilaporkan"
-            tone="bg-violet-100 text-violet-700"
+            tone="bg-slate-100 text-slate-700"
           />
         </div>
 
@@ -428,7 +428,7 @@ const ProfilDesaDetailPage = ({
                   </div>
                   <div className="h-2 rounded-full bg-slate-100">
                     <div
-                      className={`h-2 rounded-full bg-gradient-to-r ${completionTone.bar}`}
+                      className={`h-2 rounded-full ${completionTone.bar}`}
                       style={{ width: `${Math.max(data.completion?.percentage || 0, data.completion?.percentage ? 6 : 0)}%` }}
                     />
                   </div>
@@ -507,21 +507,21 @@ const ProfilDesaDetailPage = ({
               icon={ScrollText}
               value={data.sejarah_desa}
               emptyText="Sejarah desa belum diisi."
-              accentClass="from-teal-500 to-cyan-500"
+              accentClass="bg-slate-900"
             />
             <NarrativeCard
               title="Demografi"
               icon={Users}
               value={data.demografi}
               emptyText="Informasi demografi belum diisi."
-              accentClass="from-amber-500 to-orange-500"
+              accentClass="bg-slate-900"
             />
             <NarrativeCard
               title="Potensi Desa"
               icon={Sparkles}
               value={data.potensi_desa}
               emptyText="Potensi desa belum diisi."
-              accentClass="from-violet-500 to-fuchsia-500"
+              accentClass="bg-slate-900"
             />
           </div>
         </SectionCard>

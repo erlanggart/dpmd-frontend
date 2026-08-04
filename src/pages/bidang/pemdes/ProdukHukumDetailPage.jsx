@@ -23,10 +23,11 @@ import {
 	ChevronRight,
 } from 'lucide-react';
 import api, { updateProdukHukum } from '../../../api';
+import SelectBox from '../../../components/ui/SelectBox';
 import Swal from 'sweetalert2';
 
 const INPUT_CLASS =
-	'w-full px-3 py-2 text-sm border rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent transition-all';
+	'w-full px-3 py-2 text-sm border rounded-lg focus:ring-2 focus:ring-slate-900 focus:border-transparent transition-all';
 
 const KELEMBAGAAN_CONFIG = {
 	rws: { label: 'RW', route: (id) => `/bidang/pmd/kelembagaan/rw/${id}`, displayName: (item) => `RW ${item.nomor}` },
@@ -40,10 +41,10 @@ const KELEMBAGAAN_CONFIG = {
 };
 
 const JENIS_BADGE_COLOR = {
-	PERDES: 'bg-blue-100 text-blue-700',
+	PERDES: 'bg-slate-100 text-slate-700',
 	PERKADES: 'bg-amber-100 text-amber-700',
 	SK_KADES: 'bg-green-100 text-green-700',
-	'Peraturan Desa': 'bg-blue-100 text-blue-700',
+	'Peraturan Desa': 'bg-slate-100 text-slate-700',
 	'Peraturan Kepala Desa': 'bg-amber-100 text-amber-700',
 	'Keputusan Kepala Desa': 'bg-green-100 text-green-700',
 };
@@ -80,14 +81,14 @@ const formatDateInput = (dateStr) => {
 
 const DetailRow = ({ label, value }) => (
 	<div>
-		<p className="text-xs text-gray-500 mb-0.5">{label}</p>
-		<div className="text-sm font-medium text-gray-900">{value || '-'}</div>
+		<p className="text-xs text-slate-500 mb-0.5">{label}</p>
+		<div className="text-sm font-medium text-slate-900">{value || '-'}</div>
 	</div>
 );
 
 const FormRow = ({ label, required, error, children }) => (
 	<div>
-		<label className="text-xs text-gray-500 mb-1 block">
+		<label className="text-xs text-slate-500 mb-1 block">
 			{label} {required && <span className="text-red-500">*</span>}
 		</label>
 		{children}
@@ -337,8 +338,8 @@ const ProdukHukumDetailPage = ({
 	if (loading) {
 		return (
 			<div className="min-h-[60vh] flex items-center justify-center">
-				<Loader2 className="h-8 w-8 text-teal-500 animate-spin" />
-				<span className="text-gray-500 text-lg ml-3">Memuat data...</span>
+				<Loader2 className="h-8 w-8 text-brand-500 animate-spin" />
+				<span className="text-slate-500 text-lg ml-3">Memuat data...</span>
 			</div>
 		);
 	}
@@ -347,8 +348,8 @@ const ProdukHukumDetailPage = ({
 		return (
 			<div className="min-h-[60vh] flex flex-col items-center justify-center">
 				<AlertCircle className="h-16 w-16 text-red-300 mb-4" />
-				<p className="text-gray-600 text-lg mb-4">{error || 'Data tidak ditemukan'}</p>
-				<button onClick={handleBack} className="flex items-center gap-2 px-4 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700 transition">
+				<p className="text-slate-600 text-lg mb-4">{error || 'Data tidak ditemukan'}</p>
+				<button onClick={handleBack} className="flex items-center gap-2 px-4 py-2 bg-slate-900 text-white rounded-lg hover:bg-slate-800 transition">
 					<ArrowLeft className="h-4 w-4" /> Kembali
 				</button>
 			</div>
@@ -356,12 +357,12 @@ const ProdukHukumDetailPage = ({
 	}
 
 	const isBerlaku = data.status_peraturan === 'berlaku';
-	const inputCls = (f) => `${INPUT_CLASS} ${formErrors[f] ? 'border-red-400 bg-red-50' : 'border-gray-300'}`;
+	const inputCls = (f) => `${INPUT_CLASS} ${formErrors[f] ? 'border-red-400 bg-red-50' : 'border-slate-300'}`;
 
 	return (
 		<div className="space-y-6 p-6">
 			{/* ── Header ── */}
-			<div className="bg-gradient-to-r from-teal-600 to-teal-700 rounded-xl p-6 text-white">
+			<div className="bg-slate-900 rounded-xl p-6 text-white">
 				<div className="flex items-center justify-between mb-3">
 					<button onClick={handleBack} className="flex items-center gap-2 px-3 py-1.5 bg-white/20 hover:bg-white/30 rounded-lg text-sm transition">
 						<ArrowLeft className="h-4 w-4" /> Kembali
@@ -388,7 +389,7 @@ const ProdukHukumDetailPage = ({
 							<button onClick={cancelEdit} className="flex items-center gap-2 px-3 py-1.5 bg-white/20 hover:bg-white/30 rounded-lg text-sm transition">
 								<X className="h-4 w-4" /> Batal
 							</button>
-							<button onClick={handleSave} disabled={isSubmitting} className="flex items-center gap-2 px-3 py-1.5 bg-white hover:bg-gray-100 text-teal-700 rounded-lg text-sm font-medium transition disabled:opacity-50">
+							<button onClick={handleSave} disabled={isSubmitting} className="flex items-center gap-2 px-3 py-1.5 bg-white hover:bg-slate-100 text-slate-700 rounded-lg text-sm font-medium transition disabled:opacity-50">
 								{isSubmitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
 								{isSubmitting ? 'Menyimpan...' : 'Simpan Perubahan'}
 							</button>
@@ -400,7 +401,7 @@ const ProdukHukumDetailPage = ({
 					<Scale className="h-7 w-7" />
 					<h1 className="text-2xl font-bold">{isEditing ? 'Edit Produk Hukum' : 'Detail Produk Hukum'}</h1>
 				</div>
-				<p className="text-teal-100 mt-1">{isEditing ? formData.judul || data.judul : data.judul}</p>
+				<p className="text-brand-100 mt-1">{isEditing ? formData.judul || data.judul : data.judul}</p>
 			</div>
 
 			{/* ── Content grid ── */}
@@ -408,9 +409,9 @@ const ProdukHukumDetailPage = ({
 				{/* Left column */}
 				<div className="lg:col-span-1 space-y-6">
 					{/* Informasi Umum */}
-					<div className="bg-white rounded-xl border border-gray-200 p-5">
-						<h3 className="text-sm font-semibold text-gray-700 mb-4 flex items-center gap-2">
-							<FileText className="h-4 w-4 text-teal-600" /> Informasi Umum
+					<div className="bg-white rounded-xl border border-slate-200 p-5">
+						<h3 className="text-sm font-semibold text-slate-700 mb-4 flex items-center gap-2">
+							<FileText className="h-4 w-4 text-brand-600" /> Informasi Umum
 						</h3>
 						<div className="space-y-3">
 							{isEditing ? (
@@ -427,14 +428,19 @@ const ProdukHukumDetailPage = ({
 										</FormRow>
 									</div>
 									<FormRow label="Jenis" required>
-										<select name="jenis" value={formData.jenis} onChange={handleChange} className={`${INPUT_CLASS} border-gray-300 bg-white`}>
-											<option value="Peraturan Desa">Peraturan Desa</option>
-											<option value="Peraturan Kepala Desa">Peraturan Kepala Desa</option>
-											<option value="Keputusan Kepala Desa">Keputusan Kepala Desa</option>
-										</select>
+										<SelectBox
+											name="jenis"
+											value={formData.jenis}
+											onChange={(value) => handleChange({ target: { name: 'jenis', value } })}
+											options={[
+												{ value: 'Peraturan Desa', label: 'Peraturan Desa' },
+												{ value: 'Peraturan Kepala Desa', label: 'Peraturan Kepala Desa' },
+												{ value: 'Keputusan Kepala Desa', label: 'Keputusan Kepala Desa' },
+											]}
+										/>
 									</FormRow>
 									<FormRow label="Singkatan">
-										<input type="text" value={formData.singkatan_jenis} disabled className={`${INPUT_CLASS} border-gray-300 bg-gray-100 text-gray-500 cursor-not-allowed`} />
+										<input type="text" value={formData.singkatan_jenis} disabled className={`${INPUT_CLASS} border-slate-300 bg-slate-100 text-slate-500 cursor-not-allowed`} />
 									</FormRow>
 								</>
 							) : (
@@ -444,7 +450,7 @@ const ProdukHukumDetailPage = ({
 									<DetailRow
 										label="Jenis"
 										value={
-											<span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${JENIS_BADGE_COLOR[data.singkatan_jenis || data.jenis] || 'bg-gray-100 text-gray-700'}`}>
+											<span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${JENIS_BADGE_COLOR[data.singkatan_jenis || data.jenis] || 'bg-slate-100 text-slate-700'}`}>
 												{data.jenis_label || getJenisLabel(data.singkatan_jenis) || data.jenis}
 											</span>
 										}
@@ -457,9 +463,9 @@ const ProdukHukumDetailPage = ({
 					</div>
 
 					{/* Penetapan */}
-					<div className="bg-white rounded-xl border border-gray-200 p-5">
-						<h3 className="text-sm font-semibold text-gray-700 mb-4 flex items-center gap-2">
-							<Calendar className="h-4 w-4 text-teal-600" /> Penetapan
+					<div className="bg-white rounded-xl border border-slate-200 p-5">
+						<h3 className="text-sm font-semibold text-slate-700 mb-4 flex items-center gap-2">
+							<Calendar className="h-4 w-4 text-brand-600" /> Penetapan
 						</h3>
 						<div className="space-y-3">
 							{isEditing ? (
@@ -481,27 +487,32 @@ const ProdukHukumDetailPage = ({
 					</div>
 
 					{/* Status & Info Tambahan */}
-					<div className="bg-white rounded-xl border border-gray-200 p-5">
-						<h3 className="text-sm font-semibold text-gray-700 mb-4 flex items-center gap-2">
-							<BookOpen className="h-4 w-4 text-teal-600" /> Status & Informasi Tambahan
+					<div className="bg-white rounded-xl border border-slate-200 p-5">
+						<h3 className="text-sm font-semibold text-slate-700 mb-4 flex items-center gap-2">
+							<BookOpen className="h-4 w-4 text-brand-600" /> Status & Informasi Tambahan
 						</h3>
 						<div className="space-y-3">
 							{isEditing ? (
 								<>
 									<FormRow label="Status Peraturan" required>
-										<select name="status_peraturan" value={formData.status_peraturan} onChange={handleChange} className={`${INPUT_CLASS} border-gray-300 bg-white`}>
-											<option value="berlaku">Berlaku</option>
-											<option value="dicabut">Dicabut</option>
-										</select>
+										<SelectBox
+											name="status_peraturan"
+											value={formData.status_peraturan}
+											onChange={(value) => handleChange({ target: { name: 'status_peraturan', value } })}
+											options={[
+												{ value: 'berlaku', label: 'Berlaku' },
+												{ value: 'dicabut', label: 'Dicabut' },
+											]}
+										/>
 									</FormRow>
 									<FormRow label="Keterangan Status">
-										<input type="text" name="keterangan_status" value={formData.keterangan_status} onChange={handleChange} className={`${INPUT_CLASS} border-gray-300`} placeholder="Opsional" />
+										<input type="text" name="keterangan_status" value={formData.keterangan_status} onChange={handleChange} className={`${INPUT_CLASS} border-slate-300`} placeholder="Opsional" />
 									</FormRow>
 									<FormRow label="Sumber">
-										<input type="text" name="sumber" value={formData.sumber} onChange={handleChange} className={`${INPUT_CLASS} border-gray-300`} placeholder="LDes Tahun 2025 Nomor 5" />
+										<input type="text" name="sumber" value={formData.sumber} onChange={handleChange} className={`${INPUT_CLASS} border-slate-300`} placeholder="LDes Tahun 2025 Nomor 5" />
 									</FormRow>
 									<FormRow label="Subjek">
-										<input type="text" name="subjek" value={formData.subjek} onChange={handleChange} className={`${INPUT_CLASS} border-gray-300`} placeholder="Kependudukan, Pembangunan" />
+										<input type="text" name="subjek" value={formData.subjek} onChange={handleChange} className={`${INPUT_CLASS} border-slate-300`} placeholder="Kependudukan, Pembangunan" />
 									</FormRow>
 								</>
 							) : (
@@ -527,9 +538,9 @@ const ProdukHukumDetailPage = ({
 
 					{/* Asal Desa — always read-only */}
 					{data.desa && (
-						<div className="bg-white rounded-xl border border-gray-200 p-5">
-							<h3 className="text-sm font-semibold text-gray-700 mb-4 flex items-center gap-2">
-								<MapPin className="h-4 w-4 text-teal-600" /> Asal Desa
+						<div className="bg-white rounded-xl border border-slate-200 p-5">
+							<h3 className="text-sm font-semibold text-slate-700 mb-4 flex items-center gap-2">
+								<MapPin className="h-4 w-4 text-brand-600" /> Asal Desa
 							</h3>
 							<div className="space-y-3">
 								<DetailRow label="Desa" value={data.desa?.nama || '-'} />
@@ -541,14 +552,14 @@ const ProdukHukumDetailPage = ({
 
 				{/* Right column — PDF / File upload */}
 				<div className="lg:col-span-2">
-					<div className="bg-white rounded-xl border border-gray-200 overflow-hidden sticky top-4">
-						<div className="px-5 py-3 border-b border-gray-200 flex items-center justify-between">
-							<h3 className="text-sm font-semibold text-gray-700 flex items-center gap-2">
-								<FileText className="h-4 w-4 text-teal-600" />
+					<div className="bg-white rounded-xl border border-slate-200 overflow-hidden sticky top-4">
+						<div className="px-5 py-3 border-b border-slate-200 flex items-center justify-between">
+							<h3 className="text-sm font-semibold text-slate-700 flex items-center gap-2">
+								<FileText className="h-4 w-4 text-brand-600" />
 								{isEditing ? 'Ganti Dokumen' : 'Dokumen'}
 							</h3>
 							{!isEditing && pdfBlobUrl && (
-								<a href={pdfBlobUrl} download={`${data.nomor || 'dokumen'}.pdf`} className="inline-flex items-center gap-2 px-3 py-1.5 bg-teal-600 text-white rounded-lg text-xs hover:bg-teal-700 transition">
+								<a href={pdfBlobUrl} download={`${data.nomor || 'dokumen'}.pdf`} className="inline-flex items-center gap-2 px-3 py-1.5 bg-slate-900 text-white rounded-lg text-xs hover:bg-slate-800 transition">
 									<Download className="h-3.5 w-3.5" /> Download
 								</a>
 							)}
@@ -557,30 +568,30 @@ const ProdukHukumDetailPage = ({
 						<div className="p-0">
 							{/* Upload area (edit mode only) */}
 							{isEditing && (
-								<div className="p-5 border-b border-gray-200 bg-gray-50">
+								<div className="p-5 border-b border-slate-200 bg-slate-50">
 									<div
 										{...getRootProps()}
-										className={`border-2 border-dashed rounded-lg p-6 text-center cursor-pointer transition-all ${isDragActive ? 'border-teal-500 bg-teal-50' : 'border-gray-300 hover:border-teal-400 hover:bg-teal-50'}`}
+										className={`border-2 border-dashed rounded-lg p-6 text-center cursor-pointer transition-all ${isDragActive ? 'border-slate-700 bg-slate-100' : 'border-slate-300 hover:border-brand-400 hover:bg-slate-50'}`}
 									>
 										<input {...getInputProps()} />
 										{selectedFile ? (
 											<div className="flex flex-col items-center text-green-600">
 												<FileIcon className="h-10 w-10 mb-2" />
 												<p className="font-medium text-sm">{selectedFile.name}</p>
-												<p className="text-xs text-gray-500 mt-1">({(selectedFile.size / 1024).toFixed(1)} KB)</p>
-												<p className="text-xs text-gray-400 mt-2">Klik atau seret file lain untuk mengganti</p>
+												<p className="text-xs text-slate-500 mt-1">({(selectedFile.size / 1024).toFixed(1)} KB)</p>
+												<p className="text-xs text-slate-400 mt-2">Klik atau seret file lain untuk mengganti</p>
 											</div>
 										) : (
-											<div className="flex flex-col items-center text-gray-500">
-												<Upload className="h-10 w-10 mb-2 text-gray-400" />
-												<p className="text-sm font-medium text-gray-700">Seret & lepas file PDF baru, atau klik untuk memilih</p>
-												<p className="text-xs text-gray-500 mt-1">Maks 10 MB · Format PDF · Kosongkan jika tidak ingin mengganti</p>
+											<div className="flex flex-col items-center text-slate-500">
+												<Upload className="h-10 w-10 mb-2 text-slate-400" />
+												<p className="text-sm font-medium text-slate-700">Seret & lepas file PDF baru, atau klik untuk memilih</p>
+												<p className="text-xs text-slate-500 mt-1">Maks 10 MB · Format PDF · Kosongkan jika tidak ingin mengganti</p>
 											</div>
 										)}
 									</div>
 									{data.file && !selectedFile && (
-										<p className="text-xs text-gray-500 mt-3">
-											Dokumen saat ini: <span className="font-medium text-gray-700">{data.file}</span>
+										<p className="text-xs text-slate-500 mt-3">
+											Dokumen saat ini: <span className="font-medium text-slate-700">{data.file}</span>
 										</p>
 									)}
 								</div>
@@ -588,26 +599,26 @@ const ProdukHukumDetailPage = ({
 
 							{/* PDF Preview */}
 							{pdfLoading ? (
-								<div className="flex items-center justify-center bg-gray-50" style={{ height: isEditing ? '50vh' : '75vh' }}>
+								<div className="flex items-center justify-center bg-slate-50" style={{ height: isEditing ? '50vh' : '75vh' }}>
 									<div className="flex flex-col items-center gap-3">
-										<Loader2 className="h-8 w-8 text-teal-500 animate-spin" />
-										<p className="text-gray-500 text-sm">Memuat dokumen PDF...</p>
+										<Loader2 className="h-8 w-8 text-brand-500 animate-spin" />
+										<p className="text-slate-500 text-sm">Memuat dokumen PDF...</p>
 									</div>
 								</div>
 							) : pdfBlobUrl ? (
 								<iframe src={pdfBlobUrl} title={data.judul} className="w-full border-0" style={{ height: isEditing ? '50vh' : '75vh' }} />
 							) : data.file ? (
-								<div className="flex items-center justify-center bg-gray-50" style={{ height: isEditing ? '50vh' : '65vh' }}>
+								<div className="flex items-center justify-center bg-slate-50" style={{ height: isEditing ? '50vh' : '65vh' }}>
 									<div className="flex flex-col items-center gap-3">
-										<AlertCircle className="h-10 w-10 text-gray-300" />
-										<p className="text-gray-500 text-sm">Gagal memuat dokumen PDF</p>
+										<AlertCircle className="h-10 w-10 text-slate-300" />
+										<p className="text-slate-500 text-sm">Gagal memuat dokumen PDF</p>
 									</div>
 								</div>
 							) : (
-								<div className="flex items-center justify-center bg-gray-50 border-2 border-dashed border-gray-200 m-4 rounded-lg" style={{ height: isEditing ? '40vh' : '65vh' }}>
+								<div className="flex items-center justify-center bg-slate-50 border-2 border-dashed border-slate-200 m-4 rounded-lg" style={{ height: isEditing ? '40vh' : '65vh' }}>
 									<div className="flex flex-col items-center gap-3">
-										<FileText className="h-10 w-10 text-gray-300" />
-										<p className="text-gray-500 text-sm">Tidak ada file dokumen</p>
+										<FileText className="h-10 w-10 text-slate-300" />
+										<p className="text-slate-500 text-sm">Tidak ada file dokumen</p>
 									</div>
 								</div>
 							)}
@@ -617,9 +628,9 @@ const ProdukHukumDetailPage = ({
 			</div>
 
 			{/* ── Related Kelembagaan & Pengurus ── */}
-			<div className="bg-white rounded-xl border border-gray-200 p-5">
-				<h3 className="text-sm font-semibold text-gray-700 mb-4 flex items-center gap-2">
-					<Users className="h-4 w-4 text-teal-600" />
+			<div className="bg-white rounded-xl border border-slate-200 p-5">
+				<h3 className="text-sm font-semibold text-slate-700 mb-4 flex items-center gap-2">
+					<Users className="h-4 w-4 text-brand-600" />
 					Terkait dengan Produk Hukum Ini
 					{!relatedLoading && relatedData && (() => {
 						const total =
@@ -627,14 +638,14 @@ const ProdukHukumDetailPage = ({
 							relatedData.pengurus.length +
 							relatedData.aparatur_desa.length;
 						return total > 0 ? (
-							<span className="ml-2 px-2 py-0.5 text-xs font-semibold bg-teal-100 text-teal-700 rounded-full">{total}</span>
+							<span className="ml-2 px-2 py-0.5 text-xs font-semibold bg-slate-100 text-slate-700 rounded-full">{total}</span>
 						) : null;
 					})()}
 				</h3>
 
 				{relatedLoading ? (
-					<div className="flex items-center gap-2 text-sm text-gray-500 py-4">
-						<Loader2 className="h-4 w-4 animate-spin text-teal-500" />
+					<div className="flex items-center gap-2 text-sm text-slate-500 py-4">
+						<Loader2 className="h-4 w-4 animate-spin text-brand-500" />
 						Memuat data terkait...
 					</div>
 				) : !relatedData ? null : (() => {
@@ -646,7 +657,7 @@ const ProdukHukumDetailPage = ({
 
 					if (!hasAny) {
 						return (
-							<div className="flex items-center gap-3 py-6 text-sm text-gray-400">
+							<div className="flex items-center gap-3 py-6 text-sm text-slate-400">
 								<Building2 className="h-5 w-5 flex-shrink-0" />
 								<span>Tidak ada kelembagaan atau pengurus yang terkait dengan produk hukum ini.</span>
 							</div>
@@ -658,7 +669,7 @@ const ProdukHukumDetailPage = ({
 							{/* Kelembagaan */}
 							{hasKelembagaan && (
 								<div>
-									<p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2 flex items-center gap-1.5">
+									<p className="text-xs font-semibold text-brand-600 uppercase tracking-wide mb-2 flex items-center gap-1.5">
 										<Building2 className="h-3.5 w-3.5" /> Kelembagaan
 									</p>
 									<div className="space-y-3">
@@ -667,20 +678,20 @@ const ProdukHukumDetailPage = ({
 											if (!config) return null;
 											return (
 												<div key={type}>
-													<p className="text-xs text-gray-400 mb-1.5">{config.label}</p>
+													<p className="text-xs text-slate-400 mb-1.5">{config.label}</p>
 													<div className="flex flex-wrap gap-2">
 														{items.map((item) => (
 															<Link
 																key={item.id}
 																to={config.route(item.id)}
-																className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium bg-teal-50 text-teal-700 border border-teal-200 rounded-lg hover:bg-teal-100 transition-colors"
+																className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium bg-slate-100 text-slate-700 border border-slate-200 rounded-lg hover:bg-slate-100 transition-colors"
 															>
 																{config.displayName(item)}
 																{item.desas?.nama && (
-																	<span className="text-teal-500">· {item.desas.nama}</span>
+																	<span className="text-brand-500">· {item.desas.nama}</span>
 																)}
 																<span className={`ml-1 w-1.5 h-1.5 rounded-full flex-shrink-0 ${item.status_kelembagaan === 'aktif' ? 'bg-green-500' : 'bg-red-400'}`} />
-																<ChevronRight className="h-3 w-3 text-teal-400" />
+																<ChevronRight className="h-3 w-3 text-brand-400" />
 															</Link>
 														))}
 													</div>
@@ -694,13 +705,13 @@ const ProdukHukumDetailPage = ({
 							{/* Pengurus */}
 							{hasPengurus && (
 								<div>
-									<p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2 flex items-center gap-1.5">
+									<p className="text-xs font-semibold text-brand-600 uppercase tracking-wide mb-2 flex items-center gap-1.5">
 										<Users className="h-3.5 w-3.5" /> Pengurus Kelembagaan
 									</p>
 									<div className="overflow-x-auto">
 										<table className="w-full text-xs">
 											<thead>
-												<tr className="bg-gray-50 text-gray-500">
+												<tr className="bg-slate-50 text-slate-500">
 													<th className="text-left px-3 py-2 font-semibold rounded-l-lg">Nama</th>
 													<th className="text-left px-3 py-2 font-semibold">Jabatan</th>
 													<th className="text-left px-3 py-2 font-semibold">Desa</th>
@@ -708,19 +719,19 @@ const ProdukHukumDetailPage = ({
 													<th className="px-3 py-2 rounded-r-lg" />
 												</tr>
 											</thead>
-											<tbody className="divide-y divide-gray-100">
+											<tbody className="divide-y divide-slate-100">
 												{relatedData.pengurus.map((p) => (
-													<tr key={p.id} className="hover:bg-gray-50 transition-colors">
-														<td className="px-3 py-2 font-medium text-gray-800">{p.nama_lengkap}</td>
-														<td className="px-3 py-2 text-gray-600">{p.jabatan}</td>
-														<td className="px-3 py-2 text-gray-500">{p.desas?.nama || '-'}</td>
+													<tr key={p.id} className="hover:bg-slate-50 transition-colors">
+														<td className="px-3 py-2 font-medium text-slate-800">{p.nama_lengkap}</td>
+														<td className="px-3 py-2 text-slate-600">{p.jabatan}</td>
+														<td className="px-3 py-2 text-slate-500">{p.desas?.nama || '-'}</td>
 														<td className="px-3 py-2">
-															<span className={`inline-flex px-1.5 py-0.5 rounded text-xs font-medium ${p.status_jabatan === 'aktif' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}`}>
+															<span className={`inline-flex px-1.5 py-0.5 rounded text-xs font-medium ${p.status_jabatan === 'aktif' ? 'bg-green-100 text-green-700' : 'bg-slate-100 text-slate-500'}`}>
 																{p.status_jabatan === 'aktif' ? 'Aktif' : 'Selesai'}
 															</span>
 														</td>
 														<td className="px-3 py-2">
-															<Link to={`/bidang/pmd/pengurus/${p.id}`} className="text-teal-600 hover:text-teal-800 transition-colors">
+															<Link to={`/bidang/pmd/pengurus/${p.id}`} className="text-brand-600 hover:text-brand-800 transition-colors">
 																<ChevronRight className="h-4 w-4" />
 															</Link>
 														</td>
@@ -735,24 +746,24 @@ const ProdukHukumDetailPage = ({
 							{/* Aparatur Desa */}
 							{hasAparatur && (
 								<div>
-									<p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2 flex items-center gap-1.5">
+									<p className="text-xs font-semibold text-brand-600 uppercase tracking-wide mb-2 flex items-center gap-1.5">
 										<Users className="h-3.5 w-3.5" /> Aparatur Desa
 									</p>
 									<div className="overflow-x-auto">
 										<table className="w-full text-xs">
 											<thead>
-												<tr className="bg-gray-50 text-gray-500">
+												<tr className="bg-slate-50 text-slate-500">
 													<th className="text-left px-3 py-2 font-semibold rounded-l-lg">Nama</th>
 													<th className="text-left px-3 py-2 font-semibold">Jabatan</th>
 													<th className="text-left px-3 py-2 font-semibold rounded-r-lg">Desa</th>
 												</tr>
 											</thead>
-											<tbody className="divide-y divide-gray-100">
+											<tbody className="divide-y divide-slate-100">
 												{relatedData.aparatur_desa.map((a) => (
-													<tr key={a.id} className="hover:bg-gray-50 transition-colors">
-														<td className="px-3 py-2 font-medium text-gray-800">{a.nama_lengkap}</td>
-														<td className="px-3 py-2 text-gray-600">{a.jabatan}</td>
-														<td className="px-3 py-2 text-gray-500">{a.desas?.nama || '-'}</td>
+													<tr key={a.id} className="hover:bg-slate-50 transition-colors">
+														<td className="px-3 py-2 font-medium text-slate-800">{a.nama_lengkap}</td>
+														<td className="px-3 py-2 text-slate-600">{a.jabatan}</td>
+														<td className="px-3 py-2 text-slate-500">{a.desas?.nama || '-'}</td>
 													</tr>
 												))}
 											</tbody>

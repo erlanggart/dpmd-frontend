@@ -26,6 +26,7 @@ import {
 	BarChart, Bar, XAxis, YAxis, CartesianGrid,
 } from 'recharts';
 import api from '../../../api';
+import SelectBox from '../../../components/ui/SelectBox';
 import toast from 'react-hot-toast';
 import { useAuth } from '../../../context/AuthContext';
 
@@ -162,9 +163,9 @@ const TambahModal = ({ open, onClose, onSuccess, kecamatanList }) => {
 
 	return (
 		<div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={e => e.target === e.currentTarget && !submitting && onClose()}>
-			<div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+			<div className="bg-white rounded-2xl shadow-sm w-full max-w-2xl max-h-[90vh] overflow-y-auto">
 				{/* Header */}
-				<div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 bg-gradient-to-r from-teal-600 to-teal-700 rounded-t-2xl">
+				<div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 bg-slate-900 rounded-t-2xl">
 					<div className="flex items-center gap-3">
 						<div className="w-8 h-8 bg-white/20 rounded-lg flex items-center justify-center">
 							<Scale className="w-4 h-4 text-white" />
@@ -178,43 +179,37 @@ const TambahModal = ({ open, onClose, onSuccess, kecamatanList }) => {
 
 				<form onSubmit={handleSubmit} className="p-6 space-y-5">
 					{/* ── Pilihan Desa (tersimpan di localStorage) ── */}
-					<div className="bg-teal-50 border border-teal-200 rounded-xl p-4 space-y-3">
-						<p className="text-xs font-semibold text-teal-700 flex items-center gap-1.5 uppercase tracking-wide">
+					<div className="bg-slate-100 border border-slate-200 rounded-xl p-4 space-y-3">
+						<p className="text-xs font-semibold text-brand-700 flex items-center gap-1.5 uppercase tracking-wide">
 							<MapPin className="w-3.5 h-3.5" />
 							Pilih Desa — tersimpan otomatis
 						</p>
 						<div className="grid grid-cols-2 gap-3">
 							<div>
-								<label className="block text-xs font-medium text-gray-600 mb-1">Kecamatan <span className="text-red-500">*</span></label>
-								<select
+								<label className="block text-xs font-medium text-slate-600 mb-1">Kecamatan <span className="text-red-500">*</span></label>
+								<SelectBox
 									value={sel.kecamatan_id}
-									onChange={handleKecamatanChange}
-									className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent bg-white"
-								>
-									<option value="">-- Pilih Kecamatan --</option>
-									{kecamatanList.map(k => (
-										<option key={k.id} value={k.id}>{k.nama}</option>
-									))}
-								</select>
+									onChange={(value) => handleKecamatanChange({ target: { value } })}
+									placeholder="Pilih Kecamatan"
+									emptyText="Kecamatan tidak ditemukan"
+									options={kecamatanList.map((k) => ({ value: String(k.id), label: k.nama }))}
+								/>
 							</div>
 							<div>
-								<label className="block text-xs font-medium text-gray-600 mb-1">Desa <span className="text-red-500">*</span></label>
-								<select
+								<label className="block text-xs font-medium text-slate-600 mb-1">Desa <span className="text-red-500">*</span></label>
+								<SelectBox
 									value={sel.desa_id}
-									onChange={handleDesaChange}
+									onChange={(value) => handleDesaChange({ target: { value } })}
 									disabled={!sel.kecamatan_id || loadingDesa}
-									className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent bg-white disabled:bg-gray-50 disabled:text-gray-400"
-								>
-									<option value="">{loadingDesa ? 'Memuat...' : '-- Pilih Desa --'}</option>
-									{desaList.map(d => (
-										<option key={d.id} value={d.id}>{d.nama}</option>
-									))}
-								</select>
+									placeholder={loadingDesa ? 'Memuat…' : 'Pilih Desa'}
+									emptyText="Desa tidak ditemukan"
+									options={desaList.map((d) => ({ value: String(d.id), label: d.nama }))}
+								/>
 								{errors.desa && <p className="text-red-500 text-xs mt-1">{errors.desa}</p>}
 							</div>
 						</div>
 						{desaSelected && (
-							<div className="flex items-center gap-2 text-xs text-teal-700 bg-teal-100 rounded-lg px-3 py-2">
+							<div className="flex items-center gap-2 text-xs text-brand-700 bg-slate-100 rounded-lg px-3 py-2">
 								<Building2 className="w-3.5 h-3.5 flex-shrink-0" />
 								<span>Input akan disimpan untuk: <strong>{sel.desa_nama}</strong> · Kec. {sel.kecamatan_nama}</span>
 							</div>
@@ -226,53 +221,55 @@ const TambahModal = ({ open, onClose, onSuccess, kecamatanList }) => {
 						<>
 							{/* Judul */}
 							<div>
-								<label className="block text-sm font-medium text-gray-700 mb-1">Judul <span className="text-red-500">*</span></label>
+								<label className="block text-sm font-medium text-slate-700 mb-1">Judul <span className="text-red-500">*</span></label>
 								<input name="judul" value={form.judul} onChange={handleField}
 									placeholder="Judul produk hukum"
-									className={`w-full px-3 py-2 text-sm border rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent ${errors.judul ? 'border-red-400 bg-red-50' : 'border-gray-300'}`} />
+									className={`w-full px-3 py-2 text-sm border rounded-lg focus:ring-2 focus:ring-slate-900 focus:border-transparent ${errors.judul ? 'border-red-400 bg-red-50' : 'border-slate-300'}`} />
 								{errors.judul && <p className="text-red-500 text-xs mt-1">{errors.judul}</p>}
 							</div>
 
 							{/* Nomor + Tahun */}
 							<div className="grid grid-cols-2 gap-3">
 								<div>
-									<label className="block text-sm font-medium text-gray-700 mb-1">Nomor <span className="text-red-500">*</span></label>
+									<label className="block text-sm font-medium text-slate-700 mb-1">Nomor <span className="text-red-500">*</span></label>
 									<input name="nomor" value={form.nomor} onChange={handleField}
 										placeholder="contoh: 01/2024"
-										className={`w-full px-3 py-2 text-sm border rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent ${errors.nomor ? 'border-red-400 bg-red-50' : 'border-gray-300'}`} />
+										className={`w-full px-3 py-2 text-sm border rounded-lg focus:ring-2 focus:ring-slate-900 focus:border-transparent ${errors.nomor ? 'border-red-400 bg-red-50' : 'border-slate-300'}`} />
 									{errors.nomor && <p className="text-red-500 text-xs mt-1">{errors.nomor}</p>}
 								</div>
 								<div>
-									<label className="block text-sm font-medium text-gray-700 mb-1">Tahun <span className="text-red-500">*</span></label>
+									<label className="block text-sm font-medium text-slate-700 mb-1">Tahun <span className="text-red-500">*</span></label>
 									<input name="tahun" value={form.tahun} onChange={handleField}
 										placeholder="2024" maxLength={4}
-										className={`w-full px-3 py-2 text-sm border rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent ${errors.tahun ? 'border-red-400 bg-red-50' : 'border-gray-300'}`} />
+										className={`w-full px-3 py-2 text-sm border rounded-lg focus:ring-2 focus:ring-slate-900 focus:border-transparent ${errors.tahun ? 'border-red-400 bg-red-50' : 'border-slate-300'}`} />
 									{errors.tahun && <p className="text-red-500 text-xs mt-1">{errors.tahun}</p>}
 								</div>
 							</div>
 
 							{/* Jenis */}
 							<div>
-								<label className="block text-sm font-medium text-gray-700 mb-1">Jenis <span className="text-red-500">*</span></label>
-								<select name="jenis" value={form.jenis} onChange={handleField}
-									className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent">
-									{JENIS_OPTIONS.map(j => <option key={j.value} value={j.value}>{j.label} ({j.singkatan})</option>)}
-								</select>
+								<label className="block text-sm font-medium text-slate-700 mb-1">Jenis <span className="text-red-500">*</span></label>
+								<SelectBox
+									name="jenis"
+									value={form.jenis}
+									onChange={(value) => handleField({ target: { name: 'jenis', value } })}
+									options={JENIS_OPTIONS.map((j) => ({ value: j.value, label: j.label, hint: `(${j.singkatan})` }))}
+								/>
 							</div>
 
 							{/* Tempat + Tanggal Penetapan */}
 							<div className="grid grid-cols-2 gap-3">
 								<div>
-									<label className="block text-sm font-medium text-gray-700 mb-1">Tempat Penetapan <span className="text-red-500">*</span></label>
+									<label className="block text-sm font-medium text-slate-700 mb-1">Tempat Penetapan <span className="text-red-500">*</span></label>
 									<input name="tempat_penetapan" value={form.tempat_penetapan} onChange={handleField}
 										placeholder="Nama tempat"
-										className={`w-full px-3 py-2 text-sm border rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent ${errors.tempat_penetapan ? 'border-red-400 bg-red-50' : 'border-gray-300'}`} />
+										className={`w-full px-3 py-2 text-sm border rounded-lg focus:ring-2 focus:ring-slate-900 focus:border-transparent ${errors.tempat_penetapan ? 'border-red-400 bg-red-50' : 'border-slate-300'}`} />
 									{errors.tempat_penetapan && <p className="text-red-500 text-xs mt-1">{errors.tempat_penetapan}</p>}
 								</div>
 								<div>
-									<label className="block text-sm font-medium text-gray-700 mb-1">Tanggal Penetapan <span className="text-red-500">*</span></label>
+									<label className="block text-sm font-medium text-slate-700 mb-1">Tanggal Penetapan <span className="text-red-500">*</span></label>
 									<input type="date" name="tanggal_penetapan" value={form.tanggal_penetapan} onChange={handleField}
-										className={`w-full px-3 py-2 text-sm border rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent ${errors.tanggal_penetapan ? 'border-red-400 bg-red-50' : 'border-gray-300'}`} />
+										className={`w-full px-3 py-2 text-sm border rounded-lg focus:ring-2 focus:ring-slate-900 focus:border-transparent ${errors.tanggal_penetapan ? 'border-red-400 bg-red-50' : 'border-slate-300'}`} />
 									{errors.tanggal_penetapan && <p className="text-red-500 text-xs mt-1">{errors.tanggal_penetapan}</p>}
 								</div>
 							</div>
@@ -280,35 +277,39 @@ const TambahModal = ({ open, onClose, onSuccess, kecamatanList }) => {
 							{/* Subjek + Sumber */}
 							<div className="grid grid-cols-2 gap-3">
 								<div>
-									<label className="block text-sm font-medium text-gray-700 mb-1">Subjek</label>
+									<label className="block text-sm font-medium text-slate-700 mb-1">Subjek</label>
 									<input name="subjek" value={form.subjek} onChange={handleField}
 										placeholder="Subjek (opsional)"
-										className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent" />
+										className="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-slate-900 focus:border-transparent" />
 								</div>
 								<div>
-									<label className="block text-sm font-medium text-gray-700 mb-1">Sumber</label>
+									<label className="block text-sm font-medium text-slate-700 mb-1">Sumber</label>
 									<input name="sumber" value={form.sumber} onChange={handleField}
 										placeholder="Sumber (opsional)"
-										className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent" />
+										className="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-slate-900 focus:border-transparent" />
 								</div>
 							</div>
 
 							{/* Status */}
 							<div>
-								<label className="block text-sm font-medium text-gray-700 mb-1">Status Peraturan</label>
-								<select name="status_peraturan" value={form.status_peraturan} onChange={handleField}
-									className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent">
-									<option value="berlaku">Berlaku</option>
-									<option value="dicabut">Dicabut</option>
-								</select>
+								<label className="block text-sm font-medium text-slate-700 mb-1">Status Peraturan</label>
+								<SelectBox
+									name="status_peraturan"
+									value={form.status_peraturan}
+									onChange={(value) => handleField({ target: { name: 'status_peraturan', value } })}
+									options={[
+										{ value: 'berlaku', label: 'Berlaku' },
+										{ value: 'dicabut', label: 'Dicabut' },
+									]}
+								/>
 							</div>
 
 							{/* File PDF */}
 							<div>
-								<label className="block text-sm font-medium text-gray-700 mb-1">File PDF <span className="text-gray-400 font-normal">(opsional, maks 10MB)</span></label>
-								<label className={`flex items-center gap-3 px-4 py-3 border-2 border-dashed rounded-lg cursor-pointer transition ${file ? 'border-teal-400 bg-teal-50' : 'border-gray-300 hover:border-teal-400 hover:bg-teal-50'}`}>
-									<Upload className={`w-4 h-4 flex-shrink-0 ${file ? 'text-teal-600' : 'text-gray-400'}`} />
-									<span className={`text-sm truncate ${file ? 'text-teal-700 font-medium' : 'text-gray-500'}`}>
+								<label className="block text-sm font-medium text-slate-700 mb-1">File PDF <span className="text-slate-400 font-normal">(opsional, maks 10MB)</span></label>
+								<label className={`flex items-center gap-3 px-4 py-3 border-2 border-dashed rounded-lg cursor-pointer transition ${file ? 'border-brand-400 bg-slate-100' : 'border-slate-300 hover:border-brand-400 hover:bg-slate-50'}`}>
+									<Upload className={`w-4 h-4 flex-shrink-0 ${file ? 'text-brand-600' : 'text-slate-400'}`} />
+									<span className={`text-sm truncate ${file ? 'text-brand-700 font-medium' : 'text-slate-500'}`}>
 										{file ? file.name : 'Pilih file PDF...'}
 									</span>
 									<input ref={fileRef} type="file" accept=".pdf" className="hidden"
@@ -321,20 +322,20 @@ const TambahModal = ({ open, onClose, onSuccess, kecamatanList }) => {
 							</div>
 
 							{/* Buttons */}
-							<div className="flex gap-3 pt-2 border-t border-gray-100">
+							<div className="flex gap-3 pt-2 border-t border-slate-100">
 								<button type="button" onClick={onClose} disabled={submitting}
-									className="flex-1 px-4 py-2 text-sm border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 disabled:opacity-50 transition">
+									className="flex-1 px-4 py-2 text-sm border border-slate-300 text-slate-700 rounded-lg hover:bg-slate-50 disabled:opacity-50 transition">
 									Batal
 								</button>
 								<button type="submit" disabled={submitting}
-									className="flex-1 px-4 py-2 text-sm bg-teal-600 text-white rounded-lg hover:bg-teal-700 disabled:opacity-50 transition flex items-center justify-center gap-2">
+									className="flex-1 px-4 py-2 text-sm bg-slate-900 text-white rounded-lg hover:bg-slate-800 disabled:opacity-50 transition flex items-center justify-center gap-2">
 									{submitting ? <><Loader2 className="w-4 h-4 animate-spin" /> Menyimpan...</> : <><Plus className="w-4 h-4" /> Simpan & Input Lagi</>}
 								</button>
 							</div>
 						</>
 					) : (
-						<div className="text-center py-8 text-gray-400 text-sm">
-							<MapPin className="w-8 h-8 mx-auto mb-2 text-gray-300" />
+						<div className="text-center py-8 text-slate-400 text-sm">
+							<MapPin className="w-8 h-8 mx-auto mb-2 text-slate-300" />
 							Pilih kecamatan dan desa untuk mulai input
 						</div>
 					)}
@@ -432,23 +433,23 @@ const ProdukHukumPage = ({ detailBasePath = '/pemdes/produk-hukum' }) => {
 	};
 
 	const getJenisLabel = (s) => ({ PERDES: 'Peraturan Desa', PERKADES: 'Peraturan Kepala Desa', SK_KADES: 'SK Kepala Desa' }[s] || s);
-	const getJenisBadgeColor = (s) => ({ PERDES: 'bg-blue-100 text-blue-700', PERKADES: 'bg-amber-100 text-amber-700', SK_KADES: 'bg-green-100 text-green-700' }[s] || 'bg-gray-100 text-gray-700');
+	const getJenisBadgeColor = (s) => ({ PERDES: 'bg-slate-100 text-slate-700', PERKADES: 'bg-amber-100 text-amber-700', SK_KADES: 'bg-green-100 text-green-700' }[s] || 'bg-slate-100 text-slate-700');
 
 	return (
-		<div className="min-h-screen p-8">
+		<div className="min-h-screen bg-slate-50 p-4 pt-20 sm:p-6 lg:p-8 lg:pt-8">
 			{/* Header */}
-			<div className="bg-gradient-to-r from-teal-600 to-teal-700 rounded-xl p-6 mb-6 text-white">
+			<div className="bg-slate-900 rounded-xl p-6 mb-6 text-white">
 				<div className="flex items-center justify-between">
 					<div className="flex items-center gap-3">
 						<Scale className="h-7 w-7" />
 						<div>
-							<h1 className="text-2xl font-bold">Produk Hukum Desa</h1>
-							<p className="text-teal-100 mt-0.5 text-sm">Data produk hukum dari seluruh desa</p>
+							<h1 className="text-xl sm:text-2xl font-semibold tracking-tight">Produk Hukum Desa</h1>
+							<p className="text-white/80 mt-0.5 text-sm">Data produk hukum dari seluruh desa</p>
 						</div>
 					</div>
 					{isAdmin && (
 						<button onClick={() => setShowTambah(true)}
-							className="flex items-center gap-2 px-4 py-2 bg-white text-teal-700 rounded-lg font-medium text-sm hover:bg-teal-50 transition shadow-sm">
+							className="flex items-center gap-2 px-4 py-2 bg-white text-brand-700 rounded-lg font-medium text-sm hover:bg-slate-50 transition shadow-sm">
 							<Plus className="w-4 h-4" />
 							Tambah Produk Hukum
 						</button>
@@ -461,19 +462,19 @@ const ProdukHukumPage = ({ detailBasePath = '/pemdes/produk-hukum' }) => {
 				<>
 					<div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
 						{[
-							{ label: 'Total Produk Hukum', value: stats.total, icon: FileText, cls: 'bg-blue-100 text-blue-600' },
+							{ label: 'Total Produk Hukum', value: stats.total, icon: FileText, cls: 'bg-slate-100 text-brand-600' },
 							{ label: 'Berlaku', value: stats.berlaku, icon: CheckCircle, cls: 'bg-green-100 text-green-600', textCls: 'text-green-700' },
 							{ label: 'Dicabut', value: stats.dicabut, icon: XCircle, cls: 'bg-red-100 text-red-600', textCls: 'text-red-700' },
-							{ label: 'Jenis', value: stats.jenis?.length || 0, icon: Scale, cls: 'bg-purple-100 text-purple-600', textCls: 'text-purple-700' },
+							{ label: 'Jenis', value: stats.jenis?.length || 0, icon: Scale, cls: 'bg-slate-100 text-brand-600', textCls: 'text-brand-700' },
 						].map(({ label, value, icon: Icon, cls, textCls }) => (
-							<div key={label} className="bg-white rounded-xl border border-gray-200 p-4">
+							<div key={label} className="bg-white rounded-xl border border-slate-200 p-4">
 								<div className="flex items-center gap-3">
 									<div className={`h-10 w-10 rounded-lg flex items-center justify-center ${cls}`}>
 										<Icon className="h-5 w-5" />
 									</div>
 									<div>
-										<p className="text-xs text-gray-500">{label}</p>
-										<p className={`text-2xl font-bold ${textCls || 'text-gray-900'}`}>{value}</p>
+										<p className="text-xs text-slate-500">{label}</p>
+										<p className={`text-2xl font-bold ${textCls || 'text-slate-900'}`}>{value}</p>
 									</div>
 								</div>
 							</div>
@@ -482,8 +483,8 @@ const ProdukHukumPage = ({ detailBasePath = '/pemdes/produk-hukum' }) => {
 
 					{/* Charts */}
 					<div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
-						<div className="bg-white rounded-xl border border-gray-200 p-4">
-							<h3 className="text-sm font-semibold text-gray-700 mb-3">Distribusi Jenis Produk Hukum</h3>
+						<div className="bg-white rounded-xl border border-slate-200 p-4">
+							<h3 className="text-sm font-semibold text-slate-700 mb-3">Distribusi Jenis Produk Hukum</h3>
 							{stats.jenis?.length > 0 ? (
 								<ResponsiveContainer width="100%" height={250}>
 									<PieChart>
@@ -494,11 +495,11 @@ const ProdukHukumPage = ({ detailBasePath = '/pemdes/produk-hukum' }) => {
 										<RechartsLegend formatter={v => getJenisLabel(v)} wrapperStyle={{ fontSize: '12px' }} />
 									</PieChart>
 								</ResponsiveContainer>
-							) : <p className="text-gray-400 text-sm text-center py-10">Tidak ada data</p>}
+							) : <p className="text-slate-400 text-sm text-center py-10">Tidak ada data</p>}
 						</div>
 
-						<div className="bg-white rounded-xl border border-gray-200 p-4">
-							<h3 className="text-sm font-semibold text-gray-700 mb-3">Status Peraturan</h3>
+						<div className="bg-white rounded-xl border border-slate-200 p-4">
+							<h3 className="text-sm font-semibold text-slate-700 mb-3">Status Peraturan</h3>
 							{stats.status?.length > 0 ? (
 								<ResponsiveContainer width="100%" height={250}>
 									<PieChart>
@@ -509,11 +510,11 @@ const ProdukHukumPage = ({ detailBasePath = '/pemdes/produk-hukum' }) => {
 										<RechartsLegend wrapperStyle={{ fontSize: '12px' }} />
 									</PieChart>
 								</ResponsiveContainer>
-							) : <p className="text-gray-400 text-sm text-center py-10">Tidak ada data</p>}
+							) : <p className="text-slate-400 text-sm text-center py-10">Tidak ada data</p>}
 						</div>
 
-						<div className="bg-white rounded-xl border border-gray-200 p-4">
-							<h3 className="text-sm font-semibold text-gray-700 mb-3">Produk Hukum per Tahun</h3>
+						<div className="bg-white rounded-xl border border-slate-200 p-4">
+							<h3 className="text-sm font-semibold text-slate-700 mb-3">Produk Hukum per Tahun</h3>
 							{stats.tahun?.length > 0 ? (
 								<ResponsiveContainer width="100%" height={250}>
 									<BarChart data={stats.tahun} layout="vertical">
@@ -526,108 +527,130 @@ const ProdukHukumPage = ({ detailBasePath = '/pemdes/produk-hukum' }) => {
 										</Bar>
 									</BarChart>
 								</ResponsiveContainer>
-							) : <p className="text-gray-400 text-sm text-center py-10">Tidak ada data</p>}
+							) : <p className="text-slate-400 text-sm text-center py-10">Tidak ada data</p>}
 						</div>
 					</div>
 				</>
 			)}
 
 			{/* Search & Filters */}
-			<div className="bg-white rounded-xl border border-gray-200 p-4 mb-6">
+			<div className="bg-white rounded-xl border border-slate-200 p-4 mb-6">
 				<form onSubmit={e => { e.preventDefault(); setPagination(p => ({ ...p, page: 1 })); }} className="flex gap-3 mb-3">
 					<div className="relative flex-1">
-						<Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+						<Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
 						<input type="text" value={filters.search} onChange={e => handleFilterChange('search', e.target.value)}
 							placeholder="Cari judul, nomor, atau subjek..."
-							className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-teal-500 focus:border-transparent" />
+							className="w-full pl-10 pr-4 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-slate-900 focus:border-transparent" />
 					</div>
 					<button type="button" onClick={() => setShowFilters(!showFilters)}
-						className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm border transition ${showFilters ? 'bg-teal-50 border-teal-300 text-teal-700' : 'border-gray-300 text-gray-600 hover:bg-gray-50'}`}>
+						className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm border transition ${showFilters ? 'bg-slate-100 border-slate-300 text-brand-700' : 'border-slate-300 text-slate-600 hover:bg-slate-50'}`}>
 						<Filter className="h-4 w-4" />Filter
 						<ChevronDown className={`h-4 w-4 transition-transform ${showFilters ? 'rotate-180' : ''}`} />
 					</button>
 					<button type="button" onClick={() => { resetFilters(); fetchStats(); }}
-						className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm border border-gray-300 text-gray-600 hover:bg-gray-50">
+						className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm border border-slate-300 text-slate-600 hover:bg-slate-50">
 						<RefreshCw className="h-4 w-4" />Reset
 					</button>
 				</form>
 
 				{showFilters && (
-					<div className="grid grid-cols-2 md:grid-cols-5 gap-3 pt-3 border-t border-gray-200">
-						<select value={filters.kecamatan_id} onChange={e => handleFilterChange('kecamatan_id', e.target.value)}
-							className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-teal-500">
-							<option value="">Semua Kecamatan</option>
-							{kecamatanList.map(k => <option key={k.id} value={k.id}>{k.nama}</option>)}
-						</select>
-						<select value={filters.desa_id} onChange={e => handleFilterChange('desa_id', e.target.value)}
+					<div className="grid grid-cols-2 md:grid-cols-5 gap-3 pt-3 border-t border-slate-200">
+						<SelectBox
+							size="sm"
+							value={filters.kecamatan_id}
+							onChange={(value) => handleFilterChange('kecamatan_id', value)}
+							placeholder="Semua Kecamatan"
+							emptyText="Kecamatan tidak ditemukan"
+							options={[
+								{ value: '', label: 'Semua Kecamatan' },
+								...kecamatanList.map((k) => ({ value: String(k.id), label: k.nama })),
+							]}
+						/>
+						<SelectBox
+							size="sm"
+							value={filters.desa_id}
+							onChange={(value) => handleFilterChange('desa_id', value)}
 							disabled={!filters.kecamatan_id}
-							className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-teal-500">
-							<option value="">Semua Desa</option>
-							{desaList.map(d => <option key={d.id} value={d.id}>{d.nama}</option>)}
-						</select>
-						<select value={filters.singkatan_jenis} onChange={e => handleFilterChange('singkatan_jenis', e.target.value)}
-							className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-teal-500">
-							<option value="">Semua Jenis</option>
-							<option value="PERDES">PERDES</option>
-							<option value="PERKADES">PERKADES</option>
-							<option value="SK_KADES">SK KADES</option>
-						</select>
-						<select value={filters.status_peraturan} onChange={e => handleFilterChange('status_peraturan', e.target.value)}
-							className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-teal-500">
-							<option value="">Semua Status</option>
-							<option value="berlaku">Berlaku</option>
-							<option value="dicabut">Dicabut</option>
-						</select>
+							placeholder={filters.kecamatan_id ? 'Semua Desa' : 'Pilih kecamatan dulu'}
+							emptyText="Desa tidak ditemukan"
+							options={[
+								{ value: '', label: 'Semua Desa' },
+								...desaList.map((d) => ({ value: String(d.id), label: d.nama })),
+							]}
+						/>
+						<SelectBox
+							size="sm"
+							value={filters.singkatan_jenis}
+							onChange={(value) => handleFilterChange('singkatan_jenis', value)}
+							placeholder="Semua Jenis"
+							options={[
+								{ value: '', label: 'Semua Jenis' },
+								{ value: 'PERDES', label: 'PERDES' },
+								{ value: 'PERKADES', label: 'PERKADES' },
+								{ value: 'SK_KADES', label: 'SK KADES' },
+							]}
+						/>
+						<SelectBox
+							size="sm"
+							value={filters.status_peraturan}
+							onChange={(value) => handleFilterChange('status_peraturan', value)}
+							placeholder="Semua Status"
+							options={[
+								{ value: '', label: 'Semua Status' },
+								{ value: 'berlaku', label: 'Berlaku' },
+								{ value: 'dicabut', label: 'Dicabut' },
+							]}
+						/>
 						<input type="number" value={filters.tahun} onChange={e => handleFilterChange('tahun', e.target.value)}
 							placeholder="Tahun"
-							className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-teal-500" />
+							className="px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-slate-900" />
 					</div>
 				)}
 			</div>
 
 			{/* Data Table */}
-			<div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
-				<div className="px-4 py-3 border-b border-gray-200 flex items-center justify-between">
-					<p className="text-sm text-gray-600">
+			<div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
+				<div className="px-4 py-3 border-b border-slate-200 flex items-center justify-between">
+					<p className="text-sm text-slate-600">
 						Menampilkan <span className="font-semibold">{data.length}</span> dari <span className="font-semibold">{pagination.totalItems}</span> produk hukum
 					</p>
 				</div>
 
 				{loading ? (
 					<div className="flex items-center justify-center py-20">
-						<Loader2 className="h-8 w-8 text-teal-500 animate-spin" />
-						<span className="ml-3 text-gray-500">Memuat data...</span>
+						<Loader2 className="h-8 w-8 text-brand-500 animate-spin" />
+						<span className="ml-3 text-slate-500">Memuat data...</span>
 					</div>
 				) : data.length === 0 ? (
 					<div className="flex flex-col items-center justify-center py-20">
-						<AlertCircle className="h-12 w-12 text-gray-300 mb-3" />
-						<p className="text-gray-500">Tidak ada data produk hukum</p>
+						<AlertCircle className="h-12 w-12 text-slate-300 mb-3" />
+						<p className="text-slate-500">Tidak ada data produk hukum</p>
 					</div>
 				) : (
 					<div className="overflow-x-auto">
-						<table className="min-w-full divide-y divide-gray-200">
-							<thead className="bg-gray-50">
+						<table className="min-w-full divide-y divide-slate-200">
+							<thead className="bg-slate-50">
 								<tr>
 									{['No', 'Judul', 'Nomor', 'Jenis', 'Tahun', 'Desa', 'Status', 'Aksi'].map(h => (
-										<th key={h} className={`px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase ${h === 'Aksi' ? 'text-center' : ''}`}>{h}</th>
+										<th key={h} className={`px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-[0.14em] text-brand-600 ${h === 'Aksi' ? 'text-center' : ''}`}>{h}</th>
 									))}
 								</tr>
 							</thead>
-							<tbody className="bg-white divide-y divide-gray-200">
+							<tbody className="bg-white divide-y divide-slate-200">
 								{data.map((item, i) => (
-									<tr key={item.id} className="hover:bg-gray-50">
-										<td className="px-4 py-3 text-sm text-gray-500">{(pagination.page - 1) * pagination.limit + i + 1}</td>
-										<td className="px-4 py-3 text-sm text-gray-900 max-w-xs truncate">{item.judul}</td>
-										<td className="px-4 py-3 text-sm text-gray-600">{item.nomor}</td>
+									<tr key={item.id} className="hover:bg-slate-50">
+										<td className="px-4 py-3 text-sm text-slate-500">{(pagination.page - 1) * pagination.limit + i + 1}</td>
+										<td className="px-4 py-3 text-sm text-slate-900 max-w-xs truncate">{item.judul}</td>
+										<td className="px-4 py-3 text-sm text-slate-600">{item.nomor}</td>
 										<td className="px-4 py-3">
 											<span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${getJenisBadgeColor(item.singkatan_jenis)}`}>
 												{item.singkatan_jenis}
 											</span>
 										</td>
-										<td className="px-4 py-3 text-sm text-gray-600">{item.tahun}</td>
-										<td className="px-4 py-3 text-sm text-gray-600">
+										<td className="px-4 py-3 text-sm text-slate-600">{item.tahun}</td>
+										<td className="px-4 py-3 text-sm text-slate-600">
 											<p className="font-medium">{item.desa?.nama || '-'}</p>
-											<p className="text-xs text-gray-400">{item.desa?.kecamatan?.nama || ''}</p>
+											<p className="text-xs text-slate-400">{item.desa?.kecamatan?.nama || ''}</p>
 										</td>
 										<td className="px-4 py-3">
 											<span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${item.status_peraturan === 'berlaku' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
@@ -636,7 +659,7 @@ const ProdukHukumPage = ({ detailBasePath = '/pemdes/produk-hukum' }) => {
 										</td>
 										<td className="px-4 py-3 text-center">
 											<button onClick={() => navigate(`${detailBasePath}/${item.id}`)}
-												className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-medium text-teal-700 bg-teal-50 rounded-lg hover:bg-teal-100 transition">
+												className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-medium text-brand-700 bg-slate-100 rounded-lg hover:bg-slate-100 transition">
 												<Eye className="h-3.5 w-3.5" />Detail
 											</button>
 										</td>
@@ -648,15 +671,15 @@ const ProdukHukumPage = ({ detailBasePath = '/pemdes/produk-hukum' }) => {
 				)}
 
 				{pagination.totalPages > 1 && (
-					<div className="px-4 py-3 border-t border-gray-200 flex items-center justify-between">
-						<p className="text-sm text-gray-600">Halaman {pagination.page} dari {pagination.totalPages}</p>
+					<div className="px-4 py-3 border-t border-slate-200 flex items-center justify-between">
+						<p className="text-sm text-slate-600">Halaman {pagination.page} dari {pagination.totalPages}</p>
 						<div className="flex gap-2">
 							<button disabled={pagination.page <= 1} onClick={() => setPagination(p => ({ ...p, page: p.page - 1 }))}
-								className="flex items-center gap-1 px-3 py-1.5 text-sm border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed">
+								className="flex items-center gap-1 px-3 py-1.5 text-sm border border-slate-300 rounded-lg hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed">
 								<ChevronLeft className="h-4 w-4" />Prev
 							</button>
 							<button disabled={pagination.page >= pagination.totalPages} onClick={() => setPagination(p => ({ ...p, page: p.page + 1 }))}
-								className="flex items-center gap-1 px-3 py-1.5 text-sm border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed">
+								className="flex items-center gap-1 px-3 py-1.5 text-sm border border-slate-300 rounded-lg hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed">
 								Next<ChevronRight className="h-4 w-4" />
 							</button>
 						</div>

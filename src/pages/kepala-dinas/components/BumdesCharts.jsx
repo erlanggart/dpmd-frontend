@@ -15,9 +15,9 @@ import {
 import { MapPin, TrendingUp } from 'lucide-react';
 
 const COLORS = {
-  primary: '#3B82F6',
-  secondary: '#10B981',
-  danger: '#EF4444'
+  primary: '#0f172a', // hitam navy — warna dominan
+  secondary: '#059669', // aktif (makna data, bukan aksen)
+  danger: '#94a3b8' // non-aktif: netral, bukan "salah"
 };
 
 const BumdesCharts = ({ bumdes }) => {
@@ -36,12 +36,13 @@ const BumdesCharts = ({ bumdes }) => {
   ];
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+    <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
       {/* BUMDes per Kecamatan - Bar Chart */}
-      <div className="bg-white rounded-xl shadow-lg p-6">
-        <div className="flex items-center gap-2 mb-4">
-          <MapPin className="w-5 h-5 text-blue-600" />
-          <h2 className="text-xl font-bold text-gray-800">
+      <div className="rounded-2xl border border-slate-200 bg-white p-4 sm:p-5">
+        <div className="mb-4 flex items-center gap-2.5">
+          <span className="h-4 w-1 rounded-full bg-slate-900" />
+          <MapPin className="h-4 w-4 text-slate-400" />
+          <h2 className="text-sm font-semibold text-slate-900">
             BUMDes per Kecamatan
           </h2>
         </div>
@@ -69,10 +70,11 @@ const BumdesCharts = ({ bumdes }) => {
       </div>
 
       {/* BUMDes Status - Pie Chart */}
-      <div className="bg-white rounded-xl shadow-lg p-6">
-        <div className="flex items-center gap-2 mb-4">
-          <TrendingUp className="w-5 h-5 text-green-600" />
-          <h2 className="text-xl font-bold text-gray-800">
+      <div className="rounded-2xl border border-slate-200 bg-white p-4 sm:p-5">
+        <div className="mb-4 flex items-center gap-2.5">
+          <span className="h-4 w-1 rounded-full bg-slate-900" />
+          <TrendingUp className="h-4 w-4 text-slate-400" />
+          <h2 className="text-sm font-semibold text-slate-900">
             Status BUMDes
           </h2>
         </div>
@@ -103,17 +105,17 @@ const BumdesCharts = ({ bumdes }) => {
             />
           </PieChart>
         </ResponsiveContainer>
-        <div className="flex justify-center gap-6 mt-4">
+        <div className="mt-4 flex justify-center gap-6">
           <div className="flex items-center gap-2">
-            <div className="w-4 h-4 rounded-full bg-green-500"></div>
-            <span className="text-sm text-gray-700">
-              Aktif: {bumdes?.aktif || 0}
+            <span className="h-2.5 w-2.5 rounded-full bg-emerald-600" />
+            <span className="text-sm text-slate-600">
+              Aktif: <span className="font-semibold text-slate-900">{bumdes?.aktif || 0}</span>
             </span>
           </div>
           <div className="flex items-center gap-2">
-            <div className="w-4 h-4 rounded-full bg-red-500"></div>
-            <span className="text-sm text-gray-700">
-              Non-Aktif: {bumdes?.non_aktif || 0}
+            <span className="h-2.5 w-2.5 rounded-full bg-slate-400" />
+            <span className="text-sm text-slate-600">
+              Non-Aktif: <span className="font-semibold text-slate-900">{bumdes?.non_aktif || 0}</span>
             </span>
           </div>
         </div>

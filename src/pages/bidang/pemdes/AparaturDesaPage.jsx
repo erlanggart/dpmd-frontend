@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
+import SelectBox from '../../../components/ui/SelectBox';
 import {
 	Users,
 	Search,
@@ -51,9 +52,9 @@ const isBpd = (jabatan = '') => {
 };
 
 const AVATAR_TONES = [
-	'bg-blue-100 text-blue-700',
-	'bg-teal-100 text-teal-700',
-	'bg-violet-100 text-violet-700',
+	'bg-slate-100 text-slate-700',
+	'bg-slate-100 text-slate-700',
+	'bg-slate-100 text-slate-700',
 	'bg-amber-100 text-amber-700',
 	'bg-rose-100 text-rose-700',
 	'bg-emerald-100 text-emerald-700',
@@ -89,7 +90,7 @@ const StatCard = ({ label, value, hint, icon: Icon, iconClass, share, barClass }
 	<div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm transition-shadow hover:shadow-md">
 		<div className="flex items-start justify-between gap-3">
 			<div className="min-w-0">
-				<p className="text-[11px] font-semibold uppercase tracking-wider text-slate-500">{label}</p>
+				<p className="text-[11px] font-semibold uppercase tracking-wider text-brand-600">{label}</p>
 				<p className="mt-1.5 text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">{value}</p>
 				{hint && <p className="mt-1 truncate text-xs text-slate-500">{hint}</p>}
 			</div>
@@ -276,7 +277,7 @@ const StatusBadge = ({ status }) => {
 const JabatanBadge = ({ jabatan }) => (
 	<span
 		className={`inline-flex max-w-full items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium ${
-			isBpd(jabatan) ? 'bg-violet-50 text-violet-700' : 'bg-teal-50 text-teal-700'
+			isBpd(jabatan) ? 'bg-slate-100 text-slate-700' : 'bg-slate-100 text-slate-700'
 		}`}
 		title={jabatan}
 	>
@@ -353,7 +354,7 @@ const DetailModal = ({ aparatur, onClose }) => {
 			role="presentation"
 		>
 			<div
-				className="relative flex max-h-[92vh] w-full max-w-3xl flex-col overflow-hidden rounded-t-3xl bg-white shadow-2xl sm:rounded-3xl"
+				className="relative flex max-h-[92vh] w-full max-w-3xl flex-col overflow-hidden rounded-t-3xl bg-white shadow-sm sm:rounded-2xl"
 				onClick={(event) => event.stopPropagation()}
 				role="dialog"
 				aria-modal="true"
@@ -371,9 +372,9 @@ const DetailModal = ({ aparatur, onClose }) => {
 				<div className="flex-1 overflow-y-auto">
 					{/* --- Kartu profil --- */}
 					<div className="relative">
-						<div className="relative h-32 overflow-hidden bg-gradient-to-br from-teal-700 via-emerald-700 to-slate-800">
+						<div className="relative h-32 overflow-hidden bg-slate-900">
 							<div className="absolute -right-6 -top-10 h-36 w-36 rounded-full bg-white/10 blur-2xl" />
-							<div className="absolute -bottom-8 left-8 h-28 w-28 rounded-full bg-cyan-300/20 blur-2xl" />
+							<div className="absolute -bottom-8 left-8 h-28 w-28 rounded-full bg-slate-900/20 blur-2xl" />
 							<svg
 								viewBox="0 0 500 40"
 								preserveAspectRatio="none"
@@ -389,7 +390,7 @@ const DetailModal = ({ aparatur, onClose }) => {
 						<div className="relative z-10 flex flex-col items-center px-6 pb-5 text-center">
 							<Avatar
 								person={aparatur}
-								className="-mt-16 h-28 w-28 text-3xl ring-4 ring-white shadow-xl"
+								className="-mt-16 h-28 w-28 text-3xl ring-4 ring-white shadow-sm"
 							/>
 							<h2 className="mt-3 text-xl font-bold tracking-tight text-slate-900 sm:text-2xl">
 								{aparatur.nama_lengkap}
@@ -397,7 +398,7 @@ const DetailModal = ({ aparatur, onClose }) => {
 							<div className="mt-2.5 flex flex-wrap items-center justify-center gap-2">
 								<span
 									className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold ${
-										isBpd(aparatur.jabatan) ? 'bg-violet-50 text-violet-700' : 'bg-teal-50 text-teal-700'
+										isBpd(aparatur.jabatan) ? 'bg-slate-100 text-slate-700' : 'bg-slate-100 text-slate-700'
 									}`}
 								>
 									<Briefcase className="h-3.5 w-3.5" />
@@ -502,7 +503,29 @@ const DetailModal = ({ aparatur, onClose }) => {
 // ============================================================
 // Tab: Database Lokal
 // ============================================================
-const EMPTY_FILTERS = { search: '', kecamatan_id: '', desa_id: '', jabatan: '', jenis_kelamin: '', status: '' };
+// Menyatukan ejaan jenjang pendidikan dari dua sumber data menjadi satu label.
+// Urutan pengujian penting: yang paling spesifik lebih dulu, kalau tidak
+// "STRATA II" akan tertangkap duluan oleh pola "STRATA I".
+const JENJANG = [
+	{ label: 'S3', order: 8, match: /^s-?3\b|strata\s*iii\b|doktor/i },
+	{ label: 'S2', order: 7, match: /^s-?2\b|strata\s*ii\b|magister|pasca\s*sarjana/i },
+	{ label: 'S1 / Diploma IV', order: 6, match: /^s-?1\b|^d-?4\b|strata\s*i\b|diploma\s*iv\b|sarjana/i },
+	{ label: 'Diploma III', order: 5, match: /^d-?3\b|diploma\s*iii\b|sarjana\s*muda|s\.\s*muda/i },
+	{ label: 'Diploma I-II', order: 4, match: /^d-?[12]\b|diploma\s*i{1,2}\b/i },
+	{ label: 'SMA / SMK / Sederajat', order: 3, match: /^(sma|smk|slta|stm|smea|man|ma)\b/i },
+	{ label: 'SMP / Sederajat', order: 2, match: /^(smp|sltp|mts)\b/i },
+	{ label: 'SD / Sederajat', order: 1, match: /^(sd|mi)\b|sekolah\s*dasar/i },
+];
+
+const jenjangKey = (raw) => {
+	const value = String(raw).trim();
+	for (const item of JENJANG) {
+		if (item.match.test(value)) return item;
+	}
+	return { label: value, order: 99 };
+};
+
+const EMPTY_FILTERS = { search: '', kecamatan_id: '', desa_id: '', jabatan: '', jenis_kelamin: '', status: '', pendidikan: '' };
 
 const DatabaseTab = ({ refreshKey = 0, onLoadingChange, onUpdated }) => {
 	const [loading, setLoading] = useState(true);
@@ -633,6 +656,39 @@ const DatabaseTab = ({ refreshKey = 0, onLoadingChange, onUpdated }) => {
 		setPagination((prev) => ({ ...prev, page: 1 }));
 	};
 
+	// Isi kolom pendidikan datang dari dua sumber dengan ejaan berbeda
+	// ("S1" vs "STRATA I / DIPLOMA IV", "SMA/SMK" vs "SLTA/Sederajat"), jadi
+	// ejaan yang setara digabung jadi satu jenjang. Hasil pengelompokan ini
+	// dipakai bersama oleh grafik dan filter supaya angkanya tidak berbeda.
+	const pendidikanOptions = useMemo(() => {
+		const buckets = new Map();
+		for (const item of stats?.pendidikan || []) {
+			const raw = String(item?.name || '').trim();
+			if (!raw) continue;
+			const key = raw === 'Tidak Diketahui' ? { label: 'Tidak Diketahui', order: 100 } : jenjangKey(raw);
+			const bucket = buckets.get(key.label) || { label: key.label, order: key.order, total: 0, values: [] };
+			bucket.total += Number(item.value) || 0;
+			bucket.values.push(raw);
+			buckets.set(key.label, bucket);
+		}
+		return [...buckets.values()].sort((a, b) => a.order - b.order || a.label.localeCompare(b.label, 'id'));
+	}, [stats]);
+
+	// Grafik: jenjang yang sama, diurutkan dari yang terbanyak.
+	const pendidikanChart = useMemo(
+		() =>
+			[...pendidikanOptions]
+				.map((item) => ({ name: item.label, value: item.total }))
+				.sort((a, b) => b.value - a.value),
+		[pendidikanOptions]
+	);
+
+	// Filter: "Tidak Diketahui" bukan jenjang, jadi tidak ditawarkan sebagai pilihan.
+	const pendidikanFilterOptions = useMemo(
+		() => pendidikanOptions.filter((item) => item.label !== 'Tidak Diketahui'),
+		[pendidikanOptions]
+	);
+
 	const labelFor = useCallback(
 		(key, value) => {
 			switch (key) {
@@ -648,6 +704,10 @@ const DatabaseTab = ({ refreshKey = 0, onLoadingChange, onUpdated }) => {
 				}
 				case 'jabatan':
 					return `Jabatan: ${value}`;
+				case 'pendidikan': {
+					const bucket = pendidikanFilterOptions.find((item) => item.values.join(',') === value);
+					return `Pendidikan: ${bucket?.label || value}`;
+				}
 				case 'jenis_kelamin':
 					return `Kelamin: ${value === 'Laki_laki' ? 'Laki-laki' : 'Perempuan'}`;
 				case 'status':
@@ -656,7 +716,7 @@ const DatabaseTab = ({ refreshKey = 0, onLoadingChange, onUpdated }) => {
 					return value;
 			}
 		},
-		[kecamatanList, desaList]
+		[kecamatanList, desaList, pendidikanFilterOptions]
 	);
 
 	const activeFilters = useMemo(
@@ -717,23 +777,23 @@ const DatabaseTab = ({ refreshKey = 0, onLoadingChange, onUpdated }) => {
 											value={fmt(stats.total)}
 											hint={stats.desa_count ? `Tersebar di ${fmt(stats.desa_count)} desa` : null}
 											icon={Users}
-											iconClass="bg-blue-50 text-blue-600"
+											iconClass="bg-slate-100 text-brand-600"
 										/>
 										<StatCard
 											label="Perangkat Desa"
 											value={fmt(stats.total_pemdes)}
 											icon={Building2}
-											iconClass="bg-teal-50 text-teal-600"
+											iconClass="bg-slate-100 text-slate-600"
 											share={pct(stats.total_pemdes, total)}
-											barClass="bg-teal-500"
+											barClass="bg-slate-1000"
 										/>
 										<StatCard
 											label="BPD"
 											value={fmt(stats.total_bpd)}
 											icon={Shield}
-											iconClass="bg-violet-50 text-violet-600"
+											iconClass="bg-slate-100 text-brand-600"
 											share={pct(stats.total_bpd, total)}
-											barClass="bg-violet-500"
+											barClass="bg-slate-800"
 										/>
 										<StatCard
 											label="Aparatur Aktif"
@@ -766,11 +826,11 @@ const DatabaseTab = ({ refreshKey = 0, onLoadingChange, onUpdated }) => {
 
 										<ChartCard
 											title="Pendidikan Terakhir"
-											subtitle="8 jenjang terbanyak"
+											subtitle="Dikelompokkan per jenjang"
 											className="lg:col-span-5"
 										>
 											<BarList
-												items={stats.pendidikan || []}
+												items={pendidikanChart}
 												color={EDU_COLOR}
 												maxRows={9}
 												labelClass="w-32 sm:w-52 lg:w-64"
@@ -794,7 +854,7 @@ const DatabaseTab = ({ refreshKey = 0, onLoadingChange, onUpdated }) => {
 							placeholder="Cari nama atau jabatan aparatur..."
 							value={searchInput}
 							onChange={(event) => setSearchInput(event.target.value)}
-							className="w-full rounded-xl border border-slate-200 bg-slate-50 py-2.5 pl-10 pr-10 text-sm text-slate-900 transition-colors placeholder:text-slate-400 focus:border-blue-500 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-100"
+							className="w-full rounded-xl border border-slate-200 bg-slate-50 py-2.5 pl-10 pr-10 text-sm text-slate-900 transition-colors placeholder:text-slate-400 focus:border-slate-700 focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand-50"
 						/>
 						{searchInput && (
 							<button
@@ -814,14 +874,14 @@ const DatabaseTab = ({ refreshKey = 0, onLoadingChange, onUpdated }) => {
 							onClick={() => setShowFilters((prev) => !prev)}
 							className={`inline-flex items-center gap-2 rounded-xl border px-4 py-2.5 text-sm font-medium transition-colors ${
 								showFilters || activeFilters.length
-									? 'border-blue-200 bg-blue-50 text-blue-700'
+									? 'border-slate-200 bg-slate-100 text-slate-700'
 									: 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50'
 							}`}
 						>
 							<SlidersHorizontal className="h-4 w-4" />
 							Filter
 							{activeFilters.length > 0 && (
-								<span className="flex h-5 min-w-[1.25rem] items-center justify-center rounded-full bg-blue-600 px-1 text-[11px] font-bold text-white">
+								<span className="flex h-5 min-w-[1.25rem] items-center justify-center rounded-full bg-slate-900 px-1 text-[11px] font-bold text-white">
 									{activeFilters.length}
 								</span>
 							)}
@@ -838,76 +898,84 @@ const DatabaseTab = ({ refreshKey = 0, onLoadingChange, onUpdated }) => {
 				</div>
 
 				{showFilters && (
-					<div className="mt-3 grid grid-cols-1 gap-3 border-t border-slate-100 pt-3 sm:grid-cols-2 lg:grid-cols-5">
-						<label className="block">
-							<span className="mb-1 block text-xs font-medium text-slate-600">Kecamatan</span>
-							<select
-								value={filters.kecamatan_id}
-								onChange={(event) => handleFilterChange('kecamatan_id', event.target.value)}
-								className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
-							>
-								<option value="">Semua Kecamatan</option>
-								{kecamatanList.map((kecamatan) => (
-									<option key={kecamatan.id || kecamatan.id_kecamatan} value={kecamatan.id || kecamatan.id_kecamatan}>
-										{kecamatan.nama || kecamatan.name}
-									</option>
-								))}
-							</select>
-						</label>
+					<div className="mt-3 grid grid-cols-1 gap-3 border-t border-slate-100 pt-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
+						<SelectBox
+							label="Kecamatan"
+							value={filters.kecamatan_id}
+							onChange={(value) => handleFilterChange('kecamatan_id', value)}
+							placeholder="Semua Kecamatan"
+							emptyText="Kecamatan tidak ditemukan"
+							options={[
+								{ value: '', label: 'Semua Kecamatan' },
+								...kecamatanList.map((kecamatan) => ({
+									value: String(kecamatan.id || kecamatan.id_kecamatan),
+									label: kecamatan.nama || kecamatan.name,
+								})),
+							]}
+						/>
+
+						<SelectBox
+							label="Desa"
+							value={filters.desa_id}
+							onChange={(value) => handleFilterChange('desa_id', value)}
+							disabled={!filters.kecamatan_id}
+							placeholder={filters.kecamatan_id ? 'Semua Desa' : 'Pilih kecamatan dulu'}
+							emptyText="Desa tidak ditemukan"
+							options={[
+								{ value: '', label: 'Semua Desa' },
+								...desaList.map((desa) => ({ value: String(desa.id), label: desa.nama || desa.name })),
+							]}
+						/>
 
 						<label className="block">
-							<span className="mb-1 block text-xs font-medium text-slate-600">Desa</span>
-							<select
-								value={filters.desa_id}
-								onChange={(event) => handleFilterChange('desa_id', event.target.value)}
-								disabled={!filters.kecamatan_id}
-								className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100 disabled:cursor-not-allowed disabled:bg-slate-50 disabled:text-slate-400"
-							>
-								<option value="">{filters.kecamatan_id ? 'Semua Desa' : 'Pilih kecamatan dulu'}</option>
-								{desaList.map((desa) => (
-									<option key={desa.id} value={desa.id}>
-										{desa.nama || desa.name}
-									</option>
-								))}
-							</select>
-						</label>
-
-						<label className="block">
-							<span className="mb-1 block text-xs font-medium text-slate-600">Jabatan</span>
+							<span className="mb-1.5 block text-[11px] font-semibold uppercase tracking-[0.12em] text-brand-600">Jabatan</span>
 							<input
 								type="text"
 								placeholder="Contoh: Kepala Desa"
 								value={filters.jabatan}
 								onChange={(event) => handleFilterChange('jabatan', event.target.value)}
-								className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm placeholder:text-slate-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
+								className="h-11 w-full rounded-xl border border-slate-200 bg-white px-3.5 text-sm font-medium text-slate-900 shadow-sm transition-colors placeholder:font-normal placeholder:text-slate-400 hover:border-slate-300 focus:border-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-900/10"
 							/>
 						</label>
 
-						<label className="block">
-							<span className="mb-1 block text-xs font-medium text-slate-600">Jenis Kelamin</span>
-							<select
-								value={filters.jenis_kelamin}
-								onChange={(event) => handleFilterChange('jenis_kelamin', event.target.value)}
-								className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
-							>
-								<option value="">Semua</option>
-								<option value="Laki_laki">Laki-laki</option>
-								<option value="Perempuan">Perempuan</option>
-							</select>
-						</label>
+						<SelectBox
+							label="Pendidikan"
+							value={filters.pendidikan}
+							onChange={(value) => handleFilterChange('pendidikan', value)}
+							placeholder="Semua Pendidikan"
+							options={[
+								{ value: '', label: 'Semua Pendidikan' },
+								...pendidikanFilterOptions.map((item) => ({
+									value: item.values.join(','),
+									label: item.label,
+									hint: `(${item.total.toLocaleString('id-ID')})`,
+								})),
+							]}
+						/>
 
-						<label className="block">
-							<span className="mb-1 block text-xs font-medium text-slate-600">Status</span>
-							<select
-								value={filters.status}
-								onChange={(event) => handleFilterChange('status', event.target.value)}
-								className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
-							>
-								<option value="">Semua</option>
-								<option value="Aktif">Aktif</option>
-								<option value="Tidak_Aktif">Tidak Aktif</option>
-							</select>
-						</label>
+						<SelectBox
+							label="Jenis Kelamin"
+							value={filters.jenis_kelamin}
+							onChange={(value) => handleFilterChange('jenis_kelamin', value)}
+							placeholder="Semua"
+							options={[
+								{ value: '', label: 'Semua' },
+								{ value: 'Laki_laki', label: 'Laki-laki' },
+								{ value: 'Perempuan', label: 'Perempuan' },
+							]}
+						/>
+
+						<SelectBox
+							label="Status"
+							value={filters.status}
+							onChange={(value) => handleFilterChange('status', value)}
+							placeholder="Semua"
+							options={[
+								{ value: '', label: 'Semua' },
+								{ value: 'Aktif', label: 'Aktif' },
+								{ value: 'Tidak_Aktif', label: 'Tidak Aktif' },
+							]}
+						/>
 					</div>
 				)}
 
@@ -916,13 +984,13 @@ const DatabaseTab = ({ refreshKey = 0, onLoadingChange, onUpdated }) => {
 						{activeFilters.map(([key, value]) => (
 							<span
 								key={key}
-								className="inline-flex items-center gap-1.5 rounded-full bg-blue-50 py-1 pl-3 pr-1.5 text-xs font-medium text-blue-700"
+								className="inline-flex items-center gap-1.5 rounded-full bg-slate-100 py-1 pl-3 pr-1.5 text-xs font-medium text-brand-700"
 							>
 								{labelFor(key, value)}
 								<button
 									type="button"
 									onClick={() => removeFilter(key)}
-									className="rounded-full p-0.5 transition-colors hover:bg-blue-100"
+									className="rounded-full p-0.5 transition-colors hover:bg-slate-50"
 									aria-label={`Hapus filter ${key}`}
 								>
 									<X className="h-3 w-3" />
@@ -955,23 +1023,17 @@ const DatabaseTab = ({ refreshKey = 0, onLoadingChange, onUpdated }) => {
 							</>
 						)}
 					</p>
-					<label className="flex items-center gap-2 text-xs text-slate-500">
-						Tampilkan
-						<select
-							value={pagination.limit}
-							onChange={(event) =>
-								setPagination((prev) => ({ ...prev, limit: Number(event.target.value), page: 1 }))
-							}
-							className="rounded-lg border border-slate-200 bg-white px-2 py-1 text-xs focus:border-blue-500 focus:outline-none"
-						>
-							{[20, 50, 100].map((size) => (
-								<option key={size} value={size}>
-									{size}
-								</option>
-							))}
-						</select>
-						baris
-					</label>
+					<div className="flex items-center gap-2 text-xs text-slate-500">
+						<span>Tampilkan</span>
+						<SelectBox
+							size="sm"
+							className="w-24"
+							value={String(pagination.limit)}
+							onChange={(value) => setPagination((prev) => ({ ...prev, limit: Number(value), page: 1 }))}
+							options={[20, 50, 100].map((size) => ({ value: String(size), label: String(size) }))}
+						/>
+						<span>baris</span>
+					</div>
 				</div>
 
 				{loading ? (
@@ -1004,19 +1066,19 @@ const DatabaseTab = ({ refreshKey = 0, onLoadingChange, onUpdated }) => {
 							<table className="min-w-full">
 								<thead>
 									<tr className="border-b border-slate-100 bg-slate-50/80">
-										<th className="px-5 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-slate-500">
+										<th className="px-5 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-brand-600">
 											Aparatur
 										</th>
-										<th className="px-5 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-slate-500">
+										<th className="px-5 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-brand-600">
 											Jabatan
 										</th>
-										<th className="px-5 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-slate-500">
+										<th className="px-5 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-brand-600">
 											Wilayah
 										</th>
-										<th className="px-5 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-slate-500">
+										<th className="px-5 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-brand-600">
 											Status
 										</th>
-										<th className="px-5 py-3 text-right text-[11px] font-semibold uppercase tracking-wider text-slate-500">
+										<th className="px-5 py-3 text-right text-[11px] font-semibold uppercase tracking-wider text-brand-600">
 											Aksi
 										</th>
 									</tr>
@@ -1053,7 +1115,7 @@ const DatabaseTab = ({ refreshKey = 0, onLoadingChange, onUpdated }) => {
 												<StatusBadge status={aparatur.status} />
 											</td>
 											<td className="px-5 py-3.5 text-right">
-												<span className="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-medium text-blue-600 transition-colors hover:bg-blue-50">
+												<span className="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-medium text-brand-600 transition-colors hover:bg-slate-50">
 													<Eye className="h-4 w-4" />
 													Detail
 												</span>
@@ -1167,14 +1229,14 @@ const PAGE_VARIANTS = {
 		title: 'Aparatur Desa',
 		description: 'Monitoring dan audit data perangkat desa serta BPD se-Kabupaten Bogor.',
 		badge: 'Database Aplikasi',
-		accent: 'from-sky-600 to-blue-700',
+		accent: 'bg-slate-900',
 	},
 	'core-dashboard': {
 		eyebrow: 'Core Dashboard DPMD',
 		title: 'Aparatur Desa',
 		description: 'Sebaran dan komposisi aparatur desa dari database aplikasi untuk monitoring wilayah.',
 		badge: 'Database Aplikasi',
-		accent: 'from-emerald-600 to-teal-700',
+		accent: 'bg-slate-800',
 	},
 };
 
@@ -1207,31 +1269,32 @@ const AparaturDesaPage = ({ mode = 'pemdes', allowedTabs = ['database'], initial
 	const handleLoading = useCallback((value) => setBusy(value), []);
 
 	return (
-		<div className="min-h-screen p-4 sm:p-6">
+		<div className="min-h-screen bg-slate-50 p-4 pt-20 sm:p-6 lg:pt-6">
 			{/* Header */}
-			<header className="mb-5 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-				<div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+			<header className="relative mb-5 overflow-hidden rounded-2xl bg-slate-950 p-5 sm:p-6">
+				<div className="pointer-events-none absolute inset-0 bg-[radial-gradient(70%_120%_at_92%_0%,_rgba(185,28,28,0.22)_0%,_transparent_62%)]" />
+				<div className="relative flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
 					<div className="flex items-start gap-4">
 						<div
-							className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br ${variant.accent} text-white shadow-sm`}
+							className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-white/10 text-white ring-1 ring-white/15"
 						>
 							<Users className="h-6 w-6" />
 						</div>
 						<div className="min-w-0">
-							<p className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">{variant.eyebrow}</p>
-							<h1 className="mt-0.5 text-xl font-bold tracking-tight text-slate-900 sm:text-2xl">{variant.title}</h1>
-							<p className="mt-1 text-sm text-slate-500">{variant.description}</p>
+							<p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-brand-400">{variant.eyebrow}</p>
+							<h1 className="mt-1 text-xl font-semibold tracking-tight text-white sm:text-2xl">{variant.title}</h1>
+							<p className="mt-1.5 text-sm leading-relaxed text-slate-400">{variant.description}</p>
 						</div>
 					</div>
 
 					<div className="flex items-center gap-2 sm:flex-col sm:items-end">
-						<span className="inline-flex items-center gap-1.5 rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-600">
+						<span className="inline-flex items-center gap-1.5 rounded-full bg-white/10 px-3 py-1 text-xs font-medium text-slate-300 ring-1 ring-white/15">
 							<Shield className="h-3.5 w-3.5" />
 							{variant.badge}
 						</span>
 						<div className="flex items-center gap-2">
 							{lastUpdated && (
-								<span className="hidden items-center gap-1 text-xs text-slate-400 sm:inline-flex">
+								<span className="hidden items-center gap-1 text-xs text-slate-500 sm:inline-flex">
 									<CalendarDays className="h-3.5 w-3.5" />
 									{lastUpdated.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })}
 								</span>
@@ -1240,7 +1303,7 @@ const AparaturDesaPage = ({ mode = 'pemdes', allowedTabs = ['database'], initial
 								type="button"
 								onClick={() => setRefreshKey((key) => key + 1)}
 								disabled={busy}
-								className="inline-flex items-center gap-2 rounded-xl bg-slate-900 px-3.5 py-2 text-sm font-medium text-white transition-colors hover:bg-slate-800 disabled:opacity-60"
+								className="inline-flex items-center gap-2 rounded-xl bg-white/10 px-3.5 py-2 text-sm font-medium text-white ring-1 ring-white/15 transition-colors hover:bg-white/20 disabled:opacity-60"
 							>
 								<RefreshCw className={`h-4 w-4 ${busy ? 'animate-spin' : ''}`} />
 								Refresh
@@ -1250,7 +1313,7 @@ const AparaturDesaPage = ({ mode = 'pemdes', allowedTabs = ['database'], initial
 				</div>
 
 				{tabs.length > 1 && (
-					<div className="mt-4 flex gap-1 rounded-xl bg-slate-100 p-1">
+					<div className="relative mt-5 flex gap-1 rounded-xl bg-white/10 p-1 ring-1 ring-white/10">
 						{tabs.map((tab) => {
 							const TabIcon = tab.icon || GraduationCap;
 							const isActive = activeTab === tab.id;
@@ -1260,7 +1323,7 @@ const AparaturDesaPage = ({ mode = 'pemdes', allowedTabs = ['database'], initial
 									type="button"
 									onClick={() => setActiveTab(tab.id)}
 									className={`flex flex-1 items-center justify-center gap-2 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
-										isActive ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-700'
+										isActive ? 'bg-white text-slate-900' : 'text-slate-400 hover:text-white'
 									}`}
 									title={tab.desc}
 								>

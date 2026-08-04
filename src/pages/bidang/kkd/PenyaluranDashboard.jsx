@@ -16,16 +16,28 @@ import * as XLSX from 'xlsx';
 import toast from 'react-hot-toast';
 import { useSipanda } from '../../../hooks/useSipanda';
 import { useBidangPath } from '../../../hooks/useBidangPath';
+import SelectBox from '../../../components/ui/SelectBox';
 
 ChartJS.register(LineElement, PointElement, CategoryScale, LinearScale, Tooltip, Filler);
 
-// ─── Accent palette (literal Tailwind classes so JIT keeps them + a chart hex) ──
+// ─── Aksen brand DPMD (merah bata). Prop `accent` dipertahankan supaya pemanggil
+// tidak perlu diubah, tapi semua varian kini memakai satu tone yang sama supaya
+// ADD/DD/BHPRD tampil sebagai satu keluarga. ─────────────────────────────────
+const BRAND_ACCENT = {
+  hex: '#b91c1c',
+  tile: 'bg-slate-900 text-white',
+  kicker: 'text-brand-700',
+  bar: 'bg-slate-900',
+  chip: 'bg-slate-900 text-white',
+  soft: 'bg-slate-100 text-slate-700 ring-slate-200',
+};
+
 const ACCENTS = {
-  emerald: { hex: '#10b981', tile: 'bg-emerald-50 text-emerald-600 ring-emerald-200/60', kicker: 'text-emerald-600', bar: 'bg-emerald-500', chip: 'bg-emerald-600 text-white', soft: 'bg-emerald-50 text-emerald-700 ring-emerald-200/60' },
-  violet:  { hex: '#8b5cf6', tile: 'bg-violet-50 text-violet-600 ring-violet-200/60',    kicker: 'text-violet-600',  bar: 'bg-violet-500',  chip: 'bg-violet-600 text-white',  soft: 'bg-violet-50 text-violet-700 ring-violet-200/60' },
-  blue:    { hex: '#3b82f6', tile: 'bg-blue-50 text-blue-600 ring-blue-200/60',          kicker: 'text-blue-600',    bar: 'bg-blue-500',    chip: 'bg-blue-600 text-white',    soft: 'bg-blue-50 text-blue-700 ring-blue-200/60' },
-  amber:   { hex: '#f59e0b', tile: 'bg-amber-50 text-amber-600 ring-amber-200/60',       kicker: 'text-amber-600',   bar: 'bg-amber-500',   chip: 'bg-amber-600 text-white',   soft: 'bg-amber-50 text-amber-700 ring-amber-200/60' },
-  rose:    { hex: '#f43f5e', tile: 'bg-rose-50 text-rose-600 ring-rose-200/60',          kicker: 'text-rose-600',    bar: 'bg-rose-500',    chip: 'bg-rose-600 text-white',    soft: 'bg-rose-50 text-rose-700 ring-rose-200/60' },
+  emerald: BRAND_ACCENT,
+  violet: BRAND_ACCENT,
+  blue: BRAND_ACCENT,
+  amber: BRAND_ACCENT,
+  rose: BRAND_ACCENT,
 };
 
 // ─── Status → tone/icon (keyword based, matches SIPANDA `sts` values) ────────────
@@ -48,7 +60,7 @@ const fmtDate = (d) => (d ? new Date(d.replace(' ', 'T')).toLocaleDateString('id
 
 const StatCell = ({ label, value, sub, subTone = 'text-slate-500' }) => (
   <div className="bg-white px-3 sm:px-4 py-3 sm:py-3.5">
-    <div className="text-[10px] sm:text-[10.5px] font-bold tracking-[0.12em] uppercase text-slate-400">{label}</div>
+    <div className="text-[10px] sm:text-[10.5px] font-bold tracking-[0.12em] uppercase text-brand-600">{label}</div>
     <div className="mt-1 text-[18px] sm:text-[20px] font-extrabold tracking-tight text-slate-900 truncate" title={typeof value === 'string' ? value : undefined}>{value}</div>
     {sub && <div className={`mt-0.5 text-[10.5px] sm:text-[11px] font-medium ${subTone}`}>{sub}</div>}
   </div>
@@ -78,6 +90,9 @@ export default function PenyaluranDashboard({
   dimField = 'nm_tahap', // 'periode' for ADD (bulanan), 'nm_tahap' for tahap-based
   dimLabel = 'Tahap',    // shown in the selector ('Bulan' / 'Tahap')
   icon: HeaderIcon = MapPin,
+  // Saat dirender di dalam tab Core Dashboard, judul & tombol kembali sudah
+  // disediakan halaman induk — jangan digambar dua kali.
+  embedded = false,
 }) {
   const A = ACCENTS[accent] || ACCENTS.emerald;
   const navigate = useNavigate();
@@ -286,9 +301,9 @@ export default function PenyaluranDashboard({
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#F8F9FB] flex items-center justify-center">
+      <div className="min-h-[60vh] bg-slate-50 flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-600 mx-auto" />
+          <div className="animate-spin rounded-full h-10 w-10 border-[3px] border-slate-200 border-t-slate-900 mx-auto" />
           <p className="mt-3 text-sm text-slate-500">Memuat data dari SIPANDA…</p>
         </div>
       </div>
@@ -297,7 +312,7 @@ export default function PenyaluranDashboard({
 
   if (error) {
     return (
-      <div className="min-h-screen bg-[#F8F9FB] flex items-center justify-center px-4">
+      <div className="min-h-[60vh] bg-slate-50 flex items-center justify-center px-4">
         <div className="text-center max-w-sm">
           <AlertTriangle className="h-10 w-10 text-rose-400 mx-auto" />
           <p className="mt-3 text-sm font-semibold text-slate-800">Gagal memuat data SIPANDA</p>
@@ -352,17 +367,20 @@ export default function PenyaluranDashboard({
   };
 
   return (
-    <div className="min-h-screen bg-[#F8F9FB] text-slate-900">
+    <div className={`text-slate-900 ${embedded ? '' : 'min-h-screen bg-slate-50'}`}>
       {/* Header */}
       <div className="px-4 sm:px-6 pt-5 pb-5">
+        {!embedded && (
         <button
           onClick={() => navigate(getPath('/bidang/kkd'))}
           className="mb-3 inline-flex items-center gap-1.5 h-8 pl-2 pr-3 rounded-lg border border-slate-200 bg-white text-slate-600 text-[12px] font-semibold hover:bg-slate-50 hover:text-slate-900 transition-colors"
         >
           <ArrowLeft className="h-3.5 w-3.5" /> Dashboard Bidang KKD
         </button>
+        )}
 
         <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4">
+          {!embedded && (
           <div className="flex items-start gap-3 sm:gap-4">
             <div className={`h-12 w-12 sm:h-14 sm:w-14 rounded-2xl ring-1 flex items-center justify-center shrink-0 ${A.tile}`}>
               <HeaderIcon className="h-5 w-5 sm:h-6 sm:w-6" strokeWidth={1.75} />
@@ -373,11 +391,12 @@ export default function PenyaluranDashboard({
                 <span className="h-1 w-1 rounded-full bg-slate-300" />
                 <span className="text-[10px] sm:text-[10.5px] font-semibold tracking-wide text-slate-500">{short} · 2026</span>
               </div>
-              <h1 className="text-[22px] sm:text-[26px] lg:text-[28px] leading-[1.1] font-extrabold tracking-tight">{title}</h1>
+              <h1 className="text-[22px] sm:text-[26px] lg:text-[28px] leading-[1.1] font-semibold tracking-tight">{title}</h1>
               <p className="mt-1.5 text-[12.5px] sm:text-[13.5px] text-slate-500 max-w-xl">{subtitle}</p>
             </div>
           </div>
-          <div className="flex items-center gap-2 shrink-0">
+          )}
+          <div className="flex items-center gap-2 shrink-0 lg:ml-auto">
             <button onClick={() => reload(true)} className="h-9 px-3.5 rounded-lg border border-slate-200 bg-white text-slate-700 text-[12.5px] font-semibold hover:bg-slate-50 flex items-center gap-1.5">
               <RotateCcw className="h-3.5 w-3.5" /> <span className="hidden sm:inline">Sinkronkan</span>
             </button>
@@ -387,8 +406,51 @@ export default function PenyaluranDashboard({
           </div>
         </div>
 
+        {/* Tab tahap/bulan — seluruh angka, grafik, dan tabel di bawah
+            mengikuti pilihan di sini. */}
+        <div className="mt-5">
+          <div className="flex items-center justify-between gap-3 mb-2">
+            <span className="text-[10.5px] font-bold tracking-[0.12em] uppercase text-brand-600">
+              {dimLabel}
+            </span>
+            {sel !== 'Semua' && (
+              <button
+                onClick={() => setSel('Semua')}
+                className="inline-flex items-center gap-1 text-[11.5px] font-semibold text-slate-500 hover:text-slate-900"
+              >
+                <X className="h-3.5 w-3.5" /> Tampilkan semua
+              </button>
+            )}
+          </div>
+          <div
+            role="tablist"
+            aria-label={`Pilih ${dimLabel}`}
+            className="-mx-4 flex gap-1.5 overflow-x-auto px-4 pb-1 sm:mx-0 sm:px-0"
+          >
+            {['Semua', ...dims].map((d) => {
+              const active = sel === d;
+              return (
+                <button
+                  key={d}
+                  type="button"
+                  role="tab"
+                  aria-selected={active}
+                  onClick={() => setSel(d)}
+                  className={`shrink-0 rounded-lg border px-3.5 py-2 text-[12.5px] font-semibold transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900/20 ${
+                    active
+                      ? 'border-slate-900 bg-slate-900 text-white'
+                      : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300 hover:bg-slate-50 hover:text-slate-900'
+                  }`}
+                >
+                  {d === 'Semua' ? `Semua ${dimLabel}` : d}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
         {/* Stats strip */}
-        <div className="mt-5 grid grid-cols-2 lg:grid-cols-4 gap-px bg-slate-200/80 rounded-xl overflow-hidden border border-slate-200/80">
+        <div className="mt-4 grid grid-cols-2 lg:grid-cols-4 gap-px bg-slate-200/80 rounded-xl overflow-hidden border border-slate-200/80">
           <StatCell label="Total Desa" value={fmtInt(stats.desa)} sub={`${stats.kec} kecamatan`} />
           <StatCell label="Total Anggaran" value={fmtRp(stats.total)} sub={`${fmtInt(stats.count)} penyaluran`} />
           <StatCell label="Sudah Cair" value={`${stats.pct}%`} sub={`${fmtInt(stats.cairCount)} dari ${fmtInt(stats.count)}`} subTone="text-emerald-600" />
@@ -408,7 +470,7 @@ export default function PenyaluranDashboard({
       <div className="px-4 sm:px-6 pb-2">
         <div className="flex items-end justify-between gap-3 mb-3">
           <div>
-            <div className="text-[10.5px] font-bold tracking-[0.14em] uppercase text-slate-400">Ringkasan Realisasi</div>
+            <div className="text-[10.5px] font-bold tracking-[0.14em] uppercase text-brand-600">Ringkasan Realisasi</div>
             <h2 className="mt-0.5 text-[15px] sm:text-[16px] font-extrabold tracking-tight text-slate-900">
               {isMonthly ? `Progres Bulanan ${short}` : `Progres per Tahap ${short}`}
             </h2>
@@ -421,7 +483,7 @@ export default function PenyaluranDashboard({
           <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1.1fr)_auto] gap-5 lg:gap-6 items-center">
             <div>
               <div className="flex items-baseline gap-2.5 flex-wrap">
-                <span className="text-[10.5px] font-bold tracking-[0.12em] uppercase text-slate-400">Realisasi Anggaran</span>
+                <span className="text-[10.5px] font-bold tracking-[0.12em] uppercase text-brand-600">Realisasi Anggaran</span>
                 <span className={`text-[11px] font-bold ${A.kicker}`}>{Math.round(moduleAgg.pctAmt)}% tersalur</span>
               </div>
               <div className="mt-1.5 flex items-end gap-2 flex-wrap">
@@ -459,7 +521,7 @@ export default function PenyaluranDashboard({
                     <Icon className="h-3.5 w-3.5" strokeWidth={2} />
                   </div>
                   <div className="text-[18px] font-extrabold tracking-tight text-slate-900 leading-none truncate" title={String(value)}>{value}</div>
-                  <div className="mt-1 text-[10px] font-bold tracking-wide uppercase text-slate-400 truncate" title={label}>{label}</div>
+                  <div className="mt-1 text-[10px] font-bold tracking-wide uppercase text-brand-600 truncate" title={label}>{label}</div>
                   <div className="text-[10.5px] text-slate-500 leading-tight truncate">{sub}</div>
                 </div>
               ))}
@@ -482,16 +544,29 @@ export default function PenyaluranDashboard({
             <ChartCard
               icon={isMonthly ? CalendarRange : Layers}
               title={`Progres Pencairan per ${dimLabel}`}
-              subtitle={`Porsi desa yang sudah cair di tiap ${dimLabel.toLowerCase()} · ${moduleAgg.doneCount} selesai`}
+              subtitle={
+                sel === 'Semua'
+                  ? `Porsi desa yang sudah cair di tiap ${dimLabel.toLowerCase()} · ${moduleAgg.doneCount} selesai`
+                  : `Semua ${dimLabel.toLowerCase()} ditampilkan sebagai pembanding · klik untuk berpindah`
+              }
             >
               <div className="space-y-2 sm:space-y-2.5">
                 {dimBreakdown.map((d) => {
                   const p = PHASE[d.phase];
+                  const isSel = sel === d.label;
+                  const dimmed = sel !== 'Semua' && !isSel;
                   return (
-                    <div key={d.label} className="flex items-center gap-2.5 sm:gap-3">
+                    <button
+                      type="button"
+                      key={d.label}
+                      onClick={() => setSel(isSel ? 'Semua' : d.label)}
+                      className={`flex w-full items-center gap-2.5 sm:gap-3 rounded-lg px-1.5 py-1 text-left transition-colors hover:bg-slate-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900/20 ${
+                        isSel ? 'bg-slate-50 ring-1 ring-slate-200' : ''
+                      } ${dimmed ? 'opacity-45' : ''}`}
+                    >
                       <div className="w-16 sm:w-24 shrink-0 flex items-center gap-1.5 min-w-0">
                         <span className={`h-1.5 w-1.5 rounded-full shrink-0 ${p.dot}`} />
-                        <span className="text-[11.5px] font-semibold text-slate-700 truncate" title={d.label}>{d.label}</span>
+                        <span className={`text-[11.5px] truncate ${isSel ? 'font-bold text-slate-900' : 'font-semibold text-slate-700'}`} title={d.label}>{d.label}</span>
                       </div>
                       <div className="flex-1 h-6 rounded-lg bg-slate-100 overflow-hidden min-w-0">
                         <div className={`h-full ${p.bar} transition-all duration-700`} style={{ width: `${d.pctDesa}%` }} />
@@ -500,7 +575,7 @@ export default function PenyaluranDashboard({
                         <div className={`text-[12px] font-bold tabular-nums ${p.text}`}>{Math.round(d.pctDesa)}%</div>
                         <div className="text-[10px] text-slate-400 leading-tight">{d.cair > 0 ? fmtRp(d.cair) : '—'}</div>
                       </div>
-                    </div>
+                    </button>
                   );
                 })}
               </div>
@@ -565,30 +640,6 @@ export default function PenyaluranDashboard({
 
       {/* Controls */}
       <div className="px-4 sm:px-6 pt-4">
-        {/* Dimension selector — dropdown */}
-        <div className="flex items-center gap-2.5 mb-3">
-          <span className="text-[10.5px] font-bold tracking-[0.12em] uppercase text-slate-400 shrink-0">{dimLabel}</span>
-          <div className="relative">
-            <select
-              value={sel}
-              onChange={(e) => setSel(e.target.value)}
-              className={`h-9 pl-3 pr-9 rounded-lg text-[12.5px] font-semibold appearance-none cursor-pointer transition-colors focus:outline-none focus:ring-2 focus:ring-slate-300 ${sel === 'Semua' ? 'bg-white text-slate-700 border border-slate-200 hover:bg-slate-50' : A.chip}`}
-            >
-              <option value="Semua">Semua {dimLabel}</option>
-              {dims.map((d) => <option key={d} value={d}>{d}</option>)}
-            </select>
-            <ChevronRight className={`pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 h-4 w-4 rotate-90 ${sel === 'Semua' ? 'text-slate-400' : 'text-white/80'}`} />
-          </div>
-          {sel !== 'Semua' && (
-            <button
-              onClick={() => setSel('Semua')}
-              className="h-9 px-2.5 rounded-lg border border-slate-200 bg-white text-slate-500 text-[12px] font-semibold hover:bg-slate-50 inline-flex items-center gap-1"
-            >
-              <X className="h-3.5 w-3.5" /> Reset
-            </button>
-          )}
-        </div>
-
         {/* Search + status */}
         <div className="grid grid-cols-1 sm:grid-cols-[1fr_auto] gap-2 mb-3">
           <div className="relative">
@@ -605,19 +656,23 @@ export default function PenyaluranDashboard({
               </button>
             )}
           </div>
-          <select
+          <SelectBox
+            className="w-full sm:w-52"
             value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value)}
-            className="h-10 px-3 rounded-xl border border-slate-200 bg-white text-[13px] font-medium text-slate-700 focus:outline-none focus:ring-2 focus:ring-slate-300"
-          >
-            <option value="">Semua Status</option>
-            {statusOptions.map((s) => <option key={s} value={s}>{s}</option>)}
-          </select>
+            onChange={setStatusFilter}
+            placeholder="Semua Status"
+            options={[
+              { value: '', label: 'Semua Status' },
+              ...statusOptions.map((s) => ({ value: s, label: s })),
+            ]}
+          />
         </div>
 
-        {/* Status distribution — full-width, evenly distributed segments */}
+        {/* Distribusi status — grid rata, label tidak dipotong.
+            Kartu dibuat putih; warna status hanya dipakai pada titik penanda,
+            ikon, dan bilah proporsi supaya barisnya tidak jadi pelangi. */}
         {statusDist.length > 0 && (
-          <div className="flex flex-wrap gap-2 mb-4">
+          <div className="mb-4 grid grid-cols-2 gap-2 sm:grid-cols-3 xl:grid-cols-4">
             {statusDist.map(([s, n]) => {
               const t = statusTone(s);
               const active = statusFilter === s;
@@ -626,17 +681,31 @@ export default function PenyaluranDashboard({
                 <button
                   key={s}
                   onClick={() => setStatusFilter(active ? '' : s)}
-                  className={`flex-1 basis-44 min-w-0 flex items-center gap-3 px-3.5 py-3 rounded-xl ring-1 transition-all text-left ${t.chip} ${active ? 'ring-2 ring-offset-1 shadow-sm' : 'hover:shadow-sm'}`}
+                  title={s}
+                  className={`flex min-w-0 flex-col rounded-xl border bg-white p-3 text-left transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900/20 ${
+                    active
+                      ? 'border-slate-900 ring-1 ring-slate-900'
+                      : 'border-slate-200 hover:border-slate-300 hover:bg-slate-50'
+                  }`}
                 >
-                  <span className={`h-9 w-9 rounded-lg flex items-center justify-center shrink-0 ${t.chip}`}>
-                    <t.Icon className="h-4 w-4" />
-                  </span>
-                  <div className="min-w-0 flex-1">
-                    <div className="text-[11.5px] font-semibold truncate leading-tight" title={s}>{s}</div>
-                    <div className="mt-0.5 flex items-baseline gap-1.5">
-                      <span className="text-[18px] font-extrabold leading-none tabular-nums">{fmtInt(n)}</span>
-                      <span className="text-[10.5px] font-medium opacity-70">desa · {pct}%</span>
-                    </div>
+                  <div className="flex items-start gap-2">
+                    <span className={`mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-md ${t.chip}`}>
+                      <t.Icon className="h-3.5 w-3.5" />
+                    </span>
+                    <span className="min-w-0 flex-1 text-[11.5px] font-semibold leading-snug text-slate-700 line-clamp-2">
+                      {s}
+                    </span>
+                  </div>
+
+                  <div className="mt-2 flex items-baseline gap-1.5">
+                    <span className="text-[19px] font-bold leading-none tabular-nums text-slate-900">
+                      {fmtInt(n)}
+                    </span>
+                    <span className="text-[10.5px] font-medium text-slate-400">desa · {pct}%</span>
+                  </div>
+
+                  <div className="mt-2 h-1 w-full overflow-hidden rounded-full bg-slate-100">
+                    <div className={`h-full rounded-full ${t.dot}`} style={{ width: `${Math.max(pct, 2)}%` }} />
                   </div>
                 </button>
               );
@@ -680,7 +749,7 @@ export default function PenyaluranDashboard({
                       <div className="overflow-x-auto bg-slate-50/50">
                         <table className="w-full text-[12.5px]">
                           <thead>
-                            <tr className="text-slate-400 text-[10.5px] font-bold uppercase tracking-wide">
+                            <tr className="text-brand-600 text-[10.5px] font-bold uppercase tracking-wide">
                               <th className="text-left font-bold px-4 py-2 w-8">#</th>
                               <th className="text-left font-bold px-2 py-2">Desa</th>
                               {showDim && <th className="text-left font-bold px-2 py-2">{dimLabel}</th>}

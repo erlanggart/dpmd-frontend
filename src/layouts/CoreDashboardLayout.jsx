@@ -1,61 +1,64 @@
 // src/layouts/CoreDashboardLayout.jsx
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { Outlet, NavLink, useNavigate, useLocation } from 'react-router-dom';
-import { 
-  LayoutDashboard, 
-  Users, 
-  Briefcase, 
-  TrendingUp, 
-  Menu, 
-  X,
+import {
+  LayoutDashboard,
+  Store,
+  Landmark,
+  MapPin,
+  Scale,
+  Users,
+  Briefcase,
+  HandCoins,
+  Wallet,
+  TrendingUp,
+  Menu,
   PanelLeftClose,
   PanelLeftOpen,
-  ChevronDown,
-  DollarSign,
-  Landmark,
-  ArrowLeft,
-  Home
+  Home,
 } from 'lucide-react';
-import AnimatedIcon from '../components/AnimatedIcon';
 import { useAuth } from '../context/AuthContext';
 
+const ROLE_BASE_PATH = {
+  superadmin: '/superadmin/dashboard',
+  admin: '/superadmin/dashboard',
+  kepala_dinas: '/dpmd',
+  sekretaris_dinas: '/dpmd',
+  kepala_bidang: '/dpmd',
+  ketua_tim: '/dpmd',
+  pegawai: '/dpmd',
+};
+
+const MENU_ITEMS = [
+  { path: '/core-dashboard/dashboard', icon: LayoutDashboard, label: 'Dashboard', end: true },
+  { path: '/core-dashboard/statistik-bumdes', icon: Store, label: 'Statistik BUMDes' },
+  { path: '/core-dashboard/statistik-kelembagaan', icon: Landmark, label: 'Statistik Kelembagaan' },
+  { path: '/core-dashboard/statistik-profil-desa', icon: MapPin, label: 'Statistik Profil Desa' },
+  { path: '/core-dashboard/statistik-produk-hukum', icon: Scale, label: 'Statistik Produk Hukum' },
+  { path: '/core-dashboard/statistik-aparatur-desa', icon: Users, label: 'Aparatur Desa' },
+  { path: '/core-dashboard/statistik-perjadin', icon: Briefcase, label: 'Perjalanan Dinas' },
+  { path: '/core-dashboard/statistik-bankeu', icon: HandCoins, label: 'Statistik Bankeu' },
+  { path: '/core-dashboard/statistik-kkd', icon: Wallet, label: 'Keuangan Desa' },
+  { path: '/core-dashboard/trends', icon: TrendingUp, label: 'Analisis Trend' },
+];
+
+const isDesktop = () =>
+  typeof window === 'undefined' ? true : window.innerWidth >= 1024;
+
 const CoreDashboardLayout = () => {
-  const [sidebarOpen, setSidebarOpen] = useState(true);
-  const [expandedDd, setExpandedDd] = useState(false);
-  const [expandedBhprd, setExpandedBhprd] = useState(false);
-  const [hoveredItem, setHoveredItem] = useState(null);
+  const [sidebarOpen, setSidebarOpen] = useState(isDesktop);
   const navigate = useNavigate();
   const location = useLocation();
   const { user } = useAuth();
 
-  // Determine base path based on user role (for Home button)
-  const getBasePath = () => {
-    const rolePathMap = {
-      'superadmin': '/superadmin/dashboard',
-      'admin': '/superadmin/dashboard',
-      'kepala_dinas': '/dpmd',
-      'sekretaris_dinas': '/dpmd',
-      'kepala_bidang': '/dpmd',
-      'ketua_tim': '/dpmd',
-      'pegawai': '/dpmd'
-    };
-    return rolePathMap[user?.role] || '/dpmd';
-  };
+  const basePath = ROLE_BASE_PATH[user?.role] || '/dpmd';
 
-  const basePath = getBasePath();
-
-  // Handle resize with debounce
+  // Sidebar mengikuti lebar layar
   useEffect(() => {
     let timeoutId;
     const handleResize = () => {
       clearTimeout(timeoutId);
-      timeoutId = setTimeout(() => {
-        if (window.innerWidth >= 1024) {
-          setSidebarOpen(true);
-        } else {
-          setSidebarOpen(false);
-        }
-      }, 100);
+      timeoutId = setTimeout(() => setSidebarOpen(isDesktop()), 100);
     };
 
     window.addEventListener('resize', handleResize);
@@ -65,280 +68,153 @@ const CoreDashboardLayout = () => {
     };
   }, []);
 
+  // Di mobile, tutup sidebar setiap kali pindah halaman
+  useEffect(() => {
+    if (!isDesktop()) setSidebarOpen(false);
+  }, [location.pathname]);
+
   const toggleSidebar = useCallback(() => {
-    setSidebarOpen(prev => !prev);
+    setSidebarOpen((prev) => !prev);
   }, []);
 
-  const menuItems = useMemo(() => [
-    {
-      path: '/core-dashboard/dashboard',
-      icon: 'dashboard',
-      label: 'Dashboard',
-      end: true,
-      gradient: 'from-cyan-500 to-blue-600',
-      color: 'text-cyan-600'
-    },
-    
-    {
-      path: '/core-dashboard/statistik-bumdes',
-      icon: 'users',
-      label: 'Statistik BUMDes',
-      gradient: 'from-purple-500 to-indigo-600',
-      color: 'text-purple-600'
-    },
-
-    {
-      path: '/core-dashboard/statistik-kelembagaan',
-      icon: 'landmark',
-      label: 'Statistik Kelembagaan',
-      gradient: 'from-cyan-500 to-teal-600',
-      color: 'text-cyan-600'
-    },
-
-    {
-      path: '/core-dashboard/statistik-profil-desa',
-      icon: 'chart',
-      label: 'Statistik Profil Desa',
-      gradient: 'from-amber-500 to-orange-600',
-      color: 'text-amber-600'
-    },
-
-    {
-      path: '/core-dashboard/statistik-produk-hukum',
-      icon: 'file',
-      label: 'Statistik Produk Hukum',
-      gradient: 'from-violet-500 to-purple-600',
-      color: 'text-violet-600'
-    },
-
-    {
-      path: '/core-dashboard/statistik-aparatur-desa',
-      icon: 'users',
-      label: 'Aparatur Desa',
-      gradient: 'from-teal-500 to-emerald-600',
-      color: 'text-teal-600'
-    },
-
-    {
-      path: '/core-dashboard/statistik-perjadin',
-      icon: 'briefcase',
-      label: 'Perjalanan Dinas',
-      gradient: 'from-amber-500 to-orange-600',
-      color: 'text-amber-600'
-    },
-    {
-      path: '/core-dashboard/statistik-bankeu',
-      icon: 'dollar',
-      label: 'Statistik Bankeu',
-      gradient: 'from-emerald-500 to-teal-600',
-      color: 'text-emerald-600'
-    },
-    {
-      path: '/core-dashboard/statistik-kkd',
-      icon: 'dollar',
-      label: 'Keuangan Desa',
-      gradient: 'from-blue-500 to-violet-600',
-      color: 'text-blue-600'
-    },
-    {
-      path: '/core-dashboard/trends',
-      icon: 'trending',
-      label: 'Analisis Trend',
-      gradient: 'from-red-500 to-pink-600',
-      color: 'text-red-600'
-    },{
-      path: '/core-dashboard/laporan-desa',
-      icon: 'briefcase',
-      label: 'Laporan Desa',
-      gradient: 'from-teal-500 to-cyan-600',
-      color: 'text-teal-600'
-    }
-  ], []);
+  const menuItems = useMemo(() => MENU_ITEMS, []);
+  const roleLabel = user?.role?.replace(/_/g, ' ') || 'Pengguna';
 
   return (
-    <div className="flex h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 overflow-hidden">
-      {/* Overlay for mobile */}
+    <div className="flex h-screen overflow-hidden bg-slate-50">
+      {/* Overlay mobile */}
       {sidebarOpen && (
-        <div 
-          className="fixed inset-0 bg-black/50 z-40 lg:hidden transition-opacity duration-200"
+        <div
+          className="fixed inset-0 z-40 bg-slate-950/60 backdrop-blur-sm transition-opacity duration-200 lg:hidden"
           onClick={toggleSidebar}
+          aria-hidden="true"
         />
       )}
 
       {/* Sidebar */}
       <aside
-        className={`fixed lg:relative z-50 h-full bg-white shadow-2xl flex flex-col border-r border-gray-100
-          transition-[transform,width] duration-300 ease-[cubic-bezier(0.4,0,0.2,1)]
+        className={`fixed z-50 flex h-full flex-col border-r border-slate-200 bg-white
+          transition-[transform,width] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] lg:relative
           ${sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
-          ${sidebarOpen ? 'w-64' : 'lg:w-20'}
+          ${sidebarOpen ? 'w-64' : 'lg:w-[76px]'}
         `}
       >
-        {/* Gradient Accent Line */}
-        <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-cyan-400 via-blue-500 to-purple-500"></div>
-
-        {/* Sidebar Header */}
-        <div className="relative p-4 border-b border-gray-100 flex items-center justify-between flex-shrink-0 bg-gradient-to-r from-blue-50 to-purple-50">
+        {/* Header */}
+        <div
+          className={`flex h-16 flex-shrink-0 items-center border-b border-slate-200 px-3 ${
+            sidebarOpen ? 'justify-between' : 'lg:justify-center'
+          }`}
+        >
           {sidebarOpen && (
-            <div className="flex items-center justify-center flex-1">
-              <img 
-                src="/logo-dpmd.png" 
-                alt="DPMD Logo" 
-                className="h-20 transition-opacity duration-300"
-              />
+            <div className="flex min-w-0 items-center gap-2.5">
+              {/* Kotak gelap hanya di balik logo — huruf "MD" pada logo berwarna
+                  putih sehingga tidak terbaca di atas latar putih. */}
+              <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg bg-slate-950">
+                <img src="/logo-dpmd.png" alt="Logo DPMD" className="h-7 w-7 object-contain" />
+              </div>
+              <div className="min-w-0">
+                <p className="truncate text-sm font-semibold tracking-tight text-slate-900">
+                  Core Dashboard
+                </p>
+                <p className="truncate text-[10px] font-semibold uppercase tracking-[0.16em] text-brand-600">
+                  DPMD
+                </p>
+              </div>
             </div>
           )}
           <button
             onClick={toggleSidebar}
-            className={`p-2 bg-blue-100 hover:bg-blue-200 rounded-lg transition-colors duration-200 flex-shrink-0 group ${!sidebarOpen ? 'mx-auto' : ''}`}
-            aria-label={sidebarOpen ? 'Tutup Sidebar' : 'Buka Sidebar'}
-            title={sidebarOpen ? 'Tutup Sidebar' : 'Buka Sidebar'}
+            className="flex-shrink-0 rounded-lg p-2 text-slate-400 transition-colors duration-200 hover:bg-slate-100 hover:text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900/20"
+            aria-label={sidebarOpen ? 'Tutup sidebar' : 'Buka sidebar'}
+            title={sidebarOpen ? 'Tutup sidebar' : 'Buka sidebar'}
           >
             {sidebarOpen ? (
-              <PanelLeftClose className="w-5 h-5 text-blue-600 group-hover:scale-110 transition-transform" />
+              <PanelLeftClose className="h-5 w-5" />
             ) : (
-              <PanelLeftOpen className="w-5 h-5 text-blue-600 group-hover:scale-110 transition-transform" />
+              <PanelLeftOpen className="h-5 w-5" />
             )}
           </button>
         </div>
 
-        {/* Back to Dashboard Button */}
-        <div className="p-3 border-b border-gray-100">
-          <button
-            onClick={() => navigate(basePath)}
-            onMouseEnter={() => setHoveredItem('back')}
-            onMouseLeave={() => setHoveredItem(null)}
-            className="group relative flex items-center gap-3 px-3 py-2.5 w-full rounded-xl text-blue-600 hover:bg-gradient-to-r hover:from-blue-500 hover:to-indigo-600 hover:text-white transition-all duration-200 shadow-sm hover:shadow-md"
-            title={!sidebarOpen ? 'Home' : ''}
-          >
-            <div className={`relative ${sidebarOpen ? 'flex-shrink-0' : 'mx-auto'}`}>
-              <Home className="w-5 h-5" />
-            </div>
-            {sidebarOpen && (
-              <span className="relative font-semibold truncate text-sm">Home</span>
-            )}
-          </button>
-        </div>
-
-        {/* Navigation Menu */}
-        <nav className="relative flex-1 p-3 space-y-1.5 overflow-y-auto scrollbar-thin scrollbar-thumb-gray-200 scrollbar-track-transparent">
-          {menuItems.map((item, index) => {
-            // Handle menu with submenu (DD, BHPRD)
-            if (item.submenu) {
-              const isSubmenuActive = item.submenu.some(sub => 
-                location.pathname === sub.path
-              );
-
-              // Determine which state to use based on label
-              const isExpanded = item.label === 'Statistik DD' ? expandedDd : 
-                                 item.label === 'Statistik BHPRD' ? expandedBhprd : false;
-              const setExpanded = item.label === 'Statistik DD' ? setExpandedDd : 
-                                   item.label === 'Statistik BHPRD' ? setExpandedBhprd : () => {};
-
-              return (
-                <div key={index}>
-                  <button
-                    onClick={() => sidebarOpen && setExpanded(!isExpanded)}
-                    onMouseEnter={() => setHoveredItem(item.label)}
-                    onMouseLeave={() => setHoveredItem(null)}
-                    className={`group relative flex items-center gap-3 px-3 py-2.5 rounded-xl w-full
-                      transition-colors duration-200
-                      ${isSubmenuActive
-                        ? `bg-gradient-to-r ${item.gradient} text-white shadow-md`
-                        : `${item.color} hover:bg-gradient-to-r ${item.gradient} hover:text-white hover:shadow-md`
-                      }`}
-                  >
-                    <div className={`relative ${sidebarOpen ? '' : 'mx-auto'}`}>
-                      <AnimatedIcon 
-                        type={item.icon} 
-                        isActive={isSubmenuActive} 
-                        isHovered={hoveredItem === item.label}
-                        className="w-5 h-5"
-                      />
-                    </div>
-                    {sidebarOpen && (
-                      <>
-                        <span className="relative font-semibold flex-1 text-left truncate text-sm">{item.label}</span>
-                        <ChevronDown 
-                          className={`relative w-4 h-4 transition-transform duration-200 flex-shrink-0
-                            ${isExpanded ? 'rotate-180' : ''}
-                          `}
-                        />
-                      </>
-                    )}
-                  </button>
-                  {sidebarOpen && isExpanded && (
-                    <div className="ml-8 mt-1.5 space-y-1">
-                      {item.submenu.map((subitem, subindex) => (
-                        <NavLink
-                          key={subindex}
-                          to={subitem.path}
-                          className={({ isActive }) =>
-                            `flex items-center px-3 py-2 rounded-lg text-sm transition-colors duration-200 ${
-                              isActive
-                                ? `bg-gradient-to-r ${item.gradient} text-white font-semibold shadow-sm`
-                                : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
-                            }`
-                          }
-                        >
-                          <div className="w-1.5 h-1.5 rounded-full bg-current mr-2"></div>
-                          <span className="truncate">{subitem.label}</span>
-                        </NavLink>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              );
-            }
-
-            // Regular menu item
+        {/* Menu */}
+        <nav className="flex-1 space-y-0.5 overflow-y-auto p-3 scrollbar-thin scrollbar-thumb-slate-200 scrollbar-track-transparent">
+          {sidebarOpen && (
+            <p className="px-3 pb-2 pt-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-brand-600">
+              Modul
+            </p>
+          )}
+          {menuItems.map((item) => {
+            const Icon = item.icon;
             return (
               <NavLink
-                key={index}
+                key={item.path}
                 to={item.path}
                 end={item.end}
-                onMouseEnter={() => setHoveredItem(item.label)}
-                onMouseLeave={() => setHoveredItem(null)}
+                title={!sidebarOpen ? item.label : undefined}
                 className={({ isActive }) =>
-                  `group relative flex items-center gap-3 px-3 py-2.5 rounded-xl transition-colors duration-200 ${
+                  `group relative flex items-center gap-3 rounded-lg py-2.5 text-sm transition-colors duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900/20 ${
+                    sidebarOpen ? 'px-3' : 'px-3 lg:justify-center lg:px-0'
+                  } ${
                     isActive
-                      ? `bg-gradient-to-r ${item.gradient} text-white shadow-md`
-                      : `${item.color} hover:bg-gradient-to-r ${item.gradient} hover:text-white hover:shadow-md`
+                      ? 'bg-slate-900 font-semibold text-white shadow-sm shadow-slate-900/20'
+                      : 'font-medium text-slate-600 hover:bg-slate-100 hover:text-slate-900'
                   }`
                 }
-                title={!sidebarOpen ? item.label : ''}
               >
-                <div className={`relative ${sidebarOpen ? 'flex-shrink-0' : 'mx-auto'}`}>
-                  <AnimatedIcon 
-                    type={item.icon} 
-                    isActive={location.pathname === item.path} 
-                    isHovered={hoveredItem === item.label}
-                    className="w-5 h-5"
-                  />
-                </div>
-                {sidebarOpen && (
-                  <span className="relative font-semibold truncate text-sm">{item.label}</span>
+                {({ isActive }) => (
+                  <>
+                    <Icon className="h-[18px] w-[18px] flex-shrink-0" strokeWidth={isActive ? 2.2 : 1.9} />
+                    {sidebarOpen && <span className="truncate">{item.label}</span>}
+                  </>
                 )}
               </NavLink>
             );
           })}
         </nav>
+
+        {/* Footer: identitas + kembali */}
+        <div className="flex-shrink-0 border-t border-slate-200 p-3">
+          {sidebarOpen && (
+            <div className="mb-2 flex items-center gap-2.5 rounded-lg px-3 py-2">
+              <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-slate-100 text-xs font-semibold text-brand-700 ring-1 ring-slate-200">
+                {(user?.nama || 'U').charAt(0).toUpperCase()}
+              </div>
+              <div className="min-w-0">
+                <p className="truncate text-xs font-medium text-slate-900">
+                  {user?.nama || 'Pengguna'}
+                </p>
+                <p className="truncate text-[11px] capitalize text-slate-500">{roleLabel}</p>
+              </div>
+            </div>
+          )}
+          <button
+            onClick={() => navigate(basePath)}
+            title={!sidebarOpen ? 'Kembali ke beranda' : undefined}
+            className={`flex w-full items-center gap-3 rounded-lg py-2.5 text-sm font-medium text-slate-600 transition-colors duration-200 hover:bg-slate-100 hover:text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900/20 ${
+              sidebarOpen ? 'px-3' : 'px-3 lg:justify-center lg:px-0'
+            }`}
+          >
+            <Home className="h-[18px] w-[18px] flex-shrink-0" strokeWidth={1.9} />
+            {sidebarOpen && <span className="truncate">Kembali ke beranda</span>}
+          </button>
+        </div>
       </aside>
 
-      {/* Main Content */}
+      {/* Konten */}
       <main className="flex-1 overflow-y-auto">
-        {/* Mobile Menu Button */}
+        {/* Tombol menu mobile */}
         {!sidebarOpen && (
-          <div className="lg:hidden fixed top-4 left-4 z-30">
+          <div className="fixed left-4 top-4 z-30 lg:hidden">
             <button
               onClick={toggleSidebar}
-              className="p-3 bg-white rounded-lg shadow-lg hover:bg-gray-100 transition-colors"
-              aria-label="Open menu"
+              className="rounded-xl border border-slate-200 bg-white p-3 text-slate-700 shadow-lg shadow-slate-900/5 transition-colors hover:bg-slate-50"
+              aria-label="Buka menu"
             >
-              <Menu className="w-6 h-6 text-gray-700" />
+              <Menu className="h-5 w-5" />
             </button>
           </div>
         )}
-        
+
         <Outlet />
       </main>
     </div>

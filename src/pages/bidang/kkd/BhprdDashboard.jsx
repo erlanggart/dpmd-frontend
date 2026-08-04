@@ -2,9 +2,10 @@
 import { FileCheck } from 'lucide-react';
 import PenyaluranDashboard from './PenyaluranDashboard';
 
-export default function BhprdDashboard() {
+export default function BhprdDashboard(props) {
   return (
     <PenyaluranDashboard
+      {...props}
       sumberDana="BHPRD"
       title="Bagi Hasil Pajak & Retribusi Daerah"
       short="BHPRD"

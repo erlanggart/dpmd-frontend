@@ -2,9 +2,10 @@
 import { TrendingUp } from 'lucide-react';
 import PenyaluranDashboard from '../PenyaluranDashboard';
 
-export default function DdDashboard() {
+export default function DdDashboard(props) {
   return (
     <PenyaluranDashboard
+      {...props}
       sumberDana="DD REGULER"
       title="Dana Desa"
       short="DD"

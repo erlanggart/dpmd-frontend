@@ -354,18 +354,18 @@ const StatistikPerjadinDashboard = () => {
   // Loading State
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 flex items-center justify-center">
+      <div className="min-h-screen bg-slate-50 flex items-center justify-center">
         <motion.div 
           initial={{ opacity: 0, scale: 0.9 }}
           animate={{ opacity: 1, scale: 1 }}
           className="text-center"
         >
           <div className="relative w-24 h-24 mx-auto mb-6">
-            <div className="absolute inset-0 rounded-full border-4 border-indigo-200"></div>
+            <div className="absolute inset-0 rounded-full border-4 border-slate-200"></div>
             <div className="absolute inset-0 rounded-full border-4 border-transparent border-t-indigo-600 animate-spin"></div>
-            <Briefcase className="absolute inset-0 m-auto w-10 h-10 text-indigo-600" />
+            <Briefcase className="absolute inset-0 m-auto w-10 h-10 text-brand-600" />
           </div>
-          <p className="text-gray-600 font-medium">Memuat Data Perjalanan Dinas...</p>
+          <p className="text-slate-600 font-medium">Memuat Data Perjalanan Dinas...</p>
         </motion.div>
       </div>
     );
@@ -374,20 +374,20 @@ const StatistikPerjadinDashboard = () => {
   // Error State
   if (error) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 flex items-center justify-center p-4">
+      <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
         <motion.div 
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="bg-white rounded-3xl p-8 shadow-xl border border-gray-200 max-w-md w-full text-center"
+          className="bg-white rounded-2xl p-8 shadow-sm border border-slate-200 max-w-md w-full text-center"
         >
           <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
             <FileText className="w-8 h-8 text-red-500" />
           </div>
-          <h3 className="text-xl font-bold text-gray-800 mb-2">Gagal Memuat Data</h3>
-          <p className="text-gray-500 mb-6">{error}</p>
+          <h3 className="text-xl font-bold text-slate-800 mb-2">Gagal Memuat Data</h3>
+          <p className="text-slate-500 mb-6">{error}</p>
           <button
             onClick={() => { clearCache('statistik-perjadin'); fetchData(); }}
-            className="px-6 py-3 bg-gradient-to-r from-red-500 to-pink-500 text-white rounded-xl hover:shadow-lg hover:shadow-red-500/30 transition-all"
+            className="px-6 py-3 bg-red-600 text-white rounded-xl hover:shadow-lg hover:shadow-red-500/30 transition-all"
           >
             Coba Lagi
           </button>
@@ -399,26 +399,21 @@ const StatistikPerjadinDashboard = () => {
   const stats = dashboardData || {};
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 p-6">
+    <div className="min-h-screen bg-slate-50 p-4 pt-20 sm:p-6 lg:pt-6">
       <div className="max-w-7xl mx-auto">
         
         {/* Hero Header */}
         <motion.div 
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-amber-500 via-orange-500 to-red-500 p-8 mb-8 shadow-2xl"
+          className="relative overflow-hidden rounded-2xl bg-slate-900 p-6 sm:p-8 mb-6"
         >
-          {/* Decorative Elements */}
-          <div className="absolute top-0 right-0 w-64 h-64 bg-white/30 rounded-full -mr-32 -mt-32"></div>
-          <div className="absolute bottom-0 left-0 w-48 h-48 bg-orange-200/30 rounded-full -ml-24 -mb-24"></div>
-          <div className="absolute top-1/2 right-1/4 w-32 h-32 bg-yellow-300/30 rounded-full blur-2xl"></div>
-          
           <div className="relative z-10">
             <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
               <div>
                 <div className="flex items-center gap-3 mb-3">
-                  <div className="p-2 bg-white/50 rounded-xl backdrop-blur-sm shadow-lg">
-                    <Briefcase className="w-8 h-8 text-orange-700" />
+                  <div className="p-2 bg-white/10 rounded-xl ring-1 ring-white/20">
+                    <Briefcase className="w-7 h-7 text-white" />
                   </div>
                   <div>
                     <h1 className="text-3xl md:text-4xl font-bold text-white">
@@ -441,7 +436,7 @@ const StatistikPerjadinDashboard = () => {
                 <button
                   onClick={() => { clearCache('statistik-perjadin'); fetchData(); }}
                   disabled={loading}
-                  className="p-3 bg-white/30 hover:bg-white/50 rounded-xl transition-all border border-white/50 shadow-lg"
+                  className="p-3 bg-white/10 hover:bg-white/20 rounded-xl transition-colors ring-1 ring-white/20"
                 >
                   <FiRefreshCw className={`w-5 h-5 text-white ${loading ? 'animate-spin' : ''}`} />
                 </button>
@@ -451,10 +446,10 @@ const StatistikPerjadinDashboard = () => {
             {/* Quick Stats */}
             <div className="mt-6 grid grid-cols-2 md:grid-cols-4 gap-4">
               {[
-                { label: 'Total Kegiatan', value: stats.total || 0, icon: FileText, color: 'from-cyan-400 to-blue-500' },
-                { label: 'Minggu Ini', value: stats.minggu_ini || 0, icon: Calendar, color: 'from-pink-400 to-rose-500' },
-                { label: 'Bulan Ini', value: stats.bulan_ini || 0, icon: Clock, color: 'from-amber-400 to-orange-500' },
-                { label: 'Total Pegawai', value: stats.total_pegawai || 0, icon: Users, color: 'from-emerald-400 to-green-500' },
+                { label: 'Total Kegiatan', value: stats.total || 0, icon: FileText },
+                { label: 'Minggu Ini', value: stats.minggu_ini || 0, icon: Calendar },
+                { label: 'Bulan Ini', value: stats.bulan_ini || 0, icon: Clock },
+                { label: 'Total Pegawai', value: stats.total_pegawai || 0, icon: Users },
               ].map((stat, index) => (
                 <motion.div
                   key={stat.label}
@@ -464,12 +459,12 @@ const StatistikPerjadinDashboard = () => {
                   className="bg-white/90 backdrop-blur-md rounded-2xl p-4 border border-white/50 hover:shadow-lg transition-all group shadow-lg"
                 >
                   <div className="flex items-center gap-3">
-                    <div className={`p-2 rounded-xl bg-gradient-to-br ${stat.color} shadow-lg`}>
+                    <div className="p-2 rounded-xl bg-slate-900">
                       <stat.icon className="w-5 h-5 text-white" />
                     </div>
                     <div>
-                      <p className="text-gray-600 text-xs font-medium">{stat.label}</p>
-                      <p className="text-gray-800 text-xl font-bold">{stat.value}</p>
+                      <p className="text-slate-600 text-xs font-medium">{stat.label}</p>
+                      <p className="text-slate-800 text-xl font-bold">{stat.value}</p>
                     </div>
                   </div>
                 </motion.div>
@@ -483,19 +478,19 @@ const StatistikPerjadinDashboard = () => {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.3 }}
-          className="bg-white rounded-3xl p-6 mb-8 border border-gray-200 shadow-xl"
+          className="bg-white rounded-2xl p-6 mb-8 border border-slate-200 shadow-sm"
         >
           <div className="flex items-center justify-between mb-6">
             <div className="flex items-center gap-3">
-              <div className="p-2 bg-gradient-to-br from-orange-500 to-red-500 rounded-xl">
+              <div className="p-2 bg-slate-900 rounded-xl">
                 <Building2 className="w-5 h-5 text-white" />
               </div>
-              <h3 className="text-xl font-bold text-gray-800">Kegiatan per Bidang</h3>
+              <h3 className="text-xl font-bold text-slate-800">Kegiatan per Bidang</h3>
             </div>
             {selectedBidang && (
               <button
                 onClick={() => setSelectedBidang(null)}
-                className="flex items-center gap-2 px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl text-sm font-medium transition-colors border border-gray-300"
+                className="flex items-center gap-2 px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-sm font-medium transition-colors border border-slate-300"
               >
                 ✕ Reset Filter
               </button>
@@ -505,15 +500,7 @@ const StatistikPerjadinDashboard = () => {
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             {(stats.breakdown_per_bidang || []).map((bidang, index) => {
               const isSelected = selectedBidang === bidang.id_bidang;
-              const colors = [
-                { gradient: 'from-blue-500 to-indigo-600', bg: 'bg-blue-50', text: 'text-blue-600' },
-                { gradient: 'from-purple-500 to-pink-600', bg: 'bg-purple-50', text: 'text-purple-600' },
-                { gradient: 'from-emerald-500 to-teal-600', bg: 'bg-emerald-50', text: 'text-emerald-600' },
-                { gradient: 'from-amber-500 to-orange-600', bg: 'bg-amber-50', text: 'text-amber-600' },
-                { gradient: 'from-rose-500 to-pink-600', bg: 'bg-rose-50', text: 'text-rose-600' },
-                { gradient: 'from-cyan-500 to-blue-600', bg: 'bg-cyan-50', text: 'text-cyan-600' },
-              ];
-              const color = colors[index % colors.length];
+              const color = { bg: 'bg-slate-100', text: 'text-brand-600' };
 
               return (
                 <motion.div 
@@ -526,12 +513,12 @@ const StatistikPerjadinDashboard = () => {
                   onMouseEnter={() => setHoveredCard(bidang.id_bidang)}
                   onMouseLeave={() => setHoveredCard(null)}
                   className={`relative overflow-hidden rounded-2xl p-5 cursor-pointer transition-all duration-300 bg-white border ${
-                    isSelected ? 'ring-4 ring-orange-300 shadow-2xl border-orange-400' : 'border-gray-200 hover:shadow-lg'
+                    isSelected ? 'ring-2 ring-slate-300 border-slate-300' : 'border-slate-200 hover:border-slate-300'
                   }`}
                 >
                   {/* Hover Gradient */}
-                  <div 
-                    className={`absolute inset-0 bg-gradient-to-br ${color.gradient} opacity-0 transition-opacity duration-300 ${
+                  <div
+                    className={`absolute inset-0 bg-slate-900 opacity-0 transition-opacity duration-300 ${
                       hoveredCard === bidang.id_bidang || isSelected ? 'opacity-100' : ''
                     }`}
                   ></div>
@@ -547,13 +534,13 @@ const StatistikPerjadinDashboard = () => {
                       </div>
                     </div>
                     <p className={`text-sm font-medium mb-1 transition-colors ${
-                      hoveredCard === bidang.id_bidang || isSelected ? 'text-white' : 'text-gray-600'
+                      hoveredCard === bidang.id_bidang || isSelected ? 'text-white' : 'text-slate-600'
                     }`}>{bidang.nama}</p>
                     <p className={`text-3xl font-bold mb-1 transition-colors ${
-                      hoveredCard === bidang.id_bidang || isSelected ? 'text-white' : 'text-gray-800'
+                      hoveredCard === bidang.id_bidang || isSelected ? 'text-white' : 'text-slate-800'
                     }`}>{bidang.jumlah}</p>
                     <p className={`text-xs transition-colors ${
-                      hoveredCard === bidang.id_bidang || isSelected ? 'text-white/80' : 'text-gray-500'
+                      hoveredCard === bidang.id_bidang || isSelected ? 'text-white/80' : 'text-slate-500'
                     }`}>Kegiatan</p>
                   </div>
                 </motion.div>
@@ -567,20 +554,20 @@ const StatistikPerjadinDashboard = () => {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.35 }}
-          className="bg-white rounded-3xl p-6 mb-8 border border-gray-200 shadow-xl"
+          className="bg-white rounded-2xl p-6 mb-8 border border-slate-200 shadow-sm"
         >
           <div className="flex items-center gap-2 mb-6">
-            <div className="p-2 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl">
+            <div className="p-2 bg-slate-900 rounded-xl">
               <Calendar className="w-5 h-5 text-white" />
             </div>
-            <h3 className="text-xl font-bold text-gray-800">Kalender Mingguan</h3>
+            <h3 className="text-xl font-bold text-slate-800">Kalender Mingguan</h3>
             <div className="ml-auto flex items-center gap-2">
               <button
                 onClick={() => setIsAutoTransition(!isAutoTransition)}
                 className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-all ${
                   isAutoTransition
-                    ? 'bg-blue-100 text-blue-700 hover:bg-blue-200'
-                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                    ? 'bg-slate-100 text-slate-700 hover:bg-slate-100'
+                    : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
                 }`}
               >
                 {isAutoTransition ? <Pause className="w-3 h-3" /> : <Play className="w-3 h-3" />}
@@ -603,31 +590,31 @@ const StatistikPerjadinDashboard = () => {
                   onClick={() => handleDayClick(index)}
                   className={`relative text-center p-3 rounded-xl transition-all duration-300 transform ${
                     isSelected
-                      ? 'bg-gradient-to-br from-blue-500 to-indigo-600 text-white scale-105 shadow-lg'
+                      ? 'bg-slate-900 text-white scale-105 shadow-lg'
                       : isToday
-                      ? 'bg-green-100 border-2 border-green-500 hover:scale-102'
-                      : 'bg-gray-50 border border-gray-200 hover:bg-gray-100 hover:scale-102'
+                      ? 'bg-green-100 border-2 border-green-500'
+                      : 'bg-slate-50 border border-slate-200 hover:bg-slate-100'
                   }`}
                 >
                   <p className={`text-xs font-medium ${
-                    isSelected ? 'text-white/80' : isToday ? 'text-green-700' : 'text-gray-600'
+                    isSelected ? 'text-white/80' : isToday ? 'text-green-700' : 'text-slate-600'
                   }`}>
                     {formatted.day}
                   </p>
                   <p className={`text-lg font-bold mt-1 ${
-                    isSelected ? 'text-white' : isToday ? 'text-green-700' : 'text-gray-800'
+                    isSelected ? 'text-white' : isToday ? 'text-green-700' : 'text-slate-800'
                   }`}>
                     {formatted.date}
                   </p>
                   <p className={`text-xs ${
-                    isSelected ? 'text-white/70' : isToday ? 'text-green-600' : 'text-gray-500'
+                    isSelected ? 'text-white/70' : isToday ? 'text-green-600' : 'text-slate-500'
                   }`}>
                     {formatted.monthName}
                   </p>
                   {/* Kegiatan indicator */}
                   {kegiatanList.length > 0 && (
                     <div className={`absolute -top-1 -right-1 w-5 h-5 rounded-full flex items-center justify-center text-xs font-bold ${
-                      isSelected ? 'bg-green-400 text-white' : 'bg-orange-500 text-white'
+                      isSelected ? 'bg-slate-900 text-white' : 'bg-slate-900 text-white'
                     }`}>
                       {kegiatanList.length}
                     </div>
@@ -644,9 +631,9 @@ const StatistikPerjadinDashboard = () => {
           {/* Auto-transition progress bar */}
           {isAutoTransition && (
             <div className="mb-4">
-              <div className="h-1 bg-gray-200 rounded-full overflow-hidden">
+              <div className="h-1 bg-slate-200 rounded-full overflow-hidden">
                 <div
-                  className="h-full bg-gradient-to-r from-blue-500 to-indigo-600 transition-all duration-100"
+                  className="h-full bg-slate-900 transition-all duration-100"
                   style={{
                     width: '100%',
                     animation: 'shrink 4s linear infinite'
@@ -666,8 +653,8 @@ const StatistikPerjadinDashboard = () => {
           <div className={`border-t pt-4 transition-opacity duration-300 ${animating ? 'opacity-0' : 'opacity-100'}`}>
             <div className="flex items-center justify-between mb-3">
               <div className="flex items-center gap-2">
-                <div className="w-3 h-3 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600"></div>
-                <p className="text-sm font-semibold text-gray-700">
+                <div className="w-3 h-3 rounded-full bg-slate-900"></div>
+                <p className="text-sm font-semibold text-slate-700">
                   {selectedDayFormatted?.dayFull}, {selectedDayFormatted?.date} {selectedDayFormatted?.monthName} {selectedDayFormatted?.year}
                 </p>
               </div>
@@ -676,7 +663,7 @@ const StatistikPerjadinDashboard = () => {
                   <div
                     key={i}
                     className={`w-2 h-2 rounded-full transition-all duration-300 ${
-                      i === selectedDayIndex ? 'bg-blue-600 scale-125' : 'bg-gray-300'
+                      i === selectedDayIndex ? 'bg-slate-900 scale-125' : 'bg-slate-300'
                     }`}
                   />
                 ))}
@@ -692,19 +679,19 @@ const StatistikPerjadinDashboard = () => {
                     initial={{ opacity: 0, x: -10 }}
                     animate={{ opacity: 1, x: 0 }}
                     transition={{ delay: idx * 0.05 }}
-                    className="bg-gradient-to-r from-blue-50 to-indigo-50 p-4 rounded-xl border-l-4 border-blue-500 hover:shadow-md transition-shadow"
+                    className="bg-slate-100 p-4 rounded-xl border-l-4 border-slate-700 hover:shadow-md transition-shadow"
                   >
                     <div className="flex items-start justify-between">
                       <div className="flex-1 min-w-0">
-                        <h4 className="font-semibold text-gray-800 text-sm truncate">
+                        <h4 className="font-semibold text-slate-800 text-sm truncate">
                           {kegiatan.nama_kegiatan}
                         </h4>
                         <div className="flex items-center gap-3 mt-2">
-                          <div className="flex items-center gap-1 text-xs text-gray-500">
+                          <div className="flex items-center gap-1 text-xs text-slate-500">
                             <MapPinLucide className="w-3 h-3" />
                             <span className="truncate">{kegiatan.lokasi || 'Lokasi TBD'}</span>
                           </div>
-                          <div className="flex items-center gap-1 text-xs text-gray-500">
+                          <div className="flex items-center gap-1 text-xs text-slate-500">
                             <Clock className="w-3 h-3" />
                             <span>{formatTime(kegiatan.tanggal_mulai)}</span>
                           </div>
@@ -717,12 +704,12 @@ const StatistikPerjadinDashboard = () => {
                   </motion.div>
                 ))
               ) : (
-                <div className="h-40 flex flex-col items-center justify-center text-gray-400">
-                  <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mb-3">
-                    <Calendar className="w-8 h-8 text-gray-300" />
+                <div className="h-40 flex flex-col items-center justify-center text-slate-400">
+                  <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mb-3">
+                    <Calendar className="w-8 h-8 text-slate-300" />
                   </div>
-                  <p className="font-semibold text-gray-600">Tidak Ada Kegiatan</p>
-                  <p className="text-xs text-gray-400 mt-1 text-center">
+                  <p className="font-semibold text-slate-600">Tidak Ada Kegiatan</p>
+                  <p className="text-xs text-slate-400 mt-1 text-center">
                     Belum ada kegiatan yang dijadwalkan<br />untuk tanggal ini
                   </p>
                 </div>
@@ -738,15 +725,15 @@ const StatistikPerjadinDashboard = () => {
             initial={{ opacity: 0, x: -20 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ delay: 0.4 }}
-            className="bg-white rounded-3xl p-6 border border-gray-200 shadow-xl"
+            className="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm"
           >
             <div className="flex items-center gap-3 mb-6">
-              <div className="p-2 bg-gradient-to-br from-cyan-500 to-blue-500 rounded-xl">
+              <div className="p-2 bg-slate-900 rounded-xl">
                 <BarChart3 className="w-5 h-5 text-white" />
               </div>
               <div>
-                <h3 className="text-lg font-bold text-gray-800">Kegiatan per Bidang</h3>
-                <p className="text-gray-500 text-sm">10 bidang teratas</p>
+                <h3 className="text-lg font-bold text-slate-800">Kegiatan per Bidang</h3>
+                <p className="text-slate-500 text-sm">10 bidang teratas</p>
               </div>
             </div>
             <div className="h-80">
@@ -787,9 +774,9 @@ const StatistikPerjadinDashboard = () => {
                   }}
                 />
               ) : (
-                <div className="h-full flex flex-col items-center justify-center text-gray-400">
-                  <BarChart3 className="w-12 h-12 text-gray-300 mb-3" />
-                  <p className="font-medium text-gray-500">Belum ada data bidang</p>
+                <div className="h-full flex flex-col items-center justify-center text-slate-400">
+                  <BarChart3 className="w-12 h-12 text-slate-300 mb-3" />
+                  <p className="font-medium text-slate-500">Belum ada data bidang</p>
                 </div>
               )}
             </div>
@@ -801,15 +788,15 @@ const StatistikPerjadinDashboard = () => {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.6 }}
-          className="bg-white rounded-3xl p-6 mb-8 border border-gray-200 shadow-xl"
+          className="bg-white rounded-2xl p-6 mb-8 border border-slate-200 shadow-sm"
         >
           <div className="flex items-center gap-3 mb-6">
-            <div className="p-2 bg-gradient-to-br from-indigo-500 to-purple-500 rounded-xl">
+            <div className="p-2 bg-slate-900 rounded-xl">
               <FiTrendingUp className="w-5 h-5 text-white" />
             </div>
             <div>
-              <h3 className="text-lg font-bold text-gray-800">Statistik Kegiatan</h3>
-              <p className="text-gray-500 text-sm">Ringkasan jumlah kegiatan perjalanan dinas</p>
+              <h3 className="text-lg font-bold text-slate-800">Statistik Kegiatan</h3>
+              <p className="text-slate-500 text-sm">Ringkasan jumlah kegiatan perjalanan dinas</p>
             </div>
           </div>
           <div className="h-64">
@@ -845,9 +832,9 @@ const StatistikPerjadinDashboard = () => {
                 }}
               />
             ) : (
-              <div className="h-full flex flex-col items-center justify-center text-gray-400">
-                <FiTrendingUp className="w-12 h-12 text-gray-300 mb-3" />
-                <p className="font-medium text-gray-500">Belum ada data statistik</p>
+              <div className="h-full flex flex-col items-center justify-center text-slate-400">
+                <FiTrendingUp className="w-12 h-12 text-slate-300 mb-3" />
+                <p className="font-medium text-slate-500">Belum ada data statistik</p>
               </div>
             )}
           </div>
@@ -859,15 +846,15 @@ const StatistikPerjadinDashboard = () => {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.7 }}
-            className="bg-white rounded-3xl p-6 border border-gray-200 shadow-xl"
+            className="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm"
           >
             <div className="flex items-center gap-3 mb-6">
-              <div className="p-2 bg-gradient-to-br from-rose-500 to-pink-500 rounded-xl">
+              <div className="p-2 bg-slate-900 rounded-xl">
                 <Calendar className="w-5 h-5 text-white" />
               </div>
               <div>
-                <h3 className="text-xl font-bold text-gray-800">Kegiatan Mendatang</h3>
-                <p className="text-gray-500 text-sm">7 hari ke depan</p>
+                <h3 className="text-xl font-bold text-slate-800">Kegiatan Mendatang</h3>
+                <p className="text-slate-500 text-sm">7 hari ke depan</p>
               </div>
             </div>
             
@@ -878,20 +865,20 @@ const StatistikPerjadinDashboard = () => {
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: index * 0.05 }}
-                  className="bg-gradient-to-br from-gray-50 to-gray-100 rounded-2xl p-4 border border-gray-200 hover:shadow-lg transition-all"
+                  className="bg-slate-50 rounded-2xl p-4 border border-slate-200 hover:shadow-lg transition-all"
                 >
                   <div className="flex items-start gap-3">
-                    <div className="p-2 bg-gradient-to-br from-amber-400 to-orange-500 rounded-xl">
+                    <div className="p-2 bg-amber-600 rounded-xl">
                       <Briefcase className="w-4 h-4 text-white" />
                     </div>
                     <div className="flex-1 min-w-0">
-                      <h4 className="font-semibold text-gray-800 text-sm truncate">{kegiatan.nama_kegiatan}</h4>
-                      <div className="flex items-center gap-1 mt-1 text-gray-500 text-xs">
+                      <h4 className="font-semibold text-slate-800 text-sm truncate">{kegiatan.nama_kegiatan}</h4>
+                      <div className="flex items-center gap-1 mt-1 text-slate-500 text-xs">
                         <Calendar className="w-3 h-3" />
                         <span>{formatDate(kegiatan.tanggal_mulai)}</span>
                       </div>
                       {kegiatan.lokasi && (
-                        <div className="flex items-center gap-1 mt-1 text-gray-500 text-xs">
+                        <div className="flex items-center gap-1 mt-1 text-slate-500 text-xs">
                           <MapPinLucide className="w-3 h-3" />
                           <span className="truncate">{kegiatan.lokasi}</span>
                         </div>

@@ -9,6 +9,7 @@ import toast from 'react-hot-toast';
 import * as XLSX from 'xlsx';
 import api from '../../api';
 import { useDataCache } from '../../context/DataCacheContext';
+import SelectBox from '../../components/ui/SelectBox';
 import { isVpnUser } from '../../utils/vpnHelper';
 
 ChartJS.register(ArcElement, Tooltip, Legend, CategoryScale, LinearScale, BarElement);
@@ -246,26 +247,22 @@ const StatistikDdDashboard = () => {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-cyan-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600">Memuat data...</p>
+          <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-slate-900 mx-auto"></div>
+          <p className="mt-4 text-slate-600">Memuat data...</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50 to-cyan-50 p-4 md:p-8">
+    <div className="min-h-screen bg-slate-50 p-4 pt-20 md:p-8 lg:pt-8">
       <div className="max-w-7xl mx-auto">
-        {/* Hero Welcome Banner dengan Gradient Modern */}
-        <div className="relative bg-gradient-to-r from-cyan-600 via-blue-600 to-indigo-600 rounded-3xl shadow-2xl p-8 mb-8 overflow-hidden">
-          {/* Animated Background Patterns */}
-          <div className="absolute top-0 right-0 w-64 h-64 bg-white opacity-10 rounded-full -mr-32 -mt-32 animate-pulse"></div>
-          <div className="absolute bottom-0 left-0 w-96 h-96 bg-white opacity-5 rounded-full -ml-48 -mb-48"></div>
-          
+        {/* Header */}
+        <div className="relative bg-slate-900 rounded-2xl p-6 sm:p-8 mb-6 overflow-hidden">
           <div className="relative z-10">
             <div className="mb-4">
-              <h1 className="text-3xl md:text-4xl font-bold text-white mb-2 drop-shadow-lg">
-                📊 Statistik Dana Desa
+              <h1 className="text-2xl md:text-3xl font-semibold tracking-tight text-white mb-2">
+                Statistik Dana Desa
               </h1>
               <p className="text-white text-opacity-90 text-base md:text-lg">
                 Monitoring Dana Desa (DD) Earmarked, Non-Earmarked, dan Insentif
@@ -274,19 +271,19 @@ const StatistikDdDashboard = () => {
             
             {/* Quick Stats in Hero */}
             <div className="mt-4 grid grid-cols-2 md:grid-cols-4 gap-3">
-              <div className="bg-cyan-700 bg-opacity-70 backdrop-blur-md rounded-xl p-4 border border-cyan-400 border-opacity-40 shadow-lg">
+              <div className="bg-white/10 rounded-xl p-4 ring-1 ring-white/20">
                 <p className="text-white text-opacity-90 text-xs md:text-sm mb-1 font-medium">Total Kecamatan</p>
                 <p className="text-white text-xl md:text-2xl font-bold">{stats.totalKecamatan}</p>
               </div>
-              <div className="bg-blue-700 bg-opacity-70 backdrop-blur-md rounded-xl p-4 border border-blue-400 border-opacity-40 shadow-lg">
+              <div className="bg-white/10 rounded-xl p-4 ring-1 ring-white/20">
                 <p className="text-white text-opacity-90 text-xs md:text-sm mb-1 font-medium">Total Desa</p>
                 <p className="text-white text-xl md:text-2xl font-bold">{stats.totalDesa}</p>
               </div>
-              <div className="bg-indigo-700 bg-opacity-70 backdrop-blur-md rounded-xl p-4 border border-indigo-400 border-opacity-40 shadow-lg overflow-hidden">
+              <div className="bg-white/10 rounded-xl p-4 ring-1 ring-white/20 overflow-hidden">
                 <p className="text-white text-opacity-90 text-xs md:text-sm mb-1 font-medium">Total Alokasi</p>
                 <p className="text-white text-[10px] md:text-xs font-bold break-words leading-tight">{formatCurrency(stats.totalRealisasi)}</p>
               </div>
-              <div className="bg-purple-700 bg-opacity-70 backdrop-blur-md rounded-xl p-4 border border-purple-400 border-opacity-40 shadow-lg overflow-hidden">
+              <div className="bg-white/10 rounded-xl p-4 ring-1 ring-white/20 overflow-hidden">
                 <p className="text-white text-opacity-90 text-xs md:text-sm mb-1 font-medium">Rata-rata/Desa</p>
                 <p className="text-white text-[10px] md:text-xs font-bold break-words leading-tight">{formatCurrency(stats.avgPerDesa)}</p>
               </div>
@@ -295,26 +292,26 @@ const StatistikDdDashboard = () => {
         </div>
 
         {/* Total Anggaran Seluruh Tahapan */}
-        <div className="bg-white/90 backdrop-blur-sm rounded-2xl shadow-lg p-6 mb-8 border border-gray-100">
-          <h2 className="text-lg font-bold text-gray-800 mb-4">Total Anggaran Seluruh Tahapan</h2>
+        <div className="bg-white rounded-2xl p-5 sm:p-6 mb-6 border border-slate-200">
+          <h2 className="text-lg font-bold text-slate-800 mb-4">Total Anggaran Seluruh Tahapan</h2>
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 mb-3">
             {grandTotal.perTahapan.map((t) => (
-              <div key={t.label} className="bg-gray-50 rounded-xl p-3 border border-gray-200">
-                <p className="text-gray-500 text-xs font-medium mb-1">{t.label}</p>
-                <p className="text-gray-800 text-xs md:text-sm font-bold break-words leading-tight">{formatCurrency(t.total)}</p>
+              <div key={t.label} className="bg-slate-50 rounded-xl p-3 border border-slate-200">
+                <p className="text-slate-500 text-xs font-medium mb-1">{t.label}</p>
+                <p className="text-slate-800 text-xs md:text-sm font-bold break-words leading-tight">{formatCurrency(t.total)}</p>
               </div>
             ))}
           </div>
           <div className="grid grid-cols-2 lg:grid-cols-3 gap-3">
-            <div className="bg-blue-50 rounded-xl p-3 border border-blue-200">
-              <p className="text-blue-600 text-xs font-medium mb-1">Total Earmarked (T1+T2)</p>
-              <p className="text-blue-800 text-xs md:text-sm font-bold break-words leading-tight">{formatCurrency(grandTotal.totalEarmarked)}</p>
+            <div className="bg-slate-100 rounded-xl p-3 border border-slate-200">
+              <p className="text-brand-600 text-xs font-medium mb-1">Total Earmarked (T1+T2)</p>
+              <p className="text-brand-700 text-xs md:text-sm font-bold break-words leading-tight">{formatCurrency(grandTotal.totalEarmarked)}</p>
             </div>
             <div className="bg-amber-50 rounded-xl p-3 border border-amber-200">
               <p className="text-amber-600 text-xs font-medium mb-1">Total Non-Earmarked (T1+T2)</p>
               <p className="text-amber-800 text-xs md:text-sm font-bold break-words leading-tight">{formatCurrency(grandTotal.totalNonEarmarked)}</p>
             </div>
-            <div className="bg-gradient-to-r from-cyan-500 to-blue-600 rounded-xl p-3 text-white col-span-2 lg:col-span-1">
+            <div className="bg-slate-900 rounded-xl p-3 text-white col-span-2 lg:col-span-1">
               <p className="text-white text-opacity-90 text-xs font-medium mb-1">Grand Total</p>
               <p className="text-xs md:text-sm font-bold break-words leading-tight">{formatCurrency(grandTotal.totalAll)}</p>
             </div>
@@ -323,53 +320,53 @@ const StatistikDdDashboard = () => {
 
         {/* Tab Navigation */}
         <div className="mb-8 overflow-x-auto">
-          <div className="flex gap-2 p-1 bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg w-fit min-w-full">
+          <div className="flex gap-1.5 p-1.5 bg-white rounded-xl border border-slate-200 w-fit min-w-full">
             <button
               onClick={() => setActiveTab('earmarked-t1')}
-              className={`px-6 py-3 rounded-xl font-medium transition-all duration-300 whitespace-nowrap ${
+              className={`px-4 py-2.5 rounded-lg text-sm font-semibold transition-colors duration-200 whitespace-nowrap ${
                 activeTab === 'earmarked-t1'
-                  ? 'bg-gradient-to-r from-cyan-500 to-blue-600 text-white shadow-lg scale-105'
-                  : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
+                  ? 'bg-slate-900 text-white'
+                  : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
               }`}
             >
               DD Earmarked T1
             </button>
             <button
               onClick={() => setActiveTab('earmarked-t2')}
-              className={`px-6 py-3 rounded-xl font-medium transition-all duration-300 whitespace-nowrap ${
+              className={`px-4 py-2.5 rounded-lg text-sm font-semibold transition-colors duration-200 whitespace-nowrap ${
                 activeTab === 'earmarked-t2'
-                  ? 'bg-gradient-to-r from-cyan-500 to-blue-600 text-white shadow-lg scale-105'
-                  : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
+                  ? 'bg-slate-900 text-white'
+                  : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
               }`}
             >
               DD Earmarked T2
             </button>
             <button
               onClick={() => setActiveTab('nonearmarked-t1')}
-              className={`px-6 py-3 rounded-xl font-medium transition-all duration-300 whitespace-nowrap ${
+              className={`px-4 py-2.5 rounded-lg text-sm font-semibold transition-colors duration-200 whitespace-nowrap ${
                 activeTab === 'nonearmarked-t1'
-                  ? 'bg-gradient-to-r from-cyan-500 to-blue-600 text-white shadow-lg scale-105'
-                  : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
+                  ? 'bg-slate-900 text-white'
+                  : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
               }`}
             >
               DD Non-Earmarked T1
             </button>
             <button
               onClick={() => setActiveTab('nonearmarked-t2')}
-              className={`px-6 py-3 rounded-xl font-medium transition-all duration-300 whitespace-nowrap ${
+              className={`px-4 py-2.5 rounded-lg text-sm font-semibold transition-colors duration-200 whitespace-nowrap ${
                 activeTab === 'nonearmarked-t2'
-                  ? 'bg-gradient-to-r from-cyan-500 to-blue-600 text-white shadow-lg scale-105'
-                  : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
+                  ? 'bg-slate-900 text-white'
+                  : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
               }`}
             >
               DD Non-Earmarked T2
             </button>
             <button
               onClick={() => setActiveTab('insentif')}
-              className={`px-6 py-3 rounded-xl font-medium transition-all duration-300 whitespace-nowrap ${
+              className={`px-4 py-2.5 rounded-lg text-sm font-semibold transition-colors duration-200 whitespace-nowrap ${
                 activeTab === 'insentif'
-                  ? 'bg-gradient-to-r from-cyan-500 to-blue-600 text-white shadow-lg scale-105'
-                  : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
+                  ? 'bg-slate-900 text-white'
+                  : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
               }`}
             >
               Insentif DD
@@ -383,66 +380,59 @@ const StatistikDdDashboard = () => {
             {/* Search Bar */}
             <div className="md:col-span-2">
               <div className="relative">
-                <FiSearch className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+                <FiSearch className="absolute left-4 top-1/2 transform -translate-y-1/2 text-slate-400 w-5 h-5" />
                 <input
                   type="text"
                   placeholder="Cari desa atau kecamatan..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="w-full pl-12 pr-4 py-3 bg-white/90 backdrop-blur-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-transparent transition-all duration-200 shadow-sm hover:shadow-md"
+                  className="w-full pl-12 pr-4 py-3 bg-white/90 backdrop-blur-sm border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-slate-900 focus:border-transparent transition-all duration-200 shadow-sm hover:shadow-md"
                 />
               </div>
             </div>
 
             {/* Filter Kecamatan */}
-            <div className="relative">
-              <FiFilter className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5 pointer-events-none" />
-              <select
-                value={filterKecamatan}
-                onChange={(e) => setFilterKecamatan(e.target.value)}
-                className="w-full pl-12 pr-4 py-3 bg-white/90 backdrop-blur-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-transparent transition-all duration-200 shadow-sm hover:shadow-md appearance-none cursor-pointer"
-              >
-                <option value="">Semua Kecamatan</option>
-                {uniqueKecamatan.map(kec => (
-                  <option key={kec} value={kec}>{kec}</option>
-                ))}
-              </select>
-            </div>
+            <SelectBox
+              value={filterKecamatan}
+              onChange={setFilterKecamatan}
+              placeholder="Semua Kecamatan"
+              emptyText="Kecamatan tidak ditemukan"
+              options={[
+                { value: '', label: 'Semua Kecamatan' },
+                ...uniqueKecamatan.map((kec) => ({ value: kec, label: kec })),
+              ]}
+            />
 
             {/* Filter Status */}
-            <div className="relative">
-              <FiFilter className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5 pointer-events-none" />
-              <select
-                value={filterStatus}
-                onChange={(e) => setFilterStatus(e.target.value)}
-                className="w-full pl-12 pr-4 py-3 bg-white/90 backdrop-blur-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-transparent transition-all duration-200 shadow-sm hover:shadow-md appearance-none cursor-pointer"
-              >
-                <option value="">Semua Status</option>
-                {uniqueStatus.map(status => (
-                  <option key={status} value={status}>{status}</option>
-                ))}
-              </select>
-            </div>
+            <SelectBox
+              value={filterStatus}
+              onChange={setFilterStatus}
+              placeholder="Semua Status"
+              options={[
+                { value: '', label: 'Semua Status' },
+                ...uniqueStatus.map((status) => ({ value: status, label: status })),
+              ]}
+            />
           </div>
 
           {/* Active Filters Display */}
           {(searchTerm || filterKecamatan || filterStatus) && (
             <div className="flex flex-wrap items-center gap-2">
-              <span className="text-sm text-gray-600 font-medium">Filter Aktif:</span>
+              <span className="text-sm text-slate-600 font-medium">Filter Aktif:</span>
               {searchTerm && (
-                <span className="inline-flex items-center gap-1 px-3 py-1 bg-cyan-100 text-cyan-700 rounded-lg text-sm">
+                <span className="inline-flex items-center gap-1 px-3 py-1 bg-slate-100 text-slate-700 rounded-lg text-sm">
                   <FiSearch className="w-3 h-3" />
                   {searchTerm}
-                  <button onClick={() => setSearchTerm('')} className="ml-1 hover:text-cyan-900">
+                  <button onClick={() => setSearchTerm('')} className="ml-1 hover:text-brand-900">
                     <FiX className="w-3 h-3" />
                   </button>
                 </span>
               )}
               {filterKecamatan && (
-                <span className="inline-flex items-center gap-1 px-3 py-1 bg-purple-100 text-purple-700 rounded-lg text-sm">
+                <span className="inline-flex items-center gap-1 px-3 py-1 bg-slate-100 text-slate-700 rounded-lg text-sm">
                   <FiMapPin className="w-3 h-3" />
                   {filterKecamatan}
-                  <button onClick={() => setFilterKecamatan('')} className="ml-1 hover:text-purple-900">
+                  <button onClick={() => setFilterKecamatan('')} className="ml-1 hover:text-brand-900">
                     <FiX className="w-3 h-3" />
                   </button>
                 </span>
@@ -474,7 +464,7 @@ const StatistikDdDashboard = () => {
         <div className="flex gap-3 mb-8">
           <button
             onClick={exportToExcel}
-            className="group px-6 py-3 bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 flex items-center gap-2"
+            className="inline-flex items-center gap-2 px-4 py-2.5 bg-slate-900 text-white rounded-lg text-sm font-semibold hover:bg-slate-800 transition-colors"
           >
             <FiDownload className="w-5 h-5 group-hover:translate-y-1 transition-transform duration-300" />
             <span className="font-medium">Export Excel</span>
@@ -483,29 +473,29 @@ const StatistikDdDashboard = () => {
 
         {/* Summary Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-          <div className="group bg-gradient-to-br from-cyan-500 to-blue-600 rounded-2xl p-6 shadow-xl hover:shadow-2xl transition-all duration-300 hover:scale-[1.02] cursor-default">
+          <div className="group bg-slate-900 rounded-2xl p-6 shadow-sm hover:shadow-sm transition-all duration-300 cursor-default">
             <div className="flex items-start justify-between mb-4">
-              <div className="w-14 h-14 bg-white/90 backdrop-blur-sm rounded-xl flex items-center justify-center group-hover:scale-110 group-hover:rotate-3 transition-all duration-300 shadow-lg">
-                <FiMapPin className="w-7 h-7 text-cyan-600" />
+              <div className="w-12 h-12 bg-white/15 rounded-xl flex items-center justify-center ring-1 ring-white/20">
+                <FiMapPin className="w-7 h-7 text-brand-600" />
               </div>
             </div>
             <h3 className="text-white text-sm font-medium mb-1 opacity-90">Total Kecamatan</h3>
             <p className="text-3xl font-bold text-white animate-fade-in">{stats.totalKecamatan}</p>
           </div>
 
-          <div className="group bg-gradient-to-br from-purple-500 to-pink-600 rounded-2xl p-6 shadow-xl hover:shadow-2xl transition-all duration-300 hover:scale-[1.02] cursor-default">
+          <div className="group bg-slate-900 rounded-2xl p-6 shadow-sm hover:shadow-sm transition-all duration-300 cursor-default">
             <div className="flex items-start justify-between mb-4">
-              <div className="w-14 h-14 bg-white/90 backdrop-blur-sm rounded-xl flex items-center justify-center group-hover:scale-110 group-hover:rotate-3 transition-all duration-300 shadow-lg">
-                <FiUsers className="w-7 h-7 text-purple-600" />
+              <div className="w-12 h-12 bg-white/15 rounded-xl flex items-center justify-center ring-1 ring-white/20">
+                <FiUsers className="w-7 h-7 text-brand-600" />
               </div>
             </div>
             <h3 className="text-white text-sm font-medium mb-1 opacity-90">Total Desa</h3>
             <p className="text-3xl font-bold text-white animate-fade-in">{stats.totalDesa}</p>
           </div>
 
-          <div className="group bg-gradient-to-br from-green-500 to-emerald-600 rounded-2xl p-6 shadow-xl hover:shadow-2xl transition-all duration-300 hover:scale-[1.02] cursor-default">
+          <div className="group bg-green-600 rounded-2xl p-6 shadow-sm hover:shadow-sm transition-all duration-300 cursor-default">
             <div className="flex items-start justify-between mb-4">
-              <div className="w-14 h-14 bg-white/90 backdrop-blur-sm rounded-xl flex items-center justify-center group-hover:scale-110 group-hover:rotate-3 transition-all duration-300 shadow-lg">
+              <div className="w-12 h-12 bg-white/15 rounded-xl flex items-center justify-center ring-1 ring-white/20">
                 <FiDollarSign className="w-7 h-7 text-green-600" />
               </div>
             </div>
@@ -513,9 +503,9 @@ const StatistikDdDashboard = () => {
             <p className="text-2xl font-bold text-white animate-fade-in">{formatCurrency(stats.totalRealisasi)}</p>
           </div>
 
-          <div className="group bg-gradient-to-br from-orange-500 to-red-600 rounded-2xl p-6 shadow-xl hover:shadow-2xl transition-all duration-300 hover:scale-[1.02] cursor-default">
+          <div className="group bg-orange-600 rounded-2xl p-6 shadow-sm hover:shadow-sm transition-all duration-300 cursor-default">
             <div className="flex items-start justify-between mb-4">
-              <div className="w-14 h-14 bg-white/90 backdrop-blur-sm rounded-xl flex items-center justify-center group-hover:scale-110 group-hover:rotate-3 transition-all duration-300 shadow-lg">
+              <div className="w-12 h-12 bg-white/15 rounded-xl flex items-center justify-center ring-1 ring-white/20">
                 <FiTrendingUp className="w-7 h-7 text-orange-600" />
               </div>
             </div>
@@ -527,20 +517,20 @@ const StatistikDdDashboard = () => {
         {/* Charts Section */}
         <div className="space-y-6 mb-8">
           {/* Bar Chart - Kecamatan */}
-          <div className="group bg-white/90 backdrop-blur-md rounded-3xl shadow-2xl hover:shadow-3xl transition-all duration-500 p-8 border border-gray-100/50">
+          <div className="group bg-white/90 backdrop-blur-md rounded-2xl shadow-sm hover:shadow-3xl transition-all duration-500 p-8 border border-slate-100/50">
             <div className="flex items-center gap-3 mb-6">
-              <div className="p-3 bg-gradient-to-br from-cyan-500 to-blue-600 rounded-xl shadow-lg group-hover:scale-110 transition-transform duration-300">
+              <div className="p-2.5 bg-slate-900 rounded-xl">
                 <Activity className="w-6 h-6 text-white" />
               </div>
               <div>
-                <h3 className="text-xl font-bold bg-gradient-to-r from-cyan-600 to-blue-600 bg-clip-text text-transparent">
+                <h3 className="text-xl font-bold text-slate-900">
                   Semua Kecamatan
                 </h3>
-                <p className="text-sm text-gray-500">Berdasarkan Total Alokasi</p>
+                <p className="text-sm text-slate-500">Berdasarkan Total Alokasi</p>
               </div>
             </div>
             <div className="h-[350px] relative">
-              <div className="absolute inset-0 bg-gradient-to-br from-cyan-50/50 to-blue-50/50 rounded-2xl"></div>
+              <div className="absolute inset-0 bg-slate-100 rounded-2xl"></div>
               <div className="relative h-full p-4">
                 <Bar
                     data={{
@@ -553,18 +543,18 @@ const StatistikDdDashboard = () => {
                         backgroundColor: (context) => {
                           const ctx = context.chart.ctx;
                           const gradient = ctx.createLinearGradient(0, 0, 0, 350);
-                          gradient.addColorStop(0, 'rgba(6, 182, 212, 0.9)');
-                          gradient.addColorStop(1, 'rgba(37, 99, 235, 0.7)');
+                          gradient.addColorStop(0, 'rgba(185, 28, 28, 0.9)');
+                          gradient.addColorStop(1, 'rgba(198, 167, 61, 0.7)');
                           return gradient;
                         },
-                        borderColor: 'rgba(6, 182, 212, 1)',
+                        borderColor: 'rgba(185, 28, 28, 1)',
                         borderWidth: 2,
                         borderRadius: 10,
                         hoverBackgroundColor: (context) => {
                           const ctx = context.chart.ctx;
                           const gradient = ctx.createLinearGradient(0, 0, 0, 350);
-                          gradient.addColorStop(0, 'rgba(6, 182, 212, 1)');
-                          gradient.addColorStop(1, 'rgba(37, 99, 235, 0.9)');
+                          gradient.addColorStop(0, 'rgba(185, 28, 28, 1)');
+                          gradient.addColorStop(1, 'rgba(198, 167, 61, 0.9)');
                           return gradient;
                         },
                       }]
@@ -626,20 +616,20 @@ const StatistikDdDashboard = () => {
           </div>
 
           {/* Pie Chart - Status Distribution */}
-          <div className="group bg-white/90 backdrop-blur-md rounded-3xl shadow-2xl hover:shadow-3xl transition-all duration-500 p-8 border border-gray-100/50">
+          <div className="group bg-white/90 backdrop-blur-md rounded-2xl shadow-sm hover:shadow-3xl transition-all duration-500 p-8 border border-slate-100/50">
             <div className="flex items-center gap-3 mb-6">
-              <div className="p-3 bg-gradient-to-br from-purple-500 to-pink-600 rounded-xl shadow-lg group-hover:scale-110 transition-transform duration-300">
+              <div className="p-2.5 bg-slate-900 rounded-xl">
                 <Activity className="w-6 h-6 text-white" />
               </div>
               <div>
-                <h3 className="text-xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
+                <h3 className="text-xl font-bold text-slate-900">
                   Distribusi Status
                 </h3>
-                <p className="text-sm text-gray-500">Status Pencairan Dana</p>
+                <p className="text-sm text-slate-500">Status Pencairan Dana</p>
               </div>
             </div>
             <div className="h-[350px] flex items-center justify-center relative">
-              <div className="absolute inset-0 bg-gradient-to-br from-purple-50/50 to-pink-50/50 rounded-2xl"></div>
+              <div className="absolute inset-0 bg-slate-100 rounded-2xl"></div>
               <div className="relative w-full h-full flex items-center justify-center">
                 <Pie
                   data={{
@@ -726,13 +716,13 @@ const StatistikDdDashboard = () => {
         </div>
 
       {/* Data Table */}
-      <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-xl overflow-hidden">
-        <div className="p-6 border-b border-gray-200">
-          <h2 className="text-xl font-bold text-gray-800">Data per Kecamatan</h2>
+      <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-sm overflow-hidden">
+        <div className="p-6 border-b border-slate-200">
+          <h2 className="text-xl font-bold text-slate-800">Data per Kecamatan</h2>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full">
-            <thead className="bg-gradient-to-r from-cyan-500 to-blue-600 text-white">
+            <thead className="bg-slate-900 text-white">
               <tr>
                 <th className="px-6 py-4 text-left text-sm font-semibold">Kecamatan</th>
                 <th className="px-6 py-4 text-left text-sm font-semibold">Jumlah Desa</th>
@@ -740,21 +730,21 @@ const StatistikDdDashboard = () => {
                 <th className="px-6 py-4 text-center text-sm font-semibold">Aksi</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-200">
+            <tbody className="divide-y divide-slate-200">
                 {Object.entries(groupedData).map(([kecamatan, desas]) => {
                   const totalRealisasi = desas.reduce((sum, d) => sum + d.realisasi, 0);
                   const isExpanded = expandedKecamatan[kecamatan];
 
                   return (
                     <React.Fragment key={kecamatan}>
-                      <tr className="hover:bg-cyan-50 transition-colors duration-200">
-                        <td className="px-6 py-4 font-medium text-gray-900">{kecamatan}</td>
-                        <td className="px-6 py-4 text-gray-700">{desas.length} Desa</td>
-                        <td className="px-6 py-4 text-gray-700 font-semibold">{formatCurrency(totalRealisasi)}</td>
+                      <tr className="hover:bg-slate-50 transition-colors duration-200">
+                        <td className="px-6 py-4 font-medium text-slate-900">{kecamatan}</td>
+                        <td className="px-6 py-4 text-slate-700">{desas.length} Desa</td>
+                        <td className="px-6 py-4 text-slate-700 font-semibold">{formatCurrency(totalRealisasi)}</td>
                         <td className="px-6 py-4 text-center">
                           <button
                             onClick={() => toggleKecamatan(kecamatan)}
-                            className="inline-flex items-center gap-2 px-4 py-2 bg-cyan-100 text-cyan-700 rounded-lg hover:bg-cyan-200 transition-colors duration-200"
+                            className="inline-flex items-center gap-2 px-4 py-2 bg-slate-100 text-slate-700 rounded-lg hover:bg-slate-100 transition-colors duration-200"
                           >
                             {isExpanded ? (
                               <>
@@ -772,28 +762,28 @@ const StatistikDdDashboard = () => {
                       </tr>
                       {isExpanded && (
                         <tr>
-                          <td colSpan="4" className="px-6 py-4 bg-gray-50">
+                          <td colSpan="4" className="px-6 py-4 bg-slate-50">
                             <div className="overflow-x-auto">
                               <table className="w-full">
-                                <thead className="bg-gray-100">
+                                <thead className="bg-slate-100">
                                   <tr>
-                                    <th className="px-4 py-2 text-left text-xs font-semibold text-gray-600">No</th>
-                                    <th className="px-4 py-2 text-left text-xs font-semibold text-gray-600">Nama Desa</th>
-                                    <th className="px-4 py-2 text-left text-xs font-semibold text-gray-600">Status</th>
-                                    <th className="px-4 py-2 text-left text-xs font-semibold text-gray-600">Realisasi</th>
+                                    <th className="px-4 py-2 text-left text-xs font-semibold text-slate-600">No</th>
+                                    <th className="px-4 py-2 text-left text-xs font-semibold text-slate-600">Nama Desa</th>
+                                    <th className="px-4 py-2 text-left text-xs font-semibold text-slate-600">Status</th>
+                                    <th className="px-4 py-2 text-left text-xs font-semibold text-slate-600">Realisasi</th>
                                   </tr>
                                 </thead>
-                                <tbody className="divide-y divide-gray-200">
+                                <tbody className="divide-y divide-slate-200">
                                   {desas.map((desa, idx) => (
-                                    <tr key={idx} className="hover:bg-gray-100 transition-colors duration-150">
-                                      <td className="px-4 py-2 text-sm text-gray-700">{idx + 1}</td>
-                                      <td className="px-4 py-2 text-sm text-gray-900">{desa.desa}</td>
+                                    <tr key={idx} className="hover:bg-slate-100 transition-colors duration-150">
+                                      <td className="px-4 py-2 text-sm text-slate-700">{idx + 1}</td>
+                                      <td className="px-4 py-2 text-sm text-slate-900">{desa.desa}</td>
                                       <td className="px-4 py-2">
                                         <span className="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800">
                                           {desa.status}
                                         </span>
                                       </td>
-                                      <td className="px-4 py-2 text-sm text-gray-900 font-medium">{formatCurrency(desa.realisasi)}</td>
+                                      <td className="px-4 py-2 text-sm text-slate-900 font-medium">{formatCurrency(desa.realisasi)}</td>
                                     </tr>
                                   ))}
                                 </tbody>

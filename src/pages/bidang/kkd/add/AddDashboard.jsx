@@ -2,9 +2,10 @@
 import { DollarSign } from 'lucide-react';
 import PenyaluranDashboard from '../PenyaluranDashboard';
 
-export default function AddDashboard() {
+export default function AddDashboard(props) {
   return (
     <PenyaluranDashboard
+      {...props}
       sumberDana="ADD"
       title="Alokasi Dana Desa"
       short="ADD"

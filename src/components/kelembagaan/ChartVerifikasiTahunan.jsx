@@ -21,9 +21,9 @@ ChartJS.register(
 );
 
 const COLORS = {
-  rw: { border: "#3b82f6", bg: "rgba(59, 130, 246, 0.15)" },
-  rt: { border: "#06b6d4", bg: "rgba(6, 182, 212, 0.15)" },
-  posyandu: { border: "#9333ea", bg: "rgba(147, 51, 234, 0.15)" },
+  rw: { border: "#0f172a", bg: "rgba(15, 23, 42, 0.15)" },
+  rt: { border: "#334155", bg: "rgba(51, 65, 85, 0.15)" },
+  posyandu: { border: "#64748b", bg: "rgba(100, 116, 139, 0.15)" },
 };
 
 const CHART_KEYS = ["rw", "rt", "posyandu"];
@@ -31,8 +31,8 @@ const CHART_KEYS = ["rw", "rt", "posyandu"];
 const ChartVerifikasiTahunan = ({ data, loading, error }) => {
   if (loading) {
     return (
-      <div className="bg-white rounded-xl border border-gray-200 p-8 flex items-center justify-center min-h-[300px]">
-        <div className="flex items-center gap-2 text-gray-500">
+      <div className="bg-white rounded-xl border border-slate-200 p-8 flex items-center justify-center min-h-[300px]">
+        <div className="flex items-center gap-2 text-slate-500">
           <LuLoader className="h-5 w-5 animate-spin" />
           <span className="text-sm">Memuat chart verifikasi...</span>
         </div>
@@ -111,23 +111,23 @@ const ChartVerifikasiTahunan = ({ data, loading, error }) => {
   };
 
   return (
-    <div className="bg-white rounded-xl border border-gray-200 p-6">
-      <h3 className="text-lg font-bold text-gray-900 mb-1">
+    <div className="bg-white rounded-xl border border-slate-200 p-6">
+      <h3 className="text-lg font-bold text-slate-900 mb-1">
         Perkembangan Verifikasi RW, RT & Posyandu
       </h3>
-      <p className="text-sm text-gray-500 mb-5">
+      <p className="text-sm text-slate-500 mb-5">
         Jumlah kumulatif lembaga terverifikasi per tahun
       </p>
       <div className="h-80">
         <Bar data={chartData} options={chartOptions} />
       </div>
-      <div className="grid grid-cols-3 gap-4 mt-5 pt-5 border-t border-gray-100">
+      <div className="grid grid-cols-3 gap-4 mt-5 pt-5 border-t border-slate-100">
         {CHART_KEYS.map((key) => (
           <div key={key} className="text-center">
             <div className="text-2xl font-bold" style={{ color: COLORS[key].border }}>
               {per_lembaga[key]?.totals.verified || 0}
             </div>
-            <div className="text-xs text-gray-500 mt-0.5">
+            <div className="text-xs text-slate-500 mt-0.5">
               {per_lembaga[key]?.label} Terverifikasi
             </div>
             {(per_lembaga[key]?.totals.unverified || 0) > 0 && (

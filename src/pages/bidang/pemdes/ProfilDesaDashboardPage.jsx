@@ -19,7 +19,6 @@ import {
   PieChart as PieChartIcon,
   RefreshCw,
   Search,
-  Sparkles,
   Users,
 } from 'lucide-react';
 import {
@@ -38,6 +37,7 @@ import {
 import toast from 'react-hot-toast';
 import api from '../../../api';
 import { useBidangPath } from '../../../hooks/useBidangPath';
+import SelectBox from '../../../components/ui/SelectBox';
 
 const COMPLETION_COLORS = ['#0f766e', '#f59e0b', '#cbd5e1'];
 const CATEGORY_COLORS = ['#0284c7', '#7c3aed', '#ea580c', '#16a34a', '#db2777', '#0f766e'];
@@ -86,20 +86,20 @@ const getCompletionTone = (statusKey) => {
   if (statusKey === 'lengkap') {
     return {
       badge: 'bg-emerald-100 text-emerald-700 border-emerald-200',
-      bar: 'from-emerald-500 to-teal-500',
+      bar: 'bg-emerald-600',
     };
   }
 
   if (statusKey === 'perlu_dilengkapi') {
     return {
       badge: 'bg-amber-100 text-amber-700 border-amber-200',
-      bar: 'from-amber-500 to-orange-500',
+      bar: 'bg-amber-500',
     };
   }
 
   return {
     badge: 'bg-slate-100 text-slate-600 border-slate-200',
-    bar: 'from-slate-300 to-slate-400',
+    bar: 'bg-slate-300',
   };
 };
 
@@ -136,7 +136,7 @@ const StatCard = ({ icon, title, value, subtitle, tone }) => {
     <div className="rounded-xl border border-white/70 bg-white/90 p-5 shadow-lg backdrop-blur-sm">
       <div className="flex items-start justify-between gap-3">
         <div>
-          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">{title}</p>
+          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-brand-600">{title}</p>
           <p className="mt-3 text-3xl font-black tracking-tight text-slate-900">{value}</p>
           <p className="mt-2 text-sm text-slate-500">{subtitle}</p>
         </div>
@@ -174,7 +174,7 @@ const InsightList = ({ title, icon, items, emptyText, accentClass, progressClass
               key={item.desa_id}
               type="button"
               onClick={() => onItemClick?.(item.desa_id)}
-              className="block w-full rounded-xl border border-slate-100 bg-slate-50/70 p-4 text-left transition hover:border-teal-200 hover:bg-white"
+              className="block w-full rounded-xl border border-slate-100 bg-slate-50/70 p-4 text-left transition hover:border-slate-200 hover:bg-white"
             >
               <div className="flex items-start justify-between gap-4">
                 <div className="min-w-0">
@@ -187,13 +187,13 @@ const InsightList = ({ title, icon, items, emptyText, accentClass, progressClass
               </div>
               <div className="mt-3 h-2 rounded-full bg-white">
                 <div
-                  className={`h-2 rounded-full bg-gradient-to-r ${progressClass}`}
+                  className={`h-2 rounded-full ${progressClass}`}
                   style={{ width: `${Math.max(item.completion_percentage, 6)}%` }}
                 />
               </div>
               <div className="mt-2 flex items-center justify-between gap-3">
                 <p className="text-xs text-slate-500">{item.status_label}</p>
-                <span className="text-xs font-semibold text-teal-700">Lihat detail</span>
+                <span className="text-xs font-semibold text-brand-700">Lihat detail</span>
               </div>
             </button>
           ))}
@@ -373,12 +373,10 @@ const ProfilDesaDashboardPage = ({
   };
 
   return (
-    <div className="min-h-screen bg-[radial-gradient(circle_at_top_right,_rgba(13,148,136,0.16),_transparent_28%),radial-gradient(circle_at_bottom_left,_rgba(249,115,22,0.14),_transparent_30%),#f8fafc] px-4 py-6 sm:px-6 lg:px-8">
+    <div className="min-h-screen bg-slate-50 px-4 pb-8 pt-20 sm:px-6 lg:px-8 lg:pt-6">
       <div className=" space-y-6">
-        <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-amber-500 via-orange-500 to-teal-600 p-7 text-white shadow-lg sm:p-8">
-          <div className="absolute inset-y-0 right-0 w-1/2 bg-[radial-gradient(circle_at_top_right,_rgba(255,255,255,0.32),_transparent_42%)]" />
-          <div className="absolute -right-14 bottom-0 h-44 w-44 rounded-full bg-white/10 blur-3xl" />
-          <div className="absolute -left-10 top-8 h-32 w-32 rounded-full bg-white/10 blur-3xl" />
+        <div className="relative overflow-hidden rounded-2xl bg-slate-950 p-6 text-white sm:p-8">
+          <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(70%_120%_at_92%_0%,_rgba(185,28,28,0.22)_0%,_transparent_62%)]" />
 
           <div className="relative z-10 flex flex-col gap-8 lg:flex-row lg:items-end lg:justify-between">
             <div className="max-w-3xl">
@@ -390,12 +388,11 @@ const ProfilDesaDashboardPage = ({
                 {backLabel}
               </button>
 
-              <div className="inline-flex items-center gap-2 rounded-lg border border-white/20 bg-white/10 px-4 py-1.5 text-xs font-semibold uppercase tracking-[0.2em] text-white/80">
-                <Sparkles className="h-4 w-4" />
-                Dashboard Profil Desa
-              </div>
-              <h1 className="mt-4 text-3xl font-black tracking-tight sm:text-4xl">Profil seluruh desa dalam satu panel ringkas</h1>
-              <p className="mt-3 max-w-2xl text-sm leading-6 text-white/85 sm:text-base">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-brand-400">
+                Core Dashboard · Profil Desa
+              </p>
+              <h1 className="mt-2 text-2xl font-semibold tracking-tight sm:text-3xl">Profil seluruh desa dalam satu panel ringkas</h1>
+              <p className="mt-2.5 max-w-2xl text-sm leading-relaxed text-slate-400">
                 Pantau kelengkapan data profil desa, sebaran kategori, kualitas informasi lokasi, dan desa yang perlu ditindaklanjuti tanpa harus membuka profil satu per satu.
               </p>
               {stats && (
@@ -443,7 +440,7 @@ const ProfilDesaDashboardPage = ({
                 title="Total Desa"
                 value={formatNumber(stats?.total_desa || 0)}
                 subtitle="wilayah yang dipantau pada dashboard ini"
-                tone="bg-sky-100 text-sky-700"
+                tone="bg-slate-100 text-slate-700"
               />
               <StatCard
                 icon={ClipboardList}
@@ -457,7 +454,7 @@ const ProfilDesaDashboardPage = ({
                 title="Profil Lengkap"
                 value={formatNumber(stats?.profil_lengkap || 0)}
                 subtitle={`${formatNumber(stats?.profil_perlu_dilengkapi || 0)} desa masih perlu pelengkapan`}
-                tone="bg-teal-100 text-teal-700"
+                tone="bg-slate-100 text-slate-700"
               />
               <StatCard
                 icon={Users}
@@ -471,7 +468,7 @@ const ProfilDesaDashboardPage = ({
                 title="Titik Lokasi"
                 value={formatNumber(stats?.desa_dengan_koordinat || 0)}
                 subtitle="profil memiliki latitude dan longitude"
-                tone="bg-violet-100 text-violet-700"
+                tone="bg-slate-100 text-slate-700"
               />
               <StatCard
                 icon={Camera}
@@ -485,7 +482,7 @@ const ProfilDesaDashboardPage = ({
             <div className="grid grid-cols-1 gap-6 xl:grid-cols-12">
               <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-lg xl:col-span-4">
                 <div className="mb-4 flex items-center gap-3">
-                  <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-teal-100 text-teal-700">
+                  <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-slate-100 text-slate-700">
                     <PieChartIcon className="h-5 w-5" />
                   </div>
                   <div>
@@ -560,7 +557,7 @@ const ProfilDesaDashboardPage = ({
 
               <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-lg xl:col-span-4">
                 <div className="mb-4 flex items-center gap-3">
-                  <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-sky-100 text-sky-700">
+                  <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-slate-100 text-slate-700">
                     <BarChart3 className="h-5 w-5" />
                   </div>
                   <div>
@@ -596,7 +593,7 @@ const ProfilDesaDashboardPage = ({
                 items={stats?.top_completed || []}
                 emptyText="Belum ada data desa yang bisa dibandingkan."
                 accentClass="bg-emerald-100 text-emerald-700"
-                progressClass="from-emerald-500 to-teal-500"
+                progressClass="bg-emerald-600"
                 onItemClick={openDetailPage}
               />
               <InsightList
@@ -605,7 +602,7 @@ const ProfilDesaDashboardPage = ({
                 items={stats?.needs_attention || []}
                 emptyText="Tidak ada desa yang membutuhkan perhatian saat ini."
                 accentClass="bg-amber-100 text-amber-700"
-                progressClass="from-amber-500 to-orange-500"
+                progressClass="bg-amber-500"
                 onItemClick={openDetailPage}
               />
             </div>
@@ -627,7 +624,7 @@ const ProfilDesaDashboardPage = ({
                   value={filters.search}
                   onChange={(event) => handleFilterChange('search', event.target.value)}
                   placeholder="Cari desa, kode, kecamatan, atau kategori..."
-                  className="w-full rounded-xl border border-slate-200 bg-slate-50 py-3 pl-10 pr-4 text-sm text-slate-700 outline-none transition placeholder:text-slate-400 focus:border-teal-400 focus:bg-white"
+                  className="w-full rounded-xl border border-slate-200 bg-slate-50 py-3 pl-10 pr-4 text-sm text-slate-700 outline-none transition placeholder:text-slate-400 focus:border-brand-400 focus:bg-white"
                 />
               </div>
 
@@ -636,7 +633,7 @@ const ProfilDesaDashboardPage = ({
                 onClick={() => setShowFilters((prev) => !prev)}
                 className={`inline-flex items-center gap-2 rounded-xl border px-4 py-3 text-sm font-medium transition ${
                   showFilters
-                    ? 'border-teal-200 bg-teal-50 text-teal-700'
+                    ? 'border-slate-200 bg-slate-100 text-slate-700'
                     : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50'
                 }`}
               >
@@ -668,85 +665,87 @@ const ProfilDesaDashboardPage = ({
           </div>
 
           {showFilters && (
-            <div className="mt-5 grid grid-cols-1 gap-3 border-t border-slate-100 pt-5 md:grid-cols-2 xl:grid-cols-6">
-              <select
+            <div className="mt-5 grid grid-cols-1 gap-3 border-t border-slate-100 pt-5 md:grid-cols-2 xl:grid-cols-3">
+              <SelectBox
+                label="Kecamatan"
                 value={filters.kecamatan_id}
-                onChange={(event) => handleFilterChange('kecamatan_id', event.target.value)}
-                className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700 outline-none focus:border-teal-400 focus:bg-white"
-              >
-                <option value="">Semua Kecamatan</option>
-                {kecamatanList.map((kecamatan) => (
-                  <option key={kecamatan.id} value={kecamatan.id}>
-                    {kecamatan.nama}
-                  </option>
-                ))}
-              </select>
+                onChange={(value) => handleFilterChange('kecamatan_id', value)}
+                placeholder="Semua Kecamatan"
+                emptyText="Kecamatan tidak ditemukan"
+                options={[
+                  { value: '', label: 'Semua Kecamatan' },
+                  ...kecamatanList.map((kecamatan) => ({ value: String(kecamatan.id), label: kecamatan.nama })),
+                ]}
+              />
 
-              <select
+              <SelectBox
+                label="Desa"
                 value={filters.desa_id}
-                onChange={(event) => handleFilterChange('desa_id', event.target.value)}
+                onChange={(value) => handleFilterChange('desa_id', value)}
                 disabled={!filters.kecamatan_id}
-                className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700 outline-none disabled:cursor-not-allowed disabled:bg-slate-100 focus:border-teal-400 focus:bg-white"
-              >
-                <option value="">Semua Desa</option>
-                {desaList.map((desa) => (
-                  <option key={desa.id} value={desa.id}>
-                    {desa.nama}
-                  </option>
-                ))}
-              </select>
+                placeholder={filters.kecamatan_id ? 'Semua Desa' : 'Pilih kecamatan dulu'}
+                emptyText="Desa tidak ditemukan"
+                options={[
+                  { value: '', label: 'Semua Desa' },
+                  ...desaList.map((desa) => ({ value: String(desa.id), label: desa.nama })),
+                ]}
+              />
 
-              <select
+              <SelectBox
+                label="Status Kelengkapan"
                 value={filters.completion_status}
-                onChange={(event) => handleFilterChange('completion_status', event.target.value)}
-                className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700 outline-none focus:border-teal-400 focus:bg-white"
-              >
-                <option value="">Semua Status Kelengkapan</option>
-                {(stats?.filter_options?.completion_status || []).map((item) => (
-                  <option key={item.value} value={item.value}>
-                    {item.label}
-                  </option>
-                ))}
-              </select>
+                onChange={(value) => handleFilterChange('completion_status', value)}
+                placeholder="Semua Status Kelengkapan"
+                options={[
+                  { value: '', label: 'Semua Status Kelengkapan' },
+                  ...(stats?.filter_options?.completion_status || []).map((item) => ({
+                    value: String(item.value),
+                    label: item.label,
+                  })),
+                ]}
+              />
 
-              <select
+              <SelectBox
+                label="Klasifikasi"
                 value={filters.klasifikasi_desa}
-                onChange={(event) => handleFilterChange('klasifikasi_desa', event.target.value)}
-                className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700 outline-none focus:border-teal-400 focus:bg-white"
-              >
-                <option value="">Semua Klasifikasi</option>
-                {(stats?.filter_options?.klasifikasi_desa || []).map((item) => (
-                  <option key={item.value} value={item.value}>
-                    {item.label}
-                  </option>
-                ))}
-              </select>
+                onChange={(value) => handleFilterChange('klasifikasi_desa', value)}
+                placeholder="Semua Klasifikasi"
+                options={[
+                  { value: '', label: 'Semua Klasifikasi' },
+                  ...(stats?.filter_options?.klasifikasi_desa || []).map((item) => ({
+                    value: String(item.value),
+                    label: item.label,
+                  })),
+                ]}
+              />
 
-              <select
+              <SelectBox
+                label="Status Desa"
                 value={filters.status_desa}
-                onChange={(event) => handleFilterChange('status_desa', event.target.value)}
-                className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700 outline-none focus:border-teal-400 focus:bg-white"
-              >
-                <option value="">Semua Status Desa</option>
-                {(stats?.filter_options?.status_desa || []).map((item) => (
-                  <option key={item.value} value={item.value}>
-                    {item.label}
-                  </option>
-                ))}
-              </select>
+                onChange={(value) => handleFilterChange('status_desa', value)}
+                placeholder="Semua Status Desa"
+                options={[
+                  { value: '', label: 'Semua Status Desa' },
+                  ...(stats?.filter_options?.status_desa || []).map((item) => ({
+                    value: String(item.value),
+                    label: item.label,
+                  })),
+                ]}
+              />
 
-              <select
+              <SelectBox
+                label="Tipologi"
                 value={filters.tipologi_desa}
-                onChange={(event) => handleFilterChange('tipologi_desa', event.target.value)}
-                className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700 outline-none focus:border-teal-400 focus:bg-white"
-              >
-                <option value="">Semua Tipologi</option>
-                {(stats?.filter_options?.tipologi_desa || []).map((item) => (
-                  <option key={item.value} value={item.value}>
-                    {item.label}
-                  </option>
-                ))}
-              </select>
+                onChange={(value) => handleFilterChange('tipologi_desa', value)}
+                placeholder="Semua Tipologi"
+                options={[
+                  { value: '', label: 'Semua Tipologi' },
+                  ...(stats?.filter_options?.tipologi_desa || []).map((item) => ({
+                    value: String(item.value),
+                    label: item.label,
+                  })),
+                ]}
+              />
             </div>
           )}
 
@@ -768,12 +767,12 @@ const ProfilDesaDashboardPage = ({
                   <table className="min-w-full divide-y divide-slate-200">
                     <thead className="bg-slate-50/90">
                       <tr>
-                        <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Desa</th>
-                        <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Kategori Profil</th>
-                        <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Kelengkapan</th>
-                        <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Kontak & Penduduk</th>
-                        <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Indikator</th>
-                        <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Update</th>
+                        <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-[0.18em] text-brand-600">Desa</th>
+                        <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-[0.18em] text-brand-600">Kategori Profil</th>
+                        <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-[0.18em] text-brand-600">Kelengkapan</th>
+                        <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-[0.18em] text-brand-600">Kontak & Penduduk</th>
+                        <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-[0.18em] text-brand-600">Indikator</th>
+                        <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-[0.18em] text-brand-600">Update</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100 bg-white">
@@ -796,16 +795,16 @@ const ProfilDesaDashboardPage = ({
                                   {item.status_pemerintahan === 'kelurahan' ? 'Kelurahan' : 'Desa'} · Kode {item.kode_desa}
                                 </p>
                                 <p className="mt-2 text-xs font-medium text-slate-600">Kecamatan {item.kecamatan.nama}</p>
-                                <p className="mt-3 text-xs font-semibold text-teal-700">Klik untuk lihat detail profil</p>
+                                <p className="mt-3 text-xs font-semibold text-brand-700">Klik untuk lihat detail profil</p>
                               </div>
                             </td>
                             <td className="px-6 py-5">
                               <div className="min-w-[240px] space-y-2">
                                 <div className="flex flex-wrap gap-2">
-                                  <span className="rounded-full border border-sky-200 bg-sky-50 px-2.5 py-1 text-xs font-medium text-sky-700">
+                                  <span className="rounded-full border border-slate-200 bg-slate-100 px-2.5 py-1 text-xs font-medium text-brand-700">
                                     {item.klasifikasi_desa_label}
                                   </span>
-                                  <span className="rounded-full border border-violet-200 bg-violet-50 px-2.5 py-1 text-xs font-medium text-violet-700">
+                                  <span className="rounded-full border border-slate-200 bg-slate-100 px-2.5 py-1 text-xs font-medium text-brand-700">
                                     {item.status_desa_label}
                                   </span>
                                   <span className="rounded-full border border-amber-200 bg-amber-50 px-2.5 py-1 text-xs font-medium text-amber-700">
@@ -824,7 +823,7 @@ const ProfilDesaDashboardPage = ({
                                 </div>
                                 <div className="h-2 rounded-full bg-slate-100">
                                   <div
-                                    className={`h-2 rounded-full bg-gradient-to-r ${tone.bar}`}
+                                    className={`h-2 rounded-full ${tone.bar}`}
                                     style={{ width: `${Math.max(item.completion.percentage, item.completion.percentage === 0 ? 0 : 6)}%` }}
                                   />
                                 </div>
@@ -881,7 +880,7 @@ const ProfilDesaDashboardPage = ({
                         key={item.desa_id}
                         type="button"
                         onClick={() => openDetailPage(item.desa_id)}
-                        className="block w-full rounded-2xl border border-slate-200 bg-slate-50/70 p-5 text-left transition hover:border-teal-200 hover:bg-white"
+                        className="block w-full rounded-2xl border border-slate-200 bg-slate-50/70 p-5 text-left transition hover:border-slate-200 hover:bg-white"
                       >
                         <div className="flex items-start justify-between gap-4">
                           <div>
@@ -894,10 +893,10 @@ const ProfilDesaDashboardPage = ({
                         </div>
 
                         <div className="mt-4 flex flex-wrap gap-2">
-                          <span className="rounded-full border border-sky-200 bg-sky-50 px-2.5 py-1 text-xs font-medium text-sky-700">
+                          <span className="rounded-full border border-slate-200 bg-slate-100 px-2.5 py-1 text-xs font-medium text-brand-700">
                             {item.klasifikasi_desa_label}
                           </span>
-                          <span className="rounded-full border border-violet-200 bg-violet-50 px-2.5 py-1 text-xs font-medium text-violet-700">
+                          <span className="rounded-full border border-slate-200 bg-slate-100 px-2.5 py-1 text-xs font-medium text-brand-700">
                             {item.status_desa_label}
                           </span>
                           <span className="rounded-full border border-amber-200 bg-amber-50 px-2.5 py-1 text-xs font-medium text-amber-700">
@@ -912,7 +911,7 @@ const ProfilDesaDashboardPage = ({
                           </div>
                           <div className="h-2 rounded-full bg-white">
                             <div
-                              className={`h-2 rounded-full bg-gradient-to-r ${tone.bar}`}
+                              className={`h-2 rounded-full ${tone.bar}`}
                               style={{ width: `${Math.max(item.completion.percentage, item.completion.percentage === 0 ? 0 : 6)}%` }}
                             />
                           </div>
@@ -941,7 +940,7 @@ const ProfilDesaDashboardPage = ({
                         </div>
 
                         <p className="mt-4 text-xs text-slate-500">Pembaruan terakhir: {formatDate(item.updated_at)}</p>
-                        <p className="mt-2 text-xs font-semibold text-teal-700">Ketuk untuk membuka detail profil desa</p>
+                        <p className="mt-2 text-xs font-semibold text-brand-700">Ketuk untuk membuka detail profil desa</p>
                       </button>
                     );
                   })}

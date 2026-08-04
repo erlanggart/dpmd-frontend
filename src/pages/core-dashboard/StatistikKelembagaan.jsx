@@ -3,6 +3,7 @@ import { LuUsers, LuLoader, LuX, LuRefreshCw } from "react-icons/lu";
 import StatistikTahunan from "../../components/kelembagaan/StatistikTahunan";
 import StatistikLKD from "../../components/kelembagaan/StatistikLKD";
 import kelembagaanApi from "../../api/kelembagaan";
+import PageHeader from "../../components/statistik/PageHeader";
 import { useDataCache } from "../../context/DataCacheContext";
 
 const CACHE_KEY = "statistik-kelembagaan";
@@ -52,15 +53,13 @@ const StatistikKelembagaan = () => {
 
 	if (loading) {
 		return (
-			<div className="p-6 space-y-6">
-				<div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-					<div className="flex items-center justify-center min-h-96">
-						<div className="flex items-center gap-2">
-							<LuLoader className="h-6 w-6 animate-spin text-blue-600" />
-							<span className="text-gray-600">
-								Memuat data statistik kelembagaan...
-							</span>
-						</div>
+			<div className="min-h-screen bg-slate-50 p-4 pt-20 sm:p-6 lg:p-8 lg:pt-8">
+				<div className="flex min-h-96 items-center justify-center rounded-2xl border border-slate-200 bg-white">
+					<div className="flex items-center gap-2.5">
+						<LuLoader className="h-5 w-5 animate-spin text-brand-600" />
+						<span className="text-sm text-slate-500">
+							Memuat data statistik kelembagaan...
+						</span>
 					</div>
 				</div>
 			</div>
@@ -69,14 +68,18 @@ const StatistikKelembagaan = () => {
 
 	if (error) {
 		return (
-			<div className="p-6">
-				<div className="bg-red-50 border border-red-200 rounded-lg p-6 text-center">
-					<LuX className="h-12 w-12 text-red-500 mx-auto mb-4" />
-					<h3 className="text-lg font-semibold text-red-800 mb-2">Error</h3>
-					<p className="text-red-600 mb-4">{error}</p>
+			<div className="min-h-screen bg-slate-50 p-4 pt-20 sm:p-6 lg:p-8 lg:pt-8">
+				<div className="mx-auto max-w-lg rounded-2xl border border-slate-200 bg-white p-8 text-center">
+					<div className="mx-auto flex h-11 w-11 items-center justify-center rounded-full border border-slate-200 bg-slate-50">
+						<LuX className="h-5 w-5 text-slate-900" />
+					</div>
+					<h3 className="mt-4 text-base font-semibold text-slate-900">
+						Data gagal dimuat
+					</h3>
+					<p className="mt-1.5 text-sm leading-relaxed text-slate-500">{error}</p>
 					<button
 						onClick={handleRefresh}
-						className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
+						className="mt-5 rounded-lg bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-slate-800"
 					>
 						Coba Lagi
 					</button>
@@ -86,33 +89,22 @@ const StatistikKelembagaan = () => {
 	}
 
 	return (
-		<div className="p-6 space-y-6">
+		<div className="min-h-screen space-y-6 bg-slate-50 p-4 pt-20 sm:p-6 lg:p-8 lg:pt-8">
 			{/* Header */}
-			<div className=" rounded-lg shadow-sm border border-gray-200 p-6">
-				<div className="flex items-center justify-between">
-					<div className="flex items-center gap-3">
-						<div className="p-3 bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl">
-							<LuUsers className="h-6 w-6 text-white" />
-						</div>
-						<div>
-							<h1 className="text-2xl font-bold text-gray-900">
-								Statistik Kelembagaan Desa
-							</h1>
-							<p className="text-gray-600 text-sm">
-								Informasi lengkap kelembagaan di seluruh Kabupaten Bogor
-							</p>
-						</div>
-					</div>
+			<PageHeader
+				icon={LuUsers}
+				title="Statistik Kelembagaan Desa"
+				subtitle="Informasi lengkap kelembagaan di seluruh Kabupaten Bogor"
+				actions={
 					<button
 						onClick={handleRefresh}
-						className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+						className="inline-flex items-center gap-2 rounded-lg bg-white/10 px-4 py-2 text-sm font-semibold text-white ring-1 ring-white/15 transition-colors hover:bg-white/20"
 					>
 						<LuRefreshCw className="h-4 w-4" />
 						<span>Refresh</span>
 					</button>
-				</div>
-			</div>
-			
+				}
+			/>
 
 			{/* Statistik LKD */}
 			<StatistikLKD summaryData={summaryData} loading={loading} />

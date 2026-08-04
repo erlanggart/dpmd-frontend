@@ -1,94 +1,119 @@
 /* WelcomeDashboard.css */
 
-@keyframes blob {
-  0%, 100% {
-    transform: translate(0, 0) scale(1);
+@keyframes welcome-rise {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
   }
-  33% {
-    transform: translate(30px, -50px) scale(1.1);
-  }
-  66% {
-    transform: translate(-20px, 20px) scale(0.9);
-  }
-}
-
-@keyframes float {
-  0%, 100% {
-    transform: translateY(0px);
-  }
-  50% {
-    transform: translateY(-20px);
+  to {
+    opacity: 1;
+    transform: translateY(0);
   }
 }
 
-@keyframes slideUpBounce {
+.welcome-rise {
+  animation: welcome-rise 0.55s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.welcome-delay-1 {
+  animation-delay: 0.07s;
+}
+
+.welcome-delay-2 {
+  animation-delay: 0.14s;
+}
+
+.welcome-delay-3 {
+  animation-delay: 0.21s;
+}
+
+.welcome-delay-4 {
+  animation-delay: 0.28s;
+}
+
+/* Panel gelap: grid halus + sorot cahaya lembut, semua monokrom */
+.welcome-hero {
+  position: relative;
+  isolation: isolate;
+  background-color: #020617;
+  overflow: hidden;
+}
+
+.welcome-hero::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -2;
+  background-image: linear-gradient(
+      to right,
+      rgba(255, 255, 255, 0.05) 1px,
+      transparent 1px
+    ),
+    linear-gradient(to bottom, rgba(255, 255, 255, 0.05) 1px, transparent 1px);
+  background-size: 56px 56px;
+  mask-image: radial-gradient(120% 100% at 15% 0%, #000 25%, transparent 85%);
+  -webkit-mask-image: radial-gradient(
+    120% 100% at 15% 0%,
+    #000 25%,
+    transparent 85%
+  );
+}
+
+.welcome-hero::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  /* Sorot tipis merah bata; dominan tetap hitam */
+  background: radial-gradient(
+      80% 120% at 88% 8%,
+      rgba(185, 28, 28, 0.22) 0%,
+      transparent 58%
+    ),
+    radial-gradient(
+      55% 90% at 12% 108%,
+      rgba(255, 255, 255, 0.05) 0%,
+      transparent 62%
+    );
+}
+
+/* Titik status berdenyut */
+@keyframes welcome-ping {
   0% {
-    opacity: 0;
-    transform: translateY(60px) scale(0.9);
-  }
-  60% {
-    transform: translateY(-10px) scale(1.02);
-  }
-  100% {
-    opacity: 1;
-    transform: translateY(0) scale(1);
-  }
-}
-
-@keyframes gradient-shift {
-  0%, 100% {
-    background-position: 0% 50%;
-  }
-  50% {
-    background-position: 100% 50%;
-  }
-}
-
-@keyframes fade-in {
-  from {
-    opacity: 0;
-  }
-  to {
-    opacity: 1;
-  }
-}
-
-@keyframes scale-in {
-  from {
-    opacity: 0;
-    transform: scale(0.8);
-  }
-  to {
-    opacity: 1;
     transform: scale(1);
+    opacity: 0.55;
+  }
+  70%,
+  100% {
+    transform: scale(2.4);
+    opacity: 0;
   }
 }
 
-.animate-blob {
-  animation: blob 7s infinite;
+.welcome-ping {
+  animation: welcome-ping 2s cubic-bezier(0, 0, 0.2, 1) infinite;
 }
 
-.animate-float {
-  animation: float 6s ease-in-out infinite;
+/* Baris fitur: garis penanda muncul saat hover */
+.welcome-row-mark {
+  transition: transform 0.35s cubic-bezier(0.22, 1, 0.36, 1);
+  transform: scaleX(0);
+  transform-origin: left;
+  background-image: linear-gradient(to right, #0f172a, #334155);
 }
 
-.animate-gradient-shift {
-  background-size: 200% 200%;
-  animation: gradient-shift 4s ease infinite;
+.welcome-row:hover .welcome-row-mark,
+.welcome-row:focus-visible .welcome-row-mark {
+  transform: scaleX(1);
 }
 
-.animate-fade-in {
-  animation: fade-in 1s ease-out;
-}
+@media (prefers-reduced-motion: reduce) {
+  .welcome-rise,
+  .welcome-ping {
+    animation: none;
+  }
 
-.animate-scale-in {
-  animation: scale-in 0.8s ease-out 0.3s both;
-}
-
-.animation-delay-2000 {
-  animation-delay: 2s;
-}
-
-.animation-delay-4000 {
-  animation-delay: 4s;
+  .welcome-row-mark {
+    transition: none;
+  }
 }
