@@ -197,6 +197,11 @@ const PegawaiDetailPage = () => {
 	const location = useLocation();
 	const { id } = useParams();
 	const initialPegawai = location.state?.pegawai || null;
+	// Halaman ini dipasang di beberapa jalur (/superadmin/kepegawaian/:id,
+	// /superadmin/bidang/sekretariat/kepegawaian/:id, /sekretariat/kepegawaian/:id).
+	// Tombol kembali harus pulang ke daftar pada jalur yang sama — kalau dipaksa
+	// ke /superadmin, pegawai Umpeg justru terlempar ke halaman terlarang.
+	const listPath = location.pathname.replace(/\/[^/]*$/, "");
 	const [pegawai, setPegawai] = useState(initialPegawai);
 	const [loading, setLoading] = useState(!initialPegawai);
 	const [error, setError] = useState("");
@@ -254,15 +259,15 @@ const PegawaiDetailPage = () => {
 	if (!pegawai) {
 		return (
 			<div className="mx-auto max-w-3xl px-4 py-16 text-center">
-				<div className="rounded-3xl border border-red-100 bg-white p-8 shadow-sm">
-					<div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-red-50 text-red-500">
-						<LuUsers className="h-8 w-8" />
+				<div className="rounded-xl border border-slate-200 bg-white p-8">
+					<div className="mx-auto flex h-14 w-14 items-center justify-center rounded-xl bg-rose-50 text-rose-500">
+						<LuUsers className="h-6 w-6" />
 					</div>
-					<h1 className="mt-4 text-xl font-bold text-slate-900">Detail pegawai tidak tersedia</h1>
+					<h1 className="mt-4 text-lg font-semibold text-slate-900">Detail pegawai tidak tersedia</h1>
 					<p className="mt-2 text-sm text-slate-500">{error || "Data pegawai tidak ditemukan."}</p>
 					<button
-						onClick={() => navigate("/superadmin/kepegawaian")}
-						className="mt-6 inline-flex items-center gap-2 rounded-2xl bg-slate-900 px-5 py-3 text-sm font-semibold text-white transition hover:bg-slate-800"
+						onClick={() => navigate(listPath)}
+						className="mt-6 inline-flex items-center gap-2 rounded-lg bg-slate-900 px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-slate-800"
 					>
 						<LuChevronLeft className="h-4 w-4" />
 						Kembali ke Kepegawaian
@@ -312,38 +317,38 @@ const PegawaiDetailPage = () => {
 	const bidangBadge = getDisplayState(pegawai.bidangs?.nama);
 
 	return (
-		<div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-blue-50 p-4 md:p-6 lg:p-8">
-			<div className="mx-auto max-w-7xl space-y-6">
-				<div className="overflow-hidden rounded-3xl bg-gradient-to-r from-slate-900 via-indigo-950 to-blue-900 p-6 text-white shadow-2xl">
-					<div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-						<div className="flex items-start gap-3">
+		<div className="min-h-screen bg-slate-50">
+			<div className="mx-auto max-w-7xl space-y-5 px-4 py-6 sm:px-6 lg:px-8">
+				<div className="rounded-xl border border-slate-200 bg-white p-5 sm:p-6">
+					<div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+						<div className="flex min-w-0 items-start gap-3.5">
 							<button
-								onClick={() => navigate("/superadmin/kepegawaian")}
-								className="mt-0.5 flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-2xl bg-white/10 transition hover:bg-white/20"
+								onClick={() => navigate(listPath)}
+								className="mt-0.5 flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg border border-slate-200 text-slate-500 transition-colors hover:bg-slate-50 hover:text-slate-900"
 							>
 								<LuChevronLeft className="h-5 w-5" />
 							</button>
-							<div>
-								<p className="text-sm font-medium text-white/70">Kepegawaian</p>
-								<h1 className="mt-1 text-2xl font-bold md:text-3xl">Detail Pegawai</h1>
-								<p className="mt-2 max-w-2xl text-sm text-white/75 md:text-base">
-									Halaman detail menampilkan seluruh data pegawai dengan keterangan kosong untuk field yang belum terisi.
+							<div className="min-w-0">
+								<p className="text-xs font-semibold uppercase tracking-wide text-brand-600">Kepegawaian</p>
+								<h1 className="text-xl font-semibold tracking-tight text-slate-900 sm:text-2xl">Detail Pegawai</h1>
+								<p className="mt-1 max-w-2xl text-sm leading-6 text-slate-500">
+									Seluruh data pegawai yang tersimpan; field yang belum terisi tetap ditampilkan sebagai keterangan kosong.
 								</p>
 							</div>
 						</div>
-						<div className="flex flex-wrap gap-2">
-							<span className={`inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm font-semibold ${statusBadge.isEmpty ? "bg-white/10 text-white/75" : "bg-emerald-400/15 text-emerald-100"}`}>
-								<LuCheck className="h-4 w-4" />
+						<div className="flex flex-shrink-0 flex-wrap gap-2">
+							<span className={`inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-xs font-semibold ring-1 ${statusBadge.isEmpty ? "bg-slate-50 text-slate-500 ring-slate-200" : "bg-emerald-50 text-emerald-700 ring-emerald-100"}`}>
+								<LuCheck className="h-3.5 w-3.5" />
 								{statusBadge.value}
 							</span>
-							<span className={`inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm font-semibold ${roleBadge.isEmpty ? "bg-white/10 text-white/75" : "bg-blue-400/15 text-blue-100"}`}>
-								<LuUsers className="h-4 w-4" />
+							<span className={`inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-xs font-semibold ring-1 ${roleBadge.isEmpty ? "bg-slate-50 text-slate-500 ring-slate-200" : "bg-slate-900 text-white ring-slate-900"}`}>
+								<LuUsers className="h-3.5 w-3.5" />
 								{roleBadge.value}
 							</span>
 						</div>
 					</div>
 					{error ? (
-						<div className="mt-5 rounded-2xl border border-amber-300/20 bg-amber-400/10 px-4 py-3 text-sm text-amber-50">
+						<div className="mt-5 rounded-lg border border-amber-100 bg-amber-50 px-4 py-3 text-sm text-amber-800">
 							Menampilkan data terakhir yang tersedia. Sinkronisasi data terbaru gagal: {error}
 						</div>
 					) : null}
@@ -351,8 +356,8 @@ const PegawaiDetailPage = () => {
 
 				<div className="grid grid-cols-1 gap-6 xl:grid-cols-12">
 					<div className="xl:col-span-4">
-						<div className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-xl xl:sticky xl:top-6">
-							<div className="bg-gradient-to-br from-indigo-600 via-blue-600 to-cyan-500 px-6 pb-24 pt-6" />
+						<div className="overflow-hidden rounded-xl border border-slate-200 bg-white xl:sticky xl:top-6">
+							<div className="bg-slate-900 px-6 pb-24 pt-6" />
 							<div className="px-6 pb-6">
 								<div className="-mt-20 mx-auto max-w-[280px]">
 									<div className="aspect-[4/5] overflow-hidden rounded-[2rem] border-[6px] border-white bg-slate-100 shadow-2xl">

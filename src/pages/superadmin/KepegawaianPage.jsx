@@ -1,6 +1,6 @@
 // src/pages/superadmin/KepegawaianPage.jsx
 import React, { useState, useEffect, useCallback, useMemo } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import {
 	LuUsers,
 	LuPlus,
@@ -88,16 +88,16 @@ const PegawaiFormModal = ({ isOpen, onClose, onSaved, pegawai, bidangList }) => 
 		}
 	};
 
-	const inputClass = "w-full px-3 py-2.5 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all text-sm";
-	const labelClass = "block text-xs font-medium text-gray-600 mb-1";
+	const inputClass = "w-full rounded-lg border border-slate-200 px-3.5 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 transition-colors focus:border-slate-900 focus:outline-none focus:ring-1 focus:ring-slate-900";
+	const labelClass = "mb-1.5 block text-xs font-medium text-slate-600";
 
 	return (
 		<div className="fixed inset-0 z-50 flex items-center justify-center p-4">
 			<div className="fixed inset-0 bg-black/50 backdrop-blur-sm" onClick={onClose} />
-			<div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-hidden animate-in fade-in zoom-in duration-200">
-				<div className="bg-gradient-to-r from-indigo-600 to-purple-600 px-6 py-4 text-white flex items-center justify-between">
-					<h3 className="text-lg font-bold">{pegawai ? "Edit Pegawai" : "Tambah Pegawai"}</h3>
-					<button onClick={onClose} className="p-1 hover:bg-white/20 rounded-lg transition-colors">
+			<div className="relative max-h-[90vh] w-full max-w-2xl overflow-hidden rounded-2xl bg-white shadow-2xl">
+				<div className="flex items-center justify-between border-b border-slate-200 px-6 py-4">
+					<h3 className="text-base font-semibold text-slate-900">{pegawai ? "Edit Pegawai" : "Tambah Pegawai"}</h3>
+					<button onClick={onClose} className="rounded-lg p-1.5 text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-900">
 						<LuX className="w-5 h-5" />
 					</button>
 				</div>
@@ -105,7 +105,7 @@ const PegawaiFormModal = ({ isOpen, onClose, onSaved, pegawai, bidangList }) => 
 					{/* Row 1: Nama & NIP */}
 					<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
 						<div>
-							<label className={labelClass}>Nama Pegawai <span className="text-red-500">*</span></label>
+							<label className={labelClass}>Nama Pegawai <span className="text-rose-500">*</span></label>
 							<input type="text" value={form.nama_pegawai} onChange={(e) => handleChange("nama_pegawai", e.target.value)} placeholder="Nama lengkap..." className={inputClass} required />
 						</div>
 						<div>
@@ -117,7 +117,7 @@ const PegawaiFormModal = ({ isOpen, onClose, onSaved, pegawai, bidangList }) => 
 					{/* Row 2: Bidang & Status */}
 					<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
 						<div>
-							<label className={labelClass}>Bidang <span className="text-red-500">*</span></label>
+							<label className={labelClass}>Bidang <span className="text-rose-500">*</span></label>
 							<div className="relative">
 								<select value={form.id_bidang} onChange={(e) => handleChange("id_bidang", e.target.value)} className={`${inputClass} appearance-none bg-white`} required>
 									<option value="">Pilih Bidang</option>
@@ -233,10 +233,10 @@ const PegawaiFormModal = ({ isOpen, onClose, onSaved, pegawai, bidangList }) => 
 
 					{/* Actions */}
 					<div className="flex gap-3 pt-2">
-						<button type="button" onClick={onClose} className="flex-1 px-4 py-3 border-2 border-gray-200 rounded-xl text-gray-700 font-medium hover:bg-gray-50 transition-all">
+						<button type="button" onClick={onClose} className="flex-1 rounded-lg border border-slate-200 px-4 py-3 font-semibold text-slate-700 transition-colors hover:bg-slate-50">
 							Batal
 						</button>
-						<button type="submit" disabled={saving || !form.nama_pegawai.trim() || !form.id_bidang} className="flex-1 px-4 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-xl font-medium hover:from-indigo-700 hover:to-purple-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2">
+						<button type="submit" disabled={saving || !form.nama_pegawai.trim() || !form.id_bidang} className="flex flex-1 items-center justify-center gap-2 rounded-lg bg-slate-900 px-4 py-3 font-semibold text-white transition-colors hover:bg-slate-800 disabled:cursor-not-allowed disabled:bg-slate-300">
 							{saving ? <div className="animate-spin rounded-full h-5 w-5 border-2 border-white/30 border-t-white" /> : <><LuCheck className="w-5 h-5" />{pegawai ? "Simpan" : "Tambah"}</>}
 						</button>
 					</div>
@@ -249,6 +249,12 @@ const PegawaiFormModal = ({ isOpen, onClose, onSaved, pegawai, bidangList }) => 
 // ===================== Main Page =====================
 const KepegawaianPage = () => {
 	const navigate = useNavigate();
+	const location = useLocation();
+	// Halaman ini dipakai di tiga jalur: /superadmin/kepegawaian,
+	// /superadmin/bidang/sekretariat/kepegawaian, dan /sekretariat/kepegawaian.
+	// Tautan detail harus tetap di jalur yang sedang dibuka, bukan lompat ke
+	// /superadmin dan memicu penolakan akses untuk pegawai Umpeg.
+	const basePath = location.pathname.replace(/\/+$/, "");
 	const [pegawaiList, setPegawaiList] = useState([]);
 	const [bidangList, setBidangList] = useState([]);
 	const [loading, setLoading] = useState(true);
@@ -333,7 +339,7 @@ const KepegawaianPage = () => {
 	};
 
 	const handleOpenDetail = (pegawai) => {
-		navigate(`/superadmin/kepegawaian/${pegawai.id_pegawai}`, {
+		navigate(`${basePath}/${pegawai.id_pegawai}`, {
 			state: { pegawai },
 		});
 	};
@@ -371,58 +377,64 @@ const KepegawaianPage = () => {
 
 	const getRoleBadge = (role) => {
 		const map = {
-			kepala_dinas: { label: "Kepala Dinas", color: "bg-red-100 text-red-700" },
-			sekretaris_dinas: { label: "Sekretaris", color: "bg-orange-100 text-orange-700" },
-			kepala_bidang: { label: "Kabid", color: "bg-purple-100 text-purple-700" },
-			ketua_tim: { label: "Ketua Tim", color: "bg-blue-100 text-blue-700" },
-			pegawai: { label: "Pegawai", color: "bg-green-100 text-green-700" },
+			kepala_dinas: { label: "Kepala Dinas", color: "bg-brand-50 text-brand-700" },
+			sekretaris_dinas: { label: "Sekretaris", color: "bg-brand-50 text-brand-700" },
+			kepala_bidang: { label: "Kabid", color: "bg-slate-900 text-white" },
+			ketua_tim: { label: "Ketua Tim", color: "bg-slate-100 text-slate-700" },
+			pegawai: { label: "Pegawai", color: "bg-slate-100 text-slate-700" },
 		};
-		return map[role] || { label: role, color: "bg-gray-100 text-gray-700" };
+		return map[role] || { label: role, color: "bg-slate-100 text-slate-700" };
 	};
 
 	if (loading) {
 		return (
-			<div className="flex justify-center items-center p-12">
+			<div className="flex items-center justify-center rounded-xl border border-slate-200 bg-white p-12">
 				<div className="flex flex-col items-center gap-3">
-					<div className="animate-spin rounded-full h-12 w-12 border-b-3 border-indigo-500" />
-					<p className="text-gray-600 text-sm">Memuat data kepegawaian...</p>
+					<div className="h-8 w-8 animate-spin rounded-full border-2 border-slate-200 border-t-slate-900" />
+					<p className="text-sm text-slate-500">Memuat data kepegawaian...</p>
 				</div>
 			</div>
 		);
 	}
 
 	return (
-		<div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 p-4 md:p-6 lg:p-8">
+		<div className="min-h-screen bg-slate-50">
+			<div className="mx-auto max-w-7xl space-y-5 px-4 py-6 sm:px-6 lg:px-8">
 			{/* Header */}
-			<div className="mb-6">
-				<div className="bg-gradient-to-r from-indigo-600 via-blue-600 to-cyan-600 rounded-2xl p-6 md:p-8 text-white shadow-2xl relative overflow-hidden">
-					<div className="absolute inset-0 bg-black opacity-5" />
-					<div className="relative z-10 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-						<div>
-							<h1 className="text-3xl md:text-4xl font-bold mb-2 flex items-center gap-3">
-								<div className="h-10 w-10 md:h-12 md:w-12 bg-white/20 backdrop-blur-sm rounded-xl flex items-center justify-center">
-									<LuUsers className="w-6 h-6 md:w-7 md:h-7" />
-								</div>
-								Manajemen Kepegawaian
-							</h1>
-							<p className="text-white/90">Kelola data pegawai DPMD Kabupaten Bogor</p>
+			<div className="rounded-xl border border-slate-200 bg-white p-5 sm:p-6">
+				<div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+					<div className="flex min-w-0 items-start gap-3.5">
+						<div className="relative flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-xl bg-slate-900 text-white">
+							<LuUsers className="h-5 w-5" />
+							<span className="absolute -bottom-0.5 left-1/2 h-1 w-5 -translate-x-1/2 rounded-full bg-brand-500" />
 						</div>
-						<div className="flex items-center gap-3 text-sm">
-							<div className="bg-white/15 backdrop-blur-sm rounded-xl px-4 py-2">
-								<span className="font-bold text-xl">{pegawaiList.length}</span>
-								<span className="text-white/80 ml-1">Pegawai</span>
-							</div>
-							<div className="bg-white/15 backdrop-blur-sm rounded-xl px-4 py-2">
-								<span className="font-bold text-xl">{bidangList.length}</span>
-								<span className="text-white/80 ml-1">Bidang</span>
-							</div>
+						<div className="min-w-0">
+							<p className="text-xs font-semibold uppercase tracking-wide text-brand-600">
+								Umum &amp; Kepegawaian
+							</p>
+							<h1 className="text-xl font-semibold tracking-tight text-slate-900 sm:text-2xl">
+								Data Kepegawaian
+							</h1>
+							<p className="mt-1 text-sm leading-6 text-slate-500">
+								Kelola data pegawai DPMD Kabupaten Bogor — NIP, pangkat, golongan, dan jabatan.
+							</p>
+						</div>
+					</div>
+					<div className="flex flex-shrink-0 gap-3">
+						<div className="rounded-lg border border-slate-200 bg-slate-50 px-4 py-2.5">
+							<p className="text-xl font-semibold leading-none tabular-nums text-slate-900">{pegawaiList.length}</p>
+							<p className="mt-1 text-[11px] font-medium text-slate-500">Pegawai</p>
+						</div>
+						<div className="rounded-lg border border-slate-200 bg-slate-50 px-4 py-2.5">
+							<p className="text-xl font-semibold leading-none tabular-nums text-slate-900">{bidangList.length}</p>
+							<p className="mt-1 text-[11px] font-medium text-slate-500">Bidang</p>
 						</div>
 					</div>
 				</div>
 			</div>
 
 			{/* Filters & Actions */}
-			<div className="bg-white rounded-2xl shadow-lg p-5 mb-6">
+			<div className="rounded-xl border border-slate-200 bg-white p-5">
 				<div className="flex flex-col md:flex-row gap-4">
 					<div className="relative flex-1">
 						<LuSearch className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
@@ -431,7 +443,7 @@ const KepegawaianPage = () => {
 							placeholder="Cari nama, NIP, atau jabatan..."
 							value={searchTerm}
 							onChange={(e) => setSearchTerm(e.target.value)}
-							className="w-full pl-12 pr-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
+							className="w-full rounded-lg border border-slate-200 py-2.5 pl-11 pr-4 text-sm text-slate-900 placeholder:text-slate-400 transition-colors focus:border-slate-900 focus:outline-none focus:ring-1 focus:ring-slate-900"
 						/>
 					</div>
 					<div className="relative w-full md:w-64">
@@ -439,7 +451,7 @@ const KepegawaianPage = () => {
 						<select
 							value={filterBidang}
 							onChange={(e) => setFilterBidang(e.target.value)}
-							className="w-full pl-12 pr-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all appearance-none bg-white"
+							className="w-full appearance-none rounded-lg border border-slate-200 bg-white py-2.5 pl-11 pr-4 text-sm text-slate-900 transition-colors focus:border-slate-900 focus:outline-none focus:ring-1 focus:ring-slate-900"
 						>
 							<option value="all">Semua Bidang</option>
 							{bidangList.map((b) => <option key={b.id} value={b.id}>{b.nama}</option>)}
@@ -447,47 +459,47 @@ const KepegawaianPage = () => {
 						<LuChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400 pointer-events-none" />
 					</div>
 					<div className="flex gap-3">
-						<button onClick={handleExport} className="flex items-center gap-2 px-5 py-3 bg-gradient-to-r from-emerald-600 to-teal-600 text-white rounded-xl hover:from-emerald-700 hover:to-teal-700 transition-all shadow-lg hover:shadow-xl whitespace-nowrap">
-							<LuDownload className="h-5 w-5" />
-							<span className="font-semibold hidden sm:inline">Ekspor</span>
+						<button onClick={handleExport} className="flex items-center gap-2 whitespace-nowrap rounded-lg border border-slate-200 px-4 py-2.5 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-50">
+							<LuDownload className="h-4 w-4" />
+							<span className="hidden sm:inline">Ekspor</span>
 						</button>
 						<button
 							onClick={() => { setEditPegawai(null); setShowModal(true); }}
-							className="flex items-center gap-2 px-5 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-xl hover:from-indigo-700 hover:to-purple-700 transition-all shadow-lg hover:shadow-xl whitespace-nowrap"
+							className="flex items-center gap-2 whitespace-nowrap rounded-lg bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-slate-800"
 						>
-							<LuPlus className="h-5 w-5" />
-							<span className="font-semibold">Tambah</span>
+							<LuPlus className="h-4 w-4" />
+							<span>Tambah</span>
 						</button>
 					</div>
 				</div>
-				<div className="mt-3 text-sm text-gray-500">
-					Menampilkan <span className="font-semibold text-gray-700">{filtered.length}</span> dari <span className="font-semibold text-gray-700">{pegawaiList.length}</span> pegawai
+				<div className="mt-3 text-sm text-slate-500">
+					Menampilkan <span className="font-semibold text-slate-900">{filtered.length}</span> dari <span className="font-semibold text-slate-900">{pegawaiList.length}</span> pegawai
 				</div>
 			</div>
 
 			{/* Table */}
 			{filtered.length === 0 ? (
-				<div className="text-center py-16 bg-white rounded-2xl border-2 border-dashed border-gray-200">
+				<div className="rounded-xl border border-dashed border-slate-300 bg-white py-16 text-center">
 					<div className="flex flex-col items-center gap-4">
-						<div className="h-20 w-20 bg-gray-100 rounded-2xl flex items-center justify-center">
-							<LuUsers className="h-10 w-10 text-gray-400" />
+						<div className="flex h-14 w-14 items-center justify-center rounded-xl bg-slate-100">
+							<LuUsers className="h-6 w-6 text-slate-400" />
 						</div>
 						<div>
-							<p className="text-gray-700 font-semibold text-lg mb-1">
+							<p className="mb-1 text-base font-semibold text-slate-900">
 								{searchTerm || filterBidang !== "all" ? "Tidak ada pegawai yang sesuai" : "Belum ada data pegawai"}
 							</p>
-							<p className="text-sm text-gray-500">
-								{searchTerm || filterBidang !== "all" ? "Coba ubah filter atau kata kunci pencarian" : 'Klik "Tambah" untuk menambahkan data baru'}
+							<p className="text-sm text-slate-500">
+								{searchTerm || filterBidang !== "all" ? "Coba ubah filter atau kata kunci pencarian." : 'Klik "Tambah" untuk menambahkan data baru.'}
 							</p>
 						</div>
 					</div>
 				</div>
 			) : (
-				<div className="bg-white rounded-2xl shadow-lg overflow-hidden">
+				<div className="overflow-hidden rounded-xl border border-slate-200 bg-white">
 					<div className="overflow-x-auto">
 						<table className="w-full text-sm">
 							<thead>
-								<tr className="bg-gradient-to-r from-gray-50 to-gray-100 text-gray-600 text-xs uppercase tracking-wider">
+								<tr className="border-b border-slate-200 bg-slate-50 text-xs uppercase tracking-wider text-slate-500">
 									<th className="px-4 py-4 text-left font-semibold w-12">No</th>
 									<th className="px-4 py-4 text-left font-semibold min-w-[200px]">Nama Pegawai</th>
 									<th className="px-4 py-4 text-left font-semibold min-w-[160px]">NIP</th>
@@ -500,61 +512,61 @@ const KepegawaianPage = () => {
 									<th className="px-4 py-4 text-center font-semibold w-32">Aksi</th>
 								</tr>
 							</thead>
-							<tbody className="divide-y divide-gray-100">
+							<tbody className="divide-y divide-slate-100">
 								{paginated.map((p, idx) => {
 									const user = p.users?.[0];
 									const avatarUrl = getAvatarUrl(user?.avatar);
 									const roleBadge = user ? getRoleBadge(user.role) : null;
 									return (
-										<tr key={p.id_pegawai} className="hover:bg-indigo-50/40 transition-colors">
-											<td className="px-4 py-3.5 text-gray-500 font-medium">{(currentPage - 1) * itemsPerPage + idx + 1}</td>
+										<tr key={p.id_pegawai} className="transition-colors hover:bg-slate-50">
+											<td className="px-4 py-3.5 font-medium text-slate-400">{(currentPage - 1) * itemsPerPage + idx + 1}</td>
 											<td className="px-4 py-3.5">
 												<div className="flex items-center gap-3">
-													<div className="h-9 w-9 bg-indigo-100 rounded-lg flex items-center justify-center flex-shrink-0">
+													<div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg bg-slate-100">
 														{avatarUrl ? (
 															<img src={avatarUrl} alt="" className="h-9 w-9 rounded-lg object-cover" />
 														) : (
-															<LuCircleUser className="w-5 h-5 text-indigo-600" />
+															<LuCircleUser className="h-5 w-5 text-slate-400" />
 														)}
 													</div>
 													<div className="min-w-0">
-														<p className="font-semibold text-gray-800 truncate">{p.nama_pegawai}</p>
-														{user?.email && <p className="text-xs text-gray-400 truncate">{user.email}</p>}
+														<p className="truncate font-semibold text-slate-900">{p.nama_pegawai}</p>
+														{user?.email && <p className="truncate text-xs text-slate-400">{user.email}</p>}
 													</div>
 												</div>
 											</td>
-											<td className="px-4 py-3.5 text-gray-600 font-mono text-xs">{p.nip || <span className="text-gray-300">-</span>}</td>
+											<td className="px-4 py-3.5 font-mono text-xs text-slate-600">{p.nip || <span className="text-slate-300">-</span>}</td>
 											<td className="px-4 py-3.5">
-												<span className="inline-flex items-center px-2.5 py-1 rounded-lg bg-blue-50 text-blue-700 text-xs font-medium truncate max-w-[140px]">
+												<span className="inline-flex max-w-[140px] items-center truncate rounded-lg bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-700">
 													{p.bidangs?.nama || "-"}
 												</span>
 											</td>
-											<td className="px-4 py-3.5 text-gray-600 text-xs truncate max-w-[140px]">{p.jabatan || <span className="text-gray-300">-</span>}</td>
-											<td className="px-4 py-3.5 text-gray-600 text-xs">{p.golongan || <span className="text-gray-300">-</span>}</td>
-											<td className="px-4 py-3.5 text-gray-600 text-xs">{p.jenis_kelamin === "L" ? "L" : p.jenis_kelamin === "P" ? "P" : <span className="text-gray-300">-</span>}</td>
+											<td className="max-w-[140px] truncate px-4 py-3.5 text-xs text-slate-600">{p.jabatan || <span className="text-slate-300">-</span>}</td>
+											<td className="px-4 py-3.5 text-xs text-slate-600">{p.golongan || <span className="text-slate-300">-</span>}</td>
+											<td className="px-4 py-3.5 text-xs text-slate-600">{p.jenis_kelamin === "L" ? "L" : p.jenis_kelamin === "P" ? "P" : <span className="text-slate-300">-</span>}</td>
 											<td className="px-4 py-3.5">
 												{p.status_kepegawaian ? (
-													<span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-emerald-50 text-emerald-700">
+													<span className="inline-flex items-center rounded px-2 py-0.5 text-xs font-medium bg-emerald-50 text-emerald-700">
 														{p.status_kepegawaian}
 													</span>
-												) : <span className="text-gray-300 text-xs">-</span>}
+												) : <span className="text-xs text-slate-300">-</span>}
 											</td>
 											<td className="px-4 py-3.5">
 												{roleBadge ? (
-													<span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${roleBadge.color}`}>
+													<span className={`inline-flex items-center rounded px-2 py-0.5 text-xs font-medium ${roleBadge.color}`}>
 														{roleBadge.label}
 													</span>
-												) : <span className="text-gray-300 text-xs">-</span>}
+												) : <span className="text-xs text-slate-300">-</span>}
 											</td>
 											<td className="px-4 py-3.5">
 												<div className="flex items-center justify-center gap-1">
-													<button onClick={() => handleOpenDetail(p)} className="p-2 text-gray-500 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all" title="Detail">
+													<button onClick={() => handleOpenDetail(p)} className="rounded-lg p-2 text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-900" title="Detail">
 														<LuEye className="h-4 w-4" />
 													</button>
-													<button onClick={() => { setEditPegawai(p); setShowModal(true); }} className="p-2 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all" title="Edit">
+													<button onClick={() => { setEditPegawai(p); setShowModal(true); }} className="rounded-lg p-2 text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-900" title="Edit">
 														<LuPencil className="h-4 w-4" />
 													</button>
-													<button onClick={() => handleDelete(p)} className="p-2 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all" title="Hapus">
+													<button onClick={() => handleDelete(p)} className="rounded-lg p-2 text-slate-400 transition-colors hover:bg-rose-50 hover:text-rose-600" title="Hapus">
 														<LuTrash2 className="h-4 w-4" />
 													</button>
 												</div>
@@ -568,15 +580,15 @@ const KepegawaianPage = () => {
 
 					{/* Pagination */}
 					{totalPages > 1 && (
-						<div className="px-6 py-4 border-t border-gray-100 flex items-center justify-between">
-							<p className="text-sm text-gray-500">
-								Halaman <span className="font-semibold text-gray-700">{currentPage}</span> dari <span className="font-semibold text-gray-700">{totalPages}</span>
+						<div className="flex items-center justify-between border-t border-slate-100 px-6 py-4">
+							<p className="text-sm text-slate-500">
+								Halaman <span className="font-semibold text-slate-900">{currentPage}</span> dari <span className="font-semibold text-slate-900">{totalPages}</span>
 							</p>
 							<div className="flex items-center gap-2">
 								<button
 									onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
 									disabled={currentPage === 1}
-									className={`p-2.5 rounded-xl transition-all ${currentPage === 1 ? "bg-gray-100 text-gray-400 cursor-not-allowed" : "bg-white text-indigo-600 hover:bg-indigo-50 shadow-md hover:shadow-lg border border-gray-200"}`}
+									className={`rounded-lg p-2.5 transition-colors ${currentPage === 1 ? "cursor-not-allowed bg-slate-100 text-slate-300" : "border border-slate-200 bg-white text-slate-700 hover:bg-slate-50"}`}
 								>
 									<LuChevronLeft className="h-4 w-4" />
 								</button>
@@ -585,9 +597,9 @@ const KepegawaianPage = () => {
 										const show = page === 1 || page === totalPages || (page >= currentPage - 1 && page <= currentPage + 1);
 										const showEllipsis = (page === currentPage - 2 && currentPage > 3) || (page === currentPage + 2 && currentPage < totalPages - 2);
 										if (!show && !showEllipsis) return null;
-										if (showEllipsis) return <span key={page} className="px-2 py-1 text-gray-400">...</span>;
+										if (showEllipsis) return <span key={page} className="px-2 py-1 text-slate-400">...</span>;
 										return (
-											<button key={page} onClick={() => setCurrentPage(page)} className={`min-w-[36px] h-[36px] rounded-xl text-sm font-medium transition-all ${currentPage === page ? "bg-indigo-600 text-white shadow-lg" : "bg-white text-gray-700 hover:bg-indigo-50 hover:text-indigo-600 border border-gray-200"}`}>
+											<button key={page} onClick={() => setCurrentPage(page)} className={`h-[36px] min-w-[36px] rounded-lg text-sm font-medium transition-colors ${currentPage === page ? "bg-slate-900 text-white" : "border border-slate-200 bg-white text-slate-700 hover:bg-slate-50"}`}>
 												{page}
 											</button>
 										);
@@ -596,7 +608,7 @@ const KepegawaianPage = () => {
 								<button
 									onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
 									disabled={currentPage === totalPages}
-									className={`p-2.5 rounded-xl transition-all ${currentPage === totalPages ? "bg-gray-100 text-gray-400 cursor-not-allowed" : "bg-white text-indigo-600 hover:bg-indigo-50 shadow-md hover:shadow-lg border border-gray-200"}`}
+									className={`rounded-lg p-2.5 transition-colors ${currentPage === totalPages ? "cursor-not-allowed bg-slate-100 text-slate-300" : "border border-slate-200 bg-white text-slate-700 hover:bg-slate-50"}`}
 								>
 									<LuChevronRight className="h-4 w-4" />
 								</button>
@@ -614,6 +626,7 @@ const KepegawaianPage = () => {
 				pegawai={editPegawai}
 				bidangList={bidangList}
 			/>
+			</div>
 		</div>
 	);
 };

@@ -17,6 +17,7 @@ import {
 	RefreshCw,
 	ClipboardCheck,
 	ClipboardList,
+	IdCard,
 	DollarSign,
 	Package,
 	LayoutGrid,
@@ -75,12 +76,24 @@ const UMPEG_FEATURES = [
 		accent: '#1baf7a',
 	},
 	{
+		// Halaman ini mengelola AKUN (user, role, device absensi) — bukan data
+		// kepegawaiannya. Dibedakan tegas dari kartu "Data Kepegawaian" di bawah
+		// supaya tidak dikira fitur yang sama.
 		key: 'pegawai',
-		title: 'Manajemen Pegawai',
-		description: 'Data pegawai & kepegawaian',
+		title: 'Manajemen Pengguna',
+		description: 'Akun, role, & device absensi',
 		icon: Users,
 		path: '/sekretariat/pegawai',
 		accent: '#4a3aa7',
+	},
+	{
+		key: 'kepegawaian',
+		title: 'Data Kepegawaian',
+		description: 'NIP, pangkat, golongan, & jabatan ASN',
+		icon: IdCard,
+		path: '/sekretariat/kepegawaian',
+		restricted: true,
+		accent: '#b45309',
 	},
 	{
 		key: 'jadwal-kegiatan',

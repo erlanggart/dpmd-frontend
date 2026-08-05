@@ -1249,6 +1249,13 @@ function App() {
                   <Route path="disposisi" element={<DisposisiRouter />} />
                   <Route path="disposisi/:id" element={<DisposisiDetail />} />
                   <Route path="pegawai" element={<UserManagementPage />} />
+                  {/* Data kepegawaian (NIP, pangkat, golongan) adalah urusan Umpeg,
+                      jadi selain lewat /superadmin ia juga hidup di sini. Dibatasi
+                      ke bidang Sekretariat; superadmin lolos otomatis. */}
+                  <Route element={<RoleProtectedRoute allowedBidang={[BIDANG_SEKRETARIAT]} />}>
+                    <Route path="kepegawaian" element={<KepegawaianPage />} />
+                    <Route path="kepegawaian/:id" element={<PegawaiDetailPage />} />
+                  </Route>
                   <Route
                     path="jadwal-kegiatan"
                     element={<JadwalKegiatanPage />}
@@ -1341,6 +1348,8 @@ function App() {
                   <Route path="bidang/sekretariat/disposisi" element={<DisposisiRouter />} />
                   <Route path="bidang/sekretariat/disposisi/:id" element={<DisposisiDetail />} />
                   <Route path="bidang/sekretariat/pegawai" element={<UserManagementPage />} />
+                  <Route path="bidang/sekretariat/kepegawaian" element={<KepegawaianPage />} />
+                  <Route path="bidang/sekretariat/kepegawaian/:id" element={<PegawaiDetailPage />} />
                   <Route path="bidang/sekretariat/jadwal-kegiatan" element={<JadwalKegiatanPage />} />
                   <Route path="bidang/sekretariat/perjadin" element={<PerjadinMain />} />
                   <Route path="bidang/sekretariat/perjadin/detail/:id" element={<PerjadinDetail />} />
