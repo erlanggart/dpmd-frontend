@@ -52,19 +52,19 @@ const STATUS_META = {
   rejected: {
     label: 'Ditolak',
     shortLabel: 'Ditolak',
-    text: 'text-red-700',
-    bg: 'bg-red-50',
-    border: 'border-red-200',
-    dot: 'bg-red-500',
+    text: 'text-rose-700',
+    bg: 'bg-rose-50',
+    border: 'border-rose-200',
+    dot: 'bg-rose-500',
     icon: LuX,
   },
   revision: {
     label: 'Perlu revisi',
     shortLabel: 'Revisi',
-    text: 'text-orange-700',
-    bg: 'bg-orange-50',
-    border: 'border-orange-200',
-    dot: 'bg-orange-500',
+    text: 'text-amber-700',
+    bg: 'bg-amber-50',
+    border: 'border-amber-200',
+    dot: 'bg-amber-500',
     icon: LuRefreshCw,
   },
   waiting: {
@@ -160,24 +160,25 @@ const StatusPill = ({ status, label }) => {
 };
 
 const SummaryCard = ({ icon: Icon, label, value, detail, tone }) => {
-  const tones = {
-    slate: 'bg-slate-900 text-white shadow-slate-900/10',
-    blue: 'border-slate-100 bg-slate-50 text-slate-700',
-    orange: 'border-orange-100 bg-orange-50 text-orange-700',
-    emerald: 'border-slate-100 bg-slate-50 text-slate-700',
+  // Warna hanya dipakai pada angka sebagai penanda semantik; permukaan tetap netral.
+  const valueTones = {
+    slate: 'text-slate-900',
+    blue: 'text-slate-900',
+    orange: 'text-brand-600',
+    emerald: 'text-emerald-600',
   };
   return (
-    <div className={`rounded-2xl border border-transparent p-4 shadow-sm ${tones[tone]}`}>
+    <div className="rounded-xl border border-slate-200 bg-white p-4">
       <div className="flex items-start justify-between gap-3">
-        <div>
-          <p className={`text-xs font-semibold uppercase tracking-[0.14em] ${tone === 'slate' ? 'text-white/60' : 'opacity-70'}`}>
+        <div className="min-w-0">
+          <p className="text-xs font-medium uppercase tracking-wide text-slate-400">
             {label}
           </p>
-          <p className="mt-2 text-2xl font-black tracking-tight">{value}</p>
-          <p className={`mt-1 text-xs ${tone === 'slate' ? 'text-white/60' : 'opacity-75'}`}>{detail}</p>
+          <p className={`mt-2 text-2xl font-semibold tracking-tight ${valueTones[tone] || 'text-slate-900'}`}>{value}</p>
+          <p className="mt-1 truncate text-xs text-slate-500">{detail}</p>
         </div>
-        <div className={`rounded-xl p-2.5 ${tone === 'slate' ? 'bg-white/10' : 'bg-white/70'}`}>
-          <Icon className="h-5 w-5" />
+        <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg bg-slate-100 text-slate-500">
+          <Icon className="h-4 w-4" />
         </div>
       </div>
     </div>
@@ -233,8 +234,8 @@ const ProposalTrackingCard = ({ proposal }) => {
   ].filter(Boolean);
 
   return (
-    <article className={`overflow-hidden rounded-3xl border bg-white shadow-sm transition-shadow hover:shadow-md ${
-      returned ? 'border-orange-200 ring-1 ring-orange-100' : 'border-slate-200'
+    <article className={`overflow-hidden rounded-xl border bg-white transition-colors ${
+      returned ? 'border-amber-200' : 'border-slate-200'
     }`}>
       <div className="p-5 md:p-6">
         <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
@@ -252,7 +253,7 @@ const ProposalTrackingCard = ({ proposal }) => {
               )}
             </div>
 
-            <h3 className="mt-3 text-lg font-black leading-snug tracking-tight text-slate-900 md:text-xl">
+            <h3 className="mt-3 text-lg font-semibold leading-snug tracking-tight text-slate-900 md:text-xl">
               {proposal.judul_proposal}
             </h3>
             {proposal.nama_kegiatan_spesifik && (
@@ -268,7 +269,7 @@ const ProposalTrackingCard = ({ proposal }) => {
 
           <div className="rounded-2xl bg-slate-50 px-4 py-3 lg:min-w-52 lg:text-right">
             <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-slate-400">Nilai Usulan</p>
-            <p className="mt-1 text-lg font-black tracking-tight text-slate-900">
+            <p className="mt-1 text-lg font-semibold tracking-tight text-slate-900">
               {rupiah(proposal.anggaran_usulan)}
             </p>
           </div>
@@ -279,10 +280,10 @@ const ProposalTrackingCard = ({ proposal }) => {
             <CurrentIcon className="h-5 w-5" />
           </div>
           <div className="min-w-0">
-            <p className={`font-black ${currentMeta.text}`}>{current.label}</p>
+            <p className={`font-semibold ${currentMeta.text}`}>{current.label}</p>
             <p className="mt-0.5 text-sm leading-relaxed text-slate-600">{current.description}</p>
             {current.source && (
-              <p className="mt-2 text-xs font-bold text-orange-700">Dikembalikan oleh {current.source}</p>
+              <p className="mt-2 text-xs font-bold text-amber-700">Dikembalikan oleh {current.source}</p>
             )}
           </div>
         </div>
@@ -346,11 +347,11 @@ const ProposalTrackingCard = ({ proposal }) => {
               const tone = {
                 blue: 'border-slate-100 bg-slate-50 text-slate-900',
                 violet: 'border-slate-100 bg-slate-50 text-slate-900',
-                red: 'border-red-100 bg-red-50 text-red-900',
+                red: 'border-rose-100 bg-rose-50 text-rose-900',
               }[note.tone];
               return (
                 <div key={`${note.source}-${note.text}`} className={`rounded-2xl border p-4 ${tone}`}>
-                  <p className="text-xs font-black uppercase tracking-[0.12em] opacity-70">{note.source}</p>
+                  <p className="text-xs font-semibold uppercase tracking-[0.12em] opacity-70">{note.source}</p>
                   <p className="mt-1.5 text-sm leading-relaxed">{note.text}</p>
                 </div>
               );
@@ -465,27 +466,29 @@ const BankeuPerubahanTrackingTab = ({ tahun }) => {
 
   return (
     <div className="space-y-5">
-      <section className="relative overflow-hidden rounded-3xl bg-slate-950 px-5 py-6 text-white shadow-xl shadow-slate-900/10 md:px-8 md:py-8">
-        <div className="absolute -right-20 -top-24 h-64 w-64 rounded-full bg-slate-400/20 blur-3xl" />
-        <div className="absolute -bottom-28 left-1/3 h-56 w-56 rounded-full bg-slate-500/10 blur-3xl" />
-        <div className="relative flex flex-col gap-6 md:flex-row md:items-end md:justify-between">
-          <div>
-            <div className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-xs font-bold text-white/70">
-              <LuRadar className="h-4 w-4 text-slate-300" />
-              TRACKING TA {tahun}
+      <section className="rounded-xl border border-slate-200 bg-white p-5 sm:p-6">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+          <div className="flex min-w-0 items-start gap-3.5">
+            <div className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-xl bg-slate-900 text-white">
+              <LuRadar className="h-5 w-5" />
             </div>
-            <h1 className="mt-4 max-w-xl text-2xl font-black tracking-tight md:text-3xl">
-              Pantau proposal sampai tuntas.
-            </h1>
-            <p className="mt-2 max-w-xl text-sm leading-relaxed text-slate-300 md:text-base">
-              Status terbaru dari Desa, Kecamatan, hingga DPMD tersaji dalam satu tampilan.
-            </p>
+            <div className="min-w-0">
+              <p className="text-xs font-medium uppercase tracking-wide text-slate-400">
+                Tracking TA {tahun}
+              </p>
+              <h1 className="mt-1 text-xl font-semibold tracking-tight text-slate-900 sm:text-2xl">
+                Pantau proposal sampai tuntas
+              </h1>
+              <p className="mt-1.5 max-w-2xl text-sm leading-6 text-slate-500">
+                Status terbaru dari Desa, Kecamatan, hingga DPMD tersaji dalam satu tampilan.
+              </p>
+            </div>
           </div>
           <button
             type="button"
             onClick={() => fetchData({ silent: true })}
             disabled={refreshing}
-            className="inline-flex w-fit items-center gap-2 rounded-xl border border-white/10 bg-white/10 px-4 py-2.5 text-sm font-bold text-white transition hover:bg-white/15 disabled:opacity-60"
+            className="inline-flex w-fit flex-shrink-0 items-center gap-2 rounded-lg border border-slate-200 px-4 py-2.5 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-50 disabled:opacity-60"
           >
             <LuRefreshCw className={`h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} />
             {refreshing ? 'Memperbarui' : 'Perbarui data'}
@@ -527,7 +530,7 @@ const BankeuPerubahanTrackingTab = ({ tahun }) => {
       )}
 
       {submittedProposals.length > 0 && (
-        <section className="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm">
+        <section className="rounded-xl border border-slate-200 bg-white p-4">
           <div className="flex flex-col gap-3 xl:flex-row xl:items-center">
             <div className="relative flex-1">
               <LuSearch className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
@@ -536,7 +539,7 @@ const BankeuPerubahanTrackingTab = ({ tahun }) => {
                 value={search}
                 onChange={(event) => setSearch(event.target.value)}
                 placeholder="Cari proposal, kegiatan, atau lokasi..."
-                className="h-11 w-full rounded-xl border border-slate-200 bg-slate-50 pl-10 pr-4 text-sm text-slate-800 outline-none transition placeholder:text-slate-400 focus:border-slate-400 focus:bg-white focus:ring-4 focus:ring-slate-100"
+                className="h-11 w-full rounded-lg border border-slate-200 bg-slate-50 pl-10 pr-4 text-sm text-slate-800 outline-none transition placeholder:text-slate-400 focus:border-slate-900 focus:bg-white focus:ring-1 focus:ring-slate-900"
               />
             </div>
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:flex">
@@ -545,7 +548,7 @@ const BankeuPerubahanTrackingTab = ({ tahun }) => {
                 <select
                   value={statusFilter}
                   onChange={(event) => setStatusFilter(event.target.value)}
-                  className="h-11 w-full appearance-none rounded-xl border border-slate-200 bg-white pl-9 pr-9 text-sm font-semibold text-slate-600 outline-none focus:border-slate-400 focus:ring-4 focus:ring-slate-100 xl:w-44"
+                  className="h-11 w-full appearance-none rounded-xl border border-slate-200 bg-white pl-9 pr-9 text-sm font-semibold text-slate-600 outline-none focus:border-slate-900 focus:ring-1 focus:ring-slate-900 xl:w-44"
                 >
                   <option value="all">Semua status</option>
                   <option value="process">Dalam proses</option>
@@ -558,7 +561,7 @@ const BankeuPerubahanTrackingTab = ({ tahun }) => {
                 <select
                   value={kegiatanFilter}
                   onChange={(event) => setKegiatanFilter(event.target.value)}
-                  className="h-11 w-full appearance-none rounded-xl border border-slate-200 bg-white pl-3 pr-9 text-sm font-semibold text-slate-600 outline-none focus:border-slate-400 focus:ring-4 focus:ring-slate-100 xl:w-64"
+                  className="h-11 w-full appearance-none rounded-xl border border-slate-200 bg-white pl-3 pr-9 text-sm font-semibold text-slate-600 outline-none focus:border-slate-900 focus:ring-1 focus:ring-slate-900 xl:w-64"
                 >
                   <option value="all">Semua kegiatan</option>
                   {kegiatanOptions.map((option) => (
@@ -591,7 +594,7 @@ const BankeuPerubahanTrackingTab = ({ tahun }) => {
           <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-slate-100 text-slate-400">
             <LuSend className="h-6 w-6" />
           </div>
-          <h2 className="mt-4 text-lg font-black text-slate-900">Belum ada proposal yang dilacak</h2>
+          <h2 className="mt-4 text-lg font-semibold text-slate-900">Belum ada proposal yang dilacak</h2>
           <p className="mx-auto mt-2 max-w-md text-sm leading-relaxed text-slate-500">
             Proposal akan muncul di sini setelah dikirim ke Kecamatan dari tab Pengajuan.
           </p>
@@ -599,7 +602,7 @@ const BankeuPerubahanTrackingTab = ({ tahun }) => {
       ) : filteredProposals.length === 0 ? (
         <section className="rounded-3xl border border-slate-200 bg-white px-6 py-14 text-center shadow-sm">
           <LuInfo className="mx-auto h-10 w-10 text-slate-300" />
-          <h2 className="mt-3 font-black text-slate-800">Proposal tidak ditemukan</h2>
+          <h2 className="mt-3 font-semibold text-slate-800">Proposal tidak ditemukan</h2>
           <p className="mt-1 text-sm text-slate-500">Ubah kata pencarian atau filter yang digunakan.</p>
           <button
             type="button"

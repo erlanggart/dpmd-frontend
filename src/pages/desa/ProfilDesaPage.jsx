@@ -143,13 +143,13 @@ const profilSchema = z.object({
 });
 
 const INPUT_CLASS =
-	"w-full rounded-lg border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 shadow-sm outline-none transition placeholder:text-slate-400 focus:border-slate-400 focus:ring-4 focus:ring-slate-100";
+	"w-full rounded-lg border border-slate-200 bg-white px-3.5 py-2.5 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-slate-900 focus:ring-1 focus:ring-slate-900";
 
 const ERROR_INPUT_CLASS =
 	"border-slate-300 focus:border-slate-400 focus:ring-slate-100";
 
 const SECTION_CLASS =
-	"rounded-lg border border-slate-200/80 bg-white/90 p-6 shadow-[0_24px_60px_-45px_rgba(15,23,42,0.55)] backdrop-blur-sm";
+	"rounded-xl border border-slate-200 bg-white p-5 sm:p-6";
 
 const isFilled = (value) => {
 	if (value === null || value === undefined) {
@@ -245,20 +245,20 @@ const getProgressTone = (percentage) => {
 	if (percentage >= 80) {
 		return {
 			badge: "bg-slate-100 text-slate-700 border-slate-200",
-			bar: "from-slate-400 via-slate-500 to-slate-500",
+			bar: "bg-brand-500",
 		};
 	}
 
 	if (percentage >= 45) {
 		return {
 			badge: "bg-amber-100 text-amber-700 border-amber-200",
-			bar: "from-slate-400 via-slate-500 to-slate-500",
+			bar: "bg-brand-500",
 		};
 	}
 
 	return {
 		badge: "bg-slate-200 text-slate-700 border-slate-300",
-		bar: "from-slate-300 via-slate-400 to-slate-500",
+		bar: "bg-brand-400",
 	};
 };
 
@@ -277,17 +277,18 @@ const SectionCard = ({ icon, eyebrow, title, description, children, className = 
 
 	return (
 		<section className={`${SECTION_CLASS} ${className}`.trim()}>
-			<div className="mb-6 flex items-start gap-4">
-				<div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-slate-500 to-slate-600 text-white shadow-lg shadow-slate-500/25">
+			<div className="mb-6 flex items-start gap-4 border-b border-slate-100 pb-5">
+				<div className="relative flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-slate-900 text-white">
 					{IconComponent ? <IconComponent className="h-5 w-5" /> : null}
+					<span className="absolute -bottom-0.5 left-1/2 h-1 w-5 -translate-x-1/2 rounded-full bg-brand-500" />
 				</div>
 				<div>
 					{eyebrow ? (
-						<p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-600">
+						<p className="text-xs font-semibold uppercase tracking-wide text-brand-600">
 							{eyebrow}
 						</p>
 					) : null}
-					<h3 className="mt-1 text-xl font-black tracking-tight text-slate-900">
+					<h3 className="mt-1 text-lg font-semibold tracking-tight text-slate-900">
 						{title}
 					</h3>
 					{description ? (
@@ -302,23 +303,24 @@ const SectionCard = ({ icon, eyebrow, title, description, children, className = 
 	);
 };
 
-const MetricCard = ({ icon, label, value, hint, accentClass }) => {
+const MetricCard = ({ icon, label, value, hint }) => {
 	const IconComponent = icon;
 
 	return (
-		<div className="rounded-lg border border-white/15 bg-white/10 p-4 backdrop-blur-sm">
-			<div className="flex items-start justify-between gap-4">
-				<div>
-					<p className="text-xs font-semibold uppercase tracking-[0.18em] text-white/65">
+		<div className="relative overflow-hidden rounded-lg border border-slate-200 bg-slate-50 p-4">
+			<span className="absolute inset-y-0 left-0 w-1 bg-brand-500" />
+			<div className="flex items-start justify-between gap-3">
+				<div className="min-w-0">
+					<p className="text-xs font-medium uppercase tracking-wide text-slate-500">
 						{label}
 					</p>
-					<p className="mt-3 text-2xl font-black tracking-tight text-white">
+					<p className="mt-2 text-2xl font-semibold tracking-tight text-slate-900">
 						{value}
 					</p>
-					<p className="mt-2 text-xs leading-5 text-white/70">{hint}</p>
+					<p className="mt-1 text-xs leading-5 text-slate-500">{hint}</p>
 				</div>
-				<div className={`flex h-12 w-12 items-center justify-center rounded-lg ${accentClass}`}>
-					{IconComponent ? <IconComponent className="h-5 w-5" /> : null}
+				<div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg bg-white text-slate-500 ring-1 ring-slate-200">
+					{IconComponent ? <IconComponent className="h-4 w-4" /> : null}
 				</div>
 			</div>
 		</div>
@@ -390,14 +392,14 @@ const LinkRow = ({ icon, label, value }) => {
 	);
 };
 
-const NarrativeRow = ({ icon, title, value, emptyText, accentClass }) => {
+const NarrativeRow = ({ icon, title, value, emptyText }) => {
 	const IconComponent = icon;
 	const hasValue = isFilled(value);
 
 	return (
 		<div className="rounded-lg border border-slate-100 bg-slate-50/70 p-4">
 			<div className="flex items-center gap-3">
-				<div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br ${accentClass} text-white shadow-sm`}>
+				<div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-slate-900 text-white">
 					{IconComponent ? <IconComponent className="h-4 w-4" /> : null}
 				</div>
 				<h4 className="text-sm font-bold text-slate-800">{title}</h4>
@@ -540,14 +542,14 @@ const ProfilDesa = () => {
 					<div className="mb-5 flex h-16 w-16 items-center justify-center rounded-lg bg-slate-100 text-slate-600 shadow-lg shadow-slate-200/60">
 						<FiHome className="h-8 w-8 animate-pulse" />
 					</div>
-					<h2 className="text-2xl font-black tracking-tight text-slate-900">
+					<h2 className="text-xl font-semibold tracking-tight text-slate-900">
 						Memuat profil desa
 					</h2>
 					<p className="mt-3 max-w-md text-sm leading-6 text-slate-500">
 						Sedang mengambil informasi identitas, lokasi, dan data publik desa.
 					</p>
 					<div className="mt-8 h-2 w-full max-w-xs overflow-hidden rounded-lg bg-slate-200">
-						<div className="h-full w-1/2 animate-pulse rounded-lg bg-gradient-to-r from-slate-400 via-slate-500 to-slate-500" />
+						<div className="h-full w-1/2 animate-pulse rounded-lg bg-slate-900" />
 					</div>
 				</div>
 			</div>
@@ -602,7 +604,7 @@ const ProfilDesa = () => {
 			description: "Cerita asal-usul, perjalanan, dan momen penting yang membentuk identitas desa.",
 			value: profil.sejarah_desa,
 			emptyText: "Belum ada sejarah desa yang dituliskan.",
-			accentClass: "from-slate-400 via-slate-500 to-slate-500",
+			
 		},
 		{
 			icon: FiUsers,
@@ -611,7 +613,7 @@ const ProfilDesa = () => {
 			description: "Gambaran sosial dan penduduk desa yang memberi konteks terhadap kondisi lapangan.",
 			value: profil.demografi,
 			emptyText: "Belum ada data demografi yang dituliskan.",
-			accentClass: "from-slate-400 via-slate-500 to-slate-500",
+			
 		},
 		{
 			icon: FiGlobe,
@@ -620,112 +622,105 @@ const ProfilDesa = () => {
 			description: "Keunggulan utama, sumber daya, dan peluang pengembangan yang dimiliki desa.",
 			value: profil.potensi_desa,
 			emptyText: "Belum ada potensi desa yang dituliskan.",
-			accentClass: "from-slate-400 via-slate-500 to-slate-500",
+			
 		},
 	];
 
 	return (
-		<div className="relative overflow-hidden rounded-lg border border-slate-200/70 bg-[radial-gradient(circle_at_top_right,rgba(100,116,139,0.16),transparent_28%),radial-gradient(circle_at_bottom_left,rgba(148,163,184,0.14),transparent_24%),linear-gradient(180deg,#f8fafc_0%,#ffffff_100%)] p-4 shadow-[0_30px_80px_-55px_rgba(15,23,42,0.45)] sm:p-6 lg:p-8">
-			<div className="pointer-events-none absolute inset-0">
-				<div className="absolute right-0 top-0 h-56 w-56 rounded-full bg-slate-200/30 blur-3xl" />
-				<div className="absolute bottom-0 left-0 h-64 w-64 rounded-full bg-slate-200/30 blur-3xl" />
-			</div>
-
-			<div className="relative z-10 space-y-8">
-				<section className="overflow-hidden rounded-lg bg-gradient-to-br from-slate-950 via-slate-800 to-slate-600 p-6 text-white shadow-[0_32px_90px_-40px_rgba(15,23,42,0.75)] sm:p-8">
-						<div className="space-y-6">
-							<div className="flex flex-wrap items-start justify-between gap-4">
-								<div className="max-w-3xl">
-									<div className="inline-flex items-center gap-2 rounded-lg border border-white/15 bg-white/10 px-4 py-1.5 text-xs font-semibold uppercase tracking-[0.18em] text-white/75 backdrop-blur-sm">
-										<FiHome className="h-4 w-4" />
+		<div>
+			<div className="space-y-5">
+				<section className="rounded-xl border border-slate-200 bg-white p-5 sm:p-6">
+					<div className="space-y-5">
+						<div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+							<div className="flex min-w-0 items-start gap-3.5">
+								<div className="relative flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-xl bg-slate-900 text-white">
+									<FiHome className="h-5 w-5" />
+									<span className="absolute -bottom-0.5 left-1/2 h-1 w-5 -translate-x-1/2 rounded-full bg-brand-500" />
+								</div>
+								<div className="min-w-0">
+									<p className="text-xs font-semibold uppercase tracking-wide text-brand-600">
 										Profil {villageLabel}
-									</div>
-									<h2 className="mt-4 text-3xl font-black tracking-tight sm:text-4xl">
+									</p>
+									<h2 className="mt-1 text-xl font-semibold tracking-tight text-slate-900 sm:text-2xl">
 										{villageLabel} {profil.desa?.nama || "Tanpa Nama"}
 									</h2>
-									<p className="mt-3 max-w-2xl text-sm leading-6 text-white/80 sm:text-base">
+									<p className="mt-1.5 max-w-2xl text-sm leading-6 text-slate-500">
 										{profil.desa?.kecamatan?.nama
 											? `Kecamatan ${profil.desa.kecamatan.nama}`
 											: "Kecamatan belum terdeteksi"}
-										. Kelola identitas desa, narasi pembangunan, kanal komunikasi, dan lokasi kantor desa dari satu halaman yang rapi.
+										. Kelola identitas desa, narasi pembangunan, kanal komunikasi, dan lokasi kantor desa dari satu halaman.
 									</p>
 								</div>
+							</div>
 
-								<div className="flex flex-wrap items-center gap-3">
-									{editMode ? (
-										<>
-											<span className="inline-flex items-center gap-2 rounded-lg border border-white/15 bg-white/10 px-4 py-2 text-sm font-medium text-white/85 backdrop-blur-sm">
-												<FiEdit className="h-4 w-4" />
-												Mode edit aktif
-											</span>
-											<button
-												type="button"
-												onClick={handleCancel}
-												className="inline-flex items-center gap-2 rounded-lg border border-white/15 bg-white px-5 py-3 text-sm font-semibold text-slate-900 transition hover:bg-slate-100"
-											>
-												<FiX className="h-4 w-4" />
-												Batalkan
-											</button>
-										</>
-									) : (
+							<div className="flex flex-shrink-0 flex-wrap items-center gap-2">
+								{editMode ? (
+									<>
+										<span className="inline-flex items-center gap-1.5 rounded-full bg-amber-50 px-3 py-1.5 text-xs font-semibold text-amber-700 ring-1 ring-amber-100">
+											<FiEdit className="h-3.5 w-3.5" />
+											Mode edit aktif
+										</span>
 										<button
 											type="button"
-											onClick={() => setEditMode(true)}
-											className="inline-flex items-center gap-2 rounded-lg bg-white px-5 py-3 text-sm font-semibold text-slate-900 shadow-lg shadow-black/10 transition hover:bg-slate-100"
+											onClick={handleCancel}
+											className="inline-flex items-center gap-2 rounded-lg border border-slate-200 px-4 py-2.5 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-50"
 										>
-											<FiEdit className="h-4 w-4" />
-											Perbarui Profil
+											<FiX className="h-4 w-4" />
+											Batalkan
 										</button>
-									)}
-								</div>
-							</div>
-
-							<div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-								<MetricCard
-									icon={FiBarChart2}
-									label="Kelengkapan"
-									value={`${completion.percentage}%`}
-									hint={`${completion.filled} dari ${completion.total} elemen profil telah terisi`}
-									accentClass="bg-white/10 text-white"
-								/>
-								<MetricCard
-									icon={FiUsers}
-									label="Penduduk"
-									value={isFilled(profil.jumlah_penduduk) ? formatNumber(profil.jumlah_penduduk) : "-"}
-									hint="Data jumlah penduduk yang tercatat pada profil desa"
-									accentClass="bg-slate-400/20 text-slate-100"
-								/>
-								<MetricCard
-									icon={FiLayers}
-									label="Luas Wilayah"
-									value={isFilled(profil.luas_wilayah) ? `${profil.luas_wilayah} km2` : "-"}
-									hint="Luas wilayah administratif desa"
-									accentClass="bg-slate-400/20 text-slate-100"
-								/>
-								<MetricCard
-									icon={FiNavigation}
-									label="Jarak Kecamatan"
-									value={isFilled(profil.radius_ke_kecamatan) ? `${profil.radius_ke_kecamatan} km` : "-"}
-									hint="Perkiraan jarak desa ke pusat kecamatan"
-									accentClass="bg-amber-400/20 text-amber-100"
-								/>
-							</div>
-
-							<div className="flex flex-wrap gap-2">
-								<span className="rounded-lg border border-white/15 bg-white/10 px-3 py-1.5 text-xs font-medium text-white/85">
-									{safeText(profil.klasifikasi_desa, "Klasifikasi belum diisi")}
-								</span>
-								<span className="rounded-lg border border-white/15 bg-white/10 px-3 py-1.5 text-xs font-medium text-white/85">
-									{safeText(profil.status_desa, "Status desa belum diisi")}
-								</span>
-								<span className="rounded-lg border border-white/15 bg-white/10 px-3 py-1.5 text-xs font-medium text-white/85">
-									{safeText(profil.tipologi_desa, "Tipologi belum diisi")}
-								</span>
+									</>
+								) : (
+									<button
+										type="button"
+										onClick={() => setEditMode(true)}
+										className="inline-flex items-center gap-2 rounded-lg bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-slate-800"
+									>
+										<FiEdit className="h-4 w-4" />
+										Perbarui Profil
+									</button>
+								)}
 							</div>
 						</div>
 
-						
-					
+						<div className="grid gap-3 border-t border-slate-100 pt-5 sm:grid-cols-2 xl:grid-cols-4">
+							<MetricCard
+								icon={FiBarChart2}
+								label="Kelengkapan"
+								value={`${completion.percentage}%`}
+								hint={`${completion.filled} dari ${completion.total} elemen profil terisi`}
+							/>
+							<MetricCard
+								icon={FiUsers}
+								label="Penduduk"
+								value={isFilled(profil.jumlah_penduduk) ? formatNumber(profil.jumlah_penduduk) : "-"}
+								hint="Jumlah penduduk yang tercatat"
+							/>
+							<MetricCard
+								icon={FiLayers}
+								label="Luas Wilayah"
+								value={isFilled(profil.luas_wilayah) ? `${profil.luas_wilayah} km2` : "-"}
+								hint="Luas wilayah administratif desa"
+							/>
+							<MetricCard
+								icon={FiNavigation}
+								label="Jarak Kecamatan"
+								value={isFilled(profil.radius_ke_kecamatan) ? `${profil.radius_ke_kecamatan} km` : "-"}
+								hint="Perkiraan jarak ke pusat kecamatan"
+							/>
+						</div>
+
+						<div className="flex flex-wrap gap-2">
+							<span className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs font-medium text-slate-600">
+								{safeText(profil.klasifikasi_desa, "Klasifikasi belum diisi")}
+							</span>
+							<span className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs font-medium text-slate-600">
+								{safeText(profil.status_desa, "Status desa belum diisi")}
+							</span>
+							<span className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs font-medium text-slate-600">
+								{safeText(profil.tipologi_desa, "Tipologi belum diisi")}
+							</span>
+						</div>
+					</div>
 				</section>
 
 				{editMode ? (
@@ -1075,7 +1070,7 @@ const ProfilDesa = () => {
 									</div>
 									<div className="mt-4 h-3 overflow-hidden rounded-lg bg-white shadow-inner">
 										<div
-											className={`h-full rounded-lg bg-gradient-to-r ${progressTone.bar}`}
+											className={`h-full rounded-full ${progressTone.bar}`}
 											style={{ width: `${Math.max(completion.percentage, completion.percentage > 0 ? 6 : 0)}%` }}
 										/>
 									</div>
@@ -1088,10 +1083,10 @@ const ProfilDesa = () => {
 
 							<div className={`${SECTION_CLASS} space-y-4`}>
 								<div>
-									<p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-600">
+									<p className="text-xs font-medium uppercase tracking-wide text-slate-400">
 										Aksi
 									</p>
-									<h3 className="mt-2 text-xl font-black tracking-tight text-slate-900">
+									<h3 className="mt-2 text-lg font-semibold tracking-tight text-slate-900">
 										Simpan perubahan profil
 									</h3>
 									<p className="mt-2 text-sm leading-6 text-slate-500">
@@ -1127,16 +1122,16 @@ const ProfilDesa = () => {
 
 									<div className="mt-5 space-y-4">
 										<div>
-											<p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-600">
+											<p className="text-xs font-medium uppercase tracking-wide text-slate-400">
 												Status profil
 											</p>
-											<h3 className="mt-1 text-2xl font-black tracking-tight text-slate-900">
+											<h3 className="mt-1 text-xl font-semibold tracking-tight text-slate-900">
 												{completion.percentage}% lengkap
 											</h3>
 										</div>
 										<div className="h-3 overflow-hidden rounded-lg bg-slate-100">
 											<div
-												className={`h-full rounded-lg bg-gradient-to-r ${progressTone.bar}`}
+												className={`h-full rounded-full ${progressTone.bar}`}
 												style={{ width: `${Math.max(completion.percentage, completion.percentage > 0 ? 6 : 0)}%` }}
 											/>
 										</div>
@@ -1325,7 +1320,6 @@ const ProfilDesa = () => {
 												title={item.title}
 												value={item.value}
 												emptyText={item.emptyText}
-												accentClass={item.accentClass}
 											/>
 										))}
 									</div>

@@ -1,19 +1,18 @@
 import React, { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import {
-	LuActivity,
+	LuArrowRight,
 	LuBanknote,
 	LuBuilding2,
 	LuCircleAlert,
 	LuCircleCheck,
-	LuDollarSign,
 	LuFileText,
 	LuLayoutDashboard,
 	LuLoader,
 	LuMapPin,
 	LuStore,
-	LuTrendingUp,
 	LuUsers,
+	LuWallet,
 } from "react-icons/lu";
 import api from "../../api";
 
@@ -63,36 +62,6 @@ const formatCurrencyShort = (value) => {
 	return formatCurrency(safeValue);
 };
 
-const formatDate = (value) => {
-	if (!value) {
-		return "Tanpa tanggal";
-	}
-
-	const parsedDate = new Date(value);
-
-	if (Number.isNaN(parsedDate.getTime())) {
-		return "Tanpa tanggal";
-	}
-
-	return new Intl.DateTimeFormat("id-ID", {
-		day: "2-digit",
-		month: "short",
-		year: "numeric",
-	}).format(parsedDate);
-};
-
-const truncateText = (value, length = 130) => {
-	if (!value) {
-		return "Ringkasan belum tersedia.";
-	}
-
-	if (value.length <= length) {
-		return value;
-	}
-
-	return `${value.slice(0, length).trim()}...`;
-};
-
 const humanizeText = (value) => {
 	if (!value) {
 		return null;
@@ -137,9 +106,9 @@ const DesaDashboardPage = () => {
 
 	if (loading) {
 		return (
-			<div className="flex h-64 items-center justify-center rounded-3xl border border-slate-200 bg-white shadow-sm">
+			<div className="flex h-64 items-center justify-center rounded-xl border border-slate-200 bg-white">
 				<div className="flex flex-col items-center gap-3 text-slate-500">
-					<LuLoader className="h-8 w-8 animate-spin text-slate-600" />
+					<LuLoader className="h-6 w-6 animate-spin text-slate-900" />
 					<p className="text-sm font-medium">Memuat ringkasan dashboard desa...</p>
 				</div>
 			</div>
@@ -148,11 +117,11 @@ const DesaDashboardPage = () => {
 
 	if (error) {
 		return (
-			<div className="rounded-3xl border border-red-200 bg-red-50 p-6 shadow-sm">
-				<div className="flex items-start gap-3 text-red-700">
+			<div className="rounded-xl border border-rose-200 bg-rose-50 p-6">
+				<div className="flex items-start gap-3 text-rose-700">
 					<LuCircleAlert className="mt-0.5 h-5 w-5 flex-shrink-0" />
 					<div>
-						<h2 className="text-base font-semibold text-red-900">Dashboard gagal dimuat</h2>
+						<h2 className="text-base font-semibold text-rose-900">Dashboard gagal dimuat</h2>
 						<p className="mt-1 text-sm">{error}</p>
 					</div>
 				</div>
@@ -169,7 +138,6 @@ const DesaDashboardPage = () => {
 		kelembagaan = {},
 		bankeu = {},
 		keuangan = {},
-		berita = [],
 	} = dashboardData || {};
 
 	const profileCompletion = profil.completion || DEFAULT_COMPLETION;
@@ -179,9 +147,7 @@ const DesaDashboardPage = () => {
 		dateStyle: "full",
 	}).format(new Date());
 	const moduleYearsLabel =
-		bankeu.years?.length > 0
-			? bankeu.years.slice(0, 3).join(", ")
-			: null;
+		bankeu.years?.length > 0 ? bankeu.years.slice(0, 3).join(", ") : null;
 
 	const bhprdStages = [
 		keuangan?.bhprd?.tahap1,
@@ -200,6 +166,36 @@ const DesaDashboardPage = () => {
 		keuangan?.bankeu?.tahap1,
 		keuangan?.bankeu?.tahap2,
 	].filter(Boolean);
+
+	const summaryStats = [
+		{
+			id: "profil",
+			label: "Profil terisi",
+			value: `${profileCompletion.percentage}%`,
+			hint: `${profileCompletion.filled}/${profileCompletion.total} data utama`,
+		},
+		{
+			id: "aparatur",
+			label: "Aparatur",
+			value: formatNumber(aparatur.total),
+			hint: `${formatNumber(aparatur.aktif)} aktif`,
+		},
+		{
+			id: "kelembagaan",
+			label: "Kelembagaan",
+			value: formatNumber(kelembagaan.total_lembaga),
+			hint: `${formatNumber(kelembagaan.rw)} RW / ${formatNumber(kelembagaan.rt)} RT`,
+		},
+		{
+			id: "bankeu",
+			label: "Proposal Bankeu",
+			value: formatNumber(bankeu.total_proposals),
+			hint:
+				bankeu.needs_action > 0
+					? `${formatNumber(bankeu.needs_action)} perlu tindakan`
+					: `${formatNumber(bankeu.approved)} disetujui`,
+		},
+	];
 
 	const featureCards = [
 		{
@@ -221,19 +217,14 @@ const DesaDashboardPage = () => {
 				},
 				{
 					label: "Luas wilayah",
-					value: profil.luas_wilayah
-						? `${profil.luas_wilayah} km²`
-						: "Belum diisi",
+					value: profil.luas_wilayah ? `${profil.luas_wilayah} km²` : "Belum diisi",
 				},
 			],
-			badge:
-				profileCompletion.percentage === 100 ? "Lengkap" : "Perlu pembaruan",
+			badge: profileCompletion.percentage === 100 ? "Lengkap" : "Perlu pembaruan",
 			badgeClass:
 				profileCompletion.percentage === 100
-					? "bg-slate-100 text-slate-700"
-					: "bg-amber-100 text-amber-700",
-			gradient: "from-slate-500 to-slate-500",
-			surface: "from-slate-50 via-white to-slate-50",
+					? "bg-emerald-50 text-emerald-700 ring-emerald-100"
+					: "bg-amber-50 text-amber-700 ring-amber-100",
 			ready: profileCompletion.percentage > 0,
 			actionLabel: "Buka profil desa",
 		},
@@ -248,22 +239,14 @@ const DesaDashboardPage = () => {
 					? "Struktur aparatur telah terdata untuk kebutuhan administrasi dan pelayanan."
 					: "Belum ada aparatur yang terinput pada modul aparatur desa.",
 			highlights: [
-				{
-					label: "Status aktif",
-					value: `${formatNumber(aparatur.aktif)} orang`,
-				},
-				{
-					label: "Nonaktif",
-					value: `${formatNumber(aparatur.nonaktif)} orang`,
-				},
+				{ label: "Status aktif", value: `${formatNumber(aparatur.aktif)} orang` },
+				{ label: "Nonaktif", value: `${formatNumber(aparatur.nonaktif)} orang` },
 			],
 			badge: aparatur.total > 0 ? "Terdata" : "Kosong",
 			badgeClass:
 				aparatur.total > 0
-					? "bg-slate-100 text-slate-700"
-					: "bg-slate-100 text-slate-600",
-			gradient: "from-slate-500 to-slate-600",
-			surface: "from-slate-50 via-white to-slate-50",
+					? "bg-emerald-50 text-emerald-700 ring-emerald-100"
+					: "bg-slate-100 text-slate-600 ring-slate-200",
 			ready: aparatur.total > 0,
 			actionLabel: "Kelola aparatur",
 		},
@@ -278,22 +261,14 @@ const DesaDashboardPage = () => {
 					? "Peraturan desa, perkades, dan keputusan kepala desa sudah terdokumentasi."
 					: "Belum ada produk hukum desa yang diunggah ke sistem.",
 			highlights: [
-				{
-					label: "Berlaku",
-					value: `${formatNumber(produkHukum.berlaku)} dokumen`,
-				},
-				{
-					label: "Dicabut",
-					value: `${formatNumber(produkHukum.dicabut)} dokumen`,
-				},
+				{ label: "Berlaku", value: `${formatNumber(produkHukum.berlaku)} dokumen` },
+				{ label: "Dicabut", value: `${formatNumber(produkHukum.dicabut)} dokumen` },
 			],
 			badge: produkHukum.total > 0 ? "Tersedia" : "Belum ada",
 			badgeClass:
 				produkHukum.total > 0
-					? "bg-amber-100 text-amber-700"
-					: "bg-slate-100 text-slate-600",
-			gradient: "from-slate-500 to-slate-500",
-			surface: "from-slate-50 via-white to-slate-50",
+					? "bg-emerald-50 text-emerald-700 ring-emerald-100"
+					: "bg-slate-100 text-slate-600 ring-slate-200",
 			ready: produkHukum.total > 0,
 			actionLabel: "Buka arsip hukum",
 		},
@@ -309,10 +284,7 @@ const DesaDashboardPage = () => {
 				? bumdes.nama || "Data BUMDes sudah terhubung di sistem."
 				: "Lengkapi identitas, legalitas, dan kondisi usaha BUMDes desa.",
 			highlights: [
-				{
-					label: "Badan hukum",
-					value: bumdes.badan_hukum || "Belum diisi",
-				},
+				{ label: "Badan hukum", value: bumdes.badan_hukum || "Belum diisi" },
 				{
 					label: "Nilai aset",
 					value: bumdes.nilai_aset
@@ -320,14 +292,10 @@ const DesaDashboardPage = () => {
 						: "Belum diisi",
 				},
 			],
-			badge: bumdes.exists
-				? humanizeText(bumdes.status) || "Terdata"
-				: "Belum ada",
+			badge: bumdes.exists ? humanizeText(bumdes.status) || "Terdata" : "Belum ada",
 			badgeClass: bumdes.exists
-				? "bg-slate-100 text-slate-700"
-				: "bg-slate-100 text-slate-600",
-			gradient: "from-slate-500 to-slate-600",
-			surface: "from-slate-50 via-white to-slate-50",
+				? "bg-emerald-50 text-emerald-700 ring-emerald-100"
+				: "bg-slate-100 text-slate-600 ring-slate-200",
 			ready: !!bumdes.exists,
 			actionLabel: "Kelola BUMDes",
 		},
@@ -346,18 +314,13 @@ const DesaDashboardPage = () => {
 					label: "RW / RT",
 					value: `${formatNumber(kelembagaan.rw)} / ${formatNumber(kelembagaan.rt)}`,
 				},
-				{
-					label: "Posyandu",
-					value: `${formatNumber(kelembagaan.posyandu)} unit`,
-				},
+				{ label: "Posyandu", value: `${formatNumber(kelembagaan.posyandu)} unit` },
 			],
 			badge: kelembagaan.total_lembaga > 0 ? "Aktif" : "Belum ada",
 			badgeClass:
 				kelembagaan.total_lembaga > 0
-					? "bg-slate-100 text-slate-700"
-					: "bg-slate-100 text-slate-600",
-			gradient: "from-slate-500 to-slate-500",
-			surface: "from-slate-50 via-white to-slate-50",
+					? "bg-emerald-50 text-emerald-700 ring-emerald-100"
+					: "bg-slate-100 text-slate-600 ring-slate-200",
 			ready: kelembagaan.total_lembaga > 0,
 			actionLabel: "Buka kelembagaan",
 		},
@@ -372,10 +335,7 @@ const DesaDashboardPage = () => {
 					? `${formatNumber(bankeu.in_progress)} proposal sedang berjalan${moduleYearsLabel ? ` untuk TA ${moduleYearsLabel}` : ""}.`
 					: "Belum ada proposal bantuan keuangan yang diajukan dari desa.",
 			highlights: [
-				{
-					label: "Disetujui",
-					value: `${formatNumber(bankeu.approved)} proposal`,
-				},
+				{ label: "Disetujui", value: `${formatNumber(bankeu.approved)} proposal` },
 				{
 					label: "Perlu tindakan",
 					value: `${formatNumber(bankeu.needs_action)} proposal`,
@@ -389,12 +349,10 @@ const DesaDashboardPage = () => {
 						: "Siap diajukan",
 			badgeClass:
 				bankeu.needs_action > 0
-					? "bg-slate-100 text-slate-700"
+					? "bg-brand-50 text-brand-700 ring-brand-100"
 					: bankeu.total_proposals > 0
-						? "bg-slate-100 text-slate-700"
-						: "bg-slate-100 text-slate-600",
-			gradient: "from-slate-500 to-slate-600",
-			surface: "from-slate-50 via-white to-slate-50",
+						? "bg-emerald-50 text-emerald-700 ring-emerald-100"
+						: "bg-slate-100 text-slate-600 ring-slate-200",
 			ready: bankeu.total_proposals > 0,
 			actionLabel: "Pantau pengajuan",
 		},
@@ -410,50 +368,45 @@ const DesaDashboardPage = () => {
 			status: keuangan?.add?.hasData
 				? humanizeText(keuangan.add.status) || "Data tersedia"
 				: "Belum ada data pencairan",
-			gradient: "from-slate-500 to-slate-500",
-			surface: "from-slate-50 via-white to-slate-50",
 			ready: !!keuangan?.add?.hasData,
 		},
 		{
 			id: "bhprd",
 			title: "BHPRD 2025",
-			amount: countAvailableStages(bhprdStages) > 0
-				? keuangan?.bhprd?.totalFormatted || "Rp 0"
-				: "Rp 0",
+			amount:
+				countAvailableStages(bhprdStages) > 0
+					? keuangan?.bhprd?.totalFormatted || "Rp 0"
+					: "Rp 0",
 			status:
 				countAvailableStages(bhprdStages) > 0
 					? `${countAvailableStages(bhprdStages)}/${bhprdStages.length} tahap memiliki data pencairan`
 					: "Belum ada data pencairan",
-			gradient: "from-slate-500 to-slate-600",
-			surface: "from-slate-50 via-white to-slate-50",
 			ready: countAvailableStages(bhprdStages) > 0,
 		},
 		{
 			id: "dd",
 			title: "DD 2025",
-			amount: countAvailableStages(ddStages) > 0
-				? keuangan?.dd?.totalFormatted || "Rp 0"
-				: "Rp 0",
+			amount:
+				countAvailableStages(ddStages) > 0
+					? keuangan?.dd?.totalFormatted || "Rp 0"
+					: "Rp 0",
 			status:
 				countAvailableStages(ddStages) > 0
 					? `${countAvailableStages(ddStages)}/${ddStages.length} tahap memiliki data pencairan`
 					: "Belum ada data pencairan",
-			gradient: "from-slate-500 to-slate-600",
-			surface: "from-slate-50 via-white to-slate-50",
 			ready: countAvailableStages(ddStages) > 0,
 		},
 		{
 			id: "bankeu-funding",
 			title: "Bankeu 2025",
-			amount: countAvailableStages(bankeuFundingStages) > 0
-				? keuangan?.bankeu?.totalFormatted || "Rp 0"
-				: "Rp 0",
+			amount:
+				countAvailableStages(bankeuFundingStages) > 0
+					? keuangan?.bankeu?.totalFormatted || "Rp 0"
+					: "Rp 0",
 			status:
 				countAvailableStages(bankeuFundingStages) > 0
 					? `${countAvailableStages(bankeuFundingStages)}/${bankeuFundingStages.length} tahap memiliki data pencairan`
 					: "Belum ada data pencairan",
-			gradient: "from-slate-500 to-slate-600",
-			surface: "from-slate-50 via-white to-slate-50",
 			ready: countAvailableStages(bankeuFundingStages) > 0,
 		},
 	];
@@ -467,7 +420,7 @@ const DesaDashboardPage = () => {
 			description: `${profileCompletion.total - profileCompletion.filled} data utama masih perlu dilengkapi agar informasi desa lebih utuh.`,
 			link: "/desa/profil-desa",
 			icon: LuMapPin,
-			tone: "bg-slate-100 text-slate-700",
+			tone: "bg-brand-50 text-brand-700",
 			actionLabel: "Perbarui profil",
 		});
 	}
@@ -478,7 +431,7 @@ const DesaDashboardPage = () => {
 			description: `${formatNumber(bankeu.needs_action)} proposal membutuhkan revisi atau tindak lanjut dari desa.`,
 			link: "/desa/bankeu",
 			icon: LuBanknote,
-			tone: "bg-slate-100 text-slate-700",
+			tone: "bg-brand-50 text-brand-700",
 			actionLabel: "Buka modul Bankeu",
 		});
 	}
@@ -486,7 +439,8 @@ const DesaDashboardPage = () => {
 	if (!bumdes.exists) {
 		focusItems.push({
 			title: "Lengkapi data BUMDes",
-			description: "BUMDes belum tercatat. Isi identitas dan legalitas usaha desa agar profil ekonomi desa lebih kuat.",
+			description:
+				"BUMDes belum tercatat. Isi identitas dan legalitas usaha desa agar profil ekonomi desa lebih kuat.",
 			link: "/desa/bumdes",
 			icon: LuStore,
 			tone: "bg-slate-100 text-slate-700",
@@ -497,10 +451,11 @@ const DesaDashboardPage = () => {
 	if (produkHukum.total === 0) {
 		focusItems.push({
 			title: "Unggah produk hukum desa",
-			description: "Belum ada dokumen peraturan yang tersimpan. Arsip hukum penting untuk mendukung modul aparatur dan kelembagaan.",
+			description:
+				"Belum ada dokumen peraturan yang tersimpan. Arsip hukum penting untuk mendukung modul aparatur dan kelembagaan.",
 			link: "/desa/produk-hukum",
 			icon: LuFileText,
-			tone: "bg-amber-100 text-amber-700",
+			tone: "bg-slate-100 text-slate-700",
 			actionLabel: "Buka arsip hukum",
 		});
 	}
@@ -508,7 +463,8 @@ const DesaDashboardPage = () => {
 	if (aparatur.total === 0) {
 		focusItems.push({
 			title: "Input aparatur desa",
-			description: "Belum ada aparatur yang terdata. Tambahkan aparatur untuk memudahkan administrasi dan pelaporan desa.",
+			description:
+				"Belum ada aparatur yang terdata. Tambahkan aparatur untuk memudahkan administrasi dan pelaporan desa.",
 			link: "/desa/aparatur-desa",
 			icon: LuUsers,
 			tone: "bg-slate-100 text-slate-700",
@@ -519,112 +475,86 @@ const DesaDashboardPage = () => {
 	if (focusItems.length === 0) {
 		focusItems.push({
 			title: "Data inti desa sudah terisi",
-			description: "Pantau pencairan keuangan, pengajuan bantuan keuangan, dan berita DPMD dari dashboard ini.",
+			description:
+				"Pantau realisasi keuangan dan pengajuan bantuan keuangan langsung dari dashboard ini.",
 			link: "/desa/dashboard",
 			icon: LuCircleCheck,
-			tone: "bg-slate-100 text-slate-700",
+			tone: "bg-emerald-50 text-emerald-700",
 			actionLabel: "Tetap di dashboard",
 		});
 	}
 
 	return (
-		<div className="space-y-6">
-			<section className="relative overflow-hidden rounded-[28px] bg-slate-950 text-white shadow-xl">
-				<div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,_rgba(148,163,184,0.24),_transparent_35%),radial-gradient(circle_at_bottom_right,_rgba(71,85,105,0.28),_transparent_32%)]" />
-				<div className="absolute left-8 top-8 h-40 w-40 rounded-full bg-slate-400/10 blur-3xl" />
-				<div className="absolute bottom-0 right-0 h-56 w-56 rounded-full bg-slate-400/10 blur-3xl" />
-				<div className="relative p-6 md:p-8 xl:p-10">
-					<div className="flex flex-col gap-8 xl:flex-row xl:items-end xl:justify-between">
-						<div className="max-w-3xl space-y-4">
-							<div className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm text-white/80 backdrop-blur-sm">
-								<LuLayoutDashboard className="h-4 w-4 text-slate-300" />
-								Ringkasan fitur dan data utama {desaLabel.toLowerCase()}
-							</div>
-							<div>
-								<h1 className="text-3xl font-bold tracking-tight md:text-4xl xl:text-5xl">
-									Dashboard {desaLabel} {desa.nama}
-								</h1>
-								<p className="mt-3 max-w-2xl text-sm leading-6 text-slate-300 md:text-base">
-									Pantau kelengkapan data desa, status modul kerja, realisasi keuangan,
-									serta berita terbaru dari DPMD dalam satu halaman.
-								</p>
-							</div>
+		<div className="space-y-5">
+			{/* Header */}
+			<section className="rounded-xl border border-slate-200 bg-white p-5 sm:p-6">
+				<div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
+					<div className="min-w-0">
+						<div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-brand-600">
+							<LuLayoutDashboard className="h-3.5 w-3.5" />
+							Dashboard {desaLabel.toLowerCase()}
 						</div>
+						<h1 className="mt-2 truncate text-2xl font-semibold tracking-tight text-slate-900 sm:text-3xl">
+							{desaLabel} {desa.nama}
+						</h1>
+						<p className="mt-2 max-w-2xl text-sm leading-6 text-slate-500">
+							Ringkasan kelengkapan data, status modul kerja, dan realisasi keuangan
+							{desaLabel.toLowerCase()} dalam satu halaman.
+						</p>
 
-						<div className="grid grid-cols-2 gap-3 sm:grid-cols-4 xl:w-[520px] xl:flex-shrink-0">
-							<div className="rounded-2xl border border-white/10 bg-white/5 p-4 backdrop-blur-sm">
-								<p className="text-xs font-medium uppercase tracking-wide text-slate-400">
-									Profil Terisi
-								</p>
-								<p className="mt-2 text-2xl font-semibold text-white">
-									{profileCompletion.percentage}%
-								</p>
-							</div>
-							<div className="rounded-2xl border border-white/10 bg-white/5 p-4 backdrop-blur-sm">
-								<p className="text-xs font-medium uppercase tracking-wide text-slate-400">
-									Aparatur
-								</p>
-								<p className="mt-2 text-2xl font-semibold text-white">
-									{formatNumber(aparatur.total)}
-								</p>
-							</div>
-							<div className="rounded-2xl border border-white/10 bg-white/5 p-4 backdrop-blur-sm">
-								<p className="text-xs font-medium uppercase tracking-wide text-slate-400">
-									Kelembagaan
-								</p>
-								<p className="mt-2 text-2xl font-semibold text-white">
-									{formatNumber(kelembagaan.total_lembaga)}
-								</p>
-							</div>
-							<div className="rounded-2xl border border-white/10 bg-white/5 p-4 backdrop-blur-sm">
-								<p className="text-xs font-medium uppercase tracking-wide text-slate-400">
-									Proposal Bankeu
-								</p>
-								<p className="mt-2 text-2xl font-semibold text-white">
-									{formatNumber(bankeu.total_proposals)}
-								</p>
-							</div>
-						</div>
-					</div>
-
-					<div className="mt-8 flex flex-wrap gap-3">
-						<div className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm text-white/80">
-							<LuMapPin className="h-4 w-4 text-slate-300" />
-							{desa.kecamatan ? `Kecamatan ${desa.kecamatan}` : "Kecamatan belum tersedia"}
-						</div>
-						<div className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm text-white/80">
-							<LuCircleCheck className="h-4 w-4 text-slate-300" />
-							{completedModules}/{featureCards.length} modul telah memiliki data inti
-						</div>
-						<div className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm text-white/80">
-							<LuDollarSign className="h-4 w-4 text-slate-300" />
-							Realisasi 2025 {keuangan.total_realisasi_formatted || formatCurrency(0)}
-						</div>
-						<div className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm text-white/80">
-							<LuTrendingUp className="h-4 w-4 text-slate-300" />
-							{todayLabel}
+						<div className="mt-4 flex flex-wrap gap-2 text-xs font-medium text-slate-600">
+							<span className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-1.5">
+								<LuMapPin className="h-3.5 w-3.5 text-slate-400" />
+								{desa.kecamatan ? `Kecamatan ${desa.kecamatan}` : "Kecamatan belum tersedia"}
+							</span>
+							<span className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-1.5">
+								<LuCircleCheck className="h-3.5 w-3.5 text-slate-400" />
+								{completedModules}/{featureCards.length} modul memiliki data inti
+							</span>
+							<span className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-1.5">
+								<LuWallet className="h-3.5 w-3.5 text-slate-400" />
+								Realisasi 2025 {keuangan.total_realisasi_formatted || formatCurrency(0)}
+							</span>
+							<span className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-1.5">
+								{todayLabel}
+							</span>
 						</div>
 					</div>
 				</div>
+
+				<div className="mt-5 grid grid-cols-2 gap-3 border-t border-slate-100 pt-5 lg:grid-cols-4">
+					{summaryStats.map((stat) => (
+						<div key={stat.id} className="relative overflow-hidden rounded-lg border border-slate-200 bg-slate-50 p-4">
+							<span className="absolute inset-y-0 left-0 w-1 bg-brand-500" />
+							<p className="text-xs font-medium uppercase tracking-wide text-slate-500">
+								{stat.label}
+							</p>
+							<p className="mt-2 text-2xl font-semibold tracking-tight text-slate-900">
+								{stat.value}
+							</p>
+							<p className="mt-1 truncate text-xs text-slate-500">{stat.hint}</p>
+						</div>
+					))}
+				</div>
 			</section>
 
-			<div className="grid gap-6 xl:grid-cols-[minmax(0,1.75fr)_minmax(320px,1fr)]">
-				<div className="space-y-6">
-					<section className="rounded-[28px] border border-slate-200 bg-white p-6 shadow-sm">
-						<div className="flex flex-col gap-2 md:flex-row md:items-end md:justify-between">
+			<div className="grid gap-5 xl:grid-cols-[minmax(0,1.9fr)_minmax(300px,1fr)]">
+				<div className="space-y-5">
+					{/* Modul */}
+					<section className="rounded-xl border border-slate-200 bg-white p-5 sm:p-6">
+						<div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
 							<div>
-								<h2 className="text-xl font-semibold text-slate-900">Ringkasan Fitur Desa</h2>
+								<h2 className="text-base font-semibold text-slate-900">Modul Desa</h2>
 								<p className="mt-1 text-sm text-slate-500">
-									Semua modul utama untuk user desa diringkas dalam kartu yang bisa langsung dibuka.
+									Semua modul utama beserta ringkasan datanya. Klik untuk membuka.
 								</p>
 							</div>
-							<div className="inline-flex items-center gap-2 rounded-full bg-slate-100 px-3 py-1.5 text-sm font-medium text-slate-600">
-								<LuLayoutDashboard className="h-4 w-4" />
-								{featureCards.length} modul utama
-							</div>
+							<span className="inline-flex items-center gap-1.5 self-start rounded-lg bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-600 sm:self-auto">
+								{featureCards.length} modul
+							</span>
 						</div>
 
-						<div className="mt-6 grid gap-4 md:grid-cols-2 2xl:grid-cols-3">
+						<div className="mt-5 grid gap-4 md:grid-cols-2 2xl:grid-cols-3">
 							{featureCards.map((card) => {
 								const IconComponent = card.icon;
 
@@ -632,45 +562,46 @@ const DesaDashboardPage = () => {
 									<Link
 										key={card.id}
 										to={card.link}
-										className={`group relative overflow-hidden rounded-3xl border border-slate-200 bg-gradient-to-br ${card.surface} p-5 shadow-sm transition duration-200 hover:-translate-y-1 hover:shadow-lg`}
+										className="group flex flex-col rounded-xl border border-slate-200 bg-white p-4 transition hover:border-slate-300 hover:shadow-sm"
 									>
-										<div className={`absolute inset-x-0 top-0 h-1 bg-gradient-to-r ${card.gradient}`} />
-										<div className="flex items-start justify-between gap-4">
-											<div className={`flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br ${card.gradient} text-white shadow-lg`}>
-												<IconComponent className="h-5 w-5" />
+										<div className="flex items-start justify-between gap-3">
+											<div className="flex h-10 w-10 items-center justify-center rounded-lg bg-slate-900 text-white">
+												<IconComponent className="h-4 w-4" />
 											</div>
-											<span className={`rounded-full px-3 py-1 text-xs font-semibold ${card.badgeClass}`}>
+											<span
+												className={`rounded-full px-2.5 py-1 text-[11px] font-semibold ring-1 ${card.badgeClass}`}
+											>
 												{card.badge}
 											</span>
 										</div>
 
-										<div className="mt-5">
+										<div className="mt-4">
 											<p className="text-sm font-medium text-slate-500">{card.title}</p>
-											<p className="mt-2 text-2xl font-semibold tracking-tight text-slate-900">
+											<p className="mt-1 text-xl font-semibold tracking-tight text-slate-900">
 												{card.value}
 											</p>
-											<p className="mt-2 text-sm leading-6 text-slate-600">
+											<p className="mt-2 text-sm leading-6 text-slate-500">
 												{card.description}
 											</p>
 										</div>
 
-										<div className="mt-5 space-y-2 rounded-2xl border border-white/70 bg-white/70 p-3 backdrop-blur-sm">
+										<div className="mt-4 space-y-2 rounded-lg border border-slate-100 bg-slate-50 p-3">
 											{card.highlights.map((highlight) => (
 												<div
 													key={`${card.id}-${highlight.label}`}
-													className="flex items-center justify-between gap-4 text-sm"
+													className="flex items-center justify-between gap-4 text-xs"
 												>
 													<span className="text-slate-500">{highlight.label}</span>
-													<span className="text-right font-semibold text-slate-800">
+													<span className="text-right font-semibold text-slate-900">
 														{highlight.value}
 													</span>
 												</div>
 											))}
 										</div>
 
-										<div className="mt-5 flex items-center justify-between text-sm font-semibold text-slate-700">
-											<span>{card.actionLabel}</span>
-											<LuTrendingUp className="h-4 w-4 transition group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
+										<div className="mt-4 flex items-center justify-between text-sm font-semibold text-slate-900">
+											<span className="transition-colors group-hover:text-brand-700">{card.actionLabel}</span>
+											<LuArrowRight className="h-4 w-4 text-slate-400 transition group-hover:translate-x-0.5 group-hover:text-brand-600" />
 										</div>
 									</Link>
 								);
@@ -678,149 +609,94 @@ const DesaDashboardPage = () => {
 						</div>
 					</section>
 
-					<section className="rounded-[28px] border border-slate-200 bg-white p-6 shadow-sm">
-						<div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+					{/* Keuangan */}
+					<section className="rounded-xl border border-slate-200 bg-white p-5 sm:p-6">
+						<div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
 							<div>
-								<h2 className="text-xl font-semibold text-slate-900">Realisasi Keuangan 2025</h2>
+								<h2 className="text-base font-semibold text-slate-900">
+									Realisasi Keuangan 2025
+								</h2>
 								<p className="mt-1 text-sm text-slate-500">
-									Ringkasan realisasi keuangan desa dari data pencairan yang tersedia di sistem.
+									Ringkasan realisasi dari data pencairan yang tersedia di sistem.
 								</p>
 							</div>
-							<div className="rounded-2xl bg-gradient-to-br from-slate-500 to-slate-600 px-5 py-4 text-white shadow-lg shadow-slate-500/20">
-								<p className="text-xs font-medium uppercase tracking-wide text-slate-100">
+							<div className="rounded-lg bg-slate-900 px-4 py-3 text-white ring-1 ring-inset ring-brand-500/30">
+								<p className="text-[11px] font-semibold uppercase tracking-wide text-brand-400">
 									Total realisasi
 								</p>
-								<p className="mt-2 text-2xl font-semibold">
+								<p className="mt-1 text-xl font-semibold tracking-tight">
 									{keuangan.total_realisasi_formatted || formatCurrency(0)}
 								</p>
 							</div>
 						</div>
 
-						<div className="mt-6 grid gap-4 md:grid-cols-2 2xl:grid-cols-4">
+						<div className="mt-5 grid gap-4 sm:grid-cols-2 2xl:grid-cols-4">
 							{financeCards.map((card) => (
 								<div
 									key={card.id}
-									className={`rounded-3xl border border-slate-200 bg-gradient-to-br ${card.surface} p-5 shadow-sm`}
+									className="rounded-xl border border-slate-200 bg-slate-50 p-4"
 								>
-									<div className="flex items-start justify-between gap-4">
-										<div className={`flex h-11 w-11 items-center justify-center rounded-2xl bg-gradient-to-br ${card.gradient} text-white shadow-md`}>
-											<LuDollarSign className="h-5 w-5" />
-										</div>
+									<div className="flex items-start justify-between gap-3">
+										<p className="text-sm font-medium text-slate-500">{card.title}</p>
 										<span
-											className={`rounded-full px-3 py-1 text-xs font-semibold ${
+											className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ring-1 ${
 												card.ready
-													? "bg-slate-100 text-slate-700"
-													: "bg-slate-100 text-slate-600"
+													? "bg-emerald-50 text-emerald-700 ring-emerald-100"
+													: "bg-white text-slate-500 ring-slate-200"
 											}`}
 										>
-											{card.ready ? "Tersedia" : "Belum ada data"}
+											{card.ready ? "Tersedia" : "Kosong"}
 										</span>
 									</div>
-
-									<p className="mt-5 text-sm font-medium text-slate-500">{card.title}</p>
-									<p className="mt-2 text-2xl font-semibold tracking-tight text-slate-900">
+									<p className="mt-3 text-xl font-semibold tracking-tight text-slate-900">
 										{card.amount}
 									</p>
-									<p className="mt-3 text-sm leading-6 text-slate-600">
-										{card.status}
-									</p>
+									<p className="mt-2 text-xs leading-5 text-slate-500">{card.status}</p>
 								</div>
 							))}
 						</div>
 					</section>
 				</div>
 
-				<div className="space-y-6">
-					<section className="rounded-[28px] border border-slate-200 bg-white p-6 shadow-sm">
-						<div className="flex items-center justify-between gap-3">
-							<div>
-								<h2 className="text-xl font-semibold text-slate-900">Berita & Artikel DPMD</h2>
-								<p className="mt-1 text-sm text-slate-500">
-									Pembaruan terbaru yang relevan untuk desa dari kanal berita DPMD.
-								</p>
-							</div>
-							<div className="inline-flex items-center gap-2 rounded-full bg-slate-100 px-3 py-1.5 text-sm font-medium text-slate-600">
-								<LuActivity className="h-4 w-4" />
-								{formatNumber(berita.length)} item
-							</div>
-						</div>
+				{/* Fokus */}
+				<section className="h-fit rounded-xl border border-slate-200 bg-white p-5 sm:p-6">
+					<h2 className="text-base font-semibold text-slate-900">Fokus Berikutnya</h2>
+					<p className="mt-1 text-sm text-slate-500">
+						Rekomendasi tindak lanjut berdasarkan kondisi data desa saat ini.
+					</p>
 
-						{berita.length > 0 ? (
-							<div className="mt-6 space-y-3">
-								{berita.map((item, index) => (
-									<Link
-										key={item.id_berita || item.slug || index}
-										to={item.slug ? `/berita/${item.slug}` : "/"}
-										className="group block rounded-3xl border border-slate-200 bg-slate-50 p-4 transition hover:border-slate-300 hover:bg-white hover:shadow-sm"
-									>
-										<div className="flex items-start gap-4">
-											<div className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-2xl bg-slate-900 text-sm font-semibold text-white">
-												{String(index + 1).padStart(2, "0")}
-											</div>
-											<div className="min-w-0 flex-1">
-												<div className="flex flex-wrap items-center gap-2 text-xs font-medium text-slate-500">
-													<span className="rounded-full bg-slate-200 px-2.5 py-1 text-slate-700">
-														{humanizeText(item.kategori) || "Berita DPMD"}
-													</span>
-													<span>{formatDate(item.tanggal_publish || item.created_at)}</span>
-													<span>{formatNumber(item.views)} dibaca</span>
-												</div>
-												<h3 className="mt-3 text-base font-semibold leading-6 text-slate-900 transition group-hover:text-slate-700">
-													{item.judul}
-												</h3>
-												<p className="mt-2 text-sm leading-6 text-slate-600">
-													{truncateText(item.ringkasan, 145)}
-												</p>
-											</div>
+					<div className="mt-5 space-y-3">
+						{focusItems.slice(0, 4).map((item, index) => {
+							const IconComponent = item.icon;
+
+							return (
+								<Link
+									key={`${item.title}-${index}`}
+									to={item.link}
+									className="group block rounded-xl border border-slate-200 bg-slate-50 p-4 transition hover:border-slate-300 hover:bg-white"
+								>
+									<div className="flex items-start gap-3">
+										<div
+											className={`flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg ${item.tone}`}
+										>
+											<IconComponent className="h-4 w-4" />
 										</div>
-									</Link>
-								))}
-							</div>
-						) : (
-							<div className="mt-6 rounded-3xl border border-dashed border-slate-200 bg-slate-50 p-5 text-sm text-slate-500">
-								Belum ada berita atau artikel DPMD yang dipublikasikan.
-							</div>
-						)}
-					</section>
-
-					<section className="rounded-[28px] border border-slate-200 bg-white p-6 shadow-sm">
-						<h2 className="text-xl font-semibold text-slate-900">Fokus Berikutnya</h2>
-						<p className="mt-1 text-sm text-slate-500">
-							Rekomendasi tindak lanjut berdasarkan kondisi data desa saat ini.
-						</p>
-
-						<div className="mt-6 space-y-3">
-							{focusItems.slice(0, 3).map((item, index) => {
-								const IconComponent = item.icon;
-
-								return (
-									<Link
-										key={`${item.title}-${index}`}
-										to={item.link}
-										className="group block rounded-3xl border border-slate-200 bg-slate-50 p-4 transition hover:border-slate-300 hover:bg-white hover:shadow-sm"
-									>
-										<div className="flex items-start gap-4">
-											<div className={`flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-2xl ${item.tone}`}>
-												<IconComponent className="h-5 w-5" />
-											</div>
-											<div className="min-w-0 flex-1">
-												<h3 className="text-base font-semibold text-slate-900 transition group-hover:text-slate-700">
-													{item.title}
-												</h3>
-												<p className="mt-2 text-sm leading-6 text-slate-600">
-													{item.description}
-												</p>
-												<p className="mt-3 text-sm font-semibold text-slate-700">
-													{item.actionLabel}
-												</p>
-											</div>
+										<div className="min-w-0 flex-1">
+											<h3 className="text-sm font-semibold text-slate-900">{item.title}</h3>
+											<p className="mt-1.5 text-sm leading-6 text-slate-500">
+												{item.description}
+											</p>
+											<p className="mt-2 inline-flex items-center gap-1 text-xs font-semibold text-brand-700">
+												{item.actionLabel}
+												<LuArrowRight className="h-3.5 w-3.5 transition group-hover:translate-x-0.5" />
+											</p>
 										</div>
-									</Link>
-								);
-							})}
-						</div>
-					</section>
-				</div>
+									</div>
+								</Link>
+							);
+						})}
+					</div>
+				</section>
 			</div>
 		</div>
 	);

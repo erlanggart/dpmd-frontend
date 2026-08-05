@@ -60,7 +60,7 @@ const LeaderCard = ({ person, accent = "teal" }) => {
 							<Crown className="w-3.5 h-3.5" />
 						</div>
 					</div>
-					<h3 className="font-bold text-gray-900 text-center text-sm leading-tight">{person.nama_lengkap || "-"}</h3>
+					<h3 className="font-bold text-slate-900 text-center text-sm leading-tight">{person.nama_lengkap || "-"}</h3>
 					<span className={`mt-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-gradient-to-r ${gradients[accent]} text-white`}>
 						{person.jabatan || "-"}
 					</span>
@@ -78,14 +78,14 @@ const StaffCard = ({ person }) => {
 	return (
 		<div
 			onClick={() => nav(`/desa/aparatur-desa/${person.id}`)}
-			className="group cursor-pointer bg-white rounded-xl border border-gray-200 hover:border-slate-300 hover:shadow-md p-4 flex items-center gap-3 transition-all"
+			className="group cursor-pointer bg-white rounded-xl border border-slate-200 hover:border-slate-300 hover:shadow-md p-4 flex items-center gap-3 transition-all"
 		>
 			<Avatar person={person} size="sm" />
 			<div className="flex-1 min-w-0">
-				<p className="font-semibold text-gray-900 text-sm truncate group-hover:text-slate-700 transition-colors">{person.nama_lengkap || "-"}</p>
-				<p className="text-xs text-gray-500 truncate">{person.jabatan || "-"}</p>
+				<p className="font-semibold text-slate-900 text-sm truncate group-hover:text-slate-700 transition-colors">{person.nama_lengkap || "-"}</p>
+				<p className="text-xs text-slate-500 truncate">{person.jabatan || "-"}</p>
 			</div>
-			<ChevronRight className="w-4 h-4 text-gray-300 group-hover:text-slate-500 flex-shrink-0 transition-colors" />
+			<ChevronRight className="w-4 h-4 text-slate-300 group-hover:text-slate-500 flex-shrink-0 transition-colors" />
 		</div>
 	);
 };
@@ -96,7 +96,7 @@ const SectionLabel = ({ icon: Icon, label, count, color = "teal" }) => {
 		blue: "bg-slate-100 text-slate-700 border-slate-200",
 		purple: "bg-white text-slate-700 border-slate-300",
 		amber: "bg-amber-50 text-amber-700 border-amber-200",
-		gray: "bg-gray-50 text-gray-700 border-gray-200",
+		gray: "bg-slate-50 text-slate-700 border-slate-200",
 	};
 	return (
 		<div className="flex items-center gap-2 mb-3">
@@ -104,7 +104,7 @@ const SectionLabel = ({ icon: Icon, label, count, color = "teal" }) => {
 				<Icon className="w-3.5 h-3.5" />
 				{label}
 			</div>
-			{count > 0 && <span className="text-xs text-gray-400">{count} orang</span>}
+			{count > 0 && <span className="text-xs text-slate-400">{count} orang</span>}
 		</div>
 	);
 };
@@ -149,9 +149,9 @@ const AparaturDesaOrgChart = ({ aparatur = [] }) => {
 
 	if (activeOnly.length === 0) {
 		return (
-			<div className="bg-white rounded-xl border border-gray-200 p-12 text-center">
-				<Users className="w-12 h-12 text-gray-300 mx-auto mb-3" />
-				<p className="text-gray-500">Tidak ada aparatur aktif</p>
+			<div className="bg-white rounded-xl border border-slate-200 p-12 text-center">
+				<Users className="w-12 h-12 text-slate-300 mx-auto mb-3" />
+				<p className="text-slate-500">Tidak ada aparatur aktif</p>
 			</div>
 		);
 	}
@@ -178,9 +178,9 @@ const AparaturDesaOrgChart = ({ aparatur = [] }) => {
 			{/* Divider */}
 			{(kepalaDesa || sekretaris) && (kaur.length > 0 || kasi.length > 0 || kadus.length > 0 || staf.length > 0 || others.length > 0) && (
 				<div className="flex items-center gap-3">
-					<div className="flex-1 h-px bg-gradient-to-r from-transparent to-gray-200" />
-					<span className="text-xs text-gray-400 font-medium">Struktur Organisasi</span>
-					<div className="flex-1 h-px bg-gradient-to-l from-transparent to-gray-200" />
+					<div className="flex-1 h-px bg-gradient-to-r from-transparent to-slate-200" />
+					<span className="text-xs text-slate-400 font-medium">Struktur Organisasi</span>
+					<div className="flex-1 h-px bg-gradient-to-l from-transparent to-slate-200" />
 				</div>
 			)}
 
@@ -231,9 +231,9 @@ const AparaturDesaOrgChart = ({ aparatur = [] }) => {
 			{bpd.length > 0 && (
 				<>
 					<div className="flex items-center gap-3">
-						<div className="flex-1 h-px bg-gradient-to-r from-transparent to-gray-200" />
-						<span className="text-xs text-gray-400 font-medium">Badan Permusyawaratan Desa</span>
-						<div className="flex-1 h-px bg-gradient-to-l from-transparent to-gray-200" />
+						<div className="flex-1 h-px bg-gradient-to-r from-transparent to-slate-200" />
+						<span className="text-xs text-slate-400 font-medium">Badan Permusyawaratan Desa</span>
+						<div className="flex-1 h-px bg-gradient-to-l from-transparent to-slate-200" />
 					</div>
 					<div>
 						<SectionLabel icon={Landmark} label="BPD" count={bpd.length} color="blue" />

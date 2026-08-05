@@ -30,44 +30,45 @@ const formatRupiah = (val) => {
   return Math.round(num).toLocaleString('id-ID');
 };
 
-// Tema navy/slate/white. Kategori dibedakan lewat KEDALAMAN slate (navy → slate
-// terang), bukan warna-warni. Aksen status (approved/revisi/ditolak) tetap berwarna.
+// Tema hitam-navy + aksen merah bata (brand). Bidang padat selalu slate-900;
+// kategori dibedakan lewat kekuatan aksen brand-nya, bukan warna-warni.
+// Aksen status (approved/revisi/ditolak) tetap berwarna sesuai maknanya.
 const KATEGORI_META = {
   wajib: {
     label: 'Wajib',
     sublabel: 'Kegiatan WAJIB',
-    gradFrom: 'from-slate-700',
-    gradTo: 'to-slate-900',
-    headerBg: 'from-slate-100 via-slate-50 to-slate-100',
-    headerHover: 'hover:from-slate-200 hover:via-slate-100 hover:to-slate-200',
-    badge: 'bg-slate-800 text-white border-slate-700',
-    btnGrad: 'from-slate-700 to-slate-900 hover:from-slate-800 hover:to-slate-950',
-    boxBg: 'from-slate-50 to-white',
-    boxBorder: 'border-slate-300',
+    iconBg: 'bg-slate-900',
+    accent: 'text-brand-600',
+    headerBg: 'bg-slate-50',
+    headerHover: 'hover:bg-slate-100',
+    badge: 'bg-slate-900 text-white border-slate-900',
+    btnBg: 'bg-slate-900 hover:bg-slate-800',
+    boxBg: 'bg-slate-50',
+    boxBorder: 'border-slate-200',
   },
   pilihan_infrastruktur: {
     label: 'Pilihan Infrastruktur',
     sublabel: 'Kegiatan fisik/bangunan',
-    gradFrom: 'from-slate-600',
-    gradTo: 'to-slate-800',
-    headerBg: 'from-slate-100 via-slate-50 to-slate-100',
-    headerHover: 'hover:from-slate-200 hover:via-slate-100 hover:to-slate-200',
-    badge: 'bg-slate-200 text-slate-800 border-slate-300',
-    btnGrad: 'from-slate-600 to-slate-800 hover:from-slate-700 hover:to-slate-900',
-    boxBg: 'from-slate-50 to-white',
-    boxBorder: 'border-slate-300',
+    iconBg: 'bg-slate-900',
+    accent: 'text-brand-600',
+    headerBg: 'bg-slate-50',
+    headerHover: 'hover:bg-slate-100',
+    badge: 'bg-slate-100 text-slate-700 border-slate-200',
+    btnBg: 'bg-slate-900 hover:bg-slate-800',
+    boxBg: 'bg-slate-50',
+    boxBorder: 'border-slate-200',
   },
   pilihan_non_infrastruktur: {
     label: 'Pilihan Non-Infrastruktur',
     sublabel: 'Program/pemberdayaan',
-    gradFrom: 'from-slate-500',
-    gradTo: 'to-slate-700',
-    headerBg: 'from-slate-100 via-slate-50 to-slate-100',
-    headerHover: 'hover:from-slate-200 hover:via-slate-100 hover:to-slate-200',
-    badge: 'bg-slate-100 text-slate-700 border-slate-300',
-    btnGrad: 'from-slate-500 to-slate-700 hover:from-slate-600 hover:to-slate-800',
-    boxBg: 'from-slate-50 to-white',
-    boxBorder: 'border-slate-300',
+    iconBg: 'bg-slate-900',
+    accent: 'text-brand-600',
+    headerBg: 'bg-slate-50',
+    headerHover: 'hover:bg-slate-100',
+    badge: 'bg-slate-100 text-slate-700 border-slate-200',
+    btnBg: 'bg-slate-900 hover:bg-slate-800',
+    boxBg: 'bg-slate-50',
+    boxBorder: 'border-slate-200',
   },
 };
 const KATEGORI_KEYS = Object.keys(KATEGORI_META);
@@ -79,11 +80,11 @@ const StatusBadge = ({ status, label }) => {
     in_review:'bg-slate-200 text-slate-800 border-slate-400',
     approved: 'bg-emerald-100 text-emerald-700 border-emerald-300',
     verified: 'bg-emerald-100 text-emerald-700 border-emerald-300',
-    rejected: 'bg-red-100 text-red-700 border-red-300',
-    revision: 'bg-orange-100 text-orange-700 border-orange-300',
+    rejected: 'bg-rose-100 text-rose-700 border-rose-300',
+    revision: 'bg-amber-100 text-amber-700 border-amber-300',
   };
   return (
-    <span className={`inline-flex items-center gap-1 px-2 py-0.5 text-xs font-semibold rounded-full border ${styles[status] || 'bg-gray-100 text-gray-700 border-gray-300'}`}>
+    <span className={`inline-flex items-center gap-1 px-2 py-0.5 text-xs font-semibold rounded-full border ${styles[status] || 'bg-slate-100 text-slate-700 border-slate-300'}`}>
       {label || status}
     </span>
   );
@@ -516,22 +517,30 @@ const BankeuPerubahanProposalPage = ({ tahun }) => {
     <>
       <div className="space-y-6">
         {/* Header */}
-        <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6">
+        <div className="bg-white rounded-xl border border-slate-200 p-6">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-            <div>
-              <h2 className="text-2xl font-bold text-gray-800 flex items-center gap-2">
-                <LuCoins className="w-7 h-7 text-slate-700" />
-                Bankeu Perubahan TA {tahun}
-              </h2>
-              <p className="text-sm text-gray-500 mt-1">
-                Alur verifikasi: Desa → Kecamatan → DPMD &nbsp;·&nbsp; 1 kegiatan boleh lebih dari 1 proposal (lokasi berbeda)
-              </p>
+            <div className="flex min-w-0 items-start gap-3.5">
+              <div className="relative flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-xl bg-slate-900">
+                <LuCoins className="h-5 w-5 text-white" />
+                <span className="absolute -bottom-0.5 left-1/2 h-1 w-5 -translate-x-1/2 rounded-full bg-brand-500" />
+              </div>
+              <div className="min-w-0">
+                <p className="text-xs font-semibold uppercase tracking-wide text-brand-600">
+                  Bantuan Keuangan
+                </p>
+                <h2 className="text-xl font-semibold tracking-tight text-slate-900 sm:text-2xl">
+                  Bankeu Perubahan TA {tahun}
+                </h2>
+                <p className="mt-1 text-sm leading-6 text-slate-500">
+                  Alur verifikasi: Desa → Kecamatan → DPMD &nbsp;·&nbsp; 1 kegiatan boleh lebih dari 1 proposal (lokasi berbeda)
+                </p>
+              </div>
             </div>
-            <div className="flex flex-wrap gap-2">
+            <div className="flex flex-shrink-0 flex-wrap gap-2">
               {counts.draft > 0 && (
                 <button
                   onClick={handleSubmitToKecamatan}
-                  className="inline-flex items-center gap-2 px-4 py-2 bg-slate-600 hover:bg-slate-700 text-white font-semibold rounded-xl shadow-sm transition-colors"
+                  className="inline-flex items-center gap-2 rounded-lg bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-slate-800"
                 >
                   <LuSend className="w-4 h-4" />
                   Kirim {counts.draft} ke Kecamatan
@@ -544,7 +553,7 @@ const BankeuPerubahanProposalPage = ({ tahun }) => {
                   title={counts.revisionReady === 0
                     ? 'Upload ulang (perbaiki) PDF proposal yang direvisi terlebih dahulu'
                     : 'Kirim ulang proposal yang sudah diperbaiki'}
-                  className="inline-flex items-center gap-2 px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white font-semibold rounded-xl shadow-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-amber-600"
+                  className="inline-flex items-center gap-2 rounded-lg bg-brand-600 px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-brand-700 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-brand-600"
                 >
                   <LuRefreshCw className="w-4 h-4" />
                   Kirim Ulang Revisi ({counts.revisionReady}/{counts.revision})
@@ -552,7 +561,7 @@ const BankeuPerubahanProposalPage = ({ tahun }) => {
               )}
               <button
                 onClick={fetchData}
-                className="inline-flex items-center gap-2 px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold rounded-xl transition-colors"
+                className="inline-flex items-center gap-2 rounded-lg border border-slate-200 px-4 py-2.5 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-50"
               >
                 <LuRefreshCw className="w-4 h-4" />
                 Refresh
@@ -566,27 +575,27 @@ const BankeuPerubahanProposalPage = ({ tahun }) => {
             <StatCard label="Pending Kec" value={counts.pending} color="bg-slate-50 text-slate-700" />
             <StatCard label="Approved Kec" value={counts.approved_kec} color="bg-emerald-50 text-emerald-700" />
             <StatCard label="Approved DPMD" value={counts.dpmd_approved} color="bg-emerald-50 text-emerald-700" />
-            <StatCard label="Revisi" value={counts.revision} color="bg-orange-50 text-orange-700" />
+            <StatCard label="Revisi" value={counts.revision} color="bg-brand-50 text-brand-700" />
           </div>
 
           {counts.revision > 0 && (
-            <div className="mt-4 rounded-2xl border-2 border-orange-300 bg-gradient-to-r from-slate-50 to-slate-50 p-4 shadow-sm">
+            <div className="mt-4 rounded-2xl border border-amber-200 bg-slate-50 p-4 shadow-sm">
               <div className="flex items-start gap-3">
-                <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl bg-orange-600 text-white">
+                <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl bg-amber-600 text-white">
                   <LuTriangleAlert className="h-5 w-5" />
                 </div>
                 <div className="flex-1">
                   <h3 className="font-bold text-orange-950">
                     {counts.revision} proposal dikembalikan untuk diperbaiki
                   </h3>
-                  <p className="mt-1 text-sm text-orange-800">
+                  <p className="mt-1 text-sm text-amber-800">
                     Buka proposal yang ditandai, baca catatan pemeriksa, upload ulang PDF, lalu gunakan tombol
                     <strong> Kirim Ulang Revisi</strong>.
                   </p>
                   <div className="mt-2 flex flex-wrap gap-2 text-xs font-semibold">
-                    {revisionSummary.kecamatan > 0 && <span className="rounded-full bg-white px-2.5 py-1 text-orange-800">Kecamatan: {revisionSummary.kecamatan}</span>}
+                    {revisionSummary.kecamatan > 0 && <span className="rounded-full bg-white px-2.5 py-1 text-amber-800">Kecamatan: {revisionSummary.kecamatan}</span>}
                     {revisionSummary.dpmd > 0 && <span className="rounded-full bg-white px-2.5 py-1 text-slate-800">DPMD: {revisionSummary.dpmd}</span>}
-                    {revisionSummary.sistem > 0 && <span className="rounded-full bg-white px-2.5 py-1 text-red-800">Dikembalikan DPMD: {revisionSummary.sistem}</span>}
+                    {revisionSummary.sistem > 0 && <span className="rounded-full bg-white px-2.5 py-1 text-rose-800">Dikembalikan DPMD: {revisionSummary.sistem}</span>}
                   </div>
                 </div>
               </div>
@@ -594,7 +603,7 @@ const BankeuPerubahanProposalPage = ({ tahun }) => {
           )}
 
           {/* Total anggaran usulan seluruh proposal desa */}
-          <div className="mt-3 rounded-xl bg-gradient-to-r from-slate-500 to-slate-600 p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 shadow-md">
+          <div className="mt-3 rounded-xl bg-slate-900 p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 shadow-md">
             <div className="flex items-center gap-2 text-white/90">
               <LuDollarSign className="w-5 h-5" />
               <span className="text-sm font-semibold">Total Anggaran Usulan</span>
@@ -608,7 +617,7 @@ const BankeuPerubahanProposalPage = ({ tahun }) => {
 
         {/* Sections per kategori */}
         {loading ? (
-          <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-12 text-center text-gray-500">
+          <div className="bg-white rounded-xl border border-slate-200 p-12 text-center text-slate-500">
             Memuat data...
           </div>
         ) : (
@@ -624,28 +633,28 @@ const BankeuPerubahanProposalPage = ({ tahun }) => {
             return (
               <div
                 key={kat}
-                className={`bg-white rounded-2xl shadow-lg border border-gray-100 ${
+                className={`bg-white rounded-xl border border-slate-200 ${
                   isDropdownOpen ? 'relative z-30 overflow-visible' : 'overflow-hidden'
                 }`}
               >
                 {/* Section Header */}
                 <button
                   onClick={() => setExpandedSection(s => ({ ...s, [kat]: !s[kat] }))}
-                  className={`w-full px-6 py-5 flex items-center justify-between bg-gradient-to-r ${meta.headerBg} ${meta.headerHover} transition-all group`}
+                  className={`w-full px-6 py-5 flex items-center justify-between ${meta.headerBg} ${meta.headerHover} transition-colors group`}
                 >
                   <div className="flex items-center gap-4">
-                    <div className={`w-10 h-10 bg-gradient-to-br ${meta.gradFrom} ${meta.gradTo} rounded-xl flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform`}>
+                    <div className={`w-10 h-10 ${meta.iconBg} rounded-xl flex items-center justify-center transition-transform group-hover:scale-105`}>
                       {isExpanded ? <LuChevronDown className="w-5 h-5 text-white" /> : <LuChevronRight className="w-5 h-5 text-white" />}
                     </div>
                     <div className="text-left">
-                      <h3 className="text-xl font-bold text-gray-900">{meta.label}</h3>
-                      <p className="text-sm text-gray-600">
+                      <h3 className="text-xl font-bold text-slate-900">{meta.label}</h3>
+                      <p className="text-sm text-slate-600">
                         {sectionProposals.length} dari {totalMaster} program · {meta.sublabel}
                       </p>
                     </div>
                   </div>
-                  <div className="px-4 py-2 bg-white rounded-xl shadow-md border border-gray-100">
-                    <span className={`text-2xl font-bold bg-gradient-to-r ${meta.gradFrom} ${meta.gradTo} bg-clip-text text-transparent`}>
+                  <div className="px-4 py-2 bg-white rounded-xl shadow-md border border-slate-100">
+                    <span className={`text-2xl font-semibold tracking-tight ${meta.accent}`}>
                       {sectionProposals.length}/{totalMaster}
                     </span>
                   </div>
@@ -661,7 +670,7 @@ const BankeuPerubahanProposalPage = ({ tahun }) => {
                 >
                   {/* Existing proposals list */}
                   {sectionProposals.length > 0 && (
-                    <div className="p-4 bg-gray-50 space-y-2 border-b border-gray-200">
+                    <div className="p-4 bg-slate-50 space-y-2 border-b border-slate-200">
                       {sectionProposals.map(p => (
                         <ProposalCard
                           key={p.id}
@@ -678,7 +687,7 @@ const BankeuPerubahanProposalPage = ({ tahun }) => {
                   {/* Add Proposal Button + Inline Form */}
                   <div className="p-6">
                     {availableList.length === 0 ? (
-                      <div className="bg-gray-50 border border-gray-200 rounded-xl p-4 flex items-start gap-3 text-sm text-gray-600">
+                      <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 flex items-start gap-3 text-sm text-slate-600">
                         <LuInfo className="w-5 h-5 flex-shrink-0 mt-0.5" />
                         <div>
                           Belum ada master kegiatan di kategori <strong>{meta.label}</strong>. Hubungi DPMD untuk konfigurasi.
@@ -694,19 +703,19 @@ const BankeuPerubahanProposalPage = ({ tahun }) => {
                               setShowAddForm(s => ({ ...s, [kat]: true }));
                             }
                           }}
-                          className={`w-full px-6 py-4 bg-gradient-to-r ${meta.btnGrad} text-white rounded-xl flex items-center justify-center gap-3 font-bold text-lg shadow-lg hover:shadow-xl transition-all transform hover:scale-[1.01]`}
+                          className={`w-full px-6 py-4 ${meta.btnBg} text-white rounded-xl flex items-center justify-center gap-3 font-semibold text-base transition-colors`}
                         >
                           {isFormOpen ? <LuX className="w-6 h-6" /> : <LuPlus className="w-6 h-6" />}
                           {isFormOpen ? 'Tutup Form' : `Tambah Proposal ${meta.label} Baru`}
                         </button>
 
                         {isFormOpen && (
-                          <div className={`mt-4 p-4 sm:p-6 bg-white rounded-2xl border-2 ${meta.boxBorder} shadow-xl`}>
+                          <div className={`mt-4 p-4 sm:p-6 bg-white rounded-xl border ${meta.boxBorder}`}>
                             <div className="space-y-5">
                               {/* Step 1: Pilih Kegiatan */}
                               <div className={`dropdown-${kat} relative ${isDropdownOpen ? 'mb-80 sm:mb-96' : ''}`}>
-                                <label className="flex items-center gap-3 text-base sm:text-lg font-bold text-gray-900 mb-3">
-                                  <div className={`flex items-center justify-center w-8 h-8 bg-gradient-to-br ${meta.gradFrom} ${meta.gradTo} text-white rounded-full shadow-md`}>
+                                <label className="flex items-center gap-3 text-base sm:text-lg font-bold text-slate-900 mb-3">
+                                  <div className={`flex items-center justify-center w-8 h-8 ${meta.iconBg} text-white rounded-full`}>
                                     <span className="text-sm font-bold">1</span>
                                   </div>
                                   <span>Pilih Kegiatan</span>
@@ -715,9 +724,9 @@ const BankeuPerubahanProposalPage = ({ tahun }) => {
                                   <button
                                     type="button"
                                     onClick={() => setDropdownOpen(d => ({ ...d, [kat]: !d[kat] }))}
-                                    className={`w-full pl-5 pr-12 py-4 bg-gradient-to-r ${meta.boxBg} border-2 ${meta.boxBorder} rounded-xl text-base font-semibold text-left shadow-sm focus:outline-none hover:opacity-90 transition-all`}
+                                    className={`w-full pl-5 pr-12 py-4 ${meta.boxBg} border ${meta.boxBorder} rounded-xl text-base font-semibold text-left focus:outline-none focus:border-slate-900 hover:border-slate-300 transition-colors`}
                                   >
-                                    <span className={selectedKegiatanId[kat] ? 'text-gray-800' : 'text-gray-500'}>
+                                    <span className={selectedKegiatanId[kat] ? 'text-slate-800' : 'text-slate-500'}>
                                       {selectedKegiatanId[kat]
                                         ? (() => {
                                             const sel = (masterKegiatan[kat] || []).find(k => k.id.toString() === selectedKegiatanId[kat]);
@@ -729,11 +738,11 @@ const BankeuPerubahanProposalPage = ({ tahun }) => {
                                     </span>
                                   </button>
                                   <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none">
-                                    <LuChevronDown className={`w-6 h-6 text-gray-600 transition-transform duration-200 ${dropdownOpen[kat] ? 'rotate-180' : ''}`} />
+                                    <LuChevronDown className={`w-6 h-6 text-slate-600 transition-transform duration-200 ${dropdownOpen[kat] ? 'rotate-180' : ''}`} />
                                   </div>
 
                                   {isDropdownOpen && (
-                                    <div className={`absolute left-0 right-0 top-full mt-2 z-50 bg-white border-2 ${meta.boxBorder} rounded-xl shadow-2xl overflow-hidden`}>
+                                    <div className={`absolute left-0 right-0 top-full mt-2 z-50 bg-white border ${meta.boxBorder} rounded-xl shadow-2xl overflow-hidden`}>
                                       <div className="max-h-72 overflow-y-auto">
                                         {availableList.map((item, idx) => {
                                           const usedCount = kegiatanUsageCount[kat]?.[item.id] || 0;
@@ -752,9 +761,9 @@ const BankeuPerubahanProposalPage = ({ tahun }) => {
                                             }}
                                             className={`w-full px-5 py-3 text-left text-sm sm:text-base font-medium transition-colors leading-relaxed ${
                                               selectedKegiatanId[kat] === item.id.toString()
-                                                ? 'bg-gray-100 text-gray-900 font-semibold'
-                                                : 'text-gray-800 hover:bg-gray-50'
-                                            } ${idx !== availableList.length - 1 ? 'border-b border-gray-200' : ''}`}
+                                                ? 'bg-slate-100 text-slate-900 font-semibold'
+                                                : 'text-slate-800 hover:bg-slate-50'
+                                            } ${idx !== availableList.length - 1 ? 'border-b border-slate-200' : ''}`}
                                           >
                                             <span className="block">
                                               {item.urutan ? <strong className="mr-1">{item.urutan}.</strong> : null}
@@ -776,12 +785,12 @@ const BankeuPerubahanProposalPage = ({ tahun }) => {
 
                               {/* Step 2: Isi Detail */}
                               {selectedKegiatanId[kat] && (
-                                <div className="pt-4 border-t-2 border-gray-100 space-y-4">
+                                <div className="pt-4 border-t-2 border-slate-100 space-y-4">
                                   <div className="flex items-center gap-2 mb-2">
-                                    <div className="flex items-center justify-center w-8 h-8 bg-gradient-to-br from-slate-500 to-slate-600 text-white rounded-full shadow-md">
+                                    <div className="flex items-center justify-center w-8 h-8 bg-slate-900 text-white rounded-full shadow-md">
                                       <span className="text-sm font-bold">2</span>
                                     </div>
-                                    <h4 className="text-base sm:text-lg font-bold text-gray-900">Isi Detail Proposal</h4>
+                                    <h4 className="text-base sm:text-lg font-bold text-slate-900">Isi Detail Proposal</h4>
                                   </div>
 
                                   <FormFields
@@ -794,14 +803,14 @@ const BankeuPerubahanProposalPage = ({ tahun }) => {
                                     <button
                                       onClick={() => resetAddState(kat)}
                                       type="button"
-                                      className="px-4 py-3 bg-white border-2 border-gray-300 text-gray-700 font-semibold rounded-xl hover:bg-gray-50"
+                                      className="px-4 py-3 bg-white border border-slate-300 text-slate-700 font-semibold rounded-xl hover:bg-slate-50"
                                     >
                                       Batal
                                     </button>
                                     <button
                                       onClick={() => handleCreate(kat)}
                                       disabled={submitting}
-                                      className={`flex-1 px-6 py-3 bg-gradient-to-r ${meta.btnGrad} text-white font-bold rounded-xl shadow-lg disabled:opacity-50 flex items-center justify-center gap-2`}
+                                      className={`flex-1 px-6 py-3 ${meta.btnBg} text-white font-semibold rounded-xl transition-colors disabled:opacity-50 flex items-center justify-center gap-2`}
                                     >
                                       <LuUpload className="w-5 h-5" />
                                       {submitting ? 'Mengupload...' : 'Upload Proposal'}
@@ -829,10 +838,10 @@ const BankeuPerubahanProposalPage = ({ tahun }) => {
         )}
 
         {!loading && proposals.length === 0 && KATEGORI_KEYS.every(k => (masterKegiatan[k] || []).length === 0) && (
-          <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-12 text-center">
-            <LuInfo className="w-12 h-12 mx-auto text-gray-300 mb-3" />
-            <p className="text-gray-600 font-medium">Belum ada master kegiatan</p>
-            <p className="text-sm text-gray-400 mt-1">Hubungi DPMD untuk konfigurasi master kegiatan bankeu perubahan</p>
+          <div className="bg-white rounded-xl border border-slate-200 p-12 text-center">
+            <LuInfo className="w-12 h-12 mx-auto text-slate-300 mb-3" />
+            <p className="text-slate-600 font-medium">Belum ada master kegiatan</p>
+            <p className="text-sm text-slate-400 mt-1">Hubungi DPMD untuk konfigurasi master kegiatan bankeu perubahan</p>
           </div>
         )}
       </div>
@@ -841,17 +850,17 @@ const BankeuPerubahanProposalPage = ({ tahun }) => {
       {editingProposal && (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 overflow-y-auto">
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-3xl my-8 max-h-[90vh] overflow-hidden flex flex-col">
-            <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
-              <h3 className="text-lg font-bold text-gray-800">
+            <div className="px-6 py-4 border-b border-slate-200 flex items-center justify-between">
+              <h3 className="text-lg font-bold text-slate-800">
                 {isRevision(editingProposal) ? 'Upload Ulang PDF Revisi' : 'Edit'} Proposal #{editingProposal.id}
               </h3>
-              <button onClick={closeEditModal} className="text-gray-400 hover:text-gray-600">
+              <button onClick={closeEditModal} className="text-slate-400 hover:text-slate-600">
                 <LuX className="w-5 h-5" />
               </button>
             </div>
 
             <div className="overflow-y-auto px-6 py-4 space-y-4 flex-1">
-              <div className="bg-gray-50 border border-gray-200 rounded-lg p-3 text-sm text-gray-700">
+              <div className="bg-slate-50 border border-slate-200 rounded-lg p-3 text-sm text-slate-700">
                 <span className={`inline-flex items-center px-2 py-0.5 text-xs font-bold border rounded ${KATEGORI_META[editingProposal.jenis_kegiatan]?.badge}`}>
                   {KATEGORI_META[editingProposal.jenis_kegiatan]?.label}
                 </span>
@@ -861,8 +870,8 @@ const BankeuPerubahanProposalPage = ({ tahun }) => {
               </div>
 
               {isRevision(editingProposal) && (
-                <div className="flex items-start gap-2 rounded-xl border border-orange-300 bg-orange-50 p-3 text-sm text-orange-900">
-                  <LuTriangleAlert className="mt-0.5 h-5 w-5 flex-shrink-0 text-orange-600" />
+                <div className="flex items-start gap-2 rounded-xl border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900">
+                  <LuTriangleAlert className="mt-0.5 h-5 w-5 flex-shrink-0 text-amber-600" />
                   <div>
                     Proposal ini dikembalikan untuk revisi.{' '}
                     {hasReupload(editingProposal)
@@ -883,18 +892,18 @@ const BankeuPerubahanProposalPage = ({ tahun }) => {
               />
             </div>
 
-            <div className="px-6 py-4 border-t border-gray-200 flex justify-end gap-2 bg-gray-50">
+            <div className="px-6 py-4 border-t border-slate-200 flex justify-end gap-2 bg-slate-50">
               <button
                 onClick={closeEditModal}
                 type="button"
-                className="px-4 py-2 bg-white border border-gray-300 text-gray-700 font-semibold rounded-xl hover:bg-gray-50"
+                className="px-4 py-2 bg-white border border-slate-300 text-slate-700 font-semibold rounded-xl hover:bg-slate-50"
               >
                 Batal
               </button>
               <button
                 onClick={handleEdit}
                 disabled={submitting}
-                className="px-4 py-2 bg-orange-600 hover:bg-orange-700 text-white font-semibold rounded-xl shadow-sm disabled:opacity-50"
+                className="px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white font-semibold rounded-xl shadow-sm disabled:opacity-50"
               >
                 {submitting ? 'Menyimpan...' : 'Simpan Perubahan'}
               </button>
@@ -916,36 +925,36 @@ const StatCard = ({ label, value, color }) => (
 const FormFields = ({ form, onChange, isAnggaranOverLimit, isEdit = false, currentFile = null, requireFile = false }) => (
   <div className="space-y-4">
     <div>
-      <label className="block text-sm font-semibold text-gray-700 mb-1">Judul Proposal *</label>
+      <label className="block text-sm font-semibold text-slate-700 mb-1">Judul Proposal *</label>
       <input
         type="text"
         value={form.judul_proposal}
         readOnly
         disabled
-        className="w-full px-3 py-2 border border-gray-200 rounded-xl bg-gray-100 text-gray-600 cursor-not-allowed focus:outline-none"
+        className="w-full px-3 py-2 border border-slate-200 rounded-xl bg-slate-100 text-slate-600 cursor-not-allowed focus:outline-none"
         placeholder="Otomatis dari kegiatan yang dipilih"
       />
-      <p className="text-xs text-gray-400 mt-1">Judul mengikuti nama kegiatan yang dipilih (tidak dapat diubah).</p>
+      <p className="text-xs text-slate-400 mt-1">Judul mengikuti nama kegiatan yang dipilih (tidak dapat diubah).</p>
     </div>
 
     <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
       <div>
-        <label className="block text-sm font-semibold text-gray-700 mb-1">Nama Kegiatan Spesifik</label>
+        <label className="block text-sm font-semibold text-slate-700 mb-1">Nama Kegiatan Spesifik</label>
         <input
           type="text"
           value={form.nama_kegiatan_spesifik}
           onChange={e => onChange('nama_kegiatan_spesifik', e.target.value)}
-          className="w-full px-3 py-2 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500"
+          className="w-full px-3 py-2 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-500"
           placeholder="Detail kegiatan"
         />
       </div>
       <div>
-        <label className="block text-sm font-semibold text-gray-700 mb-1">Volume</label>
+        <label className="block text-sm font-semibold text-slate-700 mb-1">Volume</label>
         <input
           type="text"
           value={form.volume}
           onChange={e => onChange('volume', e.target.value)}
-          className="w-full px-3 py-2 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500"
+          className="w-full px-3 py-2 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-500"
           placeholder="Contoh: 200m x 3m"
         />
       </div>
@@ -953,18 +962,18 @@ const FormFields = ({ form, onChange, isAnggaranOverLimit, isEdit = false, curre
 
     <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
       <div>
-        <label className="block text-sm font-semibold text-gray-700 mb-1">Lokasi</label>
+        <label className="block text-sm font-semibold text-slate-700 mb-1">Lokasi</label>
         <input
           type="text"
           value={form.lokasi}
           onChange={e => onChange('lokasi', e.target.value)}
-          className="w-full px-3 py-2 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500"
+          className="w-full px-3 py-2 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-500"
           placeholder="Lokasi kegiatan"
         />
       </div>
       <div>
-        <label className="block text-sm font-semibold text-gray-700 mb-1">
-          Anggaran Usulan (Rp) <span className="text-xs font-normal text-gray-400">max 1,5 M total</span>
+        <label className="block text-sm font-semibold text-slate-700 mb-1">
+          Anggaran Usulan (Rp) <span className="text-xs font-normal text-slate-400">max 1,5 M total</span>
         </label>
         <input
           type="text"
@@ -972,13 +981,13 @@ const FormFields = ({ form, onChange, isAnggaranOverLimit, isEdit = false, curre
           onChange={e => onChange('anggaran_usulan', e.target.value.replace(/\D/g, ''))}
           className={`w-full px-3 py-2 border rounded-xl focus:outline-none focus:ring-2 ${
             isAnggaranOverLimit(form.anggaran_usulan)
-              ? 'border-red-500 focus:ring-red-200 bg-red-50 text-red-700'
-              : 'border-gray-300 focus:ring-orange-500'
+              ? 'border-rose-500 focus:ring-rose-200 bg-rose-50 text-rose-700'
+              : 'border-slate-300 focus:ring-amber-500'
           }`}
           placeholder="0"
         />
         {isAnggaranOverLimit(form.anggaran_usulan) && (
-          <p className="text-xs font-semibold text-red-600 mt-1">
+          <p className="text-xs font-semibold text-rose-600 mt-1">
             ⚠️ Total anggaran melebihi batas Rp 1,5 Miliar
           </p>
         )}
@@ -986,31 +995,31 @@ const FormFields = ({ form, onChange, isAnggaranOverLimit, isEdit = false, curre
     </div>
 
     <div>
-      <label className="block text-sm font-semibold text-gray-700 mb-1">Deskripsi</label>
+      <label className="block text-sm font-semibold text-slate-700 mb-1">Deskripsi</label>
       <textarea
         value={form.deskripsi}
         onChange={e => onChange('deskripsi', e.target.value)}
         rows={3}
-        className="w-full px-3 py-2 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500"
+        className="w-full px-3 py-2 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-500"
         placeholder="Deskripsi singkat proposal perubahan"
       />
     </div>
 
     <div>
-      <label className="block text-sm font-semibold text-gray-700 mb-1">
+      <label className="block text-sm font-semibold text-slate-700 mb-1">
         File Proposal (PDF){' '}
         {requireFile
-          ? <span className="text-orange-600">* wajib upload PDF revisi</span>
+          ? <span className="text-amber-600">* wajib upload PDF revisi</span>
           : (isEdit ? '(opsional - kosongkan untuk tidak ganti)' : '*')}
       </label>
       <input
         type="file"
         accept=".pdf,application/pdf"
         onChange={e => onChange('file', e.target.files[0] || null)}
-        className="w-full text-sm file:mr-3 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-orange-50 file:text-orange-700 hover:file:bg-orange-100"
+        className="w-full text-sm file:mr-3 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-amber-50 file:text-amber-700 hover:file:bg-amber-100"
       />
       {isEdit && currentFile && !form.file && (
-        <p className="text-xs text-gray-500 mt-1">File saat ini: {currentFile}</p>
+        <p className="text-xs text-slate-500 mt-1">File saat ini: {currentFile}</p>
       )}
     </div>
   </div>
@@ -1033,22 +1042,22 @@ const ProposalCard = ({ proposal, expanded, onToggleExpand, onEdit, onDelete }) 
 
   return (
     <div className={`rounded-xl border bg-white shadow-sm overflow-hidden ${
-      inRevisi ? 'border-orange-400 ring-2 ring-orange-100' : 'border-gray-200'
+      inRevisi ? 'border-amber-400 ring-2 ring-amber-100' : 'border-slate-200'
     }`}>
       <button
         onClick={onToggleExpand}
-        className="w-full p-3 hover:bg-gray-50 transition-colors text-left"
+        className="w-full p-3 hover:bg-slate-50 transition-colors text-left"
       >
         <div className="flex items-start justify-between gap-3">
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2">
               {expanded
-                ? <LuChevronDown className="w-4 h-4 text-gray-600 flex-shrink-0" />
-                : <LuChevronRight className="w-4 h-4 text-gray-600 flex-shrink-0" />}
-              <p className="font-bold text-gray-900 text-base leading-tight truncate">{proposal.judul_proposal}</p>
+                ? <LuChevronDown className="w-4 h-4 text-slate-600 flex-shrink-0" />
+                : <LuChevronRight className="w-4 h-4 text-slate-600 flex-shrink-0" />}
+              <p className="font-bold text-slate-900 text-base leading-tight truncate">{proposal.judul_proposal}</p>
             </div>
             {firstKegiatan && (
-              <p className="text-xs text-gray-600 mt-1 ml-6 truncate">
+              <p className="text-xs text-slate-600 mt-1 ml-6 truncate">
                 <span className="font-semibold">Kegiatan:</span> {firstKegiatan.nama_kegiatan}
               </p>
             )}
@@ -1085,7 +1094,7 @@ const ProposalCard = ({ proposal, expanded, onToggleExpand, onEdit, onDelete }) 
       </button>
 
       {expanded && (
-        <div className="px-3 pb-3 border-t border-gray-100">
+        <div className="px-3 pb-3 border-t border-slate-100">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mt-3 mb-3">
             {proposal.volume && (
               <div className="flex items-start gap-2 p-2 bg-slate-50 rounded-lg">
@@ -1117,21 +1126,21 @@ const ProposalCard = ({ proposal, expanded, onToggleExpand, onEdit, onDelete }) 
           </div>
 
           {proposal.nama_kegiatan_spesifik && (
-            <div className="mb-3 p-2 bg-gray-50 rounded-lg text-sm text-gray-700">
-              <strong className="text-gray-900">Nama Spesifik:</strong> {proposal.nama_kegiatan_spesifik}
+            <div className="mb-3 p-2 bg-slate-50 rounded-lg text-sm text-slate-700">
+              <strong className="text-slate-900">Nama Spesifik:</strong> {proposal.nama_kegiatan_spesifik}
             </div>
           )}
 
           {statusRevisi && !kecRevisi && !dpmdRevisi && (
-            <div className="mb-3 flex items-start gap-2 rounded-xl border border-red-300 bg-red-50 p-3 text-sm text-red-900">
-              <LuTriangleAlert className="mt-0.5 h-5 w-5 flex-shrink-0 text-red-600" />
+            <div className="mb-3 flex items-start gap-2 rounded-xl border border-rose-300 bg-rose-50 p-3 text-sm text-rose-900">
+              <LuTriangleAlert className="mt-0.5 h-5 w-5 flex-shrink-0 text-rose-600" />
               <div>
                 <strong>Proposal dikembalikan ke Desa untuk revisi.</strong>
-                <p className="mt-0.5 text-xs text-red-800">
+                <p className="mt-0.5 text-xs text-rose-800">
                   Periksa catatan atau riwayat proposal, lalu upload ulang PDF sebelum dikirim kembali.
                 </p>
                 {proposal.troubleshoot_catatan && (
-                  <p className="mt-2 rounded-lg bg-white/80 p-2 text-xs text-red-900">
+                  <p className="mt-2 rounded-lg bg-white/80 p-2 text-xs text-rose-900">
                     <strong>Catatan DPMD:</strong> {proposal.troubleshoot_catatan}
                   </p>
                 )}
@@ -1142,7 +1151,7 @@ const ProposalCard = ({ proposal, expanded, onToggleExpand, onEdit, onDelete }) 
           {/* Hasil revisi Kecamatan — selalu tampil saat status revisi, walau
               kecamatan hanya memberi coretan/anotasi tanpa catatan teks. */}
           {kecRevisi && (
-            <div className="text-xs bg-orange-50 border border-orange-200 rounded p-2 text-orange-800 mb-3 flex items-start justify-between gap-2 flex-wrap">
+            <div className="text-xs bg-amber-50 border border-amber-200 rounded p-2 text-amber-800 mb-3 flex items-start justify-between gap-2 flex-wrap">
               <span className="min-w-0">
                 <strong>Hasil revisi Kecamatan:</strong>{' '}
                 {proposal.kecamatan_catatan
@@ -1151,7 +1160,7 @@ const ProposalCard = ({ proposal, expanded, onToggleExpand, onEdit, onDelete }) 
               </span>
               <button
                 onClick={() => setShowHistory(true)}
-                className="inline-flex items-center gap-1 px-2 py-0.5 bg-orange-600 hover:bg-orange-700 text-white text-[11px] font-semibold rounded shrink-0"
+                className="inline-flex items-center gap-1 px-2 py-0.5 bg-amber-600 hover:bg-amber-700 text-white text-[11px] font-semibold rounded shrink-0"
               >
                 <LuPencilLine className="w-3 h-3" /> Lihat coretan revisi
               </button>
@@ -1195,7 +1204,7 @@ const ProposalCard = ({ proposal, expanded, onToggleExpand, onEdit, onDelete }) 
               <button
                 onClick={onEdit}
                 className={`inline-flex items-center gap-1 px-3 py-1.5 text-white text-xs font-semibold rounded-lg ${
-                  needsReupload ? 'bg-orange-600 hover:bg-orange-700' : 'bg-amber-500 hover:bg-amber-600'
+                  needsReupload ? 'bg-amber-600 hover:bg-amber-700' : 'bg-amber-500 hover:bg-amber-600'
                 }`}
               >
                 {needsReupload
@@ -1206,7 +1215,7 @@ const ProposalCard = ({ proposal, expanded, onToggleExpand, onEdit, onDelete }) 
             {hasHistory && (
               <button
                 onClick={() => setShowHistory(true)}
-                className="inline-flex items-center gap-1 px-3 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs font-semibold rounded-lg"
+                className="inline-flex items-center gap-1 px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold rounded-lg"
               >
                 <LuHistory className="w-3.5 h-3.5" /> Riwayat & Versi
               </button>
@@ -1214,7 +1223,7 @@ const ProposalCard = ({ proposal, expanded, onToggleExpand, onEdit, onDelete }) 
             {canDelete && (
               <button
                 onClick={onDelete}
-                className="inline-flex items-center gap-1 px-3 py-1.5 bg-red-500 hover:bg-red-600 text-white text-xs font-semibold rounded-lg"
+                className="inline-flex items-center gap-1 px-3 py-1.5 bg-rose-500 hover:bg-rose-600 text-white text-xs font-semibold rounded-lg"
               >
                 <LuTrash2 className="w-3.5 h-3.5" /> Hapus
               </button>

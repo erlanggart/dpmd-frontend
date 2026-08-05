@@ -4,6 +4,7 @@ import Swal from 'sweetalert2';
 import api from '../../../api';
 import toast from 'react-hot-toast';
 import ChatDrawer from '../../../components/shared/ChatDrawer';
+import DesaPageHeader from '../../../components/desa/DesaPageHeader';
 
 const MAX_FILE_SIZE = 100 * 1024 * 1024; // 100MB
 const MAX_FILES = 10;
@@ -11,8 +12,8 @@ const MAX_FILES = 10;
 const STATUS_CONFIG = {
   pending: { label: 'Menunggu Verifikasi', color: 'amber', icon: LuClock, bg: 'bg-amber-50', border: 'border-amber-200', text: 'text-amber-700', badge: 'bg-amber-100 text-amber-700' },
   approved: { label: 'Disetujui', color: 'green', icon: LuCircleCheck, bg: 'bg-slate-50', border: 'border-slate-200', text: 'text-slate-700', badge: 'bg-slate-100 text-slate-700' },
-  rejected: { label: 'Ditolak', color: 'red', icon: LuCircleX, bg: 'bg-red-50', border: 'border-red-200', text: 'text-red-700', badge: 'bg-red-100 text-red-700' },
-  revision: { label: 'Perlu Revisi', color: 'orange', icon: LuPencil, bg: 'bg-orange-50', border: 'border-orange-200', text: 'text-orange-700', badge: 'bg-orange-100 text-orange-700' },
+  rejected: { label: 'Ditolak', color: 'red', icon: LuCircleX, bg: 'bg-rose-50', border: 'border-rose-200', text: 'text-rose-700', badge: 'bg-rose-100 text-rose-700' },
+  revision: { label: 'Perlu Revisi', color: 'orange', icon: LuPencil, bg: 'bg-amber-50', border: 'border-amber-200', text: 'text-amber-700', badge: 'bg-amber-100 text-amber-700' },
 };
 
 const DesaBankeuLpjPage = ({
@@ -244,45 +245,40 @@ const DesaBankeuLpjPage = ({
       <div className="min-h-[400px] flex items-center justify-center">
         <div className="text-center">
           <LuLoader className="h-10 w-10 animate-spin text-slate-500 mx-auto" />
-          <p className="mt-3 text-gray-500">Memuat data LPJ...</p>
+          <p className="mt-3 text-slate-500">Memuat data LPJ...</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-50 p-4 md:p-8">
-      <div className="max-w-3xl mx-auto">
+    <div className="space-y-5">
+      <div className="mx-auto w-full max-w-3xl space-y-5">
         {/* Header */}
-        <div className="text-center mb-8">
-          <div className="inline-flex h-16 w-16 bg-gradient-to-br from-slate-500 to-slate-600 rounded-2xl items-center justify-center mb-4 shadow-xl shadow-amber-500/30">
-            <LuFileText className="h-8 w-8 text-white" />
-          </div>
-          <h1 className="text-2xl md:text-3xl font-bold bg-gradient-to-r from-gray-800 via-slate-700 to-slate-600 bg-clip-text text-transparent mb-2">
-            LPJ {programName} {tahun}
-          </h1>
-          <p className="text-gray-500">
-            Upload Laporan Pertanggungjawaban {programName} Tahun {tahun}
-          </p>
-        </div>
+        <DesaPageHeader
+          icon={LuFileText}
+          eyebrow="Bantuan Keuangan"
+          title={`LPJ ${programName} ${tahun}`}
+          description={`Unggah Laporan Pertanggungjawaban ${programName} Tahun ${tahun}.`}
+        />
 
         {/* Uploaded Files List */}
         {lpjList.length > 0 ? (
-          <div className="space-y-4 mb-6">
-            <h3 className="font-semibold text-gray-700 flex items-center gap-2">
-              <LuFileText className="h-5 w-5 text-slate-600" />
-              File LPJ Terupload ({lpjList.length} file)
+          <div className="space-y-4">
+            <h3 className="flex items-center gap-2 text-sm font-semibold text-slate-900">
+              <LuFileText className="h-4 w-4 text-slate-400" />
+              File LPJ terunggah ({lpjList.length} file)
             </h3>
             {lpjList.map((lpj) => {
               const status = lpj.status || 'pending';
               const cfg = STATUS_CONFIG[status];
               const StatusIcon = cfg.icon;
               return (
-                <div key={lpj.id} className={`bg-white rounded-2xl shadow-lg border p-5 ${
-                  status === 'rejected' ? 'border-red-300' :
-                  status === 'revision' ? 'border-orange-300' :
-                  status === 'approved' ? 'border-slate-300' :
-                  'border-amber-200'
+                <div key={lpj.id} className={`rounded-xl border bg-white p-5 ${
+                  status === 'rejected' ? 'border-rose-200' :
+                  status === 'revision' ? 'border-amber-200' :
+                  status === 'approved' ? 'border-emerald-200' :
+                  'border-slate-200'
                 }`}>
                   <div className="flex items-center justify-between mb-3">
                     <div className="flex items-center gap-3">
@@ -290,8 +286,8 @@ const DesaBankeuLpjPage = ({
                         <StatusIcon className={`h-4 w-4 ${cfg.text}`} />
                       </div>
                       <div className="min-w-0 flex-1">
-                        <p className="font-medium text-gray-800 truncate text-sm">{lpj.nama_file}</p>
-                        <p className="text-xs text-gray-500">
+                        <p className="font-medium text-slate-800 truncate text-sm">{lpj.nama_file}</p>
+                        <p className="text-xs text-slate-500">
                           {formatFileSize(lpj.file_size)} • {formatDate(lpj.created_at)}
                         </p>
                       </div>
@@ -314,7 +310,7 @@ const DesaBankeuLpjPage = ({
                         {status === 'revision' && (
                           <button
                             onClick={() => setChatLpjId(lpj.id)}
-                            className="flex items-center gap-1 px-2.5 py-1.5 bg-slate-600 text-white rounded-lg text-xs font-medium hover:bg-slate-700 transition-colors flex-shrink-0"
+                            className="flex flex-shrink-0 items-center gap-1 rounded-lg bg-slate-900 px-2.5 py-1.5 text-xs font-medium text-white transition-colors hover:bg-slate-800"
                           >
                             <LuMessageSquare className="h-3.5 w-3.5" />
                             Chat
@@ -325,7 +321,7 @@ const DesaBankeuLpjPage = ({
                   )}
 
                   {lpj.keterangan && (
-                    <p className="text-xs text-gray-500 mb-3"><span className="font-medium">Keterangan:</span> {lpj.keterangan}</p>
+                    <p className="text-xs text-slate-500 mb-3"><span className="font-medium">Keterangan:</span> {lpj.keterangan}</p>
                   )}
 
                   {/* Actions */}
@@ -334,7 +330,7 @@ const DesaBankeuLpjPage = ({
                       href={getFileUrl(lpj.file_path)}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="inline-flex items-center gap-1.5 px-3 py-2 bg-slate-600 text-white rounded-xl hover:bg-slate-700 transition-colors text-xs font-medium shadow-sm"
+                      className="inline-flex items-center gap-1.5 rounded-lg bg-slate-900 px-3 py-2 text-xs font-medium text-white transition-colors hover:bg-slate-800"
                     >
                       <LuDownload className="h-3.5 w-3.5" />
                       Lihat / Download
@@ -342,10 +338,10 @@ const DesaBankeuLpjPage = ({
                     <button
                       onClick={() => handleDelete(lpj)}
                       disabled={deleting === lpj.id || status === 'approved'}
-                      className={`inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-medium border transition-colors ${
+                      className={`inline-flex items-center gap-1.5 rounded-lg border px-3 py-2 text-xs font-medium transition-colors ${
                         status === 'approved'
-                          ? 'bg-gray-50 text-gray-400 border-gray-200 cursor-not-allowed'
-                          : 'bg-red-50 text-red-600 hover:bg-red-100 border-red-200'
+                          ? 'cursor-not-allowed border-slate-200 bg-slate-50 text-slate-400'
+                          : 'border-slate-200 text-rose-600 hover:border-rose-200 hover:bg-rose-50'
                       }`}
                       title={status === 'approved' ? 'LPJ yang sudah disetujui tidak dapat dihapus' : ''}
                     >
@@ -358,38 +354,38 @@ const DesaBankeuLpjPage = ({
             })}
           </div>
         ) : (
-          <div className="bg-white rounded-2xl shadow-lg border border-amber-200 p-6 mb-6">
-            <div className="flex items-center gap-3 mb-2">
-              <div className="h-10 w-10 bg-amber-100 rounded-xl flex items-center justify-center">
+          <div className="rounded-xl border border-amber-100 bg-amber-50 p-5">
+            <div className="flex items-center gap-3">
+              <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg bg-amber-100">
                 <LuCircleAlert className="h-5 w-5 text-amber-600" />
               </div>
               <div>
-                <h3 className="font-semibold text-amber-800">Belum Ada LPJ</h3>
-                <p className="text-sm text-amber-600">Silakan upload file LPJ di bawah ini</p>
+                <h3 className="text-sm font-semibold text-amber-900">Belum ada LPJ</h3>
+                <p className="text-sm text-amber-700">Silakan unggah file LPJ pada formulir di bawah.</p>
               </div>
             </div>
           </div>
         )}
 
         {/* Upload Form */}
-        <div className="bg-white rounded-2xl shadow-lg border border-gray-200 p-6">
-          <h3 className="font-semibold text-gray-800 mb-4 flex items-center gap-2">
-            <LuUpload className="h-5 w-5 text-slate-600" />
-            Upload LPJ
+        <div className="rounded-xl border border-slate-200 bg-white p-5 sm:p-6">
+          <h3 className="mb-4 flex items-center gap-2 text-base font-semibold text-slate-900">
+            <LuUpload className="h-4 w-4 text-slate-400" />
+            Unggah LPJ
           </h3>
 
           {/* File Input */}
           <div className="mb-4">
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              File LPJ <span className="text-red-500">*</span>
-              <span className="text-gray-400 font-normal ml-1">(Bisa pilih beberapa file sekaligus)</span>
+            <label className="mb-2 block text-sm font-medium text-slate-700">
+              File LPJ <span className="text-rose-500">*</span>
+              <span className="ml-1 font-normal text-slate-400">(bisa pilih beberapa file sekaligus)</span>
             </label>
             <div
               onClick={() => fileInputRef.current?.click()}
-              className={`relative border-2 border-dashed rounded-xl p-6 text-center cursor-pointer transition-all ${
+              className={`relative cursor-pointer rounded-xl border border-dashed p-6 text-center transition-colors ${
                 selectedFiles.length > 0
                   ? 'border-slate-400 bg-slate-50'
-                  : 'border-gray-300 hover:border-slate-400 hover:bg-slate-50/50'
+                  : 'border-slate-300 hover:border-slate-400 hover:bg-slate-50'
               }`}
             >
               <input
@@ -400,15 +396,15 @@ const DesaBankeuLpjPage = ({
                 onChange={handleFileSelect}
                 className="hidden"
               />
-              <LuPlus className="h-8 w-8 text-gray-400 mx-auto mb-2" />
-              <p className="font-medium text-gray-600">Klik untuk memilih file</p>
-              <p className="text-sm text-gray-400 mt-1">Format: PDF, Maks: 100 MB per file, Maks: {MAX_FILES} file</p>
+              <LuPlus className="mx-auto mb-2 h-7 w-7 text-slate-400" />
+              <p className="text-sm font-medium text-slate-700">Klik untuk memilih file</p>
+              <p className="mt-1 text-xs text-slate-400">Format PDF · maks 100 MB per file · maks {MAX_FILES} file</p>
             </div>
 
             {/* Selected Files List */}
             {selectedFiles.length > 0 && (
               <div className="mt-3 space-y-2">
-                <p className="text-xs font-medium text-gray-500">{selectedFiles.length} file dipilih ({formatFileSize(selectedFiles.reduce((s, f) => s + f.size, 0))} total)</p>
+                <p className="text-xs font-medium text-slate-500">{selectedFiles.length} file dipilih ({formatFileSize(selectedFiles.reduce((s, f) => s + f.size, 0))} total)</p>
                 {selectedFiles.map((file, idx) => (
                   <div key={idx} className="flex items-center gap-3 bg-slate-50 border border-slate-200 rounded-lg px-3 py-2">
                     <LuFile className="h-4 w-4 text-slate-500 flex-shrink-0" />
@@ -417,7 +413,7 @@ const DesaBankeuLpjPage = ({
                       <p className="text-xs text-slate-500">{formatFileSize(file.size)}</p>
                     </div>
                     <button onClick={(e) => { e.stopPropagation(); removeSelectedFile(idx); }} className="p-1 hover:bg-slate-100 rounded-lg">
-                      <LuX className="h-4 w-4 text-slate-400 hover:text-red-500" />
+                      <LuX className="h-4 w-4 text-slate-400 hover:text-rose-500" />
                     </button>
                   </div>
                 ))}
@@ -427,27 +423,27 @@ const DesaBankeuLpjPage = ({
 
           {/* Keterangan */}
           <div className="mb-6">
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Keterangan <span className="text-gray-400">(opsional)</span>
+            <label className="mb-2 block text-sm font-medium text-slate-700">
+              Keterangan <span className="text-slate-400">(opsional)</span>
             </label>
             <textarea
               value={keterangan}
               onChange={(e) => setKeterangan(e.target.value)}
               placeholder="Catatan tambahan mengenai LPJ..."
               rows={3}
-              className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-slate-500/20 focus:border-slate-500 resize-none text-sm"
+              className="w-full resize-none rounded-lg border border-slate-200 px-3.5 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 focus:border-slate-900 focus:outline-none focus:ring-1 focus:ring-slate-900"
             />
           </div>
 
           {/* Upload Progress */}
           {uploading && uploadProgress > 0 && (
             <div className="mb-4">
-              <div className="flex items-center justify-between text-xs text-gray-500 mb-1">
+              <div className="flex items-center justify-between text-xs text-slate-500 mb-1">
                 <span>Mengupload...</span>
                 <span>{uploadProgress}%</span>
               </div>
-              <div className="h-2 bg-gray-200 rounded-full overflow-hidden">
-                <div className="h-full bg-slate-500 rounded-full transition-all duration-300" style={{ width: `${uploadProgress}%` }} />
+              <div className="h-1.5 overflow-hidden rounded-full bg-slate-100">
+                <div className="h-full rounded-full bg-slate-900 transition-all duration-300" style={{ width: `${uploadProgress}%` }} />
               </div>
             </div>
           )}
@@ -456,10 +452,10 @@ const DesaBankeuLpjPage = ({
           <button
             onClick={handleUpload}
             disabled={selectedFiles.length === 0 || uploading}
-            className={`w-full flex items-center justify-center gap-2 px-6 py-3 rounded-xl text-white font-semibold transition-all ${
+            className={`flex w-full items-center justify-center gap-2 rounded-lg px-6 py-3 font-semibold text-white transition-colors ${
               selectedFiles.length === 0 || uploading
-                ? 'bg-gray-300 cursor-not-allowed'
-                : 'bg-gradient-to-r from-slate-600 to-slate-700 hover:from-slate-700 hover:to-slate-800 shadow-lg shadow-slate-500/25 hover:shadow-xl'
+                ? 'cursor-not-allowed bg-slate-300'
+                : 'bg-slate-900 hover:bg-slate-800'
             }`}
           >
             {uploading ? (
@@ -476,8 +472,8 @@ const DesaBankeuLpjPage = ({
           </button>
 
           {/* Info */}
-          <div className="mt-4 bg-slate-50 border-l-4 border-slate-500 p-3 rounded-lg">
-            <p className="text-xs text-slate-700">
+          <div className="mt-4 rounded-lg border border-slate-200 bg-slate-50 p-3">
+            <p className="text-xs leading-5 text-slate-600">
               <strong>Informasi:</strong> File LPJ {programName} yang diupload akan diverifikasi oleh DPMD.
               Anda dapat mengupload beberapa file LPJ sekaligus (maks {MAX_FILES} file, 100 MB per file).
               Setelah upload, DPMD akan memverifikasi LPJ Anda.

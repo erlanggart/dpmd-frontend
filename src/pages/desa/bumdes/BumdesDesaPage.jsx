@@ -19,6 +19,7 @@ import {
 } from "react-icons/fi";
 import api from "../../../api";
 import BumdesDesaService from "../../../services/bumdesDesaService";
+import DesaPageHeader from "../../../components/desa/DesaPageHeader";
 
 const BumdesDesaPage = () => {
 	const { user } = useAuth();
@@ -419,22 +420,27 @@ const BumdesDesaPage = () => {
 	};
 
 	const renderFormSection = (title, icon, children) => (
-		<div className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm">
-			<div className="flex items-center gap-3 mb-6">
-				<div className="p-2 bg-slate-100 rounded-lg">
+		<div className="rounded-xl border border-slate-200 bg-white p-5 sm:p-6">
+			<div className="mb-5 flex items-center gap-3 border-b border-slate-100 pb-4">
+				<div className="rounded-lg bg-slate-100 p-2 text-slate-700">
 					{icon}
 				</div>
-				<h3 className="text-lg font-semibold text-gray-800">{title}</h3>
+				<h3 className="text-base font-semibold text-slate-900">{title}</h3>
 			</div>
 			{children}
 		</div>
 	);
 
+	const fieldClass = (disabled) =>
+		`w-full rounded-lg border border-slate-200 px-3.5 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 transition-colors focus:border-slate-900 focus:outline-none focus:ring-1 focus:ring-slate-900 ${
+			disabled ? "cursor-not-allowed bg-slate-50 text-slate-500" : "bg-white"
+		}`;
+
 	const renderInput = (label, field, type = "text", placeholder = "", required = false, readOnly = false) => (
 		<div>
-			<label className="block text-sm font-medium text-gray-700 mb-2">
-				{label} {required && <span className="text-red-500">*</span>}
-				{readOnly && <span className="text-xs text-gray-500 ml-2">(Otomatis dari akun desa)</span>}
+			<label className="mb-1.5 block text-sm font-medium text-slate-700">
+				{label} {required && <span className="text-rose-500">*</span>}
+				{readOnly && <span className="ml-2 text-xs text-slate-400">(Otomatis dari akun desa)</span>}
 			</label>
 			<input
 				type={type}
@@ -443,16 +449,14 @@ const BumdesDesaPage = () => {
 				placeholder={placeholder}
 				disabled={!isEditing || readOnly}
 				readOnly={readOnly}
-				className={`w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-slate-500 focus:border-slate-500 transition-colors ${
-					!isEditing || readOnly ? "bg-gray-50 cursor-not-allowed" : ""
-				}`}
+				className={fieldClass(!isEditing || readOnly)}
 			/>
 		</div>
 	);
 
 	const renderTextarea = (label, field, placeholder = "", rows = 3) => (
 		<div>
-			<label className="block text-sm font-medium text-gray-700 mb-2">
+			<label className="mb-1.5 block text-sm font-medium text-slate-700">
 				{label}
 			</label>
 			<textarea
@@ -461,28 +465,24 @@ const BumdesDesaPage = () => {
 				placeholder={placeholder}
 				rows={rows}
 				disabled={!isEditing}
-				className={`w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-slate-500 focus:border-slate-500 transition-colors ${
-					!isEditing ? "bg-gray-50 cursor-not-allowed" : ""
-				}`}
+				className={fieldClass(!isEditing)}
 			/>
 		</div>
 	);
 
 	const renderSelect = (label, field, options, placeholder = "Pilih opsi", showInfo = false) => (
 		<div>
-			<label className="block text-sm font-medium text-gray-700 mb-2">
+			<label className="mb-1.5 block text-sm font-medium text-slate-700">
 				{label}
 				{showInfo && (
-					<span className="text-xs text-slate-600 ml-2">(Terintegrasi dengan Produk Hukum)</span>
+					<span className="ml-2 text-xs text-slate-400">(Terintegrasi dengan Produk Hukum)</span>
 				)}
 			</label>
 			<select
 				value={formData[field] || ""}
 				onChange={(e) => handleInputChange(field, e.target.value)}
 				disabled={!isEditing}
-				className={`w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-slate-500 focus:border-slate-500 transition-colors ${
-					!isEditing ? "bg-gray-50 cursor-not-allowed" : ""
-				}`}
+				className={fieldClass(!isEditing)}
 			>
 				<option value="">{placeholder}</option>
 				{Array.isArray(options) && options.length > 0 ? (
@@ -520,100 +520,88 @@ const BumdesDesaPage = () => {
 
 	if (loading) {
 		return (
-			<div className="p-6">
-				<div className="flex items-center justify-center h-64">
-					<div className="animate-spin rounded-full h-12 w-12 border-b-2 border-slate-600"></div>
-				</div>
+			<div className="flex h-64 items-center justify-center rounded-xl border border-slate-200 bg-white">
+				<div className="h-8 w-8 animate-spin rounded-full border-2 border-slate-200 border-t-slate-900"></div>
 			</div>
 		);
 	}
 
 	return (
-		<div className="p-6 max-w-7xl mx-auto">
-			{/* Header */}
-			<div className="bg-gradient-to-r from-slate-600 to-slate-700 rounded-xl p-6 mb-6 text-white">
-				<div className="flex items-center justify-between">
-					<div className="flex items-center gap-4">
-						<div className="p-3 bg-white/20 rounded-xl">
-							<FiShoppingBag className="text-2xl" />
-						</div>
-						<div>
-							<h1 className="text-2xl font-bold">Data BUMDES Desa</h1>
-							<p className="text-slate-100">
-								{user?.desa?.nama}, Kecamatan {user?.desa?.kecamatan?.nama}
-							</p>
-						</div>
-					</div>
-					
-					{/* Status Badge */}
-					<div className="flex items-center gap-3">
-						{bumdesData ? (
-							<div className="flex items-center gap-2 bg-slate-500/20 px-4 py-2 rounded-lg">
-								<FiCheckCircle className="text-slate-300" />
-								<span className="text-slate-100 font-medium">Data Tersimpan</span>
-							</div>
-						) : (
-							<div className="flex items-center gap-2 bg-orange-500/20 px-4 py-2 rounded-lg">
-								<FiAlertCircle className="text-orange-300" />
-								<span className="text-orange-100 font-medium">Belum Ada Data</span>
-							</div>
-						)}
-					</div>
-				</div>
-			</div>
-
-			{/* Action Buttons */}
-			<div className="flex items-center gap-4 mb-6">
-				{!isEditing ? (
+		<div className="space-y-5">
+			<DesaPageHeader
+				icon={FiShoppingBag}
+				eyebrow="Data Desa"
+				title="Data BUMDes"
+				description={`${user?.desa?.nama || "Desa"}${user?.desa?.kecamatan?.nama ? `, Kecamatan ${user.desa.kecamatan.nama}` : ""} — identitas, legalitas, permodalan, dan kondisi usaha BUMDes.`}
+				actions={
 					<>
-						<button
-							onClick={() => setIsEditing(true)}
-							className="flex items-center gap-2 bg-slate-600 hover:bg-slate-700 text-white px-4 py-2 rounded-lg transition-colors"
+						<span
+							className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold ring-1 ${
+								bumdesData
+									? "bg-emerald-50 text-emerald-700 ring-emerald-100"
+									: "bg-amber-50 text-amber-700 ring-amber-100"
+							}`}
 						>
-							<FiEdit3 className="w-4 h-4" />
-							{bumdesData ? "Edit Data" : "Input Data"}
-						</button>
-						
-						{bumdesData && (
-							<button
-								onClick={handleDelete}
-								className="flex items-center gap-2 bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg transition-colors"
-							>
-								<FiTrash2 className="w-4 h-4" />
-								Hapus Data
-							</button>
-						)}
-					</>
-				) : (
-					<>
-						<button
-							onClick={handleSave}
-							disabled={saving}
-							className="flex items-center gap-2 bg-slate-600 hover:bg-slate-700 disabled:bg-gray-400 text-white px-4 py-2 rounded-lg transition-colors"
-						>
-							{saving ? (
-								<FiRefreshCw className="w-4 h-4 animate-spin" />
+							{bumdesData ? (
+								<FiCheckCircle className="h-3.5 w-3.5" />
 							) : (
-								<FiSave className="w-4 h-4" />
+								<FiAlertCircle className="h-3.5 w-3.5" />
 							)}
-							{saving ? "Menyimpan..." : "Simpan"}
-						</button>
-						
-						<button
-							onClick={() => {
-								setIsEditing(false);
-								setFormData(bumdesData || {});
-							}}
-							className="flex items-center gap-2 bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-lg transition-colors"
-						>
-							Batal
-						</button>
+							{bumdesData ? "Data tersimpan" : "Belum ada data"}
+						</span>
+
+						{!isEditing ? (
+							<>
+								<button
+									onClick={() => setIsEditing(true)}
+									className="inline-flex items-center gap-2 rounded-lg bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-slate-800"
+								>
+									<FiEdit3 className="h-4 w-4" />
+									{bumdesData ? "Edit Data" : "Input Data"}
+								</button>
+
+								{bumdesData && (
+									<button
+										onClick={handleDelete}
+										className="inline-flex items-center gap-2 rounded-lg border border-slate-200 px-4 py-2.5 text-sm font-semibold text-rose-600 transition-colors hover:border-rose-200 hover:bg-rose-50"
+									>
+										<FiTrash2 className="h-4 w-4" />
+										Hapus
+									</button>
+								)}
+							</>
+						) : (
+							<>
+								<button
+									onClick={handleSave}
+									disabled={saving}
+									className="inline-flex items-center gap-2 rounded-lg bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-slate-800 disabled:cursor-not-allowed disabled:bg-slate-400"
+								>
+									{saving ? (
+										<FiRefreshCw className="h-4 w-4 animate-spin" />
+									) : (
+										<FiSave className="h-4 w-4" />
+									)}
+									{saving ? "Menyimpan..." : "Simpan"}
+								</button>
+
+								<button
+									onClick={() => {
+										setIsEditing(false);
+										setFormData(bumdesData || {});
+									}}
+									className="inline-flex items-center gap-2 rounded-lg border border-slate-200 px-4 py-2.5 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-50"
+								>
+									Batal
+								</button>
+							</>
+						)}
 					</>
-				)}
-			</div>
+				}
+			/>
 
 			{/* Form Sections */}
-			<div className="space-y-6">
+			<div className="space-y-5">
 				{/* 1. Identitas BUMDes */}
 				{renderFormSection("1. Identitas BUMDes", <FiShoppingBag className="text-slate-600" />, (
 					<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -699,11 +687,11 @@ const BumdesDesaPage = () => {
 						{/* Fallback manual input jika diperlukan */}
 						<div className="border-t pt-4">
 							<details className="group">
-								<summary className="flex items-center gap-2 cursor-pointer text-sm text-gray-600 hover:text-gray-800">
+								<summary className="flex items-center gap-2 cursor-pointer text-sm text-slate-600 hover:text-slate-800">
 									<span className="transform group-open:rotate-90 transition-transform">▶</span>
 									Input Manual (Jika dokumen belum diupload)
 								</summary>
-								<div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4 p-4 bg-gray-50 rounded-lg">
+								<div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4 p-4 bg-slate-50 rounded-lg">
 									{renderInput("No. Perdes", "NoPerdes", "text", "Masukkan nomor Perdes")}
 									{renderInput("Tanggal Perdes", "TanggalPerdes", "date")}
 									{renderInput("No. SK Kemenkumham", "NoSKKemenkumham", "text", "Masukkan nomor SK")}
@@ -734,7 +722,7 @@ const BumdesDesaPage = () => {
 					<div className="space-y-6">
 						{/* Penasihat */}
 						<div className="border-b pb-4">
-							<h4 className="font-semibold text-gray-700 mb-3">Penasihat</h4>
+							<h4 className="font-semibold text-slate-700 mb-3">Penasihat</h4>
 							<div className="grid grid-cols-1 md:grid-cols-3 gap-4">
 								{renderInput("Nama Penasihat", "NamaPenasihat", "text", "Masukkan nama penasihat")}
 								{renderSelect("Jenis Kelamin", "JenisKelaminPenasihat", [
@@ -747,7 +735,7 @@ const BumdesDesaPage = () => {
 
 						{/* Pengawas */}
 						<div className="border-b pb-4">
-							<h4 className="font-semibold text-gray-700 mb-3">Pengawas</h4>
+							<h4 className="font-semibold text-slate-700 mb-3">Pengawas</h4>
 							<div className="grid grid-cols-1 md:grid-cols-3 gap-4">
 								{renderInput("Nama Pengawas", "NamaPengawas", "text", "Masukkan nama pengawas")}
 								{renderSelect("Jenis Kelamin", "JenisKelaminPengawas", [
@@ -760,7 +748,7 @@ const BumdesDesaPage = () => {
 
 						{/* Direktur */}
 						<div className="border-b pb-4">
-							<h4 className="font-semibold text-gray-700 mb-3">Direktur</h4>
+							<h4 className="font-semibold text-slate-700 mb-3">Direktur</h4>
 							<div className="grid grid-cols-1 md:grid-cols-3 gap-4">
 								{renderInput("Nama Direktur", "NamaDirektur", "text", "Masukkan nama direktur")}
 								{renderSelect("Jenis Kelamin", "JenisKelaminDirektur", [
@@ -773,7 +761,7 @@ const BumdesDesaPage = () => {
 
 						{/* Sekretaris */}
 						<div className="border-b pb-4">
-							<h4 className="font-semibold text-gray-700 mb-3">Sekretaris</h4>
+							<h4 className="font-semibold text-slate-700 mb-3">Sekretaris</h4>
 							<div className="grid grid-cols-1 md:grid-cols-3 gap-4">
 								{renderInput("Nama Sekretaris", "NamaSekretaris", "text", "Masukkan nama sekretaris")}
 								{renderSelect("Jenis Kelamin", "JenisKelaminSekretaris", [
@@ -786,7 +774,7 @@ const BumdesDesaPage = () => {
 
 						{/* Bendahara */}
 						<div>
-							<h4 className="font-semibold text-gray-700 mb-3">Bendahara</h4>
+							<h4 className="font-semibold text-slate-700 mb-3">Bendahara</h4>
 							<div className="grid grid-cols-1 md:grid-cols-3 gap-4">
 								{renderInput("Nama Bendahara", "NamaBendahara", "text", "Masukkan nama bendahara")}
 								{renderSelect("Jenis Kelamin", "JenisKelaminBendahara", [
@@ -831,19 +819,19 @@ const BumdesDesaPage = () => {
 				{renderFormSection("7. Omzet dan Keuntungan (3 Tahun Terakhir)", <FiDollarSign className="text-slate-600" />, (
 					<div className="space-y-4">
 						<div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-							<h4 className="md:col-span-3 font-semibold text-gray-700">Omzet Tahunan</h4>
+							<h4 className="md:col-span-3 font-semibold text-slate-700">Omzet Tahunan</h4>
 							{renderInput("Omzet 2022 (Rp)", "Omzet2022", "number", "Omzet tahun 2022")}
 							{renderInput("Omzet 2023 (Rp)", "Omzet2023", "number", "Omzet tahun 2023")}
 							{renderInput("Omzet 2024 (Rp)", "Omzet2024", "number", "Omzet tahun 2024")}
 						</div>
 						<div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-							<h4 className="md:col-span-3 font-semibold text-gray-700">Sisa Hasil Usaha (SHU)</h4>
+							<h4 className="md:col-span-3 font-semibold text-slate-700">Sisa Hasil Usaha (SHU)</h4>
 							{renderInput("SHU 2022 (Rp)", "SHU2022", "number", "SHU tahun 2022")}
 							{renderInput("SHU 2023 (Rp)", "SHU2023", "number", "SHU tahun 2023")}
 							{renderInput("SHU 2024 (Rp)", "SHU2024", "number", "SHU tahun 2024")}
 						</div>
 						<div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-							<h4 className="md:col-span-3 font-semibold text-gray-700">Laba Bersih</h4>
+							<h4 className="md:col-span-3 font-semibold text-slate-700">Laba Bersih</h4>
 							{renderInput("Laba 2022 (Rp)", "Laba2022", "number", "Laba tahun 2022")}
 							{renderInput("Laba 2023 (Rp)", "Laba2023", "number", "Laba tahun 2023")}
 							{renderInput("Laba 2024 (Rp)", "Laba2024", "number", "Laba tahun 2024")}
@@ -899,14 +887,14 @@ const BumdesDesaPage = () => {
 				<div className="space-y-6">
 					{/* Laporan Keuangan Files */}
 					<div className="border-b pb-4">
-						<h4 className="font-semibold text-gray-700 mb-4 flex items-center gap-2">
+						<h4 className="font-semibold text-slate-700 mb-4 flex items-center gap-2">
 							<FiFileText className="text-slate-600" />
 							Laporan Keuangan
 						</h4>
 						<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
 							{['2021', '2022', '2023', '2024'].map(year => (
 								<div key={year} className="space-y-2">
-									<label className="block text-sm font-medium text-gray-700">
+									<label className="block text-sm font-medium text-slate-700">
 										Laporan Keuangan {year}
 									</label>
 									<input
@@ -926,7 +914,7 @@ const BumdesDesaPage = () => {
 												}));
 											}
 										}}
-										className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
+										className="w-full px-3 py-2 border border-slate-300 rounded-md text-sm"
 									/>
 									{fileUploads[`LaporanKeuangan${year}`] && (
 										<p className="text-xs text-slate-600 flex items-center gap-1">
@@ -934,7 +922,7 @@ const BumdesDesaPage = () => {
 										</p>
 									)}
 									{formData[`LaporanKeuangan${year}`] && !fileUploads[`LaporanKeuangan${year}`] && (
-										<p className="text-xs text-gray-600 flex items-center gap-1">
+										<p className="text-xs text-slate-600 flex items-center gap-1">
 											<FiFileText /> File tersimpan: {formData[`LaporanKeuangan${year}`].split('/').pop()}
 										</p>
 									)}
@@ -945,11 +933,11 @@ const BumdesDesaPage = () => {
 
 				{/* Dokumen Badan Hukum */}
 				<div>
-					<h4 className="font-semibold text-gray-700 mb-4 flex items-center gap-2">
+					<h4 className="font-semibold text-slate-700 mb-4 flex items-center gap-2">
 						<FiFileText className="text-slate-600" />
 						Dokumen Badan Hukum BUMDes
 					</h4>
-					<p className="text-sm text-gray-600 mb-3">
+					<p className="text-sm text-slate-600 mb-3">
 						<strong>Catatan:</strong> Perdes dan SK BUMDes sudah terintegrasi dengan fitur Produk Hukum Desa. 
 						Silakan upload file-file dokumen BUMDes lainnya di bawah ini.
 					</p>
@@ -962,7 +950,7 @@ const BumdesDesaPage = () => {
 							{ key: 'ProgramKerja', label: 'Program Kerja' }
 						].map(doc => (
 								<div key={doc.key} className="space-y-2">
-									<label className="block text-sm font-medium text-gray-700">
+									<label className="block text-sm font-medium text-slate-700">
 										{doc.label}
 									</label>
 									<input
@@ -982,7 +970,7 @@ const BumdesDesaPage = () => {
 												}));
 											}
 										}}
-										className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
+										className="w-full px-3 py-2 border border-slate-300 rounded-md text-sm"
 									/>
 									{fileUploads[doc.key] && (
 										<p className="text-xs text-slate-600 flex items-center gap-1">
@@ -990,7 +978,7 @@ const BumdesDesaPage = () => {
 										</p>
 									)}
 									{formData[doc.key] && !fileUploads[doc.key] && (
-										<p className="text-xs text-gray-600 flex items-center gap-1">
+										<p className="text-xs text-slate-600 flex items-center gap-1">
 											<FiFileText /> File tersimpan: {formData[doc.key].split('/').pop()}
 										</p>
 									)}
@@ -1000,9 +988,9 @@ const BumdesDesaPage = () => {
 					</div>
 
 					{/* File Upload Info */}
-					<div className="p-3 bg-yellow-50 rounded-md">
-						<p className="text-sm text-yellow-800 flex items-center gap-2">
-							<FiAlertCircle />
+					<div className="rounded-lg border border-amber-100 bg-amber-50 p-3">
+						<p className="flex items-center gap-2 text-sm text-amber-800">
+							<FiAlertCircle className="flex-shrink-0" />
 							Format file yang didukung: PDF, DOC, DOCX. Ukuran maksimal: 5MB per file
 						</p>
 					</div>
@@ -1010,12 +998,12 @@ const BumdesDesaPage = () => {
 			))}
 
 			{/* Footer Info */}
-			<div className="mt-8 p-4 bg-slate-50 rounded-lg">
+			<div className="rounded-xl border border-slate-200 bg-white p-5">
 				<div className="flex items-start gap-3">
-					<FiAlertCircle className="text-slate-600 mt-1 flex-shrink-0" />
-					<div className="text-sm text-slate-800">
-						<p className="font-semibold mb-1">Catatan Penting:</p>
-						<ul className="list-disc list-inside space-y-1">
+					<FiAlertCircle className="mt-0.5 flex-shrink-0 text-slate-400" />
+					<div className="text-sm text-slate-600">
+						<p className="mb-1.5 font-semibold text-slate-900">Catatan Penting</p>
+						<ul className="list-inside list-disc space-y-1 leading-6">
 							<li>Data yang diinput akan otomatis tersinkronisasi dengan sistem monitoring BUMDES Kabupaten</li>
 							<li>Pastikan semua data yang diisi akurat dan sesuai dengan kondisi terkini</li>
 							<li>Field yang bertanda (*) adalah wajib diisi</li>

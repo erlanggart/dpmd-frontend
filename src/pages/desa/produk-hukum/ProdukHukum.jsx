@@ -36,13 +36,13 @@ const STATUS_OPTIONS = [
 ];
 
 const SURFACE_CLASS =
-	"rounded-lg border border-slate-200/80 bg-white/90 p-6 shadow-[0_24px_60px_-45px_rgba(15,23,42,0.55)] backdrop-blur-sm";
+	"rounded-xl border border-slate-200 bg-white p-5 sm:p-6";
 
 const INPUT_CLASS =
-	"w-full rounded-lg border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 shadow-sm outline-none transition placeholder:text-slate-400 focus:border-slate-400 focus:ring-4 focus:ring-slate-100 disabled:cursor-not-allowed disabled:opacity-50";
+	"w-full rounded-lg border border-slate-200 bg-white px-3.5 py-2.5 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-slate-900 focus:ring-1 focus:ring-slate-900 disabled:cursor-not-allowed disabled:bg-slate-50 disabled:opacity-70";
 
 const SELECT_CLASS =
-	"w-full rounded-lg border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 shadow-sm outline-none transition focus:border-slate-400 focus:ring-4 focus:ring-slate-100";
+	"w-full rounded-lg border border-slate-200 bg-white px-3.5 py-2.5 text-sm text-slate-900 outline-none transition focus:border-slate-900 focus:ring-1 focus:ring-slate-900";
 
 const numberFormatter = new Intl.NumberFormat("id-ID");
 
@@ -53,21 +53,22 @@ const getOptionLabel = (options, value, fallback = value) => {
 	return match?.label || fallback;
 };
 
-const StatCard = ({ icon, label, value, hint, accentClass }) => {
+const StatCard = ({ icon, label, value, hint }) => {
 	const IconComponent = icon;
 
 	return (
-		<div className="rounded-lg border border-white/15 bg-white/10 p-4 backdrop-blur-sm">
-			<div className="flex items-start justify-between gap-4">
-				<div>
-					<p className="text-xs font-semibold uppercase tracking-[0.18em] text-white/65">
+		<div className="relative overflow-hidden rounded-lg border border-slate-200 bg-slate-50 p-4">
+			<span className="absolute inset-y-0 left-0 w-1 bg-brand-500" />
+			<div className="flex items-start justify-between gap-3">
+				<div className="min-w-0">
+					<p className="text-xs font-medium uppercase tracking-wide text-slate-500">
 						{label}
 					</p>
-					<p className="mt-3 text-2xl font-black tracking-tight text-white">{value}</p>
-					<p className="mt-2 text-xs leading-5 text-white/70">{hint}</p>
+					<p className="mt-2 text-2xl font-semibold tracking-tight text-slate-900">{value}</p>
+					<p className="mt-1 text-xs leading-5 text-slate-500">{hint}</p>
 				</div>
-				<div className={`flex h-12 w-12 items-center justify-center rounded-lg ${accentClass}`}>
-					{IconComponent ? <IconComponent className="h-5 w-5" /> : null}
+				<div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg bg-white text-slate-500 ring-1 ring-slate-200">
+					{IconComponent ? <IconComponent className="h-4 w-4" /> : null}
 				</div>
 			</div>
 		</div>
@@ -109,7 +110,7 @@ const EmptyState = ({ hasScopedView, onResetScope, onAdd }) => (
 		<div className="flex h-16 w-16 items-center justify-center rounded-lg bg-slate-100 text-slate-600 shadow-lg shadow-slate-100">
 			<LuFileText className="h-8 w-8" />
 		</div>
-		<h3 className="mt-5 text-2xl font-black tracking-tight text-slate-900">
+		<h3 className="mt-5 text-xl font-semibold tracking-tight text-slate-900">
 			{hasScopedView ? "Tidak ada arsip yang sesuai" : "Arsip produk hukum masih kosong"}
 		</h3>
 		<p className="mt-3 max-w-md text-sm leading-6 text-slate-500">
@@ -317,7 +318,7 @@ const ProdukHukum = () => {
 					bg: "bg-slate-50",
 					border: "border-slate-100",
 					text: "text-slate-700",
-					bar: "from-slate-400 to-slate-500",
+					bar: "bg-brand-500",
 				},
 			},
 			{
@@ -328,7 +329,7 @@ const ProdukHukum = () => {
 					bg: "bg-slate-50",
 					border: "border-slate-100",
 					text: "text-slate-700",
-					bar: "from-slate-400 to-slate-500",
+					bar: "bg-brand-500",
 				},
 			},
 			{
@@ -339,7 +340,7 @@ const ProdukHukum = () => {
 					bg: "bg-amber-50",
 					border: "border-amber-100",
 					text: "text-amber-700",
-					bar: "from-slate-400 to-slate-500",
+					bar: "bg-brand-500",
 				},
 			},
 		];
@@ -393,91 +394,86 @@ const ProdukHukum = () => {
 	};
 
 	return (
-		<div className="relative overflow-hidden rounded-lg border border-slate-200/70 bg-[radial-gradient(circle_at_top_right,rgba(100,116,139,0.16),transparent_28%),radial-gradient(circle_at_bottom_left,rgba(148,163,184,0.12),transparent_28%),linear-gradient(180deg,#f8fafc_0%,#ffffff_100%)] p-4 shadow-[0_30px_80px_-55px_rgba(15,23,42,0.45)] sm:p-6 lg:p-8">
-			<div className="pointer-events-none absolute inset-0">
-				<div className="absolute right-0 top-0 h-56 w-56 rounded-full bg-slate-200/30 blur-3xl" />
-				<div className="absolute bottom-0 left-0 h-64 w-64 rounded-full bg-slate-200/30 blur-3xl" />
-			</div>
-
-			<div className="relative z-10 space-y-6 lg:space-y-8">
-				<section className="overflow-hidden rounded-lg bg-gradient-to-br from-slate-950 via-slate-900 to-slate-700 p-6 text-white shadow-[0_32px_90px_-40px_rgba(15,23,42,0.75)] sm:p-8">
-						<div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_320px] xl:items-center">
-							<div className="space-y-5">
-							<div className="inline-flex items-center gap-2 rounded-lg border border-white/15 bg-white/10 px-4 py-1.5 text-xs font-semibold uppercase tracking-[0.18em] text-white/75 backdrop-blur-sm">
-								<LuFileText className="h-4 w-4" />
-								Arsip regulasi desa
+		<div>
+			<div className="space-y-5">
+				<section className="rounded-xl border border-slate-200 bg-white p-5 sm:p-6">
+					<div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_320px] xl:items-start">
+						<div className="space-y-5">
+							<div className="flex min-w-0 items-start gap-3.5">
+								<div className="relative flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-xl bg-slate-900 text-white">
+									<LuFileText className="h-5 w-5" />
+									<span className="absolute -bottom-0.5 left-1/2 h-1 w-5 -translate-x-1/2 rounded-full bg-brand-500" />
+								</div>
+								<div className="min-w-0">
+									<p className="text-xs font-semibold uppercase tracking-wide text-brand-600">
+										Arsip regulasi desa
+									</p>
+									<h1 className="mt-1 text-xl font-semibold tracking-tight text-slate-900 sm:text-2xl">
+										Produk Hukum Desa
+									</h1>
+									<p className="mt-1.5 max-w-2xl text-sm leading-6 text-slate-500">
+										Kelola PERDES, PERKADES, dan SK KADES dalam satu ruang arsip yang rapi, cepat ditelusuri, dan siap dipakai saat verifikasi.
+									</p>
+								</div>
 							</div>
 
-							<div className="max-w-3xl">
-								<h1 className="text-3xl font-black tracking-tight sm:text-4xl">
-									Produk Hukum Desa
-								</h1>
-								<p className="mt-3 text-sm leading-7 text-white/80 sm:text-base">
-									Kelola PERDES, PERKADES, dan SK KADES dalam satu ruang arsip yang lebih rapi, cepat ditelusuri, dan nyaman dipakai saat verifikasi maupun publikasi internal.
-								</p>
-							</div>
-
-							<div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+							<div className="grid gap-3 border-t border-slate-100 pt-5 sm:grid-cols-2 xl:grid-cols-4">
 								<StatCard
 									icon={LuFileText}
 									label="Total arsip"
 									value={formatCount(stats.total)}
-									hint="Jumlah seluruh produk hukum yang tersimpan"
-									accentClass="bg-white/10 text-white"
+									hint="Seluruh produk hukum tersimpan"
 								/>
 								<StatCard
 									icon={LuBadgeCheck}
 									label="Berlaku"
 									value={formatCount(stats.berlaku)}
-									hint="Dokumen yang masih aktif digunakan"
-									accentClass="bg-slate-400/20 text-slate-100"
+									hint="Dokumen yang masih aktif"
 								/>
 								<StatCard
 									icon={LuX}
 									label="Dicabut"
 									value={formatCount(stats.dicabut)}
-									hint="Dokumen yang sudah tidak berlaku"
-									accentClass="bg-slate-400/20 text-slate-100"
+									hint="Dokumen yang tidak berlaku"
 								/>
 								<StatCard
 									icon={LuCalendar}
 									label="Arsip terbaru"
 									value={latestYear || "-"}
-									hint="Tahun dokumen terbaru yang tersedia"
-									accentClass="bg-amber-400/20 text-amber-100"
+									hint="Tahun dokumen terbaru"
 								/>
 							</div>
 						</div>
 
-						<div className="flex self-end rounded-lg border border-white/15 bg-white/10 p-5 backdrop-blur-sm xl:flex-col">
+						<div className="flex flex-col rounded-xl border border-slate-200 bg-slate-50 p-5">
 							{isFormVisible ? (
 								<>
-									<p className="text-xs font-semibold uppercase tracking-[0.18em] text-white/65">
+									<p className="text-xs font-semibold uppercase tracking-wide text-brand-600">
 										Mode editor aktif
 									</p>
-									<h2 className="mt-3 text-2xl font-black tracking-tight text-white">
+									<h2 className="mt-2 text-lg font-semibold tracking-tight text-slate-900">
 										Tambah produk hukum baru
 									</h2>
-									<p className="mt-3 text-sm leading-6 text-white/75">
-										Lengkapi metadata dokumen, pastikan file PDF sudah final, lalu simpan agar arsip langsung terstruktur dengan baik.
+									<p className="mt-2 text-sm leading-6 text-slate-500">
+										Lengkapi metadata dokumen, pastikan file PDF sudah final, lalu simpan agar arsip langsung terstruktur.
 									</p>
 
-									<div className="mt-5 rounded-lg border border-white/10 bg-slate-950/15 p-4 text-sm text-white/80">
-										<p className="text-xs font-semibold uppercase tracking-[0.16em] text-white/55">
-											Dokumen yang sedang diproses
+									<div className="mt-4 rounded-lg border border-slate-200 bg-white p-4">
+										<p className="text-xs font-semibold uppercase tracking-wide text-brand-600">
+											Sedang diproses
 										</p>
-										<p className="mt-2 text-base font-semibold text-white">
+										<p className="mt-1.5 text-sm font-semibold text-slate-900">
 											Produk hukum baru
 										</p>
-										<p className="mt-2 text-xs leading-5 text-white/65">
-											Setelah disimpan, dokumen akan langsung masuk ke daftar arsip desa.
+										<p className="mt-1.5 text-xs leading-5 text-slate-500">
+											Setelah disimpan, dokumen langsung masuk ke daftar arsip desa.
 										</p>
 									</div>
 
 									<button
 										type="button"
 										onClick={handleCancelForm}
-										className="mt-5 inline-flex items-center justify-center gap-2 rounded-lg bg-white px-5 py-3 text-sm font-semibold text-slate-900 transition hover:bg-slate-100"
+										className="mt-4 inline-flex items-center justify-center gap-2 rounded-lg border border-slate-200 bg-white px-5 py-2.5 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-50"
 									>
 										<LuX className="h-4 w-4" />
 										Batal dan kembali ke arsip
@@ -485,20 +481,20 @@ const ProdukHukum = () => {
 								</>
 							) : (
 								<>
-									<p className="text-xs font-semibold uppercase tracking-[0.18em] text-white/65">
+									<p className="text-xs font-semibold uppercase tracking-wide text-brand-600">
 										Aksi cepat
 									</p>
-									<h2 className="mt-3 text-2xl font-black tracking-tight text-white">
+									<h2 className="mt-2 text-lg font-semibold tracking-tight text-slate-900">
 										Bangun arsip hukum yang rapi
 									</h2>
-									<p className="mt-3 text-sm leading-6 text-white/75">
-										Tambahkan dokumen baru dengan metadata yang lengkap agar mudah ditemukan kembali saat dibutuhkan.
+									<p className="mt-2 text-sm leading-6 text-slate-500">
+										Tambahkan dokumen baru dengan metadata lengkap agar mudah ditemukan kembali saat dibutuhkan.
 									</p>
 
 									<button
 										type="button"
 										onClick={showAddForm}
-										className="mt-5 inline-flex items-center justify-center gap-2 rounded-lg bg-white px-5 py-3 text-sm font-semibold text-slate-900 transition hover:bg-slate-100"
+										className="mt-4 inline-flex items-center justify-center gap-2 rounded-lg bg-slate-900 px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-slate-800"
 									>
 										<LuPlus className="h-4 w-4" />
 										Tambah produk hukum
@@ -515,10 +511,10 @@ const ProdukHukum = () => {
 						<section className={SURFACE_CLASS}>
 							<div className="flex flex-wrap items-start justify-between gap-4 border-b border-slate-100 pb-5">
 								<div>
-									<p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-600">
+									<p className="text-xs font-semibold uppercase tracking-wide text-brand-600">
 										Editor dokumen
 									</p>
-									<h2 className="mt-2 text-2xl font-black tracking-tight text-slate-900">
+									<h2 className="mt-2 text-xl font-semibold tracking-tight text-slate-900">
 									Tambah produk hukum desa
 									</h2>
 									<p className="mt-2 max-w-3xl text-sm leading-6 text-slate-500">
@@ -543,10 +539,10 @@ const ProdukHukum = () => {
 
 						<aside className="space-y-6 xl:sticky xl:top-6 xl:self-start">
 							<section className={SURFACE_CLASS}>
-								<p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-600">
+								<p className="text-xs font-semibold uppercase tracking-wide text-brand-600">
 									Checklist input
 								</p>
-								<h3 className="mt-2 text-xl font-black tracking-tight text-slate-900">
+								<h3 className="mt-2 text-lg font-semibold tracking-tight text-slate-900">
 									Sebelum disimpan
 								</h3>
 								<div className="mt-5 space-y-3">
@@ -563,10 +559,10 @@ const ProdukHukum = () => {
 							</section>
 
 							<section className={SURFACE_CLASS}>
-								<p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-600">
+								<p className="text-xs font-semibold uppercase tracking-wide text-brand-600">
 									Ringkasan mode
 								</p>
-								<h3 className="mt-2 text-xl font-black tracking-tight text-slate-900">
+								<h3 className="mt-2 text-lg font-semibold tracking-tight text-slate-900">
 									Dokumen baru akan ditambahkan
 								</h3>
 								<div className="mt-5 space-y-3">
@@ -598,10 +594,10 @@ const ProdukHukum = () => {
 							<div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_280px] xl:items-start">
 								<div className="space-y-5">
 									<div>
-										<p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-600">
+										<p className="text-xs font-semibold uppercase tracking-wide text-brand-600">
 											Pencarian arsip
 										</p>
-										<h2 className="mt-2 text-2xl font-black tracking-tight text-slate-900">
+										<h2 className="mt-2 text-xl font-semibold tracking-tight text-slate-900">
 											Temukan dokumen hukum lebih cepat
 										</h2>
 										<p className="mt-2 max-w-3xl text-sm leading-6 text-slate-500">
@@ -778,10 +774,10 @@ const ProdukHukum = () => {
 							<section className={SURFACE_CLASS}>
 								<div className="flex flex-wrap items-start justify-between gap-4 border-b border-slate-100 pb-5">
 									<div>
-										<p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-600">
+										<p className="text-xs font-semibold uppercase tracking-wide text-brand-600">
 											Daftar arsip
 										</p>
-										<h2 className="mt-2 text-2xl font-black tracking-tight text-slate-900">
+										<h2 className="mt-2 text-xl font-semibold tracking-tight text-slate-900">
 											{isLoading
 												? "Memuat arsip produk hukum..."
 												: filteredItems.length > 0
@@ -854,10 +850,10 @@ const ProdukHukum = () => {
 
 							<aside className="space-y-6">
 								<section className={SURFACE_CLASS}>
-									<p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-600">
+									<p className="text-xs font-semibold uppercase tracking-wide text-brand-600">
 										Komposisi arsip
 									</p>
-									<h3 className="mt-2 text-xl font-black tracking-tight text-slate-900">
+									<h3 className="mt-2 text-lg font-semibold tracking-tight text-slate-900">
 										Sebaran jenis produk hukum
 									</h3>
 									<div className="mt-5 space-y-3">
@@ -877,14 +873,14 @@ const ProdukHukum = () => {
 															</p>
 															<p className="mt-2 text-sm font-semibold text-slate-800">{item.description}</p>
 														</div>
-														<p className="text-lg font-black tracking-tight text-slate-900">
+														<p className="text-base font-semibold tracking-tight text-slate-900">
 															{formatCount(item.value)}
 														</p>
 													</div>
 
 													<div className="mt-4 h-2 overflow-hidden rounded-lg bg-white/80">
 														<div
-															className={`h-full rounded-lg bg-gradient-to-r ${item.tone.bar}`}
+															className={`h-full rounded-full ${item.tone.bar}`}
 															style={{ width: `${Math.max(percentage, percentage > 0 ? 8 : 0)}%` }}
 														/>
 													</div>
@@ -899,10 +895,10 @@ const ProdukHukum = () => {
 								</section>
 
 								<section className={SURFACE_CLASS}>
-									<p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-600">
+									<p className="text-xs font-semibold uppercase tracking-wide text-brand-600">
 										Sorotan arsip
 									</p>
-									<h3 className="mt-2 text-xl font-black tracking-tight text-slate-900">
+									<h3 className="mt-2 text-lg font-semibold tracking-tight text-slate-900">
 										Status pengelolaan dokumen
 									</h3>
 									<div className="mt-5 space-y-3">

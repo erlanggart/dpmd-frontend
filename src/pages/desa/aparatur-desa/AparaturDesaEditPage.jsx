@@ -85,7 +85,7 @@ const AparaturDesaEditPage = () => {
 	}
 	if (error) {
 		return (
-			<div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-700">
+			<div className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-medium text-rose-700">
 				{error}
 			</div>
 		);
@@ -99,16 +99,18 @@ const AparaturDesaEditPage = () => {
 	}
 
 	return (
-		<div className="space-y-6">
-			<div className="flex items-center justify-between rounded-xl border border-slate-200 bg-white px-5 py-4 shadow-sm">
+		<div className="space-y-5">
+			<div className="flex items-center justify-between rounded-xl border border-slate-200 bg-white px-5 py-4">
 				<div>
-					<p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">
+					<p className="text-xs font-semibold uppercase tracking-wide text-brand-600">
 						Aparatur Desa
 					</p>
-					<h1 className="mt-1 text-2xl font-bold text-slate-900">Ubah Aparatur Desa</h1>
+					<h1 className="mt-1 text-xl font-semibold tracking-tight text-slate-900 sm:text-2xl">
+						Ubah Aparatur Desa
+					</h1>
 				</div>
 				<button
-					className="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-100"
+					className="rounded-lg border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-50"
 					onClick={() => nav(`/desa/aparatur-desa/${id}`)}
 				>
 					Kembali

@@ -236,8 +236,8 @@ const BankeuProposalPage = ({ tahun = new Date().getFullYear() }) => {
                 title: 'Pengajuan Ditutup',
                 html: `
                   <div class="text-left">
-                    <p class="text-red-600 font-semibold">⚠️ Pengajuan Bankeu telah ditutup oleh DPMD.</p>
-                    <p class="text-sm text-gray-700 mt-2">
+                    <p class="text-rose-600 font-semibold">⚠️ Pengajuan Bankeu telah ditutup oleh DPMD.</p>
+                    <p class="text-sm text-slate-700 mt-2">
                       Anda tidak dapat mengirim proposal atau surat baru sampai pengajuan dibuka kembali.
                     </p>
                   </div>
@@ -254,7 +254,7 @@ const BankeuProposalPage = ({ tahun = new Date().getFullYear() }) => {
                 html: `
                   <div class="text-left">
                     <p class="text-slate-600 font-semibold">✅ Pengajuan Bankeu telah dibuka oleh DPMD.</p>
-                    <p class="text-sm text-gray-700 mt-2">
+                    <p class="text-sm text-slate-700 mt-2">
                       Anda sekarang dapat mengirim proposal dan surat ke Dinas Terkait.
                     </p>
                   </div>
@@ -1003,7 +1003,7 @@ const BankeuProposalPage = ({ tahun = new Date().getFullYear() }) => {
         html: `
           <div class="text-left">
             <p class="mb-2"><strong>Error:</strong> ${errorMessage}</p>
-            ${error.response?.data?.error ? `<p class="text-sm text-gray-600 mt-2">${error.response.data.error}</p>` : ''}
+            ${error.response?.data?.error ? `<p class="text-sm text-slate-600 mt-2">${error.response.data.error}</p>` : ''}
           </div>
         `,
         confirmButtonText: "OK"
@@ -1067,9 +1067,9 @@ const BankeuProposalPage = ({ tahun = new Date().getFullYear() }) => {
         icon: "error",
         title: "Jaringan Lemah",
         html: `<div class="text-left">
-          <p class="mb-2 text-red-600 font-semibold">⚠️ Koneksi jaringan Anda saat ini tidak stabil.</p>
-          <p class="text-sm text-gray-700">Pengiriman data tidak dapat dilakukan saat jaringan lemah untuk menghindari kegagalan atau data corrupt. Silakan coba lagi saat koneksi membaik.</p>
-          ${network.latency ? `<p class="text-xs text-gray-500 mt-2">Latency: ${network.latency}ms</p>` : ''}
+          <p class="mb-2 text-rose-600 font-semibold">⚠️ Koneksi jaringan Anda saat ini tidak stabil.</p>
+          <p class="text-sm text-slate-700">Pengiriman data tidak dapat dilakukan saat jaringan lemah untuk menghindari kegagalan atau data corrupt. Silakan coba lagi saat koneksi membaik.</p>
+          ${network.latency ? `<p class="text-xs text-slate-500 mt-2">Latency: ${network.latency}ms</p>` : ''}
         </div>`,
         confirmButtonText: "OK"
       });
@@ -1082,8 +1082,8 @@ const BankeuProposalPage = ({ tahun = new Date().getFullYear() }) => {
         title: "Pengajuan Ditutup",
         html: `
           <div class="text-left">
-            <p class="mb-2 text-red-600 font-semibold">⚠️ Laju pengajuan saat ini ditutup oleh DPMD.</p>
-            <p class="text-sm text-gray-700">
+            <p class="mb-2 text-rose-600 font-semibold">⚠️ Laju pengajuan saat ini ditutup oleh DPMD.</p>
+            <p class="text-sm text-slate-700">
               Silakan hubungi DPMD untuk informasi lebih lanjut mengenai jadwal pembukaan pengajuan berikutnya.
             </p>
           </div>
@@ -1101,7 +1101,7 @@ const BankeuProposalPage = ({ tahun = new Date().getFullYear() }) => {
         html: `
           <div class="text-left">
             <p class="mb-2">Sebelum mengirim proposal ke Dinas Terkait, Anda harus:</p>
-            <ol class="list-decimal ml-6 text-sm text-gray-700 space-y-1">
+            <ol class="list-decimal ml-6 text-sm text-slate-700 space-y-1">
               <li>Upload Surat Pengantar Proposal</li>
               <li>Upload Surat Permohonan Proposal</li>
               <li>Kirim kedua surat tersebut ke Kecamatan</li>
@@ -1138,7 +1138,7 @@ const BankeuProposalPage = ({ tahun = new Date().getFullYear() }) => {
             </ul>
           </div>
           
-          <p class="text-gray-700 text-center">
+          <p class="text-slate-700 text-center">
             <strong>${count} proposal</strong> akan dikirim ke Dinas Terkait untuk diverifikasi.
           </p>
         </div>
@@ -1185,8 +1185,8 @@ const BankeuProposalPage = ({ tahun = new Date().getFullYear() }) => {
             title: "Pengajuan Ditutup",
             html: `
               <div class="text-left">
-                <p class="text-red-600 font-semibold">⚠️ Pengajuan telah ditutup oleh DPMD.</p>
-                <p class="text-sm text-gray-700 mt-2">
+                <p class="text-rose-600 font-semibold">⚠️ Pengajuan telah ditutup oleh DPMD.</p>
+                <p class="text-sm text-slate-700 mt-2">
                   ${error.response?.data?.message || 'Silakan hubungi DPMD untuk informasi lebih lanjut.'}
                 </p>
               </div>
@@ -1211,9 +1211,9 @@ const BankeuProposalPage = ({ tahun = new Date().getFullYear() }) => {
         icon: "error",
         title: "Jaringan Lemah",
         html: `<div class="text-left">
-          <p class="mb-2 text-red-600 font-semibold">⚠️ Koneksi jaringan Anda saat ini tidak stabil.</p>
-          <p class="text-sm text-gray-700">Pengiriman data tidak dapat dilakukan saat jaringan lemah untuk menghindari kegagalan atau data corrupt. Silakan coba lagi saat koneksi membaik.</p>
-          ${network.latency ? `<p class="text-xs text-gray-500 mt-2">Latency: ${network.latency}ms</p>` : ''}
+          <p class="mb-2 text-rose-600 font-semibold">⚠️ Koneksi jaringan Anda saat ini tidak stabil.</p>
+          <p class="text-sm text-slate-700">Pengiriman data tidak dapat dilakukan saat jaringan lemah untuk menghindari kegagalan atau data corrupt. Silakan coba lagi saat koneksi membaik.</p>
+          ${network.latency ? `<p class="text-xs text-slate-500 mt-2">Latency: ${network.latency}ms</p>` : ''}
         </div>`,
         confirmButtonText: "OK"
       });
@@ -1226,8 +1226,8 @@ const BankeuProposalPage = ({ tahun = new Date().getFullYear() }) => {
         title: "Pengajuan Ditutup",
         html: `
           <div class="text-left">
-            <p class="mb-2 text-red-600 font-semibold">⚠️ Laju pengajuan saat ini ditutup oleh DPMD.</p>
-            <p class="text-sm text-gray-700">
+            <p class="mb-2 text-rose-600 font-semibold">⚠️ Laju pengajuan saat ini ditutup oleh DPMD.</p>
+            <p class="text-sm text-slate-700">
               Silakan hubungi DPMD untuk informasi lebih lanjut mengenai jadwal pembukaan pengajuan berikutnya.
             </p>
           </div>
@@ -1290,9 +1290,9 @@ const BankeuProposalPage = ({ tahun = new Date().getFullYear() }) => {
         icon: "error",
         title: "Jaringan Lemah",
         html: `<div class="text-left">
-          <p class="mb-2 text-red-600 font-semibold">⚠️ Koneksi jaringan Anda saat ini tidak stabil.</p>
-          <p class="text-sm text-gray-700">Pengiriman data tidak dapat dilakukan saat jaringan lemah untuk menghindari kegagalan atau data corrupt. Silakan coba lagi saat koneksi membaik.</p>
-          ${network.latency ? `<p class="text-xs text-gray-500 mt-2">Latency: ${network.latency}ms</p>` : ''}
+          <p class="mb-2 text-rose-600 font-semibold">⚠️ Koneksi jaringan Anda saat ini tidak stabil.</p>
+          <p class="text-sm text-slate-700">Pengiriman data tidak dapat dilakukan saat jaringan lemah untuk menghindari kegagalan atau data corrupt. Silakan coba lagi saat koneksi membaik.</p>
+          ${network.latency ? `<p class="text-xs text-slate-500 mt-2">Latency: ${network.latency}ms</p>` : ''}
         </div>`,
         confirmButtonText: "OK"
       });
@@ -1305,8 +1305,8 @@ const BankeuProposalPage = ({ tahun = new Date().getFullYear() }) => {
         title: "Pengajuan Ditutup",
         html: `
           <div class="text-left">
-            <p class="mb-2 text-red-600 font-semibold">⚠️ Laju pengajuan saat ini ditutup oleh DPMD.</p>
-            <p class="text-sm text-gray-700">
+            <p class="mb-2 text-rose-600 font-semibold">⚠️ Laju pengajuan saat ini ditutup oleh DPMD.</p>
+            <p class="text-sm text-slate-700">
               Silakan hubungi DPMD untuk informasi lebih lanjut mengenai jadwal pembukaan pengajuan berikutnya.
             </p>
           </div>
@@ -1379,7 +1379,7 @@ const BankeuProposalPage = ({ tahun = new Date().getFullYear() }) => {
 
     const result = await Swal.fire({
       title: 'Kirim Proposal ke Dinas?',
-      html: `<p>Proposal ini akan dikirim ke <strong>Dinas Terkait</strong> untuk diverifikasi.</p><p class="text-sm text-gray-500 mt-2">Proses ini tidak dapat dibatalkan.</p>`,
+      html: `<p>Proposal ini akan dikirim ke <strong>Dinas Terkait</strong> untuk diverifikasi.</p><p class="text-sm text-slate-500 mt-2">Proses ini tidak dapat dibatalkan.</p>`,
       icon: "question",
       showCancelButton: true,
       confirmButtonColor: "#10b981",
@@ -1414,7 +1414,7 @@ const BankeuProposalPage = ({ tahun = new Date().getFullYear() }) => {
     const destLabel = destination === 'kecamatan' ? 'Kecamatan' : 'Dinas Terkait';
     const result = await Swal.fire({
       title: `Kirim Ulang ke ${destLabel}?`,
-      html: `<p>Proposal revisi ini akan dikirim ulang ke <strong>${destLabel}</strong>.</p><p class="text-sm text-gray-500 mt-2">Proses ini tidak dapat dibatalkan.</p>`,
+      html: `<p>Proposal revisi ini akan dikirim ulang ke <strong>${destLabel}</strong>.</p><p class="text-sm text-slate-500 mt-2">Proses ini tidak dapat dibatalkan.</p>`,
       icon: "question",
       showCancelButton: true,
       confirmButtonColor: "#10b981",
@@ -1606,7 +1606,7 @@ const BankeuProposalPage = ({ tahun = new Date().getFullYear() }) => {
       html: `
         <div class="text-left">
           <p class="mb-2">Pastikan dokumen yang Anda upload sudah benar:</p>
-          <ul class="list-disc ml-6 text-sm text-gray-700">
+          <ul class="list-disc ml-6 text-sm text-slate-700">
             <li>Surat Pengantar ✅</li>
             <li>Surat Permohonan ✅</li>
           </ul>
@@ -2237,7 +2237,7 @@ const BankeuProposalPage = ({ tahun = new Date().getFullYear() }) => {
       // Belum dikirim ke Dinas sama sekali
       if (!proposal.submitted_to_dinas_at && !proposal.dinas_status) {
         return (
-          <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-700">
+          <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-slate-100 text-slate-700">
             <LuClock className="w-3 h-3" />
             Draft - Belum Dikirim
           </span>
@@ -2275,8 +2275,8 @@ const BankeuProposalPage = ({ tahun = new Date().getFullYear() }) => {
     const badges = {
       pending: { icon: LuClock, text: "Menunggu Verifikasi", color: "bg-yellow-100 text-yellow-700" },
       verified: { icon: LuCheck, text: "Disetujui", color: "bg-emerald-100 text-emerald-700" },
-      rejected: { icon: LuX, text: "Ditolak", color: "bg-red-100 text-red-700" },
-      revision: { icon: LuRefreshCw, text: "Perlu Revisi", color: "bg-orange-100 text-orange-700" }
+      rejected: { icon: LuX, text: "Ditolak", color: "bg-rose-100 text-rose-700" },
+      revision: { icon: LuRefreshCw, text: "Perlu Revisi", color: "bg-amber-100 text-amber-700" }
     };
 
     const status = proposal.status || proposal;
@@ -2294,7 +2294,7 @@ const BankeuProposalPage = ({ tahun = new Date().getFullYear() }) => {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="text-gray-600">Memuat data...</div>
+        <div className="text-slate-600">Memuat data...</div>
       </div>
     );
   }
@@ -2309,17 +2309,17 @@ const BankeuProposalPage = ({ tahun = new Date().getFullYear() }) => {
       <div className="space-y-6">
         {/* Warning Banner when submission is closed */}
         {!submissionOpen && (
-          <div className="bg-red-50 border-2 border-red-300 rounded-xl p-4 flex items-start gap-3">
-            <div className="p-2 bg-red-500 rounded-lg shrink-0">
-              <LuTriangleAlert className="w-5 h-5 text-white" />
+          <div className="flex items-start gap-3 rounded-xl border border-rose-200 bg-rose-50 p-4">
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-rose-600">
+              <LuTriangleAlert className="h-4 w-4 text-white" />
             </div>
             <div>
-              <h3 className="font-bold text-red-800 text-lg">🚫 Pengajuan Proposal Ditutup</h3>
-              <p className="text-red-700 text-sm mt-1">
+              <h3 className="text-base font-semibold text-rose-900">Pengajuan Proposal Ditutup</h3>
+              <p className="mt-1 text-sm leading-6 text-rose-700">
                 DPMD sedang menutup laju pengajuan proposal untuk sementara waktu. 
                 Anda tidak dapat mengirim proposal baru ke Dinas Terkait sampai pengajuan dibuka kembali.
               </p>
-              <p className="text-red-600 text-xs mt-2">
+              <p className="text-rose-600 text-xs mt-2">
                 Silakan hubungi DPMD untuk informasi lebih lanjut.
               </p>
             </div>
@@ -2327,33 +2327,39 @@ const BankeuProposalPage = ({ tahun = new Date().getFullYear() }) => {
         )}
 
         {/* Header & Progress */}
-        <div className="bg-gradient-to-br from-white to-gray-50 rounded-2xl shadow-lg border border-gray-100">
-          <div className="p-8">
+        <div className="rounded-xl border border-slate-200 bg-white">
+          <div className="p-5 sm:p-6">
             <div className="flex items-center justify-between mb-6">
-              <div className="flex items-center gap-3">
-                <div className="w-12 h-12 bg-gradient-to-br from-slate-500 to-slate-600 rounded-xl flex items-center justify-center shadow-lg">
-                  <LuUpload className="w-6 h-6 text-white" />
+              <div className="flex items-center gap-3.5">
+                <div className="relative flex h-11 w-11 items-center justify-center rounded-xl bg-slate-900">
+                  <LuUpload className="h-5 w-5 text-white" />
+                  <span className="absolute -bottom-0.5 left-1/2 h-1 w-5 -translate-x-1/2 rounded-full bg-brand-500" />
                 </div>
                 <div>
-                  <h1 className="text-2xl font-bold text-gray-900">Proposal Bantuan Keuangan</h1>
-                  <p className="text-sm text-gray-600">Kelola proposal kegiatan desa Anda</p>
+                  <p className="text-xs font-semibold uppercase tracking-wide text-brand-600">
+                    Bantuan Keuangan
+                  </p>
+                  <h1 className="text-xl font-semibold tracking-tight text-slate-900 sm:text-2xl">
+                    Proposal Bantuan Keuangan
+                  </h1>
+                  <p className="mt-0.5 text-sm text-slate-500">Kelola proposal kegiatan desa Anda.</p>
                 </div>
               </div>
               <div className="flex items-center gap-2">
                 <button
                   onClick={() => setExpandedStats(!expandedStats)}
-                  className="p-2 hover:bg-gray-100 rounded-lg transition-all duration-300 group"
+                  className="p-2 hover:bg-slate-100 rounded-lg transition-all duration-300 group"
                   title={expandedStats ? "Tutup statistik" : "Buka statistik"}
                 >
                   <LuChevronRight 
-                    className={`w-5 h-5 text-gray-600 transition-transform duration-300 group-hover:scale-110 ${
+                    className={`w-5 h-5 text-slate-600 transition-transform duration-300 group-hover:scale-110 ${
                       expandedStats ? 'rotate-90' : 'rotate-0'
                     }`} 
                   />
                 </button>
                 <button
                   onClick={() => setShowContohModal(true)}
-                  className="px-4 py-2 bg-gradient-to-r from-slate-500 to-slate-600 text-white rounded-lg hover:from-slate-600 hover:to-slate-700 flex items-center gap-2 font-semibold text-sm shadow-md hover:shadow-lg transition-all transform hover:scale-[1.02] active:scale-[0.98]"
+                  className="inline-flex items-center gap-2 rounded-lg bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-slate-800"
                 >
                   <LuDownload className="w-4 h-4" />
                   <span>Download Format Dokumen</span>
@@ -2365,24 +2371,24 @@ const BankeuProposalPage = ({ tahun = new Date().getFullYear() }) => {
           {/* Alert Banner for Rejected/Revision Proposals */}
           {proposals.some(p => (p.dinas_status === 'rejected' || p.dinas_status === 'revision') && !p.submitted_to_dinas_at) && (
             <div className="px-8">
-              <div className="bg-red-50 border-l-4 border-red-500 rounded-lg p-4 shadow-md">
+              <div className="bg-rose-50 border-l-4 border-rose-500 rounded-lg p-4 shadow-md">
                 <div className="flex items-start gap-3">
                   <div className="flex-shrink-0">
-                    <LuInfo className="w-6 h-6 text-red-600" />
+                    <LuInfo className="w-6 h-6 text-rose-600" />
                   </div>
                   <div className="flex-1">
-                    <h3 className="text-base font-bold text-red-900 mb-1">
+                    <h3 className="text-base font-bold text-rose-900 mb-1">
                       ⚠️ Ada Proposal yang Ditolak/Perlu Revisi oleh Dinas!
                     </h3>
-                    <p className="text-sm text-red-800 mb-2">
+                    <p className="text-sm text-rose-800 mb-2">
                       Dinas telah menolak atau meminta revisi pada {proposals.filter(p => (p.dinas_status === 'rejected' || p.dinas_status === 'revision') && !p.submitted_to_dinas_at).length} proposal Anda. 
                       Silakan periksa catatan dari Dinas, perbaiki proposal, lalu kirim ulang.
                     </p>
                     <div className="flex flex-wrap gap-2 mt-3">
                       {proposals.filter(p => (p.dinas_status === 'rejected' || p.dinas_status === 'revision') && !p.submitted_to_dinas_at).map(p => (
-                        <div key={p.id} className="inline-flex items-center gap-2 px-3 py-1.5 bg-white border border-red-200 rounded-lg shadow-sm">
-                          <span className="text-xs font-medium text-red-700">{p.judul_proposal}</span>
-                          <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${p.dinas_status === 'rejected' ? 'bg-red-100 text-red-700' : 'bg-amber-100 text-amber-700'}`}>
+                        <div key={p.id} className="inline-flex items-center gap-2 px-3 py-1.5 bg-white border border-rose-200 rounded-lg shadow-sm">
+                          <span className="text-xs font-medium text-rose-700">{p.judul_proposal}</span>
+                          <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${p.dinas_status === 'rejected' ? 'bg-rose-100 text-rose-700' : 'bg-amber-100 text-amber-700'}`}>
                             {p.dinas_status === 'rejected' ? 'DITOLAK' : 'REVISI'}
                           </span>
                         </div>
@@ -2396,24 +2402,24 @@ const BankeuProposalPage = ({ tahun = new Date().getFullYear() }) => {
 
           {proposals.some(p => (p.kecamatan_status === 'rejected' || p.kecamatan_status === 'revision') && !p.submitted_to_kecamatan) && (
             <div className="px-8">
-              <div className="bg-orange-50 border-l-4 border-orange-500 rounded-lg p-4 shadow-md">
+              <div className="bg-amber-50 border-l-4 border-amber-500 rounded-lg p-4 shadow-md">
                 <div className="flex items-start gap-3">
                   <div className="flex-shrink-0">
-                    <LuInfo className="w-6 h-6 text-orange-600" />
+                    <LuInfo className="w-6 h-6 text-amber-600" />
                   </div>
                   <div className="flex-1">
-                    <h3 className="text-base font-bold text-orange-900 mb-1">
+                    <h3 className="text-base font-bold text-amber-900 mb-1">
                       ⚠️ Ada Proposal yang Ditolak/Perlu Revisi oleh Kecamatan!
                     </h3>
-                    <p className="text-sm text-orange-800 mb-2">
+                    <p className="text-sm text-amber-800 mb-2">
                       Kecamatan telah menolak atau meminta revisi pada {proposals.filter(p => (p.kecamatan_status === 'rejected' || p.kecamatan_status === 'revision') && !p.submitted_to_kecamatan).length} proposal Anda. 
                       Silakan periksa catatan dari Kecamatan, perbaiki proposal, lalu kirim ulang.
                     </p>
                     <div className="flex flex-wrap gap-2 mt-3">
                       {proposals.filter(p => (p.kecamatan_status === 'rejected' || p.kecamatan_status === 'revision') && !p.submitted_to_kecamatan).map(p => (
-                        <div key={p.id} className="inline-flex items-center gap-2 px-3 py-1.5 bg-white border border-orange-200 rounded-lg shadow-sm">
-                          <span className="text-xs font-medium text-orange-700">{p.judul_proposal}</span>
-                          <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${p.kecamatan_status === 'rejected' ? 'bg-red-100 text-red-700' : 'bg-amber-100 text-amber-700'}`}>
+                        <div key={p.id} className="inline-flex items-center gap-2 px-3 py-1.5 bg-white border border-amber-200 rounded-lg shadow-sm">
+                          <span className="text-xs font-medium text-amber-700">{p.judul_proposal}</span>
+                          <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${p.kecamatan_status === 'rejected' ? 'bg-rose-100 text-rose-700' : 'bg-amber-100 text-amber-700'}`}>
                             {p.kecamatan_status === 'rejected' ? 'DITOLAK' : 'REVISI'}
                           </span>
                         </div>
@@ -2462,19 +2468,19 @@ const BankeuProposalPage = ({ tahun = new Date().getFullYear() }) => {
             <div className="px-8 pb-8">
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
           {/* Progress Upload */}
-          <div className="bg-white rounded-xl p-5 shadow-sm border border-gray-100">
+          <div className="bg-white rounded-xl p-5 shadow-sm border border-slate-100">
             <div className="flex items-center justify-between mb-3">
               <div className="flex items-center gap-2">
-                <span className="text-sm font-semibold text-gray-700">Progress Upload</span>
+                <span className="text-sm font-semibold text-slate-700">Progress Upload</span>
                 <span className="px-2 py-1 bg-slate-50 text-slate-700 rounded-lg text-xs font-bold">
                   {filledCount} / {totalKegiatan}
                 </span>
               </div>
-              <span className="text-2xl font-bold text-gray-900">{percentage}%</span>
+              <span className="text-2xl font-bold text-slate-900">{percentage}%</span>
             </div>
-            <div className="w-full bg-gray-100 rounded-full h-4 overflow-hidden shadow-inner">
+            <div className="w-full bg-slate-100 rounded-full h-4 overflow-hidden shadow-inner">
               <div 
-                className={`h-4 rounded-full transition-all duration-500 ${isComplete ? 'bg-gradient-to-r from-slate-500 to-slate-500' : 'bg-gradient-to-r from-slate-500 to-slate-600'}`}
+                className={`h-3 rounded-full transition-all duration-500 ${isComplete ? 'bg-emerald-500' : 'bg-brand-500'}`}
                 style={{width: `${percentage}%`}}
               ></div>
             </div>
@@ -2484,23 +2490,23 @@ const BankeuProposalPage = ({ tahun = new Date().getFullYear() }) => {
                 <p className="text-sm font-medium">Semua kegiatan telah terisi</p>
               </div>
             ) : filledCount > 0 ? (
-              <p className="text-sm text-gray-600 mt-3">
+              <p className="text-sm text-slate-600 mt-3">
                 {kegiatanPerluDiisi > 0 && (
-                  <>Masih ada <span className="font-bold text-gray-900">{kegiatanPerluDiisi}</span> kegiatan lagi<br/>
+                  <>Masih ada <span className="font-bold text-slate-900">{kegiatanPerluDiisi}</span> kegiatan lagi<br/>
                   <span className="text-xs text-slate-600">Anda sudah bisa mengirim proposal yang ada</span></>
                 )}
               </p>
             ) : (
-              <p className="text-sm text-orange-600 mt-3 font-medium">
+              <p className="text-sm text-amber-600 mt-3 font-medium">
                 Upload minimal 1 kegiatan untuk memulai
               </p>
             )}
           </div>
 
           {/* Total Anggaran Usulan */}
-          <div className="bg-white rounded-xl p-5 shadow-sm border border-gray-100">
+          <div className="bg-white rounded-xl p-5 shadow-sm border border-slate-100">
             <div className="flex items-center justify-between mb-3">
-              <span className="text-sm font-semibold text-gray-700">Total Anggaran Usulan</span>
+              <span className="text-sm font-semibold text-slate-700">Total Anggaran Usulan</span>
               <span className="px-2 py-1 bg-slate-50 text-slate-700 rounded-lg text-xs font-bold">
                 Realtime
               </span>
@@ -2532,9 +2538,9 @@ const BankeuProposalPage = ({ tahun = new Date().getFullYear() }) => {
               return (
                 <>
                   <div className="space-y-3">
-                    <div className="p-4 bg-gradient-to-r from-slate-50 to-slate-50 rounded-lg border border-slate-100">
-                      <p className="text-xs text-gray-600 mb-1">Total Keseluruhan</p>
-                      <p className="text-xl font-bold bg-gradient-to-r from-slate-600 to-slate-600 bg-clip-text text-transparent break-words">
+                    <div className="p-4 bg-slate-50 rounded-lg border border-slate-100">
+                      <p className="text-xs text-slate-600 mb-1">Total Keseluruhan</p>
+                      <p className="text-xl font-bold text-slate-900 break-words">
                         {new Intl.NumberFormat("id-ID", {
                           style: "currency",
                           currency: "IDR",
@@ -2543,15 +2549,15 @@ const BankeuProposalPage = ({ tahun = new Date().getFullYear() }) => {
                         }).format(grandTotal)}
                       </p>
                       {grandTotal > 0 && (
-                        <p className="text-xs text-gray-600 mt-2 italic leading-relaxed">
+                        <p className="text-xs text-slate-600 mt-2 italic leading-relaxed">
                           ({angkaTerbilang(grandTotal).trim()} Rupiah)
                         </p>
                       )}
                     </div>
                     
-                    <div className="flex items-center justify-between text-xs text-gray-600 px-1">
+                    <div className="flex items-center justify-between text-xs text-slate-600 px-1">
                       <span>Terupload</span>
-                      <span className="font-bold text-gray-900 text-right break-words">
+                      <span className="font-bold text-slate-900 text-right break-words">
                         {new Intl.NumberFormat("id-ID", {
                           style: "currency",
                           currency: "IDR",
@@ -2562,9 +2568,9 @@ const BankeuProposalPage = ({ tahun = new Date().getFullYear() }) => {
                     </div>
                     
                     {formTotal > 0 && (
-                      <div className="flex items-center justify-between text-xs text-gray-600 px-1">
+                      <div className="flex items-center justify-between text-xs text-slate-600 px-1">
                         <span>Draft (belum upload)</span>
-                        <span className="font-bold text-orange-600 text-right break-words">
+                        <span className="font-bold text-amber-600 text-right break-words">
                           {new Intl.NumberFormat("id-ID", {
                             style: "currency",
                             currency: "IDR",
@@ -2581,9 +2587,9 @@ const BankeuProposalPage = ({ tahun = new Date().getFullYear() }) => {
           </div>
 
           {/* Monitoring Status */}
-          <div className="bg-white rounded-xl p-5 shadow-sm border border-gray-100">
+          <div className="bg-white rounded-xl p-5 shadow-sm border border-slate-100">
             <div className="flex items-center justify-between mb-3">
-              <span className="text-sm font-semibold text-gray-700">Status Verifikasi</span>
+              <span className="text-sm font-semibold text-slate-700">Status Verifikasi</span>
               {isSubmitted && (
                 <span className="px-2 py-1 bg-slate-50 text-slate-700 rounded-lg text-xs font-bold">
                   Terkirim
@@ -2604,36 +2610,36 @@ const BankeuProposalPage = ({ tahun = new Date().getFullYear() }) => {
                   
                   return (
                     <>
-                      <div className="flex items-center justify-between py-2 border-b border-gray-100">
+                      <div className="flex items-center justify-between py-2 border-b border-slate-100">
                         <div className="flex items-center gap-2">
                           <LuClock className="w-4 h-4 text-yellow-600" />
-                          <span className="text-sm text-gray-700">Menunggu Verifikasi</span>
+                          <span className="text-sm text-slate-700">Menunggu Verifikasi</span>
                         </div>
                         <span className="text-lg font-bold text-yellow-600">{statusCount.pending}</span>
                       </div>
                       
-                      <div className="flex items-center justify-between py-2 border-b border-gray-100">
+                      <div className="flex items-center justify-between py-2 border-b border-slate-100">
                         <div className="flex items-center gap-2">
                           <LuCheck className="w-4 h-4 text-slate-600" />
-                          <span className="text-sm text-gray-700">Disetujui</span>
+                          <span className="text-sm text-slate-700">Disetujui</span>
                         </div>
                         <span className="text-lg font-bold text-slate-600">{statusCount.verified}</span>
                       </div>
                       
-                      <div className="flex items-center justify-between py-2 border-b border-gray-100">
+                      <div className="flex items-center justify-between py-2 border-b border-slate-100">
                         <div className="flex items-center gap-2">
-                          <LuRefreshCw className="w-4 h-4 text-orange-600" />
-                          <span className="text-sm text-gray-700">Perlu Revisi</span>
+                          <LuRefreshCw className="w-4 h-4 text-amber-600" />
+                          <span className="text-sm text-slate-700">Perlu Revisi</span>
                         </div>
-                        <span className="text-lg font-bold text-orange-600">{statusCount.revision}</span>
+                        <span className="text-lg font-bold text-amber-600">{statusCount.revision}</span>
                       </div>
                       
                       <div className="flex items-center justify-between py-2">
                         <div className="flex items-center gap-2">
-                          <LuX className="w-4 h-4 text-red-600" />
-                          <span className="text-sm text-gray-700">Ditolak</span>
+                          <LuX className="w-4 h-4 text-rose-600" />
+                          <span className="text-sm text-slate-700">Ditolak</span>
                         </div>
-                        <span className="text-lg font-bold text-red-600">{statusCount.rejected}</span>
+                        <span className="text-lg font-bold text-rose-600">{statusCount.rejected}</span>
                       </div>
                     </>
                   );
@@ -2664,14 +2670,14 @@ const BankeuProposalPage = ({ tahun = new Date().getFullYear() }) => {
                         </div>
                       )}
                       {revisionCount > 0 && (
-                        <div className="px-4 py-3 bg-orange-50 border border-orange-200 rounded-lg">
+                        <div className="px-4 py-3 bg-amber-50 border border-amber-200 rounded-lg">
                           <div className="flex items-center gap-2 mb-2">
-                            <LuRefreshCw className="w-5 h-5 text-orange-600 animate-spin" />
-                            <span className="text-sm font-bold text-orange-800">
+                            <LuRefreshCw className="w-5 h-5 text-amber-600 animate-spin" />
+                            <span className="text-sm font-bold text-amber-800">
                               {revisionCount} proposal perlu diupload ulang
                             </span>
                           </div>
-                          <p className="text-xs text-orange-700">
+                          <p className="text-xs text-amber-700">
                             Upload ulang proposal yang diminta revisi, lalu kirim ulang per proposal
                           </p>
                         </div>
@@ -2697,7 +2703,7 @@ const BankeuProposalPage = ({ tahun = new Date().getFullYear() }) => {
                 
                 {/* Jika tidak ada proposal sama sekali */}
                 {proposals.length === 0 && (
-                  <div className="flex items-center justify-center h-24 text-gray-400">
+                  <div className="flex items-center justify-center h-24 text-slate-400">
                     <div className="text-center">
                       <LuClock className="w-8 h-8 mx-auto mb-2 opacity-50" />
                       <p className="text-sm">Belum ada proposal diupload</p>
@@ -2709,14 +2715,14 @@ const BankeuProposalPage = ({ tahun = new Date().getFullYear() }) => {
             
             {/* Buttons Kirim - UPDATE 2026-03-13: Tidak lagi memblokir, bisa kirim per proposal */}
             {(canSubmitNewProposals || canResubmitToKecamatan || canResubmitToDinas) && (
-              <div className="mt-4 pt-4 border-t border-gray-200">
+              <div className="mt-4 pt-4 border-t border-slate-200">
                 <div className="space-y-3">
                     {/* Tombol Kirim Proposal BARU ke Dinas Terkait */}
                     {canSubmitNewProposals && (
                       <div>
                         <button
                           onClick={handleSubmitToKecamatan}
-                          className="w-full px-6 py-3 rounded-xl flex items-center justify-center gap-2 font-bold text-sm shadow-md transition-all bg-gradient-to-r from-slate-500 to-slate-600 text-white hover:from-slate-600 hover:to-slate-700 hover:shadow-lg transform hover:scale-[1.02] active:scale-[0.98] cursor-pointer"
+                          className="w-full px-6 py-3 rounded-xl flex items-center justify-center gap-2 font-bold text-sm shadow-md transition-all bg-slate-900 text-white hover:bg-slate-800 hover:shadow-lg transform hover:scale-[1.02] active:scale-[0.98] cursor-pointer"
                         >
                           <LuSend className="w-5 h-5" />
                           <span>Kirim Semua ke Dinas Terkait</span>
@@ -2732,12 +2738,12 @@ const BankeuProposalPage = ({ tahun = new Date().getFullYear() }) => {
                       <div>
                         <button
                           onClick={handleSubmitToKecamatanResubmit}
-                          className="w-full px-6 py-3 rounded-xl flex items-center justify-center gap-2 font-bold text-sm shadow-md transition-all bg-gradient-to-r from-slate-500 to-slate-600 text-white hover:from-slate-600 hover:to-slate-700 hover:shadow-lg transform hover:scale-[1.02] active:scale-[0.98] cursor-pointer"
+                          className="w-full px-6 py-3 rounded-xl flex items-center justify-center gap-2 font-bold text-sm shadow-md transition-all bg-slate-900 text-white hover:bg-slate-800 hover:shadow-lg transform hover:scale-[1.02] active:scale-[0.98] cursor-pointer"
                         >
                           <LuSend className="w-5 h-5" />
                           <span>Kirim Ulang Semua ke Kecamatan</span>
                         </button>
-                        <p className="text-xs text-orange-600 mt-2 text-center font-medium">
+                        <p className="text-xs text-amber-600 mt-2 text-center font-medium">
                           ✓ Revisi siap dikirim ke Kecamatan ({fromKecamatanUploaded.length} proposal)
                         </p>
                       </div>
@@ -2748,7 +2754,7 @@ const BankeuProposalPage = ({ tahun = new Date().getFullYear() }) => {
                       <div>
                         <button
                           onClick={handleSubmitToDinas}
-                          className="w-full px-6 py-3 rounded-xl flex items-center justify-center gap-2 font-bold text-sm shadow-md transition-all bg-gradient-to-r from-slate-500 to-slate-600 text-white hover:from-slate-600 hover:to-slate-700 hover:shadow-lg transform hover:scale-[1.02] active:scale-[0.98] cursor-pointer"
+                          className="w-full px-6 py-3 rounded-xl flex items-center justify-center gap-2 font-bold text-sm shadow-md transition-all bg-slate-900 text-white hover:bg-slate-800 hover:shadow-lg transform hover:scale-[1.02] active:scale-[0.98] cursor-pointer"
                         >
                           <LuSend className="w-5 h-5" />
                           <span>Kirim Ulang Semua ke Dinas Terkait</span>
@@ -2768,30 +2774,30 @@ const BankeuProposalPage = ({ tahun = new Date().getFullYear() }) => {
         </div>
 
         {/* Section Dokumen Pendukung - Surat Pengantar & Surat Permohonan (Desa-Level) */}
-        <div className="bg-white rounded-2xl shadow-lg overflow-hidden border border-gray-100">
+        <div className="bg-white rounded-2xl shadow-lg overflow-hidden border border-slate-100">
           <button
             onClick={() => setExpandedSurat(!expandedSurat)}
-            className="w-full px-6 py-5 flex items-center justify-between bg-gradient-to-r from-slate-50 via-slate-50 to-slate-50 hover:from-slate-100 hover:via-slate-100 hover:to-slate-100 transition-all group"
+            className="w-full px-6 py-5 flex items-center justify-between bg-slate-50 hover:bg-slate-100 transition-all group"
           >
             <div className="flex items-center gap-4">
-              <div className="w-10 h-10 bg-gradient-to-br from-slate-500 to-slate-600 rounded-xl flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform">
+              <div className="w-10 h-10 bg-slate-900 rounded-xl flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform">
                 {expandedSurat ? <LuChevronDown className="w-5 h-5 text-white" /> : <LuChevronRight className="w-5 h-5 text-white" />}
               </div>
               <div className="text-left">
-                <h3 className="text-xl font-bold text-gray-900">Dokumen Pendukung Proposal</h3>
-                <p className="text-sm text-gray-600">
+                <h3 className="text-xl font-bold text-slate-900">Dokumen Pendukung Proposal</h3>
+                <p className="text-sm text-slate-600">
                   Upload Surat Pengantar & Surat Permohonan untuk desa ini {desaSurat.submitted_to_kecamatan && <span className="text-slate-600 font-medium">(Sudah Dikirim ke Kecamatan)</span>}
                 </p>
               </div>
             </div>
-            <div className="px-4 py-2 bg-white rounded-xl shadow-md border border-gray-100">
+            <div className="px-4 py-2 bg-white rounded-xl shadow-md border border-slate-100">
               {desaSurat.surat_pengantar && desaSurat.surat_permohonan ? (
                 <span className="text-xl font-bold flex items-center gap-2 text-slate-600">
                   <LuCheck className="w-6 h-6" /> 
                   <span>Lengkap</span>
                 </span>
               ) : (
-                <span className="text-2xl font-bold bg-gradient-to-r from-slate-600 to-slate-600 bg-clip-text text-transparent">
+                <span className="text-2xl font-bold text-slate-900">
                   {[desaSurat.surat_pengantar, desaSurat.surat_permohonan].filter(Boolean).length}/2
                 </span>
               )}
@@ -2822,7 +2828,7 @@ const BankeuProposalPage = ({ tahun = new Date().getFullYear() }) => {
                 {/* Surat Pengantar */}
                 <div className="bg-slate-50 p-5 rounded-xl border-2 border-slate-200">
                   <div className="flex items-center justify-between gap-2 mb-4">
-                    <label className="text-base font-bold text-gray-800">Surat Pengantar Proposal</label>
+                    <label className="text-base font-bold text-slate-800">Surat Pengantar Proposal</label>
                     {desaSurat.surat_pengantar && (
                       <span className="inline-flex items-center gap-1 px-3 py-1 bg-slate-100 text-slate-700 rounded-lg text-sm font-semibold shadow-sm">
                         <LuCheck className="w-4 h-4" />
@@ -2897,13 +2903,13 @@ const BankeuProposalPage = ({ tahun = new Date().getFullYear() }) => {
                       </label>
                     </>
                   )}
-                  <p className="text-xs text-gray-600 mt-3 text-center">Max 5MB, Format PDF</p>
+                  <p className="text-xs text-slate-600 mt-3 text-center">Max 5MB, Format PDF</p>
                 </div>
 
                 {/* Surat Permohonan */}
                 <div className="bg-slate-50 p-5 rounded-xl border-2 border-slate-200">
                   <div className="flex items-center justify-between gap-2 mb-4">
-                    <label className="text-base font-bold text-gray-800">Surat Permohonan Proposal</label>
+                    <label className="text-base font-bold text-slate-800">Surat Permohonan Proposal</label>
                     {desaSurat.surat_permohonan && (
                       <span className="inline-flex items-center gap-1 px-3 py-1 bg-slate-100 text-slate-700 rounded-lg text-sm font-semibold shadow-sm">
                         <LuCheck className="w-4 h-4" />
@@ -2978,7 +2984,7 @@ const BankeuProposalPage = ({ tahun = new Date().getFullYear() }) => {
                       </label>
                     </>
                   )}
-                  <p className="text-xs text-gray-600 mt-3 text-center">Max 5MB, Format PDF</p>
+                  <p className="text-xs text-slate-600 mt-3 text-center">Max 5MB, Format PDF</p>
                 </div>
               </div>
 
@@ -2987,7 +2993,7 @@ const BankeuProposalPage = ({ tahun = new Date().getFullYear() }) => {
                 <div className="flex justify-center">
                   <button
                     onClick={handleSubmitDesaSurat}
-                    className="px-8 py-4 bg-gradient-to-r from-slate-600 to-slate-600 text-white rounded-xl hover:from-slate-700 hover:to-slate-700 font-bold text-base shadow-lg hover:shadow-xl transition-all flex items-center gap-3"
+                    className="px-8 py-4 bg-slate-900 text-white rounded-xl hover:bg-slate-800 font-bold text-base shadow-lg hover:shadow-xl transition-all flex items-center gap-3"
                   >
                     <LuSend className="w-5 h-5" />
                     Kirim Surat ke Kecamatan
@@ -2997,7 +3003,7 @@ const BankeuProposalPage = ({ tahun = new Date().getFullYear() }) => {
 
               {/* Status Review Kecamatan */}
               {desaSurat.submitted_to_kecamatan && desaSurat.kecamatan_status === 'approved' && (
-                <div className="p-5 bg-slate-50 border-2 border-slate-300 rounded-xl">
+                <div className="p-5 bg-slate-50 border border-slate-300 rounded-xl">
                   <div className="flex items-start gap-4">
                     <div className="w-12 h-12 bg-slate-600 rounded-full flex items-center justify-center flex-shrink-0">
                       <LuCheck className="w-7 h-7 text-white" />
@@ -3012,8 +3018,8 @@ const BankeuProposalPage = ({ tahun = new Date().getFullYear() }) => {
                       </p>
                       {desaSurat.kecamatan_catatan && (
                         <div className="mt-3 p-3 bg-white border border-slate-200 rounded-lg">
-                          <p className="text-sm font-semibold text-gray-700 mb-1">Catatan:</p>
-                          <p className="text-sm text-gray-600">{desaSurat.kecamatan_catatan}</p>
+                          <p className="text-sm font-semibold text-slate-700 mb-1">Catatan:</p>
+                          <p className="text-sm text-slate-600">{desaSurat.kecamatan_catatan}</p>
                         </div>
                       )}
                     </div>
@@ -3039,23 +3045,23 @@ const BankeuProposalPage = ({ tahun = new Date().getFullYear() }) => {
               )}
 
               {desaSurat.kecamatan_status === 'rejected' && (
-                <div className="p-5 bg-red-50 border-2 border-red-300 rounded-xl">
+                <div className="p-5 bg-rose-50 border border-rose-200 rounded-xl">
                   <div className="flex items-start gap-4">
-                    <div className="w-12 h-12 bg-red-600 rounded-full flex items-center justify-center flex-shrink-0">
+                    <div className="w-12 h-12 bg-rose-600 rounded-full flex items-center justify-center flex-shrink-0">
                       <LuX className="w-7 h-7 text-white" />
                     </div>
                     <div className="flex-1">
-                      <h4 className="font-bold text-red-900 text-lg mb-1">Surat Ditolak Kecamatan</h4>
-                      <p className="text-sm text-red-700 mb-2">
+                      <h4 className="font-bold text-rose-900 text-lg mb-1">Surat Ditolak Kecamatan</h4>
+                      <p className="text-sm text-rose-700 mb-2">
                         Direview oleh: <span className="font-semibold">{desaSurat.reviewer_name || 'Kecamatan'}</span>
                         {desaSurat.kecamatan_reviewed_at && (
                           <span className="ml-2">pada {new Date(desaSurat.kecamatan_reviewed_at).toLocaleString('id-ID')}</span>
                         )}
                       </p>
                       {desaSurat.kecamatan_catatan && (
-                        <div className="mt-3 p-3 bg-white border border-red-200 rounded-lg">
-                          <p className="text-sm font-semibold text-gray-700 mb-1">Alasan Penolakan:</p>
-                          <p className="text-sm text-gray-600">{desaSurat.kecamatan_catatan}</p>
+                        <div className="mt-3 p-3 bg-white border border-rose-200 rounded-lg">
+                          <p className="text-sm font-semibold text-slate-700 mb-1">Alasan Penolakan:</p>
+                          <p className="text-sm text-slate-600">{desaSurat.kecamatan_catatan}</p>
                         </div>
                       )}
                       <div className="mt-4 p-4 bg-amber-50 border border-amber-200 rounded-lg">
@@ -3074,18 +3080,18 @@ const BankeuProposalPage = ({ tahun = new Date().getFullYear() }) => {
 
         {/* List Kegiatan */}
         <div className="space-y-4">{/* Infrastruktur */}
-          <div className="bg-white rounded-2xl shadow-lg overflow-hidden border border-gray-100">
+          <div className="bg-white rounded-2xl shadow-lg overflow-hidden border border-slate-100">
             <button
               onClick={() => setExpandedInfra(!expandedInfra)}
-              className="w-full px-6 py-5 flex items-center justify-between bg-gradient-to-r from-slate-50 via-slate-50 to-slate-50 hover:from-slate-100 hover:via-slate-100 hover:to-slate-100 transition-all group"
+              className="w-full px-6 py-5 flex items-center justify-between bg-slate-50 hover:bg-slate-100 transition-all group"
             >
               <div className="flex items-center gap-4">
-                <div className="w-10 h-10 bg-gradient-to-br from-slate-500 to-slate-600 rounded-xl flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform">
+                <div className="w-10 h-10 bg-slate-900 rounded-xl flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform">
                   {expandedInfra ? <LuChevronDown className="w-5 h-5 text-white" /> : <LuChevronRight className="w-5 h-5 text-white" />}
                 </div>
                 <div className="text-left">
-                  <h3 className="text-xl font-bold text-gray-900">Infrastruktur</h3>
-                  <p className="text-sm text-gray-600">
+                  <h3 className="text-xl font-bold text-slate-900">Infrastruktur</h3>
+                  <p className="text-sm text-slate-600">
                     {(() => {
                       const uniqueKegiatanIds = new Set();
                       proposals.forEach(p => {
@@ -3100,8 +3106,8 @@ const BankeuProposalPage = ({ tahun = new Date().getFullYear() }) => {
                   </p>
                 </div>
               </div>
-              <div className="px-4 py-2 bg-white rounded-xl shadow-md border border-gray-100">
-                <span className="text-2xl font-bold bg-gradient-to-r from-slate-600 to-slate-600 bg-clip-text text-transparent">
+              <div className="px-4 py-2 bg-white rounded-xl shadow-md border border-slate-100">
+                <span className="text-2xl font-bold text-slate-900">
                   {(() => {
                     const uniqueKegiatanIds = new Set();
                     proposals.forEach(p => {
@@ -3120,37 +3126,37 @@ const BankeuProposalPage = ({ tahun = new Date().getFullYear() }) => {
             <div className={`transition-all duration-500 ease-in-out ${expandedInfra ? 'max-h-[10000px] opacity-100' : 'max-h-0 opacity-0'}`} style={{ overflow: expandedInfra ? 'visible' : 'hidden' }}>
               {/* Daftar Proposal yang Sudah Diupload */}
               {proposals.filter(p => p.kegiatan_list?.some(k => k.jenis_kegiatan === 'infrastruktur')).length > 0 && (
-                <div className="border-b border-gray-200">
+                <div className="border-b border-slate-200">
                   <button
                     onClick={() => setExpandedProposalListInfra(!expandedProposalListInfra)}
-                    className="w-full p-4 bg-gray-50 hover:bg-gray-100 transition-colors flex items-center justify-between group"
+                    className="w-full p-4 bg-slate-50 hover:bg-slate-100 transition-colors flex items-center justify-between group"
                   >
-                    <h4 className="font-semibold text-gray-700 flex items-center gap-2">
+                    <h4 className="font-semibold text-slate-700 flex items-center gap-2">
                       <LuFileText className="w-4 h-4" />
                       Proposal yang Sudah Diupload ({proposals.filter(p => p.kegiatan_list?.some(k => k.jenis_kegiatan === 'infrastruktur')).length})
                     </h4>
                     {expandedProposalListInfra ? 
-                      <LuChevronDown className="w-5 h-5 text-gray-500 group-hover:text-gray-700" /> : 
-                      <LuChevronRight className="w-5 h-5 text-gray-500 group-hover:text-gray-700" />
+                      <LuChevronDown className="w-5 h-5 text-slate-500 group-hover:text-slate-700" /> : 
+                      <LuChevronRight className="w-5 h-5 text-slate-500 group-hover:text-slate-700" />
                     }
                   </button>
                   <div className={`transition-all duration-300 ${expandedProposalListInfra ? 'max-h-[2000px] opacity-100' : 'max-h-0 opacity-0'}`} style={{ overflow: expandedProposalListInfra ? 'visible' : 'hidden' }}>
-                    <div className="p-4 bg-gray-50 space-y-2">
+                    <div className="p-4 bg-slate-50 space-y-2">
                     {proposals.filter(p => p.kegiatan_list?.some(k => k.jenis_kegiatan === 'infrastruktur')).map((proposal) => (
-                      <div key={proposal.id} className="bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden">
+                      <div key={proposal.id} className="bg-white rounded-lg border border-slate-200 shadow-sm overflow-hidden">
                         {/* Header Card - Selalu Terlihat */}
                         <button
                           onClick={() => setExpandedProposalId(expandedProposalId === proposal.id ? null : proposal.id)}
-                          className="w-full p-3 hover:bg-gray-50 transition-colors"
+                          className="w-full p-3 hover:bg-slate-50 transition-colors"
                         >
                           <div className="flex items-start justify-between gap-3">
                             <div className="flex-1 text-left">
                               <div className="flex items-center gap-2">
                                 {expandedProposalId === proposal.id ? 
-                                  <LuChevronDown className="w-4 h-4 text-gray-600 flex-shrink-0" /> : 
-                                  <LuChevronRight className="w-4 h-4 text-gray-600 flex-shrink-0" />
+                                  <LuChevronDown className="w-4 h-4 text-slate-600 flex-shrink-0" /> : 
+                                  <LuChevronRight className="w-4 h-4 text-slate-600 flex-shrink-0" />
                                 }
-                                <p className="font-bold text-gray-900 text-base leading-tight">{proposal.judul_proposal}</p>
+                                <p className="font-bold text-slate-900 text-base leading-tight">{proposal.judul_proposal}</p>
                               </div>
                               {proposal.kegiatan_list && proposal.kegiatan_list.filter(k => k.jenis_kegiatan === 'infrastruktur').length > 0 && (
                                 <div className="flex flex-wrap gap-1 mt-2 ml-6">
@@ -3164,7 +3170,7 @@ const BankeuProposalPage = ({ tahun = new Date().getFullYear() }) => {
                                   ))}
                                 </div>
                               )}
-                              <p className="text-xs text-gray-500 mt-2 ml-6">
+                              <p className="text-xs text-slate-500 mt-2 ml-6">
                                 {new Date(proposal.created_at).toLocaleDateString('id-ID', { 
                                   day: 'numeric', 
                                   month: 'short', 
@@ -3185,7 +3191,7 @@ const BankeuProposalPage = ({ tahun = new Date().getFullYear() }) => {
 
                         {/* Detail Expanded - Muncul saat di-expand */}
                         {expandedProposalId === proposal.id && (
-                          <div className="px-3 pb-3 border-t border-gray-100">
+                          <div className="px-3 pb-3 border-t border-slate-100">
                             {/* Detail Informasi */}
                             <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mt-3 mb-3">
                               {/* Volume */}
@@ -3253,7 +3259,7 @@ const BankeuProposalPage = ({ tahun = new Date().getFullYear() }) => {
                                     e.stopPropagation();
                                     handleDelete(proposal.id);
                                   }}
-                                  className="px-3 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 flex items-center justify-center gap-1.5 text-xs font-medium transition-all"
+                                  className="px-3 py-2 bg-rose-500 text-white rounded-lg hover:bg-rose-600 flex items-center justify-center gap-1.5 text-xs font-medium transition-all"
                                 >
                                   <LuTrash2 className="w-4 h-4" />
                                 </button>
@@ -3272,19 +3278,19 @@ const BankeuProposalPage = ({ tahun = new Date().getFullYear() }) => {
 
                               if (isNewUnsent) return (
                                 <button onClick={(e) => { e.stopPropagation(); handleSubmitSingleProposal(proposal.id, 'dinas'); }}
-                                  className="w-full mt-2 px-3 py-2 bg-gradient-to-r from-slate-500 to-slate-600 text-white rounded-lg hover:from-slate-600 hover:to-slate-700 flex items-center justify-center gap-1.5 text-xs font-bold transition-all shadow-sm">
+                                  className="w-full mt-2 px-3 py-2 bg-slate-900 text-white rounded-lg hover:bg-slate-800 flex items-center justify-center gap-1.5 text-xs font-bold transition-all shadow-sm">
                                   <LuSend className="w-4 h-4" /> Kirim Proposal Ini ke Dinas
                                 </button>
                               );
                               if (isRevisionReadyDinas) return (
                                 <button onClick={(e) => { e.stopPropagation(); handleResubmitSingleProposal(proposal.id, 'dinas'); }}
-                                  className="w-full mt-2 px-3 py-2 bg-gradient-to-r from-slate-500 to-slate-600 text-white rounded-lg hover:from-slate-600 hover:to-slate-700 flex items-center justify-center gap-1.5 text-xs font-bold transition-all shadow-sm">
+                                  className="w-full mt-2 px-3 py-2 bg-slate-900 text-white rounded-lg hover:bg-slate-800 flex items-center justify-center gap-1.5 text-xs font-bold transition-all shadow-sm">
                                   <LuSend className="w-4 h-4" /> Kirim Ulang ke Dinas
                                 </button>
                               );
                               if (isRevisionReadyKecamatan) return (
                                 <button onClick={(e) => { e.stopPropagation(); handleResubmitSingleProposal(proposal.id, 'kecamatan'); }}
-                                  className="w-full mt-2 px-3 py-2 bg-gradient-to-r from-slate-500 to-slate-600 text-white rounded-lg hover:from-slate-600 hover:to-slate-700 flex items-center justify-center gap-1.5 text-xs font-bold transition-all shadow-sm">
+                                  className="w-full mt-2 px-3 py-2 bg-slate-900 text-white rounded-lg hover:bg-slate-800 flex items-center justify-center gap-1.5 text-xs font-bold transition-all shadow-sm">
                                   <LuSend className="w-4 h-4" /> Kirim Ulang ke Kecamatan
                                 </button>
                               );
@@ -3295,14 +3301,14 @@ const BankeuProposalPage = ({ tahun = new Date().getFullYear() }) => {
 
                           {/* Catatan Dinas */}
                           {proposal.dinas_catatan && (proposal.dinas_status === 'rejected' || proposal.dinas_status === 'revision') && (
-                            <div className="mt-3 p-3 bg-red-50 border-l-3 border-red-400 rounded">
+                            <div className="mt-3 p-3 bg-rose-50 border-l-3 border-rose-400 rounded">
                               <div className="flex items-start gap-2">
-                                <LuInfo className="w-4 h-4 text-red-600 mt-0.5 flex-shrink-0" />
+                                <LuInfo className="w-4 h-4 text-rose-600 mt-0.5 flex-shrink-0" />
                                 <div className="flex-1 min-w-0">
-                                  <p className="text-xs font-semibold text-red-800 mb-1">
+                                  <p className="text-xs font-semibold text-rose-800 mb-1">
                                     Catatan Dinas {proposal.dinas_status === 'rejected' ? '(Ditolak)' : '(Revisi)'}
                                   </p>
-                                  <p className="text-sm text-red-700">{proposal.dinas_catatan}</p>
+                                  <p className="text-sm text-rose-700">{proposal.dinas_catatan}</p>
                                 </div>
                                 {proposal.dinas_status === 'revision' && (
                                   <button onClick={() => setChatProposalId(proposal.id)}
@@ -3365,10 +3371,10 @@ const BankeuProposalPage = ({ tahun = new Date().getFullYear() }) => {
                               (proposal.troubleshoot_catatan && !proposal.submitted_to_dinas_at)
                             )
                           ) && (
-                            <div className="mt-3 bg-gradient-to-r from-slate-50 to-slate-50 p-4 rounded-lg border-2 border-orange-300">
+                            <div className="mt-3 bg-slate-50 p-4 rounded-lg border border-amber-200">
                               <div className="flex items-center gap-2 mb-3">
-                                <LuRefreshCw className="w-5 h-5 text-orange-600" />
-                                <span className="font-bold text-orange-900 text-base">Upload Ulang Proposal</span>
+                                <LuRefreshCw className="w-5 h-5 text-amber-600" />
+                                <span className="font-bold text-amber-900 text-base">Upload Ulang Proposal</span>
                                 {(proposal.dinas_status === 'revision' || proposal.dinas_status === 'rejected') && (
                                   <div className="flex items-center gap-1 px-2 py-1 bg-slate-100 border border-slate-300 rounded-lg ml-auto">
                                     <LuInfo className="w-3 h-3 text-slate-700" />
@@ -3391,52 +3397,52 @@ const BankeuProposalPage = ({ tahun = new Date().getFullYear() }) => {
                               
                               <div className="grid grid-cols-2 gap-3 mb-3">
                                 <div className="space-y-1">
-                                  <label className="text-xs font-semibold text-orange-800">Nama Kegiatan Baru (opsional)</label>
+                                  <label className="text-xs font-semibold text-amber-800">Nama Kegiatan Baru (opsional)</label>
                                   <input
                                     type="text"
                                     value={uploadForms[proposal.id]?.nama_kegiatan || ''}
                                     onChange={(e) => updateUploadForm(proposal.id, 'nama_kegiatan', e.target.value)}
                                     placeholder="Kosongkan jika tidak diubah"
-                                    className="w-full px-3 py-2 text-sm border-2 border-orange-200 rounded-lg focus:ring-2 focus:ring-orange-200 focus:border-orange-500 bg-white"
+                                    className="w-full px-3 py-2 text-sm border-2 border-amber-200 rounded-lg focus:ring-2 focus:ring-amber-200 focus:border-amber-500 bg-white"
                                   />
                                 </div>
 
                                 <div className="space-y-1">
-                                  <label className="text-xs font-semibold text-orange-800">Volume Baru (opsional)</label>
+                                  <label className="text-xs font-semibold text-amber-800">Volume Baru (opsional)</label>
                                   <input
                                     type="text"
                                     value={uploadForms[proposal.id]?.volume || ''}
                                     onChange={(e) => updateUploadForm(proposal.id, 'volume', e.target.value)}
                                     placeholder="Kosongkan jika tidak diubah"
-                                    className="w-full px-3 py-2 text-sm border-2 border-orange-200 rounded-lg focus:ring-2 focus:ring-orange-200 focus:border-orange-500 bg-white"
+                                    className="w-full px-3 py-2 text-sm border-2 border-amber-200 rounded-lg focus:ring-2 focus:ring-amber-200 focus:border-amber-500 bg-white"
                                   />
                                 </div>
 
                                 <div className="space-y-1">
-                                  <label className="text-xs font-semibold text-orange-800">Lokasi Baru (opsional)</label>
+                                  <label className="text-xs font-semibold text-amber-800">Lokasi Baru (opsional)</label>
                                   <input
                                     type="text"
                                     value={uploadForms[proposal.id]?.lokasi || ''}
                                     onChange={(e) => updateUploadForm(proposal.id, 'lokasi', e.target.value)}
                                     placeholder="Kosongkan jika tidak diubah"
-                                    className="w-full px-3 py-2 text-sm border-2 border-orange-200 rounded-lg focus:ring-2 focus:ring-orange-200 focus:border-orange-500 bg-white"
+                                    className="w-full px-3 py-2 text-sm border-2 border-amber-200 rounded-lg focus:ring-2 focus:ring-amber-200 focus:border-amber-500 bg-white"
                                   />
                                 </div>
 
                                 <div className="space-y-1">
-                                  <label className="text-xs font-semibold text-orange-800">Anggaran Baru (opsional)</label>
+                                  <label className="text-xs font-semibold text-amber-800">Anggaran Baru (opsional)</label>
                                   <div className="relative">
-                                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-600 text-sm font-medium">Rp</span>
+                                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-600 text-sm font-medium">Rp</span>
                                     <input
                                       type="text"
                                       value={formatRupiah(uploadForms[proposal.id]?.anggaran || '')}
                                       onChange={(e) => updateUploadForm(proposal.id, 'anggaran', e.target.value.replace(/\D/g, ''))}
                                       placeholder="Kosongkan jika tidak diubah"
-                                      className={`w-full pl-10 pr-3 py-2 text-sm border-2 rounded-lg focus:ring-2 ${isAnggaranOverLimit(uploadForms[proposal.id]?.anggaran, proposal.id) ? 'border-red-500 focus:ring-red-200 focus:border-red-500 bg-red-50 text-red-700' : 'border-orange-200 focus:ring-orange-200 focus:border-orange-500 bg-white'}`}
+                                      className={`w-full pl-10 pr-3 py-2 text-sm border-2 rounded-lg focus:ring-2 ${isAnggaranOverLimit(uploadForms[proposal.id]?.anggaran, proposal.id) ? 'border-rose-500 focus:ring-rose-200 focus:border-rose-500 bg-rose-50 text-rose-700' : 'border-amber-200 focus:ring-amber-200 focus:border-amber-500 bg-white'}`}
                                     />
                                   </div>
                                   {isAnggaranOverLimit(uploadForms[proposal.id]?.anggaran, proposal.id) && (
-                                    <p className="text-xs font-semibold text-red-600">⚠️ Total anggaran seluruh proposal melebihi batas maks Rp 1,5 Miliar</p>
+                                    <p className="text-xs font-semibold text-rose-600">⚠️ Total anggaran seluruh proposal melebihi batas maks Rp 1,5 Miliar</p>
                                   )}
                                 </div>
                               </div>
@@ -3458,12 +3464,12 @@ const BankeuProposalPage = ({ tahun = new Date().getFullYear() }) => {
                                 />
                                 <label
                                   htmlFor={`file-revision-compact-${proposal.id}`}
-                                  className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 bg-gradient-to-r from-slate-600 to-slate-600 text-white rounded-lg font-semibold text-sm hover:from-slate-700 hover:to-slate-700 cursor-pointer transition-all shadow-md"
+                                  className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 bg-slate-900 text-white rounded-lg font-semibold text-sm hover:bg-slate-800 cursor-pointer transition-all shadow-md"
                                 >
                                   <LuUpload className="w-4 h-4" />
                                   Pilih File PDF Baru
                                 </label>
-                                <p className="text-xs text-gray-600">
+                                <p className="text-xs text-slate-600">
                                   Max 5MB • Setelah upload, gunakan tombol <strong>"Kirim ke Dinas Terkait"</strong> di atas
                                 </p>
                               </div>
@@ -3486,7 +3492,7 @@ const BankeuProposalPage = ({ tahun = new Date().getFullYear() }) => {
                         setSelectedKegiatanIdInfra('');
                       }
                     }}
-                    className="w-full px-6 py-4 bg-gradient-to-r from-slate-600 to-slate-600 text-white rounded-xl hover:from-slate-700 hover:to-slate-700 flex items-center justify-center gap-3 font-bold text-lg shadow-lg hover:shadow-xl transition-all transform hover:scale-[1.02]"
+                    className="w-full px-6 py-4 bg-slate-900 text-white rounded-xl hover:bg-slate-800 flex items-center justify-center gap-3 font-bold text-lg shadow-lg hover:shadow-xl transition-all transform hover:scale-[1.02]"
                   >
                     <LuUpload className="w-6 h-6" />
                     {showUploadFormInfra ? 'Tutup Form' : 'Tambah Proposal Infrastruktur Baru'}
@@ -3494,12 +3500,12 @@ const BankeuProposalPage = ({ tahun = new Date().getFullYear() }) => {
 
                   {/* Dropdown & Form Upload Inline */}
                   {showUploadFormInfra && (
-                    <div className="mt-4 p-4 sm:p-6 bg-white rounded-2xl border-2 border-slate-300 shadow-xl transition-all duration-300">
+                    <div className="mt-4 p-4 sm:p-6 bg-white rounded-2xl border border-slate-300 shadow-xl transition-all duration-300">
                       <div className="space-y-5">
                         {/* Dropdown Pilih Program */}
                         <div className={`dropdown-container-infra relative ${dropdownOpenInfra ? 'mb-96' : 'mb-6'}`}>
                           <label className="flex items-center gap-3 text-lg sm:text-xl font-bold text-slate-900 mb-4">
-                            <div className="flex items-center justify-center w-10 h-10 bg-gradient-to-br from-slate-500 to-slate-600 text-white rounded-full shadow-md">
+                            <div className="flex items-center justify-center w-10 h-10 bg-slate-900 text-white rounded-full shadow-md">
                               <span className="text-base font-bold">1</span>
                             </div>
                             <span>Pilih Program Infrastruktur</span>
@@ -3510,9 +3516,9 @@ const BankeuProposalPage = ({ tahun = new Date().getFullYear() }) => {
                               ref={dropdownButtonRefInfra}
                               type="button"
                               onClick={() => setDropdownOpenInfra(!dropdownOpenInfra)}
-                              className="w-full pl-5 pr-12 py-5 bg-gradient-to-r from-slate-50 to-slate-50 border-2 border-slate-300 rounded-xl text-base sm:text-lg font-semibold text-left shadow-sm focus:outline-none focus:ring-4 focus:ring-slate-200 focus:border-slate-500 hover:border-slate-400 transition-all duration-200 cursor-pointer"
+                              className="w-full pl-5 pr-12 py-5 bg-slate-50 border border-slate-300 rounded-xl text-base sm:text-lg font-semibold text-left shadow-sm focus:outline-none focus:ring-4 focus:ring-slate-200 focus:border-slate-500 hover:border-slate-400 transition-all duration-200 cursor-pointer"
                             >
-                              <span className={selectedKegiatanIdInfra ? 'text-gray-800' : 'text-gray-500'}>
+                              <span className={selectedKegiatanIdInfra ? 'text-slate-800' : 'text-slate-500'}>
                                 {selectedKegiatanIdInfra 
                                   ? (() => {
                                       const selected = infrastrukturData.find(i => i.kegiatan.id.toString() === selectedKegiatanIdInfra);
@@ -3537,7 +3543,7 @@ const BankeuProposalPage = ({ tahun = new Date().getFullYear() }) => {
                             
                             {/* Dropdown Menu with Scroll - Fixed Position */}
                             {dropdownOpenInfra && (
-                              <div className="absolute left-0 right-0 top-full mt-2 z-50 bg-white border-2 border-slate-300 rounded-xl shadow-2xl overflow-hidden">
+                              <div className="absolute left-0 right-0 top-full mt-2 z-50 bg-white border border-slate-300 rounded-xl shadow-2xl overflow-hidden">
                                 <div className="max-h-80 overflow-y-auto custom-scrollbar">
                                     {infrastrukturData.map((item, idx) => (
                                       <button
@@ -3550,8 +3556,8 @@ const BankeuProposalPage = ({ tahun = new Date().getFullYear() }) => {
                                         className={`w-full px-5 py-4 text-left text-base sm:text-lg font-medium transition-colors leading-relaxed ${
                                           selectedKegiatanIdInfra === item.kegiatan.id.toString()
                                             ? 'bg-slate-100 text-slate-900 font-semibold'
-                                            : 'text-gray-800 hover:bg-slate-50'
-                                        } ${idx !== infrastrukturData.length - 1 ? 'border-b border-gray-200' : 'mb-2'}`}
+                                            : 'text-slate-800 hover:bg-slate-50'
+                                        } ${idx !== infrastrukturData.length - 1 ? 'border-b border-slate-200' : 'mb-2'}`}
                                       >
                                         <span className="block">
                                           {item.kegiatan.nama_kegiatan}
@@ -3563,7 +3569,7 @@ const BankeuProposalPage = ({ tahun = new Date().getFullYear() }) => {
                             )}
                           </div>
                           {selectedKegiatanIdInfra && (
-                            <p className="mt-3 text-sm sm:text-base text-gray-600 flex items-center gap-2">
+                            <p className="mt-3 text-sm sm:text-base text-slate-600 flex items-center gap-2">
                               <svg className="w-5 h-5 text-slate-500" fill="currentColor" viewBox="0 0 20 20">
                                 <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
                               </svg>
@@ -3576,10 +3582,10 @@ const BankeuProposalPage = ({ tahun = new Date().getFullYear() }) => {
                         {selectedKegiatanIdInfra && (
                           <div className="pt-5 border-t-2 border-slate-200 space-y-4">
                             <div className="flex items-center gap-2 mb-4">
-                              <div className="flex items-center justify-center w-8 h-8 bg-gradient-to-br from-slate-500 to-slate-600 text-white rounded-full shadow-md">
+                              <div className="flex items-center justify-center w-8 h-8 bg-slate-900 text-white rounded-full shadow-md">
                                 <span className="text-sm font-bold">2</span>
                               </div>
-                              <h4 className="text-base sm:text-lg font-bold text-gray-900">
+                              <h4 className="text-base sm:text-lg font-bold text-slate-900">
                                 Isi Detail Proposal
                               </h4>
                             </div>
@@ -3623,18 +3629,18 @@ const BankeuProposalPage = ({ tahun = new Date().getFullYear() }) => {
           </div>
 
           {/* Non-Infrastruktur */}
-          <div className="bg-white rounded-2xl shadow-lg overflow-hidden border border-gray-100">
+          <div className="bg-white rounded-2xl shadow-lg overflow-hidden border border-slate-100">
             <button
               onClick={() => setExpandedNonInfra(!expandedNonInfra)}
-              className="w-full px-6 py-5 flex items-center justify-between bg-gradient-to-r from-slate-50 via-slate-50 to-slate-50 hover:from-slate-100 hover:via-slate-100 hover:to-slate-100 transition-all group"
+              className="w-full px-6 py-5 flex items-center justify-between bg-slate-50 hover:bg-slate-100 transition-all group"
             >
               <div className="flex items-center gap-4">
-                <div className="w-10 h-10 bg-gradient-to-br from-slate-500 to-slate-600 rounded-xl flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform">
+                <div className="w-10 h-10 bg-slate-900 rounded-xl flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform">
                   {expandedNonInfra ? <LuChevronDown className="w-5 h-5 text-white" /> : <LuChevronRight className="w-5 h-5 text-white" />}
                 </div>
                 <div className="text-left">
-                  <h3 className="text-xl font-bold text-gray-900">Non-Infrastruktur</h3>
-                  <p className="text-sm text-gray-600">
+                  <h3 className="text-xl font-bold text-slate-900">Non-Infrastruktur</h3>
+                  <p className="text-sm text-slate-600">
                     {(() => {
                       const uniqueKegiatanIds = new Set();
                       proposals.forEach(p => {
@@ -3649,8 +3655,8 @@ const BankeuProposalPage = ({ tahun = new Date().getFullYear() }) => {
                   </p>
                 </div>
               </div>
-              <div className="px-4 py-2 bg-white rounded-xl shadow-md border border-gray-100">
-                <span className="text-2xl font-bold bg-gradient-to-r from-slate-600 to-slate-600 bg-clip-text text-transparent">
+              <div className="px-4 py-2 bg-white rounded-xl shadow-md border border-slate-100">
+                <span className="text-2xl font-bold text-slate-900">
                   {(() => {
                     const uniqueKegiatanIds = new Set();
                     proposals.forEach(p => {
@@ -3669,37 +3675,37 @@ const BankeuProposalPage = ({ tahun = new Date().getFullYear() }) => {
             <div className={`transition-all duration-500 ease-in-out ${expandedNonInfra ? 'max-h-[10000px] opacity-100' : 'max-h-0 opacity-0'}`} style={{ overflow: expandedNonInfra && !dropdownOpenNonInfra ? 'visible' : (expandedNonInfra && dropdownOpenNonInfra ? 'visible' : 'hidden') }}>
               {/* Daftar Proposal yang Sudah Diupload */}
               {proposals.filter(p => p.kegiatan_list?.some(k => k.jenis_kegiatan === 'non_infrastruktur')).length > 0 && (
-                <div className="border-b border-gray-200">
+                <div className="border-b border-slate-200">
                   <button
                     onClick={() => setExpandedProposalListNonInfra(!expandedProposalListNonInfra)}
-                    className="w-full p-4 bg-gray-50 hover:bg-gray-100 transition-colors flex items-center justify-between group"
+                    className="w-full p-4 bg-slate-50 hover:bg-slate-100 transition-colors flex items-center justify-between group"
                   >
-                    <h4 className="font-semibold text-gray-700 flex items-center gap-2">
+                    <h4 className="font-semibold text-slate-700 flex items-center gap-2">
                       <LuFileText className="w-4 h-4" />
                       Proposal yang Sudah Diupload ({proposals.filter(p => p.kegiatan_list?.some(k => k.jenis_kegiatan === 'non_infrastruktur')).length})
                     </h4>
                     {expandedProposalListNonInfra ? 
-                      <LuChevronDown className="w-5 h-5 text-gray-500 group-hover:text-gray-700" /> : 
-                      <LuChevronRight className="w-5 h-5 text-gray-500 group-hover:text-gray-700" />
+                      <LuChevronDown className="w-5 h-5 text-slate-500 group-hover:text-slate-700" /> : 
+                      <LuChevronRight className="w-5 h-5 text-slate-500 group-hover:text-slate-700" />
                     }
                   </button>
                   <div className={`transition-all duration-300 ${expandedProposalListNonInfra ? 'max-h-[2000px] opacity-100' : 'max-h-0 opacity-0'}`} style={{ overflow: expandedProposalListNonInfra ? 'visible' : 'hidden' }}>
-                    <div className="p-4 bg-gray-50 space-y-2">
+                    <div className="p-4 bg-slate-50 space-y-2">
                     {proposals.filter(p => p.kegiatan_list?.some(k => k.jenis_kegiatan === 'non_infrastruktur')).map((proposal) => (
-                      <div key={proposal.id} className="bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden">
+                      <div key={proposal.id} className="bg-white rounded-lg border border-slate-200 shadow-sm overflow-hidden">
                         {/* Header Card - Selalu Terlihat */}
                         <button
                           onClick={() => setExpandedProposalId(expandedProposalId === proposal.id ? null : proposal.id)}
-                          className="w-full p-3 hover:bg-gray-50 transition-colors"
+                          className="w-full p-3 hover:bg-slate-50 transition-colors"
                         >
                           <div className="flex items-start justify-between gap-3">
                             <div className="flex-1 text-left">
                               <div className="flex items-center gap-2">
                                 {expandedProposalId === proposal.id ? 
-                                  <LuChevronDown className="w-4 h-4 text-gray-600 flex-shrink-0" /> : 
-                                  <LuChevronRight className="w-4 h-4 text-gray-600 flex-shrink-0" />
+                                  <LuChevronDown className="w-4 h-4 text-slate-600 flex-shrink-0" /> : 
+                                  <LuChevronRight className="w-4 h-4 text-slate-600 flex-shrink-0" />
                                 }
-                                <p className="font-bold text-gray-900 text-base leading-tight">{proposal.judul_proposal}</p>
+                                <p className="font-bold text-slate-900 text-base leading-tight">{proposal.judul_proposal}</p>
                               </div>
                               {proposal.kegiatan_list && proposal.kegiatan_list.filter(k => k.jenis_kegiatan === 'non_infrastruktur').length > 0 && (
                                 <div className="flex flex-wrap gap-1 mt-2 ml-6">
@@ -3713,7 +3719,7 @@ const BankeuProposalPage = ({ tahun = new Date().getFullYear() }) => {
                                   ))}
                                 </div>
                               )}
-                              <p className="text-xs text-gray-500 mt-2 ml-6">
+                              <p className="text-xs text-slate-500 mt-2 ml-6">
                                 {new Date(proposal.created_at).toLocaleDateString('id-ID', { 
                                   day: 'numeric', 
                                   month: 'short', 
@@ -3734,7 +3740,7 @@ const BankeuProposalPage = ({ tahun = new Date().getFullYear() }) => {
 
                         {/* Detail Expanded - Muncul saat di-expand */}
                         {expandedProposalId === proposal.id && (
-                          <div className="px-3 pb-3 border-t border-gray-100">
+                          <div className="px-3 pb-3 border-t border-slate-100">
                             {/* Detail Informasi */}
                             <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mt-3 mb-3">
                               {/* Volume */}
@@ -3802,7 +3808,7 @@ const BankeuProposalPage = ({ tahun = new Date().getFullYear() }) => {
                                     e.stopPropagation();
                                     handleDelete(proposal.id);
                                   }}
-                                  className="px-3 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 flex items-center justify-center gap-1.5 text-xs font-medium transition-all"
+                                  className="px-3 py-2 bg-rose-500 text-white rounded-lg hover:bg-rose-600 flex items-center justify-center gap-1.5 text-xs font-medium transition-all"
                                 >
                                   <LuTrash2 className="w-4 h-4" />
                                 </button>
@@ -3821,19 +3827,19 @@ const BankeuProposalPage = ({ tahun = new Date().getFullYear() }) => {
 
                               if (isNewUnsent) return (
                                 <button onClick={(e) => { e.stopPropagation(); handleSubmitSingleProposal(proposal.id, 'dinas'); }}
-                                  className="w-full mt-2 px-3 py-2 bg-gradient-to-r from-slate-500 to-slate-600 text-white rounded-lg hover:from-slate-600 hover:to-slate-700 flex items-center justify-center gap-1.5 text-xs font-bold transition-all shadow-sm">
+                                  className="w-full mt-2 px-3 py-2 bg-slate-900 text-white rounded-lg hover:bg-slate-800 flex items-center justify-center gap-1.5 text-xs font-bold transition-all shadow-sm">
                                   <LuSend className="w-4 h-4" /> Kirim Proposal Ini ke Dinas
                                 </button>
                               );
                               if (isRevisionReadyDinas) return (
                                 <button onClick={(e) => { e.stopPropagation(); handleResubmitSingleProposal(proposal.id, 'dinas'); }}
-                                  className="w-full mt-2 px-3 py-2 bg-gradient-to-r from-slate-500 to-slate-600 text-white rounded-lg hover:from-slate-600 hover:to-slate-700 flex items-center justify-center gap-1.5 text-xs font-bold transition-all shadow-sm">
+                                  className="w-full mt-2 px-3 py-2 bg-slate-900 text-white rounded-lg hover:bg-slate-800 flex items-center justify-center gap-1.5 text-xs font-bold transition-all shadow-sm">
                                   <LuSend className="w-4 h-4" /> Kirim Ulang ke Dinas
                                 </button>
                               );
                               if (isRevisionReadyKecamatan) return (
                                 <button onClick={(e) => { e.stopPropagation(); handleResubmitSingleProposal(proposal.id, 'kecamatan'); }}
-                                  className="w-full mt-2 px-3 py-2 bg-gradient-to-r from-slate-500 to-slate-600 text-white rounded-lg hover:from-slate-600 hover:to-slate-700 flex items-center justify-center gap-1.5 text-xs font-bold transition-all shadow-sm">
+                                  className="w-full mt-2 px-3 py-2 bg-slate-900 text-white rounded-lg hover:bg-slate-800 flex items-center justify-center gap-1.5 text-xs font-bold transition-all shadow-sm">
                                   <LuSend className="w-4 h-4" /> Kirim Ulang ke Kecamatan
                                 </button>
                               );
@@ -3844,14 +3850,14 @@ const BankeuProposalPage = ({ tahun = new Date().getFullYear() }) => {
 
                           {/* Catatan Dinas */}
                           {proposal.dinas_catatan && (proposal.dinas_status === 'rejected' || proposal.dinas_status === 'revision') && (
-                            <div className="mt-3 p-3 bg-red-50 border-l-3 border-red-400 rounded">
+                            <div className="mt-3 p-3 bg-rose-50 border-l-3 border-rose-400 rounded">
                               <div className="flex items-start gap-2">
-                                <LuInfo className="w-4 h-4 text-red-600 mt-0.5 flex-shrink-0" />
+                                <LuInfo className="w-4 h-4 text-rose-600 mt-0.5 flex-shrink-0" />
                                 <div className="flex-1 min-w-0">
-                                  <p className="text-xs font-semibold text-red-800 mb-1">
+                                  <p className="text-xs font-semibold text-rose-800 mb-1">
                                     Catatan Dinas {proposal.dinas_status === 'rejected' ? '(Ditolak)' : '(Revisi)'}
                                   </p>
-                                  <p className="text-sm text-red-700">{proposal.dinas_catatan}</p>
+                                  <p className="text-sm text-rose-700">{proposal.dinas_catatan}</p>
                                 </div>
                                 {proposal.dinas_status === 'revision' && (
                                   <button onClick={() => setChatProposalId(proposal.id)}
@@ -3914,10 +3920,10 @@ const BankeuProposalPage = ({ tahun = new Date().getFullYear() }) => {
                               (proposal.troubleshoot_catatan && !proposal.submitted_to_dinas_at)
                             )
                           ) && (
-                            <div className="mt-3 bg-gradient-to-r from-slate-50 to-slate-50 p-4 rounded-lg border-2 border-orange-300">
+                            <div className="mt-3 bg-slate-50 p-4 rounded-lg border border-amber-200">
                               <div className="flex items-center gap-2 mb-3">
-                                <LuRefreshCw className="w-5 h-5 text-orange-600" />
-                                <span className="font-bold text-orange-900 text-base">Upload Ulang Proposal</span>
+                                <LuRefreshCw className="w-5 h-5 text-amber-600" />
+                                <span className="font-bold text-amber-900 text-base">Upload Ulang Proposal</span>
                                 {(proposal.dinas_status === 'revision' || proposal.dinas_status === 'rejected') && (
                                   <div className="flex items-center gap-1 px-2 py-1 bg-slate-100 border border-slate-300 rounded-lg ml-auto">
                                     <LuInfo className="w-3 h-3 text-slate-700" />
@@ -3940,52 +3946,52 @@ const BankeuProposalPage = ({ tahun = new Date().getFullYear() }) => {
                               
                               <div className="grid grid-cols-2 gap-3 mb-3">
                                 <div className="space-y-1">
-                                  <label className="text-xs font-semibold text-orange-800">Nama Kegiatan Baru (opsional)</label>
+                                  <label className="text-xs font-semibold text-amber-800">Nama Kegiatan Baru (opsional)</label>
                                   <input
                                     type="text"
                                     value={uploadForms[proposal.id]?.nama_kegiatan || ''}
                                     onChange={(e) => updateUploadForm(proposal.id, 'nama_kegiatan', e.target.value)}
                                     placeholder="Kosongkan jika tidak diubah"
-                                    className="w-full px-3 py-2 text-sm border-2 border-orange-200 rounded-lg focus:ring-2 focus:ring-orange-200 focus:border-orange-500 bg-white"
+                                    className="w-full px-3 py-2 text-sm border-2 border-amber-200 rounded-lg focus:ring-2 focus:ring-amber-200 focus:border-amber-500 bg-white"
                                   />
                                 </div>
 
                                 <div className="space-y-1">
-                                  <label className="text-xs font-semibold text-orange-800">Volume Baru (opsional)</label>
+                                  <label className="text-xs font-semibold text-amber-800">Volume Baru (opsional)</label>
                                   <input
                                     type="text"
                                     value={uploadForms[proposal.id]?.volume || ''}
                                     onChange={(e) => updateUploadForm(proposal.id, 'volume', e.target.value)}
                                     placeholder="Kosongkan jika tidak diubah"
-                                    className="w-full px-3 py-2 text-sm border-2 border-orange-200 rounded-lg focus:ring-2 focus:ring-orange-200 focus:border-orange-500 bg-white"
+                                    className="w-full px-3 py-2 text-sm border-2 border-amber-200 rounded-lg focus:ring-2 focus:ring-amber-200 focus:border-amber-500 bg-white"
                                   />
                                 </div>
 
                                 <div className="space-y-1">
-                                  <label className="text-xs font-semibold text-orange-800">Lokasi Baru (opsional)</label>
+                                  <label className="text-xs font-semibold text-amber-800">Lokasi Baru (opsional)</label>
                                   <input
                                     type="text"
                                     value={uploadForms[proposal.id]?.lokasi || ''}
                                     onChange={(e) => updateUploadForm(proposal.id, 'lokasi', e.target.value)}
                                     placeholder="Kosongkan jika tidak diubah"
-                                    className="w-full px-3 py-2 text-sm border-2 border-orange-200 rounded-lg focus:ring-2 focus:ring-orange-200 focus:border-orange-500 bg-white"
+                                    className="w-full px-3 py-2 text-sm border-2 border-amber-200 rounded-lg focus:ring-2 focus:ring-amber-200 focus:border-amber-500 bg-white"
                                   />
                                 </div>
 
                                 <div className="space-y-1">
-                                  <label className="text-xs font-semibold text-orange-800">Anggaran Baru (opsional)</label>
+                                  <label className="text-xs font-semibold text-amber-800">Anggaran Baru (opsional)</label>
                                   <div className="relative">
-                                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-600 text-sm font-medium">Rp</span>
+                                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-600 text-sm font-medium">Rp</span>
                                     <input
                                       type="text"
                                       value={formatRupiah(uploadForms[proposal.id]?.anggaran || '')}
                                       onChange={(e) => updateUploadForm(proposal.id, 'anggaran', e.target.value.replace(/\D/g, ''))}
                                       placeholder="Kosongkan jika tidak diubah"
-                                      className={`w-full pl-10 pr-3 py-2 text-sm border-2 rounded-lg focus:ring-2 ${isAnggaranOverLimit(uploadForms[proposal.id]?.anggaran, proposal.id) ? 'border-red-500 focus:ring-red-200 focus:border-red-500 bg-red-50 text-red-700' : 'border-orange-200 focus:ring-orange-200 focus:border-orange-500 bg-white'}`}
+                                      className={`w-full pl-10 pr-3 py-2 text-sm border-2 rounded-lg focus:ring-2 ${isAnggaranOverLimit(uploadForms[proposal.id]?.anggaran, proposal.id) ? 'border-rose-500 focus:ring-rose-200 focus:border-rose-500 bg-rose-50 text-rose-700' : 'border-amber-200 focus:ring-amber-200 focus:border-amber-500 bg-white'}`}
                                     />
                                   </div>
                                   {isAnggaranOverLimit(uploadForms[proposal.id]?.anggaran, proposal.id) && (
-                                    <p className="text-xs font-semibold text-red-600">⚠️ Total anggaran seluruh proposal melebihi batas maks Rp 1,5 Miliar</p>
+                                    <p className="text-xs font-semibold text-rose-600">⚠️ Total anggaran seluruh proposal melebihi batas maks Rp 1,5 Miliar</p>
                                   )}
                                 </div>
                               </div>
@@ -4006,12 +4012,12 @@ const BankeuProposalPage = ({ tahun = new Date().getFullYear() }) => {
                                 />
                                 <label
                                   htmlFor={`file-revision-compact-noninf-${proposal.id}`}
-                                  className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 bg-gradient-to-r from-slate-600 to-slate-600 text-white rounded-lg font-semibold text-sm hover:from-slate-700 hover:to-slate-700 cursor-pointer transition-all shadow-md"
+                                  className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 bg-slate-900 text-white rounded-lg font-semibold text-sm hover:bg-slate-800 cursor-pointer transition-all shadow-md"
                                 >
                                   <LuUpload className="w-4 h-4" />
                                   Pilih File PDF Baru
                                 </label>
-                                <p className="text-xs text-gray-600">
+                                <p className="text-xs text-slate-600">
                                   Max 5MB • Setelah upload, gunakan tombol <strong>"Kirim ke Dinas Terkait"</strong> di atas
                                 </p>
                               </div>
@@ -4034,7 +4040,7 @@ const BankeuProposalPage = ({ tahun = new Date().getFullYear() }) => {
                         setSelectedKegiatanIdNonInfra('');
                       }
                     }}
-                    className="w-full px-6 py-4 bg-gradient-to-r from-slate-600 to-slate-600 text-white rounded-xl hover:from-slate-700 hover:to-slate-700 flex items-center justify-center gap-3 font-bold text-lg shadow-lg hover:shadow-xl transition-all transform hover:scale-[1.02]"
+                    className="w-full px-6 py-4 bg-slate-900 text-white rounded-xl hover:bg-slate-800 flex items-center justify-center gap-3 font-bold text-lg shadow-lg hover:shadow-xl transition-all transform hover:scale-[1.02]"
                   >
                     <LuUpload className="w-6 h-6" />
                     {showUploadFormNonInfra ? 'Tutup Form' : 'Tambah Proposal Non-Infrastruktur Baru'}
@@ -4042,12 +4048,12 @@ const BankeuProposalPage = ({ tahun = new Date().getFullYear() }) => {
 
                   {/* Dropdown & Form Upload Inline */}
                   {showUploadFormNonInfra && (
-                    <div className="mt-4 p-4 sm:p-6 bg-white rounded-2xl border-2 border-slate-300 shadow-xl transition-all duration-300">
+                    <div className="mt-4 p-4 sm:p-6 bg-white rounded-2xl border border-slate-300 shadow-xl transition-all duration-300">
                       <div className="space-y-5">
                         {/* Dropdown Pilih Program */}
                         <div className={`dropdown-container-noninf relative ${dropdownOpenNonInfra ? 'mb-96' : 'mb-6'}`}>
                           <label className="flex items-center gap-3 text-lg sm:text-xl font-bold text-slate-900 mb-4">
-                            <div className="flex items-center justify-center w-10 h-10 bg-gradient-to-br from-slate-500 to-slate-600 text-white rounded-full shadow-md">
+                            <div className="flex items-center justify-center w-10 h-10 bg-slate-900 text-white rounded-full shadow-md">
                               <span className="text-base font-bold">1</span>
                             </div>
                             <span>Pilih Program Non-Infrastruktur</span>
@@ -4058,9 +4064,9 @@ const BankeuProposalPage = ({ tahun = new Date().getFullYear() }) => {
                               ref={dropdownButtonRefNonInfra}
                               type="button"
                               onClick={() => setDropdownOpenNonInfra(!dropdownOpenNonInfra)}
-                              className="w-full pl-5 pr-12 py-5 bg-gradient-to-r from-slate-50 to-slate-50 border-2 border-slate-300 rounded-xl text-base sm:text-lg font-semibold text-left shadow-sm focus:outline-none focus:ring-4 focus:ring-slate-200 focus:border-slate-500 hover:border-slate-400 transition-all duration-200 cursor-pointer"
+                              className="w-full pl-5 pr-12 py-5 bg-slate-50 border border-slate-300 rounded-xl text-base sm:text-lg font-semibold text-left shadow-sm focus:outline-none focus:ring-4 focus:ring-slate-200 focus:border-slate-500 hover:border-slate-400 transition-all duration-200 cursor-pointer"
                             >
-                              <span className={selectedKegiatanIdNonInfra ? 'text-gray-800' : 'text-gray-500'}>
+                              <span className={selectedKegiatanIdNonInfra ? 'text-slate-800' : 'text-slate-500'}>
                                 {selectedKegiatanIdNonInfra 
                                   ? (() => {
                                       const selected = nonInfrastrukturData.find(i => i.kegiatan.id.toString() === selectedKegiatanIdNonInfra);
@@ -4085,7 +4091,7 @@ const BankeuProposalPage = ({ tahun = new Date().getFullYear() }) => {
                             
                             {/* Dropdown Menu with Scroll - Fixed Position */}
                             {dropdownOpenNonInfra && (
-                              <div className="absolute left-0 right-0 top-full mt-2 z-50 bg-white border-2 border-slate-300 rounded-xl shadow-2xl overflow-hidden">
+                              <div className="absolute left-0 right-0 top-full mt-2 z-50 bg-white border border-slate-300 rounded-xl shadow-2xl overflow-hidden">
                                 <div className="max-h-80 overflow-y-auto custom-scrollbar">
                                     {nonInfrastrukturData.map((item, idx) => (
                                       <button
@@ -4098,8 +4104,8 @@ const BankeuProposalPage = ({ tahun = new Date().getFullYear() }) => {
                                         className={`w-full px-5 py-4 text-left text-base sm:text-lg font-medium transition-colors leading-relaxed ${
                                           selectedKegiatanIdNonInfra === item.kegiatan.id.toString()
                                             ? 'bg-slate-100 text-slate-900 font-semibold'
-                                            : 'text-gray-800 hover:bg-slate-50'
-                                        } ${idx !== nonInfrastrukturData.length - 1 ? 'border-b border-gray-200' : 'mb-2'}`}
+                                            : 'text-slate-800 hover:bg-slate-50'
+                                        } ${idx !== nonInfrastrukturData.length - 1 ? 'border-b border-slate-200' : 'mb-2'}`}
                                       >
                                         <span className="block">
                                           {item.kegiatan.nama_kegiatan}
@@ -4111,7 +4117,7 @@ const BankeuProposalPage = ({ tahun = new Date().getFullYear() }) => {
                             )}
                           </div>
                           {selectedKegiatanIdNonInfra && (
-                            <p className="mt-3 text-sm sm:text-base text-gray-600 flex items-center gap-2">
+                            <p className="mt-3 text-sm sm:text-base text-slate-600 flex items-center gap-2">
                               <svg className="w-5 h-5 text-slate-500" fill="currentColor" viewBox="0 0 20 20">
                                 <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
                               </svg>
@@ -4124,10 +4130,10 @@ const BankeuProposalPage = ({ tahun = new Date().getFullYear() }) => {
                         {selectedKegiatanIdNonInfra && (
                           <div className="pt-5 border-t-2 border-slate-200 space-y-4">
                             <div className="flex items-center gap-2 mb-4">
-                              <div className="flex items-center justify-center w-8 h-8 bg-gradient-to-br from-slate-500 to-slate-600 text-white rounded-full shadow-md">
+                              <div className="flex items-center justify-center w-8 h-8 bg-slate-900 text-white rounded-full shadow-md">
                                 <span className="text-sm font-bold">2</span>
                               </div>
-                              <h4 className="text-base sm:text-lg font-bold text-gray-900">
+                              <h4 className="text-base sm:text-lg font-bold text-slate-900">
                                 Isi Detail Proposal
                               </h4>
                             </div>
@@ -4193,10 +4199,10 @@ const BankeuProposalPage = ({ tahun = new Date().getFullYear() }) => {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4">
           <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-hidden flex flex-col">
             {/* Header */}
-            <div className="bg-gradient-to-r from-slate-500 to-slate-600 px-6 py-4 flex items-center justify-between">
+            <div className="bg-slate-900 px-6 py-4 flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 bg-white bg-opacity-30 rounded-lg flex items-center justify-center shadow-sm">
-                  <LuPencil className="w-5 h-5 text-gray-800" />
+                  <LuPencil className="w-5 h-5 text-slate-800" />
                 </div>
                 <div>
                   <h2 className="text-xl font-bold text-white">Edit Proposal</h2>
@@ -4210,7 +4216,7 @@ const BankeuProposalPage = ({ tahun = new Date().getFullYear() }) => {
                 }}
                 className="w-8 h-8 bg-white bg-opacity-30 hover:bg-opacity-40 rounded-lg flex items-center justify-center transition-all shadow-sm"
               >
-                <LuX className="w-5 h-5 text-gray-800 font-bold" />
+                <LuX className="w-5 h-5 text-slate-800 font-bold" />
               </button>
             </div>
 
@@ -4218,69 +4224,69 @@ const BankeuProposalPage = ({ tahun = new Date().getFullYear() }) => {
             <div className="flex-1 overflow-y-auto p-6 space-y-4">
               {/* Judul Proposal */}
               <div className="space-y-2">
-                <label className="text-sm font-semibold text-gray-800">Judul Proposal</label>
+                <label className="text-sm font-semibold text-slate-800">Judul Proposal</label>
                 <input
                   type="text"
                   value={editFormData.judul_proposal}
                   onChange={(e) => setEditFormData(prev => ({ ...prev, judul_proposal: e.target.value }))}
                   placeholder="Judul proposal"
-                  className="w-full px-4 py-3 text-sm font-medium border-2 border-gray-300 rounded-xl focus:outline-none focus:ring-4 focus:ring-amber-200 focus:border-amber-500 bg-white hover:border-amber-400 transition-all duration-200 shadow-sm"
+                  className="w-full px-4 py-3 text-sm font-medium border border-slate-300 rounded-xl focus:outline-none focus:ring-4 focus:ring-amber-200 focus:border-amber-500 bg-white hover:border-amber-400 transition-all duration-200 shadow-sm"
                 />
               </div>
 
               {/* Nama Kegiatan */}
               <div className="space-y-2">
-                <label className="text-sm font-semibold text-gray-800">Nama Kegiatan Spesifik</label>
+                <label className="text-sm font-semibold text-slate-800">Nama Kegiatan Spesifik</label>
                 <input
                   type="text"
                   value={editFormData.nama_kegiatan_spesifik}
                   onChange={(e) => setEditFormData(prev => ({ ...prev, nama_kegiatan_spesifik: e.target.value }))}
                   placeholder="Nama kegiatan spesifik"
-                  className="w-full px-4 py-3 text-sm font-medium border-2 border-gray-300 rounded-xl focus:outline-none focus:ring-4 focus:ring-amber-200 focus:border-amber-500 bg-white hover:border-amber-400 transition-all duration-200 shadow-sm"
+                  className="w-full px-4 py-3 text-sm font-medium border border-slate-300 rounded-xl focus:outline-none focus:ring-4 focus:ring-amber-200 focus:border-amber-500 bg-white hover:border-amber-400 transition-all duration-200 shadow-sm"
                 />
               </div>
 
               <div className="grid grid-cols-2 gap-4">
                 {/* Volume */}
                 <div className="space-y-2">
-                  <label className="text-sm font-semibold text-gray-800">Volume</label>
+                  <label className="text-sm font-semibold text-slate-800">Volume</label>
                   <input
                     type="text"
                     value={editFormData.volume}
                     onChange={(e) => setEditFormData(prev => ({ ...prev, volume: e.target.value }))}
                     placeholder={editingProposal?.kegiatan_list?.[0]?.jenis_kegiatan === 'infrastruktur' ? 'Contoh: 200 m x 3 m x 0.15 m (P x L x T)' : 'Contoh: 500 m'}
-                    className="w-full px-4 py-3 text-sm font-medium border-2 border-gray-300 rounded-xl focus:outline-none focus:ring-4 focus:ring-amber-200 focus:border-amber-500 bg-white hover:border-amber-400 transition-all duration-200 shadow-sm"
+                    className="w-full px-4 py-3 text-sm font-medium border border-slate-300 rounded-xl focus:outline-none focus:ring-4 focus:ring-amber-200 focus:border-amber-500 bg-white hover:border-amber-400 transition-all duration-200 shadow-sm"
                   />
                 </div>
 
                 {/* Lokasi */}
                 <div className="space-y-2">
-                  <label className="text-sm font-semibold text-gray-800">Lokasi</label>
+                  <label className="text-sm font-semibold text-slate-800">Lokasi</label>
                   <input
                     type="text"
                     value={editFormData.lokasi}
                     onChange={(e) => setEditFormData(prev => ({ ...prev, lokasi: e.target.value }))}
                     placeholder="Contoh: Kampung Baru"
-                    className="w-full px-4 py-3 text-sm font-medium border-2 border-gray-300 rounded-xl focus:outline-none focus:ring-4 focus:ring-amber-200 focus:border-amber-500 bg-white hover:border-amber-400 transition-all duration-200 shadow-sm"
+                    className="w-full px-4 py-3 text-sm font-medium border border-slate-300 rounded-xl focus:outline-none focus:ring-4 focus:ring-amber-200 focus:border-amber-500 bg-white hover:border-amber-400 transition-all duration-200 shadow-sm"
                   />
                 </div>
               </div>
 
               {/* Anggaran */}
               <div className="space-y-2">
-                <label className="text-sm font-semibold text-gray-800">Anggaran Usulan</label>
+                <label className="text-sm font-semibold text-slate-800">Anggaran Usulan</label>
                 <div className="relative">
-                  <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 text-sm font-semibold">Rp</span>
+                  <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 text-sm font-semibold">Rp</span>
                   <input
                     type="text"
                     value={formatRupiah(editFormData.anggaran_usulan)}
                     onChange={(e) => setEditFormData(prev => ({ ...prev, anggaran_usulan: e.target.value.replace(/\D/g, '') }))}
                     placeholder="0"
-                    className={`w-full pl-12 pr-4 py-3 text-sm font-medium border-2 rounded-xl focus:outline-none focus:ring-4 transition-all duration-200 shadow-sm ${isAnggaranOverLimit(editFormData.anggaran_usulan, editingProposal?.id) ? 'border-red-500 focus:ring-red-200 focus:border-red-500 bg-red-50 text-red-700' : 'border-gray-300 focus:ring-amber-200 focus:border-amber-500 bg-white hover:border-amber-400'}`}
+                    className={`w-full pl-12 pr-4 py-3 text-sm font-medium border-2 rounded-xl focus:outline-none focus:ring-4 transition-all duration-200 shadow-sm ${isAnggaranOverLimit(editFormData.anggaran_usulan, editingProposal?.id) ? 'border-rose-500 focus:ring-rose-200 focus:border-rose-500 bg-rose-50 text-rose-700' : 'border-slate-300 focus:ring-amber-200 focus:border-amber-500 bg-white hover:border-amber-400'}`}
                   />
                 </div>
                 {isAnggaranOverLimit(editFormData.anggaran_usulan, editingProposal?.id) && (
-                  <p className="text-xs font-semibold text-red-600 flex items-center gap-1">
+                  <p className="text-xs font-semibold text-rose-600 flex items-center gap-1">
                     ⚠️ Total anggaran seluruh proposal melebihi batas maksimal Rp 1.500.000.000 (1,5 Miliar).
                   </p>
                 )}
@@ -4288,7 +4294,7 @@ const BankeuProposalPage = ({ tahun = new Date().getFullYear() }) => {
 
               {/* File Upload (opsional) */}
               <div className="space-y-2">
-                <label className="text-sm font-semibold text-gray-800">Ganti File Proposal (opsional)</label>
+                <label className="text-sm font-semibold text-slate-800">Ganti File Proposal (opsional)</label>
                 <div className="flex items-center gap-3">
                   <input
                     type="file"
@@ -4304,42 +4310,42 @@ const BankeuProposalPage = ({ tahun = new Date().getFullYear() }) => {
                   />
                   <label
                     htmlFor="edit-proposal-file"
-                    className="flex-1 px-4 py-3 bg-gray-100 border-2 border-dashed border-gray-300 rounded-xl text-center cursor-pointer hover:bg-gray-50 hover:border-amber-400 transition-all"
+                    className="flex-1 px-4 py-3 bg-slate-100 border-2 border-dashed border-slate-300 rounded-xl text-center cursor-pointer hover:bg-slate-50 hover:border-amber-400 transition-all"
                   >
                     {editFormData.file ? (
                       <span className="text-sm font-medium text-amber-600">{editFormData.file.name}</span>
                     ) : (
-                      <span className="text-sm text-gray-500">Klik untuk pilih file PDF baru</span>
+                      <span className="text-sm text-slate-500">Klik untuk pilih file PDF baru</span>
                     )}
                   </label>
                   {editFormData.file && (
                     <button
                       onClick={() => setEditFormData(prev => ({ ...prev, file: null }))}
-                      className="px-3 py-2 bg-red-100 text-red-600 rounded-lg hover:bg-red-200 transition-all"
+                      className="px-3 py-2 bg-rose-100 text-rose-600 rounded-lg hover:bg-rose-200 transition-all"
                     >
                       <LuX className="w-4 h-4" />
                     </button>
                   )}
                 </div>
-                <p className="text-xs text-gray-500">Kosongkan jika tidak ingin mengganti file</p>
+                <p className="text-xs text-slate-500">Kosongkan jika tidak ingin mengganti file</p>
               </div>
             </div>
 
             {/* Footer */}
-            <div className="bg-gray-50 px-6 py-4 border-t border-gray-200 flex items-center justify-end gap-3">
+            <div className="bg-slate-50 px-6 py-4 border-t border-slate-200 flex items-center justify-end gap-3">
               <button
                 onClick={() => {
                   setShowEditModal(false);
                   setEditingProposal(null);
                 }}
-                className="px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-lg font-semibold text-sm transition-all"
+                className="px-4 py-2 bg-slate-200 hover:bg-slate-300 text-slate-700 rounded-lg font-semibold text-sm transition-all"
               >
                 Batal
               </button>
               <button
                 onClick={handleSaveEdit}
                 disabled={isEditSaving}
-                className="px-6 py-2 bg-gradient-to-r from-slate-500 to-slate-600 hover:from-slate-600 hover:to-slate-700 text-white rounded-lg font-semibold text-sm transition-all flex items-center gap-2 disabled:opacity-50"
+                className="px-6 py-2 bg-slate-900 hover:bg-slate-800 text-white rounded-lg font-semibold text-sm transition-all flex items-center gap-2 disabled:opacity-50"
               >
                 {isEditSaving ? (
                   <>
@@ -4426,7 +4432,7 @@ const KegiatanRow = ({ item, index, onUpload, onRevisionUpload, onReplaceFile, o
 
   return (
     <div 
-      className="p-6 hover:bg-gray-50 transition-all border-b border-gray-100 last:border-b-0"
+      className="p-6 hover:bg-slate-50 transition-all border-b border-slate-100 last:border-b-0"
       data-kegiatan-id={kegiatan.id}
     >
       {/* Selalu tampilkan form upload saja, card proposal disembunyikan */}
@@ -4435,10 +4441,10 @@ const KegiatanRow = ({ item, index, onUpload, onRevisionUpload, onReplaceFile, o
         {hasMultipleOptions && (
           <div className="space-y-2">
             <label className="flex items-center gap-3 text-lg sm:text-xl font-bold text-slate-900">
-              <div className="flex items-center justify-center w-10 h-10 bg-gradient-to-br from-slate-500 to-slate-600 text-white rounded-full shadow-md">
+              <div className="flex items-center justify-center w-10 h-10 bg-slate-900 text-white rounded-full shadow-md">
                 <span className="text-base font-bold">1</span>
               </div>
-              <span>Pilih Judul Kegiatan <span className="text-red-500">*</span></span>
+              <span>Pilih Judul Kegiatan <span className="text-rose-500">*</span></span>
             </label>
             <div className="relative">
               {/* Custom Dropdown Button */}
@@ -4449,9 +4455,9 @@ const KegiatanRow = ({ item, index, onUpload, onRevisionUpload, onReplaceFile, o
                   setDropdownJudulOpen(newState);
                 }}
                 disabled={isSubmitted}
-                className="w-full pl-5 pr-12 py-5 bg-gradient-to-r from-slate-50 to-slate-50 border-2 border-slate-300 rounded-xl text-base sm:text-lg font-semibold text-left shadow-sm focus:outline-none focus:ring-4 focus:ring-slate-200 focus:border-slate-500 hover:border-slate-400 transition-all duration-200 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-full pl-5 pr-12 py-5 bg-slate-50 border border-slate-300 rounded-xl text-base sm:text-lg font-semibold text-left shadow-sm focus:outline-none focus:ring-4 focus:ring-slate-200 focus:border-slate-500 hover:border-slate-400 transition-all duration-200 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                <span className={formData.judul_kegiatan ? 'text-gray-800' : 'text-gray-500'}>
+                <span className={formData.judul_kegiatan ? 'text-slate-800' : 'text-slate-500'}>
                   {formData.judul_kegiatan || '-- Pilih Judul Kegiatan --'}
                 </span>
               </button>
@@ -4469,7 +4475,7 @@ const KegiatanRow = ({ item, index, onUpload, onRevisionUpload, onReplaceFile, o
               
               {/* Dropdown Menu */}
               {dropdownJudulOpen && (
-                <div className="absolute left-0 right-0 top-full mt-2 z-50 bg-white border-2 border-slate-300 rounded-xl shadow-2xl overflow-hidden">
+                <div className="absolute left-0 right-0 top-full mt-2 z-50 bg-white border border-slate-300 rounded-xl shadow-2xl overflow-hidden">
                   <div className="max-h-80 overflow-y-auto custom-scrollbar">
                     {titleOptions.map((title, idx) => (
                       <button
@@ -4482,8 +4488,8 @@ const KegiatanRow = ({ item, index, onUpload, onRevisionUpload, onReplaceFile, o
                         className={`w-full px-5 py-4 text-left text-base sm:text-lg font-medium transition-colors leading-relaxed ${
                           formData.judul_kegiatan === title
                             ? 'bg-slate-100 text-slate-900 font-semibold'
-                            : 'text-gray-800 hover:bg-slate-50'
-                        } ${idx !== titleOptions.length - 1 ? 'border-b border-gray-200' : 'mb-2'}`}
+                            : 'text-slate-800 hover:bg-slate-50'
+                        } ${idx !== titleOptions.length - 1 ? 'border-b border-slate-200' : 'mb-2'}`}
                       >
                         <span className="block">
                           {title}
@@ -4501,59 +4507,59 @@ const KegiatanRow = ({ item, index, onUpload, onRevisionUpload, onReplaceFile, o
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {/* Nama Kegiatan */}
           <div className="space-y-2">
-            <label className="text-sm font-semibold text-gray-800">2. Nama Kegiatan <span className="text-red-500">*</span></label>
+            <label className="text-sm font-semibold text-slate-800">2. Nama Kegiatan <span className="text-rose-500">*</span></label>
             <input
               type="text"
               value={formData.nama_kegiatan || ''}
               onChange={(e) => updateUploadForm(kegiatan.id, 'nama_kegiatan', e.target.value)}
               placeholder="Contoh: Pembangunan Jalan"
               disabled={isSubmitted}
-              className="w-full px-4 py-3 text-sm font-medium border-2 border-gray-300 rounded-xl focus:outline-none focus:ring-4 focus:ring-slate-200 focus:border-slate-500 bg-white hover:border-slate-400 transition-all duration-200 shadow-sm placeholder:text-gray-400 disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-gray-50"
+              className="w-full px-4 py-3 text-sm font-medium border border-slate-300 rounded-xl focus:outline-none focus:ring-4 focus:ring-slate-200 focus:border-slate-500 bg-white hover:border-slate-400 transition-all duration-200 shadow-sm placeholder:text-slate-400 disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-slate-50"
             />
           </div>
 
           {/* Volume */}
           <div className="space-y-2">
-            <label className="text-sm font-semibold text-gray-800">3. Volume <span className="text-red-500">*</span></label>
+            <label className="text-sm font-semibold text-slate-800">3. Volume <span className="text-rose-500">*</span></label>
             <input
               type="text"
               value={formData.volume || ''}
               onChange={(e) => updateUploadForm(kegiatan.id, 'volume', e.target.value)}
               placeholder={kegiatan.jenis_kegiatan === 'infrastruktur' ? 'Contoh: 200 m x 3 m x 0.15 m (P x L x T)' : 'Contoh: 500 m'}
               disabled={isSubmitted}
-              className="w-full px-4 py-3 text-sm font-medium border-2 border-gray-300 rounded-xl focus:outline-none focus:ring-4 focus:ring-slate-200 focus:border-slate-500 bg-white hover:border-slate-400 transition-all duration-200 shadow-sm placeholder:text-gray-400 disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-gray-50"
+              className="w-full px-4 py-3 text-sm font-medium border border-slate-300 rounded-xl focus:outline-none focus:ring-4 focus:ring-slate-200 focus:border-slate-500 bg-white hover:border-slate-400 transition-all duration-200 shadow-sm placeholder:text-slate-400 disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-slate-50"
             />
           </div>
 
           {/* Lokasi */}
           <div className="space-y-2">
-            <label className="text-sm font-semibold text-gray-800">4. Lokasi <span className="text-red-500">*</span></label>
+            <label className="text-sm font-semibold text-slate-800">4. Lokasi <span className="text-rose-500">*</span></label>
             <input
               type="text"
               value={formData.lokasi || ''}
               onChange={(e) => updateUploadForm(kegiatan.id, 'lokasi', e.target.value)}
               placeholder="Contoh: Kampung Baru"
               disabled={isSubmitted}
-              className="w-full px-4 py-3 text-sm font-medium border-2 border-gray-300 rounded-xl focus:outline-none focus:ring-4 focus:ring-slate-200 focus:border-slate-500 bg-white hover:border-slate-400 transition-all duration-200 shadow-sm placeholder:text-gray-400 disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-gray-50"
+              className="w-full px-4 py-3 text-sm font-medium border border-slate-300 rounded-xl focus:outline-none focus:ring-4 focus:ring-slate-200 focus:border-slate-500 bg-white hover:border-slate-400 transition-all duration-200 shadow-sm placeholder:text-slate-400 disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-slate-50"
             />
           </div>
 
           {/* Anggaran */}
           <div className="space-y-2">
-            <label className="text-sm font-semibold text-gray-800">5. Anggaran <span className="text-red-500">*</span></label>
+            <label className="text-sm font-semibold text-slate-800">5. Anggaran <span className="text-rose-500">*</span></label>
             <div className="relative">
-              <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 text-sm font-semibold">Rp</span>
+              <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 text-sm font-semibold">Rp</span>
               <input
                 type="text"
                 value={formatRupiah(formData.anggaran || '')}
                 onChange={(e) => updateUploadForm(kegiatan.id, 'anggaran', e.target.value.replace(/\D/g, ''))}
                 placeholder="0"
                 disabled={isSubmitted}
-                className={`w-full pl-12 pr-4 py-3 text-sm font-medium border-2 rounded-xl focus:outline-none focus:ring-4 transition-all duration-200 shadow-sm placeholder:text-gray-400 disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-gray-50 ${isAnggaranOverLimit(formData.anggaran) ? 'border-red-500 focus:ring-red-200 focus:border-red-500 bg-red-50 text-red-700' : 'border-gray-300 focus:ring-slate-200 focus:border-slate-500 bg-white hover:border-slate-400'}`}
+                className={`w-full pl-12 pr-4 py-3 text-sm font-medium border-2 rounded-xl focus:outline-none focus:ring-4 transition-all duration-200 shadow-sm placeholder:text-slate-400 disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-slate-50 ${isAnggaranOverLimit(formData.anggaran) ? 'border-rose-500 focus:ring-rose-200 focus:border-rose-500 bg-rose-50 text-rose-700' : 'border-slate-300 focus:ring-slate-200 focus:border-slate-500 bg-white hover:border-slate-400'}`}
               />
             </div>
             {isAnggaranOverLimit(formData.anggaran) && (
-              <p className="text-xs font-semibold text-red-600 flex items-center gap-1">
+              <p className="text-xs font-semibold text-rose-600 flex items-center gap-1">
                 ⚠️ Total anggaran seluruh proposal melebihi batas maksimal Rp 1.500.000.000 (1,5 Miliar).
               </p>
             )}
@@ -4573,8 +4579,8 @@ const KegiatanRow = ({ item, index, onUpload, onRevisionUpload, onReplaceFile, o
             />
             <label
               htmlFor={`file-${kegiatan.id}`}
-              className={`flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-slate-600 to-slate-600 text-white rounded-xl font-semibold text-sm shadow-lg transition-all ${
-                isSubmitted ? 'opacity-50 cursor-not-allowed pointer-events-none' : 'hover:from-slate-700 hover:to-slate-700 hover:shadow-xl cursor-pointer transform hover:scale-[1.02]'
+              className={`flex items-center gap-2 px-6 py-3 bg-slate-900 text-white rounded-xl font-semibold text-sm shadow-lg transition-all ${
+                isSubmitted ? 'opacity-50 cursor-not-allowed pointer-events-none' : 'hover:bg-slate-800 hover:shadow-xl cursor-pointer transform hover:scale-[1.02]'
               }`}
             >
               <LuUpload className="w-5 h-5" />
@@ -4601,10 +4607,10 @@ const ContohProposalModal = ({ show, onClose, contohFiles, onDownload }) => {
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4">
       <div className="bg-white rounded-2xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-hidden flex flex-col">
         {/* Header */}
-        <div className="bg-gradient-to-r from-slate-500 to-slate-600 px-6 py-4 flex items-center justify-between">
+        <div className="bg-slate-900 px-6 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 bg-white bg-opacity-30 rounded-lg flex items-center justify-center shadow-sm">
-              <LuDownload className="w-5 h-5 text-gray-800" />
+              <LuDownload className="w-5 h-5 text-slate-800" />
             </div>
             <div>
               <h2 className="text-xl font-bold text-white">Download Format Dokumen</h2>
@@ -4615,7 +4621,7 @@ const ContohProposalModal = ({ show, onClose, contohFiles, onDownload }) => {
             onClick={onClose}
             className="w-8 h-8 bg-white bg-opacity-30 hover:bg-opacity-40 rounded-lg flex items-center justify-center transition-all shadow-sm"
           >
-            <LuX className="w-5 h-5 text-gray-800 font-bold" />
+            <LuX className="w-5 h-5 text-slate-800 font-bold" />
           </button>
         </div>
 
@@ -4626,23 +4632,23 @@ const ContohProposalModal = ({ show, onClose, contohFiles, onDownload }) => {
             <div>
               <div className="flex items-center gap-2 mb-3">
                 <LuImage className="w-5 h-5 text-slate-600" />
-                <h3 className="font-bold text-gray-900 text-lg">Cover Proposal</h3>
+                <h3 className="font-bold text-slate-900 text-lg">Cover Proposal</h3>
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 {contohFiles.cover.map((file, idx) => (
                   <button
                     key={idx}
                     onClick={() => onDownload(file)}
-                    className="flex items-center gap-3 p-4 bg-gradient-to-r from-slate-50 to-slate-50 hover:from-slate-100 hover:to-slate-100 rounded-xl border border-slate-200 transition-all group"
+                    className="flex items-center gap-3 p-4 bg-slate-50 hover:bg-slate-100 rounded-xl border border-slate-200 transition-all group"
                   >
-                    <div className="w-12 h-12 bg-gradient-to-r from-slate-500 to-slate-600 rounded-lg flex items-center justify-center flex-shrink-0">
+                    <div className="w-12 h-12 bg-slate-900 rounded-lg flex items-center justify-center flex-shrink-0">
                       <LuImage className="w-6 h-6 text-white" />
                     </div>
                     <div className="flex-1 text-left">
-                      <p className="font-semibold text-gray-900 text-sm group-hover:text-slate-700 transition-colors">
+                      <p className="font-semibold text-slate-900 text-sm group-hover:text-slate-700 transition-colors">
                         {file.display_name}
                       </p>
-                      <p className="text-xs text-gray-500">{formatFileSize(file.size)}</p>
+                      <p className="text-xs text-slate-500">{formatFileSize(file.size)}</p>
                     </div>
                     <LuDownload className="w-5 h-5 text-slate-600 group-hover:scale-110 transition-transform" />
                   </button>
@@ -4656,23 +4662,23 @@ const ContohProposalModal = ({ show, onClose, contohFiles, onDownload }) => {
             <div>
               <div className="flex items-center gap-2 mb-3">
                 <LuFileText className="w-5 h-5 text-slate-600" />
-                <h3 className="font-bold text-gray-900 text-lg">Template Dokumen Desa</h3>
+                <h3 className="font-bold text-slate-900 text-lg">Template Dokumen Desa</h3>
               </div>
               <div className="grid grid-cols-1 gap-3">
                 {contohFiles.desa.map((file, idx) => (
                   <button
                     key={idx}
                     onClick={() => onDownload(file)}
-                    className="flex items-center gap-3 p-4 bg-gradient-to-r from-slate-50 to-slate-50 hover:from-slate-100 hover:to-slate-100 rounded-xl border border-slate-200 transition-all group"
+                    className="flex items-center gap-3 p-4 bg-slate-50 hover:bg-slate-100 rounded-xl border border-slate-200 transition-all group"
                   >
-                    <div className="w-12 h-12 bg-gradient-to-r from-slate-500 to-slate-600 rounded-lg flex items-center justify-center flex-shrink-0">
+                    <div className="w-12 h-12 bg-slate-900 rounded-lg flex items-center justify-center flex-shrink-0">
                       <LuFileText className="w-6 h-6 text-white" />
                     </div>
                     <div className="flex-1 text-left">
-                      <p className="font-semibold text-gray-900 text-sm group-hover:text-slate-700 transition-colors">
+                      <p className="font-semibold text-slate-900 text-sm group-hover:text-slate-700 transition-colors">
                         {file.display_name}
                       </p>
-                      <p className="text-xs text-gray-500">{file.extension.toUpperCase()} • {formatFileSize(file.size)}</p>
+                      <p className="text-xs text-slate-500">{file.extension.toUpperCase()} • {formatFileSize(file.size)}</p>
                     </div>
                     <LuDownload className="w-5 h-5 text-slate-600 group-hover:scale-110 transition-transform" />
                   </button>
@@ -4685,14 +4691,14 @@ const ContohProposalModal = ({ show, onClose, contohFiles, onDownload }) => {
         </div>
 
         {/* Footer */}
-        <div className="bg-gray-50 px-6 py-4 border-t border-gray-200">
+        <div className="bg-slate-50 px-6 py-4 border-t border-slate-200">
           <div className="flex items-center justify-between">
-            <p className="text-sm text-gray-600">
+            <p className="text-sm text-slate-600">
               <span className="font-semibold">💡 Tips:</span> Download dan isi template sesuai kebutuhan desa Anda
             </p>
             <button
               onClick={onClose}
-              className="px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-lg font-semibold text-sm transition-all"
+              className="px-4 py-2 bg-slate-200 hover:bg-slate-300 text-slate-700 rounded-lg font-semibold text-sm transition-all"
             >
               Tutup
             </button>
@@ -4711,10 +4717,10 @@ const PdfViewerModal = ({ show, onClose, pdfData }) => {
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-75 p-2 sm:p-4">
       <div className="bg-white rounded-xl sm:rounded-2xl shadow-2xl w-full max-w-7xl h-[95vh] sm:h-[90vh] overflow-hidden flex flex-col">
         {/* Header */}
-        <div className="bg-gradient-to-r from-slate-500 to-slate-600 px-3 sm:px-6 py-3 sm:py-4 flex items-center justify-between gap-2 flex-shrink-0">
+        <div className="bg-slate-900 px-3 sm:px-6 py-3 sm:py-4 flex items-center justify-between gap-2 flex-shrink-0">
           <div className="flex items-center gap-2 sm:gap-3 flex-1 min-w-0">
             <div className="w-8 h-8 sm:w-10 sm:h-10 bg-white bg-opacity-30 rounded-lg flex items-center justify-center shadow-sm flex-shrink-0">
-              <LuEye className="w-4 h-4 sm:w-5 sm:h-5 text-gray-800" />
+              <LuEye className="w-4 h-4 sm:w-5 sm:h-5 text-slate-800" />
             </div>
             <div className="flex-1 min-w-0">
               <h2 className="text-xs sm:text-sm md:text-base font-bold text-white truncate">{pdfData.title}</h2>
@@ -4726,12 +4732,12 @@ const PdfViewerModal = ({ show, onClose, pdfData }) => {
             className="w-8 h-8 bg-white bg-opacity-30 hover:bg-opacity-40 rounded-lg flex items-center justify-center transition-all shadow-sm flex-shrink-0"
             title="Tutup"
           >
-            <LuX className="w-5 h-5 text-gray-800 font-bold" />
+            <LuX className="w-5 h-5 text-slate-800 font-bold" />
           </button>
         </div>
 
         {/* PDF Content */}
-        <div className="flex-1 overflow-hidden bg-gray-100 relative">
+        <div className="flex-1 overflow-hidden bg-slate-100 relative">
           <iframe
             src={pdfData.url}
             className="w-full h-full border-0"
@@ -4740,16 +4746,16 @@ const PdfViewerModal = ({ show, onClose, pdfData }) => {
         </div>
 
         {/* Footer - Responsive */}
-        <div className="bg-gray-50 px-3 sm:px-6 py-2 sm:py-3 border-t border-gray-200 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 flex-shrink-0">
-          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-4 text-xs sm:text-sm text-gray-600 w-full sm:w-auto">
+        <div className="bg-slate-50 px-3 sm:px-6 py-2 sm:py-3 border-t border-slate-200 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 flex-shrink-0">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-4 text-xs sm:text-sm text-slate-600 w-full sm:w-auto">
             <span className="flex items-center gap-2 flex-shrink-0">
               <span className="font-semibold">Status:</span>
               {pdfData.proposal.status === 'verified' && <span className="text-slate-600 font-medium">✓ Disetujui</span>}
               {pdfData.proposal.status === 'pending' && <span className="text-yellow-600 font-medium">⏳ Menunggu</span>}
-              {pdfData.proposal.status === 'rejected' && <span className="text-red-600 font-medium">✗ Ditolak</span>}
-              {pdfData.proposal.status === 'revision' && <span className="text-orange-600 font-medium">↻ Revisi</span>}
+              {pdfData.proposal.status === 'rejected' && <span className="text-rose-600 font-medium">✗ Ditolak</span>}
+              {pdfData.proposal.status === 'revision' && <span className="text-amber-600 font-medium">↻ Revisi</span>}
             </span>
-            <span className="text-gray-400 hidden sm:inline">|</span>
+            <span className="text-slate-400 hidden sm:inline">|</span>
             <span className="flex items-center gap-1">
               <span className="font-semibold">Anggaran:</span>
               <span className="text-slate-600 font-medium">Rp {new Intl.NumberFormat("id-ID").format(pdfData.proposal.anggaran_usulan)}</span>
@@ -4757,7 +4763,7 @@ const PdfViewerModal = ({ show, onClose, pdfData }) => {
           </div>
           <button
             onClick={onClose}
-            className="px-3 sm:px-4 py-1.5 sm:py-2 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-lg font-semibold text-xs sm:text-sm transition-all w-full sm:w-auto"
+            className="px-3 sm:px-4 py-1.5 sm:py-2 bg-slate-200 hover:bg-slate-300 text-slate-700 rounded-lg font-semibold text-xs sm:text-sm transition-all w-full sm:w-auto"
           >
             Tutup
           </button>

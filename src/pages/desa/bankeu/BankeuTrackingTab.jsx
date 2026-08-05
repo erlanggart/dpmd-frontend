@@ -24,10 +24,10 @@ const formatRupiah = (val) => {
 const stepConfig = {
   completed: { color: 'bg-emerald-500', text: 'text-emerald-700', bg: 'bg-emerald-50', border: 'border-emerald-200', icon: LuCheck, label: 'Selesai' },
   active: { color: 'bg-slate-500', text: 'text-slate-700', bg: 'bg-slate-50', border: 'border-slate-200', icon: LuClock, label: 'Sedang Diproses' },
-  rejected: { color: 'bg-red-500', text: 'text-red-700', bg: 'bg-red-50', border: 'border-red-200', icon: LuX, label: 'Ditolak' },
+  rejected: { color: 'bg-rose-500', text: 'text-rose-700', bg: 'bg-rose-50', border: 'border-rose-200', icon: LuX, label: 'Ditolak' },
   revision: { color: 'bg-amber-500', text: 'text-amber-700', bg: 'bg-amber-50', border: 'border-amber-200', icon: LuRefreshCw, label: 'Perlu Revisi' },
   troubleshoot: { color: 'bg-slate-500', text: 'text-slate-700', bg: 'bg-slate-50', border: 'border-slate-200', icon: LuWrench, label: 'Catatan' },
-  waiting: { color: 'bg-gray-300', text: 'text-gray-500', bg: 'bg-gray-50', border: 'border-gray-200', icon: LuClock, label: 'Menunggu' },
+  waiting: { color: 'bg-slate-300', text: 'text-slate-500', bg: 'bg-slate-50', border: 'border-slate-200', icon: LuClock, label: 'Menunggu' },
 };
 
 // ========== Komponen: Step Indicator ==========
@@ -43,7 +43,7 @@ const StepIndicator = ({ step, isLast }) => {
           <Icon className="w-4 h-4 text-white" />
         </div>
         {!isLast && (
-          <div className={`w-0.5 flex-1 min-h-[40px] ${step.status === 'completed' ? 'bg-slate-300' : 'bg-gray-200'}`} />
+          <div className={`w-0.5 flex-1 min-h-[40px] ${step.status === 'completed' ? 'bg-slate-300' : 'bg-slate-200'}`} />
         )}
       </div>
       {/* Content */}
@@ -59,15 +59,15 @@ const StepIndicator = ({ step, isLast }) => {
             </span>
           </div>
           {step.date && (
-            <p className="text-xs text-gray-500 mt-1">{formatDate(step.date)}</p>
+            <p className="text-xs text-slate-500 mt-1">{formatDate(step.date)}</p>
           )}
           {step.verifier && (
-            <p className="text-xs text-gray-600 mt-0.5">Oleh: {step.verifier}</p>
+            <p className="text-xs text-slate-600 mt-0.5">Oleh: {step.verifier}</p>
           )}
           {step.catatan && (
-            <div className="mt-2 text-xs bg-white/60 rounded-lg p-2 border border-gray-100">
-              <span className="font-medium text-gray-700">Catatan:</span>{' '}
-              <span className="text-gray-600">{step.catatan}</span>
+            <div className="mt-2 text-xs bg-white/60 rounded-lg p-2 border border-slate-100">
+              <span className="font-medium text-slate-700">Catatan:</span>{' '}
+              <span className="text-slate-600">{step.catatan}</span>
             </div>
           )}
         </div>
@@ -206,19 +206,19 @@ const ProposalTrackingCard = ({ proposal, index }) => {
     if (proposal.troubleshoot_catatan && proposal.status === 'revision' && !proposal.submitted_to_dinas_at) return { text: 'Troubleshoot DPMD', color: 'bg-slate-100 text-slate-800 border-slate-300' };
     
     // Status Kecamatan
-    if (proposal.kecamatan_status === 'rejected') return { text: 'Ditolak Kecamatan', color: 'bg-red-100 text-red-800 border-red-300' };
+    if (proposal.kecamatan_status === 'rejected') return { text: 'Ditolak Kecamatan', color: 'bg-rose-100 text-rose-800 border-rose-300' };
     if (proposal.kecamatan_status === 'revision') return { text: 'Revisi Kecamatan', color: 'bg-amber-100 text-amber-800 border-amber-300' };
     if (proposal.kecamatan_status === 'pending' || proposal.kecamatan_status === 'in_review') return { text: 'Di Kecamatan', color: 'bg-slate-100 text-slate-800 border-slate-300' };
     
     // Status Dinas
-    if (proposal.dinas_status === 'rejected') return { text: 'Ditolak Dinas', color: 'bg-red-100 text-red-800 border-red-300' };
+    if (proposal.dinas_status === 'rejected') return { text: 'Ditolak Dinas', color: 'bg-rose-100 text-rose-800 border-rose-300' };
     if (proposal.dinas_status === 'revision') return { text: 'Revisi Dinas', color: 'bg-amber-100 text-amber-800 border-amber-300' };
     if (proposal.dinas_status === 'approved') return { text: 'Di Kecamatan', color: 'bg-slate-100 text-slate-800 border-slate-300' };
     if (proposal.dinas_status === 'pending' || proposal.dinas_status === 'in_review') return { text: 'Di Dinas', color: 'bg-slate-100 text-slate-800 border-slate-300' };
     
     // Belum dikirim
     if (proposal.submitted_to_dinas_at) return { text: 'Dikirim ke Dinas', color: 'bg-slate-100 text-slate-800 border-slate-300' };
-    return { text: 'Belum Dikirim', color: 'bg-gray-100 text-gray-700 border-gray-300' };
+    return { text: 'Belum Dikirim', color: 'bg-slate-100 text-slate-700 border-slate-300' };
   };
 
   const badge = getOverallBadge();
@@ -230,8 +230,8 @@ const ProposalTrackingCard = ({ proposal, index }) => {
   const progressPct = Math.round((completedSteps / mainSteps.length) * 100);
 
   return (
-    <div className={`bg-white rounded-2xl border-2 transition-all duration-300 shadow-sm hover:shadow-md ${
-      isFinalApproved ? 'border-slate-200' : isRejected ? 'border-red-200' : 'border-gray-200'
+    <div className={`rounded-xl border bg-white transition-colors ${
+      isFinalApproved ? 'border-emerald-200' : isRejected ? 'border-rose-200' : 'border-slate-200'
     }`}>
       {/* Card Header */}
       <button
@@ -241,13 +241,13 @@ const ProposalTrackingCard = ({ proposal, index }) => {
         <div className="flex items-start justify-between gap-3">
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 flex-wrap mb-2">
-              <span className="text-xs font-mono text-gray-400">#{proposal.id}</span>
+              <span className="text-xs font-mono text-slate-400">#{proposal.id}</span>
               <span className={`text-xs font-semibold px-2.5 py-0.5 rounded-full border ${badge.color}`}>
                 {badge.text}
               </span>
             </div>
-            <h3 className="font-bold text-gray-800 text-sm md:text-base truncate">{proposal.judul_proposal}</h3>
-            <div className="flex flex-wrap gap-x-4 gap-y-1 mt-2 text-xs text-gray-500">
+            <h3 className="font-bold text-slate-800 text-sm md:text-base truncate">{proposal.judul_proposal}</h3>
+            <div className="flex flex-wrap gap-x-4 gap-y-1 mt-2 text-xs text-slate-500">
               {proposal.kegiatan_list?.map((k, i) => (
                 <span key={i} className={`px-1.5 py-0.5 rounded text-[10px] font-medium ${
                   k.jenis_kegiatan === 'infrastruktur' ? 'bg-slate-100 text-slate-700' : 'bg-slate-100 text-slate-700'
@@ -256,7 +256,7 @@ const ProposalTrackingCard = ({ proposal, index }) => {
                 </span>
               ))}
             </div>
-            <div className="flex flex-wrap gap-x-4 gap-y-1 mt-2 text-xs text-gray-500">
+            <div className="flex flex-wrap gap-x-4 gap-y-1 mt-2 text-xs text-slate-500">
               {proposal.lokasi && (
                 <span className="flex items-center gap-1"><LuMapPin className="w-3 h-3" />{proposal.lokasi}</span>
               )}
@@ -276,32 +276,32 @@ const ProposalTrackingCard = ({ proposal, index }) => {
                     strokeWidth="3" strokeDasharray={`${progressPct} ${100 - progressPct}`}
                     strokeLinecap="round" />
                 </svg>
-                <span className="absolute inset-0 flex items-center justify-center text-[10px] font-bold text-gray-700">
+                <span className="absolute inset-0 flex items-center justify-center text-[10px] font-bold text-slate-700">
                   {progressPct}%
                 </span>
               </div>
             </div>
-            {expanded ? <LuChevronDown className="w-5 h-5 text-gray-400" /> : <LuChevronRight className="w-5 h-5 text-gray-400" />}
+            {expanded ? <LuChevronDown className="w-5 h-5 text-slate-400" /> : <LuChevronRight className="w-5 h-5 text-slate-400" />}
           </div>
         </div>
 
         {/* Progress bar mobile */}
         <div className="mt-3 sm:hidden">
-          <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
+          <div className="h-1.5 bg-slate-100 rounded-full overflow-hidden">
             <div
               className={`h-full rounded-full transition-all duration-500 ${
-                isFinalApproved ? 'bg-slate-500' : isRejected ? 'bg-red-500' : 'bg-slate-500'
+                isFinalApproved ? 'bg-slate-500' : isRejected ? 'bg-rose-500' : 'bg-slate-500'
               }`}
               style={{ width: `${progressPct}%` }}
             />
           </div>
-          <p className="text-[10px] text-gray-400 mt-1 text-right">{progressPct}% selesai</p>
+          <p className="text-[10px] text-slate-400 mt-1 text-right">{progressPct}% selesai</p>
         </div>
       </button>
 
       {/* Expanded: Timeline */}
       {expanded && (
-        <div className="px-4 md:px-5 pb-5 border-t border-gray-100 pt-4">
+        <div className="px-4 md:px-5 pb-5 border-t border-slate-100 pt-4">
           <div className="ml-1">
             {steps.map((step, idx) => (
               <StepIndicator key={idx} step={step} isLast={idx === steps.length - 1} />
@@ -317,10 +317,10 @@ const ProposalTrackingCard = ({ proposal, index }) => {
 const SuratTrackingCard = ({ surat, tahun }) => {
   if (!surat || (!surat.surat_pengantar && !surat.surat_permohonan)) {
     return (
-      <div className="bg-white rounded-2xl border-2 border-dashed border-gray-300 p-8 text-center">
-        <LuMailOpen className="w-12 h-12 text-gray-300 mx-auto mb-3" />
-        <p className="text-gray-500 font-medium">Belum ada surat untuk TA {tahun}</p>
-        <p className="text-xs text-gray-400 mt-1">Upload surat pengantar dan permohonan di tab Pengajuan</p>
+      <div className="rounded-xl border border-dashed border-slate-300 bg-white p-10 text-center">
+        <LuMailOpen className="mx-auto mb-3 h-10 w-10 text-slate-300" />
+        <p className="text-sm font-medium text-slate-500">Belum ada surat untuk TA {tahun}</p>
+        <p className="mt-1 text-xs text-slate-400">Unggah surat pengantar dan permohonan di tab Pengajuan.</p>
       </div>
     );
   }
@@ -328,26 +328,26 @@ const SuratTrackingCard = ({ surat, tahun }) => {
   const getKecamatanBadge = () => {
     const status = surat.kecamatan_status;
     if (status === 'approved') return { text: 'Disetujui Kecamatan', color: 'bg-slate-100 text-slate-800 border-slate-300', icon: LuCheck };
-    if (status === 'rejected') return { text: 'Ditolak Kecamatan', color: 'bg-red-100 text-red-800 border-red-300', icon: LuX };
+    if (status === 'rejected') return { text: 'Ditolak Kecamatan', color: 'bg-rose-100 text-rose-800 border-rose-300', icon: LuX };
     if (status === 'revision') return { text: 'Perlu Revisi', color: 'bg-amber-100 text-amber-800 border-amber-300', icon: LuRefreshCw };
     if (surat.submitted_to_kecamatan) return { text: 'Dikirim ke Kecamatan', color: 'bg-slate-100 text-slate-800 border-slate-300', icon: LuClock };
-    return { text: 'Belum Dikirim', color: 'bg-gray-100 text-gray-700 border-gray-300', icon: LuClock };
+    return { text: 'Belum Dikirim', color: 'bg-slate-100 text-slate-700 border-slate-300', icon: LuClock };
   };
 
   const kecBadge = getKecamatanBadge();
   const KecIcon = kecBadge.icon;
 
   return (
-    <div className="bg-white rounded-2xl border-2 border-gray-200 shadow-sm overflow-hidden">
+    <div className="overflow-hidden rounded-xl border border-slate-200 bg-white">
       <div className="p-5">
-        <div className="flex items-center justify-between mb-4">
+        <div className="mb-4 flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <div className="w-9 h-9 bg-gradient-to-br from-slate-500 to-slate-600 rounded-xl flex items-center justify-center shadow-md">
-              <LuFileText className="w-4 h-4 text-white" />
+            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-slate-900">
+              <LuFileText className="h-4 w-4 text-white" />
             </div>
             <div>
-              <h3 className="font-bold text-gray-800 text-sm">Surat Desa TA {tahun}</h3>
-              <p className="text-[10px] text-gray-400">Pengantar & Permohonan</p>
+              <h3 className="font-bold text-slate-800 text-sm">Surat Desa TA {tahun}</h3>
+              <p className="text-[10px] text-slate-400">Pengantar & Permohonan</p>
             </div>
           </div>
           <span className={`inline-flex items-center gap-1 text-xs font-semibold px-2.5 py-1 rounded-full border ${kecBadge.color}`}>
@@ -359,35 +359,35 @@ const SuratTrackingCard = ({ surat, tahun }) => {
         {/* Surat items */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           {/* Surat Pengantar */}
-          <div className={`rounded-xl p-3 border ${surat.surat_pengantar ? 'bg-slate-50 border-slate-200' : 'bg-gray-50 border-gray-200'}`}>
+          <div className={`rounded-xl p-3 border ${surat.surat_pengantar ? 'bg-slate-50 border-slate-200' : 'bg-slate-50 border-slate-200'}`}>
             <div className="flex items-center gap-2 mb-1">
               {surat.surat_pengantar ? (
                 <LuCheck className="w-4 h-4 text-slate-600" />
               ) : (
-                <LuCircleAlert className="w-4 h-4 text-gray-400" />
+                <LuCircleAlert className="w-4 h-4 text-slate-400" />
               )}
-              <span className={`text-xs font-semibold ${surat.surat_pengantar ? 'text-slate-700' : 'text-gray-500'}`}>
+              <span className={`text-xs font-semibold ${surat.surat_pengantar ? 'text-slate-700' : 'text-slate-500'}`}>
                 Surat Pengantar
               </span>
             </div>
-            <p className="text-[10px] text-gray-500 ml-6">
+            <p className="text-[10px] text-slate-500 ml-6">
               {surat.surat_pengantar ? 'Sudah diupload' : 'Belum diupload'}
             </p>
           </div>
 
           {/* Surat Permohonan */}
-          <div className={`rounded-xl p-3 border ${surat.surat_permohonan ? 'bg-slate-50 border-slate-200' : 'bg-gray-50 border-gray-200'}`}>
+          <div className={`rounded-xl p-3 border ${surat.surat_permohonan ? 'bg-slate-50 border-slate-200' : 'bg-slate-50 border-slate-200'}`}>
             <div className="flex items-center gap-2 mb-1">
               {surat.surat_permohonan ? (
                 <LuCheck className="w-4 h-4 text-slate-600" />
               ) : (
-                <LuCircleAlert className="w-4 h-4 text-gray-400" />
+                <LuCircleAlert className="w-4 h-4 text-slate-400" />
               )}
-              <span className={`text-xs font-semibold ${surat.surat_permohonan ? 'text-slate-700' : 'text-gray-500'}`}>
+              <span className={`text-xs font-semibold ${surat.surat_permohonan ? 'text-slate-700' : 'text-slate-500'}`}>
                 Surat Permohonan
               </span>
             </div>
-            <p className="text-[10px] text-gray-500 ml-6">
+            <p className="text-[10px] text-slate-500 ml-6">
               {surat.surat_permohonan ? 'Sudah diupload' : 'Belum diupload'}
             </p>
           </div>
@@ -396,13 +396,13 @@ const SuratTrackingCard = ({ surat, tahun }) => {
         {/* Timeline surat */}
         <div className="mt-4 space-y-2">
           {surat.submitted_at && (
-            <div className="flex items-center gap-2 text-xs text-gray-500">
+            <div className="flex items-center gap-2 text-xs text-slate-500">
               <LuSend className="w-3 h-3" />
               <span>Dikirim ke Kecamatan: {formatDate(surat.submitted_at)}</span>
             </div>
           )}
           {surat.kecamatan_reviewed_at && (
-            <div className="flex items-center gap-2 text-xs text-gray-500">
+            <div className="flex items-center gap-2 text-xs text-slate-500">
               <LuLandmark className="w-3 h-3" />
               <span>Direview oleh: {surat.reviewer_name || 'Kecamatan'} ({formatDate(surat.kecamatan_reviewed_at)})</span>
             </div>
@@ -475,33 +475,33 @@ const BankeuTrackingTab = ({ tahun }) => {
   return (
     <div className="space-y-6">
       {/* Summary Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
         <button onClick={() => setFilterStatus('all')}
-          className={`p-4 rounded-2xl border-2 transition-all text-left ${filterStatus === 'all' ? 'border-slate-400 bg-slate-50 shadow-md' : 'border-gray-200 bg-white hover:border-gray-300'}`}>
-          <p className="text-2xl font-bold text-gray-800">{stats.total}</p>
-          <p className="text-xs text-gray-500 font-medium mt-1">Total Proposal</p>
+          className={`rounded-xl border p-4 text-left transition-colors ${filterStatus === 'all' ? 'border-slate-900 bg-white' : 'border-slate-200 bg-white hover:border-slate-300'}`}>
+          <p className="text-2xl font-semibold tracking-tight text-slate-900">{stats.total}</p>
+          <p className="mt-1 text-xs font-medium text-slate-500">Total proposal</p>
         </button>
         <button onClick={() => setFilterStatus('approved')}
-          className={`p-4 rounded-2xl border-2 transition-all text-left ${filterStatus === 'approved' ? 'border-slate-400 bg-slate-50 shadow-md' : 'border-gray-200 bg-white hover:border-gray-300'}`}>
-          <p className="text-2xl font-bold text-slate-600">{stats.approved}</p>
-          <p className="text-xs text-gray-500 font-medium mt-1">Disetujui</p>
+          className={`rounded-xl border p-4 text-left transition-colors ${filterStatus === 'approved' ? 'border-slate-900 bg-white' : 'border-slate-200 bg-white hover:border-slate-300'}`}>
+          <p className="text-2xl font-semibold tracking-tight text-emerald-600">{stats.approved}</p>
+          <p className="mt-1 text-xs font-medium text-slate-500">Disetujui</p>
         </button>
         <button onClick={() => setFilterStatus('in_progress')}
-          className={`p-4 rounded-2xl border-2 transition-all text-left ${filterStatus === 'in_progress' ? 'border-slate-400 bg-slate-50 shadow-md' : 'border-gray-200 bg-white hover:border-gray-300'}`}>
-          <p className="text-2xl font-bold text-slate-600">{stats.inProgress}</p>
-          <p className="text-xs text-gray-500 font-medium mt-1">Dalam Proses</p>
+          className={`rounded-xl border p-4 text-left transition-colors ${filterStatus === 'in_progress' ? 'border-slate-900 bg-white' : 'border-slate-200 bg-white hover:border-slate-300'}`}>
+          <p className="text-2xl font-semibold tracking-tight text-slate-900">{stats.inProgress}</p>
+          <p className="mt-1 text-xs font-medium text-slate-500">Dalam proses</p>
         </button>
         <button onClick={() => setFilterStatus('rejected')}
-          className={`p-4 rounded-2xl border-2 transition-all text-left ${filterStatus === 'rejected' ? 'border-red-400 bg-red-50 shadow-md' : 'border-gray-200 bg-white hover:border-gray-300'}`}>
-          <p className="text-2xl font-bold text-red-600">{stats.needsAction}</p>
-          <p className="text-xs text-gray-500 font-medium mt-1">Perlu Tindakan</p>
+          className={`rounded-xl border p-4 text-left transition-colors ${filterStatus === 'rejected' ? 'border-slate-900 bg-white' : 'border-slate-200 bg-white hover:border-slate-300'}`}>
+          <p className="text-2xl font-semibold tracking-tight text-brand-600">{stats.needsAction}</p>
+          <p className="mt-1 text-xs font-medium text-slate-500">Perlu tindakan</p>
         </button>
       </div>
 
       {/* Surat Section */}
       <div>
-        <h2 className="text-sm font-bold text-gray-700 mb-3 flex items-center gap-2">
-          <LuFileText className="w-4 h-4 text-orange-500" />
+        <h2 className="mb-3 flex items-center gap-2 text-sm font-semibold text-slate-900">
+          <LuFileText className="h-4 w-4 text-slate-400" />
           Status Surat Desa
         </h2>
         <SuratTrackingCard surat={desaSurat} tahun={tahun} />
@@ -510,21 +510,21 @@ const BankeuTrackingTab = ({ tahun }) => {
       {/* Proposals Section */}
       <div>
         <div className="flex items-center justify-between mb-3">
-          <h2 className="text-sm font-bold text-gray-700 flex items-center gap-2">
-            <LuFileText className="w-4 h-4 text-slate-500" />
+          <h2 className="flex items-center gap-2 text-sm font-semibold text-slate-900">
+            <LuFileText className="h-4 w-4 text-slate-400" />
             Status Proposal ({filteredProposals.length})
           </h2>
           <button onClick={fetchTrackingData}
-            className="text-xs text-slate-600 hover:text-slate-800 flex items-center gap-1 font-medium">
+            className="flex items-center gap-1 text-xs font-medium text-slate-500 transition-colors hover:text-slate-900">
             <LuRefreshCw className="w-3 h-3" />
             Refresh
           </button>
         </div>
 
         {filteredProposals.length === 0 ? (
-          <div className="bg-white rounded-2xl border-2 border-dashed border-gray-300 p-8 text-center">
-            <LuFileText className="w-12 h-12 text-gray-300 mx-auto mb-3" />
-            <p className="text-gray-500 font-medium">
+          <div className="rounded-xl border border-dashed border-slate-300 bg-white p-10 text-center">
+            <LuFileText className="mx-auto mb-3 h-10 w-10 text-slate-300" />
+            <p className="text-sm font-medium text-slate-500">
               {filterStatus === 'all' ? 'Belum ada proposal' : 'Tidak ada proposal dengan status ini'}
             </p>
           </div>
@@ -538,22 +538,19 @@ const BankeuTrackingTab = ({ tahun }) => {
       </div>
 
       {/* Flow Legend */}
-      <div className="bg-gradient-to-r from-slate-50 to-slate-50 rounded-2xl p-4 border border-slate-200">
-        <h3 className="text-xs font-bold text-slate-800 mb-3">Alur Verifikasi Proposal</h3>
-        <div className="flex items-center gap-1 overflow-x-auto pb-2 text-[10px]">
-          {[
-            { label: 'Desa', icon: '📋', color: 'bg-slate-500' },
-            { label: 'Dinas Terkait', icon: '🏢', color: 'bg-slate-500' },
-            { label: 'Kecamatan', icon: '🏛️', color: 'bg-slate-500' },
-            { label: 'DPMD', icon: '🛡️', color: 'bg-slate-500' },
-          ].map((item, i, arr) => (
-            <React.Fragment key={i}>
-              <div className="flex items-center gap-1 bg-white rounded-lg px-2.5 py-1.5 border border-gray-200 whitespace-nowrap shadow-sm">
-                <span>{item.icon}</span>
-                <span className="font-semibold text-gray-700">{item.label}</span>
+      <div className="rounded-xl border border-slate-200 bg-white p-4">
+        <h3 className="mb-3 text-xs font-semibold text-slate-900">Alur Verifikasi Proposal</h3>
+        <div className="flex items-center gap-1.5 overflow-x-auto pb-1 text-xs">
+          {['Desa', 'Dinas Terkait', 'Kecamatan', 'DPMD'].map((label, i, arr) => (
+            <React.Fragment key={label}>
+              <div className="flex items-center gap-1.5 whitespace-nowrap rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-1.5">
+                <span className="flex h-4 w-4 items-center justify-center rounded-full bg-slate-900 text-[9px] font-bold text-white">
+                  {i + 1}
+                </span>
+                <span className="font-medium text-slate-700">{label}</span>
               </div>
               {i < arr.length - 1 && (
-                <div className={`w-6 h-0.5 ${item.color} rounded-full flex-shrink-0`} />
+                <div className="h-px w-5 flex-shrink-0 bg-slate-300" />
               )}
             </React.Fragment>
           ))}

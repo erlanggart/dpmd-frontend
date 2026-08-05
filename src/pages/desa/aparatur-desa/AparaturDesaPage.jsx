@@ -10,6 +10,7 @@ import {
 	updateAparaturDesa,
 	getProdukHukumList,
 } from "../../../../src/api/aparaturDesaApi";
+import DesaPageHeader from "../../../components/desa/DesaPageHeader";
 import { FiPlus } from "react-icons/fi";
 import { FaBars, FaGripHorizontal } from "react-icons/fa";
 import { Loader2, Database, Users } from "lucide-react";
@@ -77,40 +78,75 @@ const AparaturDesaPage = () => {
 		setIsFormOpen(true);
 	};
 
+	const totalAktif = aparatur.filter(
+		(item) => String(item.status || "").toLowerCase() === "aktif",
+	).length;
+
 	return (
-		<div className="space-y-6 px-6 py-4">
-			<div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
-				<h1 className="text-2xl font-bold">Manajemen Aparatur Desa</h1>
-				{!isFormOpen && (
-					<div className="flex items-center gap-2 flex-wrap">
-						<div className="inline-flex p-1 bg-white rounded-md border border-slate-200 overflow-hidden space-x-1">
+		<div className="space-y-5">
+			<DesaPageHeader
+				icon={Users}
+				eyebrow="Data Desa"
+				title="Aparatur Desa"
+				description="Kelola data perangkat desa, jabatan, dan dasar hukum pengangkatannya."
+				actions={
+					!isFormOpen && (
+						<>
+							<div className="inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-white p-1">
+								<button
+									type="button"
+									aria-label="Tampilan tabel"
+									className={`rounded-md px-3 py-2 text-sm transition-colors ${
+										viewMode === "table"
+											? "bg-slate-900 text-white"
+											: "text-slate-500 hover:bg-slate-100 hover:text-slate-900"
+									}`}
+									onClick={() => setViewMode("table")}
+								>
+									<FaBars />
+								</button>
+								<button
+									type="button"
+									aria-label="Tampilan bagan struktur"
+									className={`rounded-md px-3 py-2 text-sm transition-colors ${
+										viewMode === "orgchart"
+											? "bg-slate-900 text-white"
+											: "text-slate-500 hover:bg-slate-100 hover:text-slate-900"
+									}`}
+									onClick={() => setViewMode("orgchart")}
+								>
+									<FaGripHorizontal />
+								</button>
+							</div>
 							<button
-								className={`px-3 py-1.5 text-sm rounded ${
-									viewMode === "table" ? "bg-primary text-white" : "bg-white"
-								}`}
-								onClick={() => setViewMode("table")}
+								onClick={handleAddNew}
+								className="inline-flex items-center gap-2 rounded-lg bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-slate-800"
 							>
-								<FaBars />
+								<FiPlus className="h-4 w-4" />
+								<span>Tambah Aparatur</span>
 							</button>
-							<button
-								className={`px-3 py-3 text-sm  rounded ${
-									viewMode === "orgchart" ? "bg-primary text-white" : "bg-white"
-								}`}
-								onClick={() => setViewMode("orgchart")}
-							>
-								<FaGripHorizontal />
-							</button>
-						</div>
-						<button
-							onClick={handleAddNew}
-							className="bg-primary text-white px-4 py-2 rounded-lg flex items-center space-x-2"
-						>
-							<FiPlus />
-							<span>Tambah Baru</span>
-						</button>
-					</div>
-				)}
-			</div>
+						</>
+					)
+				}
+				stats={
+					!isFormOpen && !loading && aparatur.length > 0
+						? [
+								{ label: "Total aparatur", value: aparatur.length, hint: "seluruh data terinput" },
+								{ label: "Aktif", value: totalAktif, hint: "sedang menjabat" },
+								{
+									label: "Nonaktif",
+									value: aparatur.length - totalAktif,
+									hint: "sudah tidak menjabat",
+								},
+								{
+									label: "Produk hukum",
+									value: produkHukum.length,
+									hint: "dasar hukum tersedia",
+								},
+							]
+						: undefined
+				}
+			/>
 
 			{/* Sisa arsip Dapur Desa yang masih menunggu keputusan desa. Panel menyembunyikan
 			    dirinya sendiri kalau semuanya sudah beres, jadi aman dipasang permanen. */}
@@ -127,35 +163,35 @@ const AparaturDesaPage = () => {
 					}}
 				/>
 			) : loading ? (
-				<div className="bg-white rounded-xl border p-12 flex items-center justify-center">
-					<Loader2 className="h-8 w-8 text-slate-600 animate-spin" />
+				<div className="flex items-center justify-center rounded-xl border border-slate-200 bg-white p-12">
+					<Loader2 className="h-6 w-6 animate-spin text-slate-900" />
 				</div>
 			) : aparatur.length === 0 && !isFormOpen ? (
-				<div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
-					<div className="p-8 text-center">
-						<div className="mx-auto h-16 w-16 bg-gray-100 rounded-full flex items-center justify-center mb-4">
-							<Users className="h-8 w-8 text-gray-400" />
+				<div className="overflow-hidden rounded-xl border border-slate-200 bg-white">
+					<div className="p-10 text-center">
+						<div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-xl bg-slate-100">
+							<Users className="h-6 w-6 text-slate-400" />
 						</div>
-						<h3 className="text-lg font-semibold text-gray-900 mb-2">Belum Ada Data Aparatur Desa</h3>
-						<p className="text-gray-500 mb-6 max-w-md mx-auto">
+						<h3 className="mb-2 text-base font-semibold text-slate-900">Belum ada data aparatur desa</h3>
+						<p className="mx-auto mb-6 max-w-md text-sm leading-6 text-slate-500">
 							Data aparatur desa Anda masih kosong. Silakan tambahkan data aparatur secara manual.
 						</p>
-						<div className="flex flex-col sm:flex-row items-center justify-center gap-3">
+						<div className="flex flex-col items-center justify-center gap-3 sm:flex-row">
 							<button
 								onClick={handleAddNew}
-								className="inline-flex items-center gap-2 px-5 py-2.5 bg-primary text-white rounded-lg hover:opacity-90 transition-colors"
+								className="inline-flex items-center gap-2 rounded-lg bg-slate-900 px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-slate-800"
 							>
-								<FiPlus className="w-4 h-4" />
+								<FiPlus className="h-4 w-4" />
 								Tambah Manual
 							</button>
 						</div>
 					</div>
-					<div className="bg-slate-50 border-t border-slate-100 px-6 py-4">
+					<div className="border-t border-slate-100 bg-slate-50 px-6 py-4">
 						<div className="flex items-start gap-3">
-							<Database className="w-5 h-5 text-slate-600 mt-0.5 flex-shrink-0" />
+							<Database className="mt-0.5 h-5 w-5 flex-shrink-0 text-slate-400" />
 							<div className="text-sm">
-								<p className="font-medium text-slate-800">Data Dapur Desa sudah dimuat DPMD</p>
-								<p className="text-slate-600 mt-1">
+								<p className="font-medium text-slate-900">Data Dapur Desa sudah dimuat DPMD</p>
+								<p className="mt-1 leading-6 text-slate-500">
 									Arsip Dapur Desa dimuat sekali oleh DPMD, bukan lagi ditarik per desa. Kalau desa Anda
 									ada di arsip itu, datanya sudah masuk sendiri atau muncul sebagai daftar tinjauan di
 									atas. Halaman ini kosong berarti desa Anda memang tidak ada di arsip tersebut.

@@ -64,13 +64,13 @@ const AparaturDesaList = ({ aparatur = [] }) => {
 	return (
 		<div className="space-y-4">
 			{/* Search & Tabs */}
-			<div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
-				<div className="p-4 border-b border-gray-100">
+			<div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
+				<div className="p-4 border-b border-slate-100">
 					<div className="relative">
-						<Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+						<Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
 						<input
 							type="text"
-							className="w-full pl-10 pr-10 py-2.5 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-slate-500 focus:border-transparent transition-all"
+							className="w-full pl-10 pr-10 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-slate-500 focus:border-transparent transition-all"
 							placeholder="Cari nama atau jabatan..."
 							value={q}
 							onChange={(e) => setQ(e.target.value)}
@@ -78,7 +78,7 @@ const AparaturDesaList = ({ aparatur = [] }) => {
 						{q && (
 							<button
 								onClick={() => setQ("")}
-								className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+								className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
 							>
 								<X className="h-4 w-4" />
 							</button>
@@ -86,19 +86,19 @@ const AparaturDesaList = ({ aparatur = [] }) => {
 					</div>
 				</div>
 
-				<div className="flex border-b border-gray-100">
+				<div className="flex border-b border-slate-100">
 					<button
 						onClick={() => setTab("pemdes")}
 						className={`flex-1 flex items-center justify-center gap-2 px-4 py-3 text-sm font-medium transition-all ${
 							tab === "pemdes"
 								? "text-slate-900 border-b-2 border-slate-700 bg-slate-50"
-								: "text-gray-500 hover:text-gray-700 hover:bg-gray-50"
+								: "text-slate-500 hover:text-slate-700 hover:bg-slate-50"
 						}`}
 					>
 						<Users className="w-4 h-4" />
 						Pemerintah Desa
 						<span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${
-							tab === "pemdes" ? "bg-slate-200 text-slate-700" : "bg-gray-100 text-gray-500"
+							tab === "pemdes" ? "bg-slate-200 text-slate-700" : "bg-slate-100 text-slate-500"
 						}`}>{pemdes.length}</span>
 					</button>
 					<button
@@ -106,13 +106,13 @@ const AparaturDesaList = ({ aparatur = [] }) => {
 						className={`flex-1 flex items-center justify-center gap-2 px-4 py-3 text-sm font-medium transition-all ${
 							tab === "bpd"
 								? "text-slate-900 border-b-2 border-slate-700 bg-slate-50"
-								: "text-gray-500 hover:text-gray-700 hover:bg-gray-50"
+								: "text-slate-500 hover:text-slate-700 hover:bg-slate-50"
 						}`}
 					>
 						<Landmark className="w-4 h-4" />
 						BPD
 						<span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${
-							tab === "bpd" ? "bg-slate-200 text-slate-700" : "bg-gray-100 text-gray-500"
+							tab === "bpd" ? "bg-slate-200 text-slate-700" : "bg-slate-100 text-slate-500"
 						}`}>{bpd.length}</span>
 					</button>
 				</div>
@@ -121,16 +121,16 @@ const AparaturDesaList = ({ aparatur = [] }) => {
 				<div className="hidden md:block">
 					<table className="w-full">
 						<thead>
-							<tr className="bg-gray-50/80">
-								<th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Aparatur</th>
-								<th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Jabatan</th>
-								<th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Jenis Kelamin</th>
-								<th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Pendidikan</th>
-								<th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Status</th>
-								<th className="px-5 py-3 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider">Aksi</th>
+							<tr className="bg-slate-50/80">
+								<th className="px-5 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Aparatur</th>
+								<th className="px-5 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Jabatan</th>
+								<th className="px-5 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Jenis Kelamin</th>
+								<th className="px-5 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Pendidikan</th>
+								<th className="px-5 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Status</th>
+								<th className="px-5 py-3 text-right text-xs font-semibold text-slate-500 uppercase tracking-wider">Aksi</th>
 							</tr>
 						</thead>
-						<tbody className="divide-y divide-gray-100">
+						<tbody className="divide-y divide-slate-100">
 							{currentData.length > 0 ? currentData.map((item) => {
 								const foto = getPasFotoUrl(item);
 								return (
@@ -141,14 +141,14 @@ const AparaturDesaList = ({ aparatur = [] }) => {
 													<img
 														src={foto}
 														alt={item.nama_lengkap}
-														className="h-9 w-9 rounded-full object-cover ring-2 ring-gray-100"
+														className="h-9 w-9 rounded-full object-cover ring-2 ring-slate-100"
 														onError={(e) => { e.currentTarget.style.display = 'none'; e.currentTarget.nextSibling.style.display = 'flex'; }}
 													/>
 												) : null}
-												<div className={`h-9 w-9 bg-gradient-to-br from-slate-100 to-slate-200 rounded-full flex items-center justify-center ring-2 ring-gray-100 ${foto ? 'hidden' : ''}`}>
+												<div className={`h-9 w-9 bg-gradient-to-br from-slate-100 to-slate-200 rounded-full flex items-center justify-center ring-2 ring-slate-100 ${foto ? 'hidden' : ''}`}>
 													<UserCircle className="h-5 w-5 text-slate-600" />
 												</div>
-												<span className="font-medium text-gray-900 group-hover:text-slate-700 transition-colors">
+												<span className="font-medium text-slate-900 group-hover:text-slate-700 transition-colors">
 													{item.nama_lengkap}
 												</span>
 											</Link>
@@ -158,18 +158,18 @@ const AparaturDesaList = ({ aparatur = [] }) => {
 												{item.jabatan || "-"}
 											</span>
 										</td>
-										<td className="px-5 py-3 text-sm text-gray-600">
+										<td className="px-5 py-3 text-sm text-slate-600">
 											{item.jenis_kelamin === "Laki_laki" || item.jenis_kelamin === "Laki-laki" ? "Laki-laki" : item.jenis_kelamin === "Perempuan" ? "Perempuan" : "-"}
 										</td>
-										<td className="px-5 py-3 text-sm text-gray-600">{item.pendidikan_terakhir || "-"}</td>
+										<td className="px-5 py-3 text-sm text-slate-600">{item.pendidikan_terakhir || "-"}</td>
 										<td className="px-5 py-3">
 											<span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold ${
 												(item.status || "").toLowerCase() === "aktif"
 													? "bg-emerald-100 text-emerald-700"
-													: "bg-red-100 text-red-700"
+													: "bg-rose-100 text-rose-700"
 											}`}>
 												<span className={`w-1.5 h-1.5 rounded-full ${
-													(item.status || "").toLowerCase() === "aktif" ? "bg-emerald-500" : "bg-red-500"
+													(item.status || "").toLowerCase() === "aktif" ? "bg-emerald-500" : "bg-rose-500"
 												}`} />
 												{item.status || "-"}
 											</span>
@@ -178,14 +178,14 @@ const AparaturDesaList = ({ aparatur = [] }) => {
 											<div className="flex items-center justify-end gap-1">
 												<button
 													onClick={() => nav(`/desa/aparatur-desa/${item.id}`)}
-													className="p-1.5 text-gray-400 hover:text-slate-700 hover:bg-slate-100 rounded-lg transition-colors"
+													className="p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-lg transition-colors"
 													title="Detail"
 												>
 													<Eye className="w-4 h-4" />
 												</button>
 												<button
 													onClick={() => nav(`/desa/aparatur-desa/${item.id}/edit`)}
-													className="p-1.5 text-gray-400 hover:text-slate-700 hover:bg-slate-100 rounded-lg transition-colors"
+													className="p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-lg transition-colors"
 													title="Edit"
 												>
 													<Edit3 className="w-4 h-4" />
@@ -197,8 +197,8 @@ const AparaturDesaList = ({ aparatur = [] }) => {
 							}) : (
 								<tr>
 									<td colSpan="6" className="px-5 py-12 text-center">
-										<UserCircle className="w-10 h-10 text-gray-300 mx-auto mb-2" />
-										<p className="text-gray-400 text-sm">
+										<UserCircle className="w-10 h-10 text-slate-300 mx-auto mb-2" />
+										<p className="text-slate-400 text-sm">
 											{tab === "pemdes" ? "Tidak ada data pemerintah desa" : "Tidak ada data BPD"}
 										</p>
 									</td>
@@ -209,17 +209,17 @@ const AparaturDesaList = ({ aparatur = [] }) => {
 				</div>
 
 				{/* Mobile Cards */}
-				<div className="md:hidden divide-y divide-gray-100">
+				<div className="md:hidden divide-y divide-slate-100">
 					{currentData.length > 0 ? currentData.map((item) => {
 						const foto = getPasFotoUrl(item);
 						return (
-							<div key={item.id} className="p-4 hover:bg-gray-50/50 transition-colors">
+							<div key={item.id} className="p-4 hover:bg-slate-50/50 transition-colors">
 								<div className="flex items-center gap-3">
 									{foto ? (
 										<img
 											src={foto}
 											alt={item.nama_lengkap}
-											className="h-11 w-11 rounded-full object-cover ring-2 ring-gray-100 flex-shrink-0"
+											className="h-11 w-11 rounded-full object-cover ring-2 ring-slate-100 flex-shrink-0"
 											onError={(e) => { e.currentTarget.style.display = 'none'; e.currentTarget.nextSibling.style.display = 'flex'; }}
 										/>
 									) : null}
@@ -227,24 +227,24 @@ const AparaturDesaList = ({ aparatur = [] }) => {
 										<UserCircle className="h-6 w-6 text-slate-600" />
 									</div>
 									<div className="flex-1 min-w-0">
-										<Link to={`/desa/aparatur-desa/${item.id}`} className="font-semibold text-gray-900 text-sm hover:text-slate-700">
+										<Link to={`/desa/aparatur-desa/${item.id}`} className="font-semibold text-slate-900 text-sm hover:text-slate-700">
 											{item.nama_lengkap}
 										</Link>
 										<div className="flex items-center gap-2 mt-1 flex-wrap">
 											<span className="inline-flex px-2 py-0.5 rounded text-xs font-medium bg-slate-100 text-slate-700">{item.jabatan || "-"}</span>
 											<span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold ${
-												(item.status || "").toLowerCase() === "aktif" ? "bg-emerald-100 text-emerald-700" : "bg-red-100 text-red-700"
+												(item.status || "").toLowerCase() === "aktif" ? "bg-emerald-100 text-emerald-700" : "bg-rose-100 text-rose-700"
 											}`}>
-												<span className={`w-1.5 h-1.5 rounded-full ${(item.status || "").toLowerCase() === "aktif" ? "bg-emerald-500" : "bg-red-500"}`} />
+												<span className={`w-1.5 h-1.5 rounded-full ${(item.status || "").toLowerCase() === "aktif" ? "bg-emerald-500" : "bg-rose-500"}`} />
 												{item.status}
 											</span>
 										</div>
 									</div>
 									<div className="flex items-center gap-1 flex-shrink-0">
-										<button onClick={() => nav(`/desa/aparatur-desa/${item.id}`)} className="p-2 text-gray-400 hover:text-slate-700 rounded-lg">
+										<button onClick={() => nav(`/desa/aparatur-desa/${item.id}`)} className="p-2 text-slate-400 hover:text-slate-700 rounded-lg">
 											<Eye className="w-4 h-4" />
 										</button>
-										<button onClick={() => nav(`/desa/aparatur-desa/${item.id}/edit`)} className="p-2 text-gray-400 hover:text-slate-700 rounded-lg">
+										<button onClick={() => nav(`/desa/aparatur-desa/${item.id}/edit`)} className="p-2 text-slate-400 hover:text-slate-700 rounded-lg">
 											<Edit3 className="w-4 h-4" />
 										</button>
 									</div>
@@ -253,8 +253,8 @@ const AparaturDesaList = ({ aparatur = [] }) => {
 						);
 					}) : (
 						<div className="p-8 text-center">
-							<UserCircle className="w-10 h-10 text-gray-300 mx-auto mb-2" />
-							<p className="text-gray-400 text-sm">
+							<UserCircle className="w-10 h-10 text-slate-300 mx-auto mb-2" />
+							<p className="text-slate-400 text-sm">
 								{tab === "pemdes" ? "Tidak ada data pemerintah desa" : "Tidak ada data BPD"}
 							</p>
 						</div>

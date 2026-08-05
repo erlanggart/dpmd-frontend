@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
-import { LuDollarSign, LuFileText, LuRadar, LuArrowLeft, LuClipboardCheck } from 'react-icons/lu';
+import { LuDollarSign, LuFileText, LuRadar, LuArrowLeft, LuArrowRight, LuClipboardCheck } from 'react-icons/lu';
 import BankeuProposalPage from './BankeuProposalPage';
 import BankeuTrackingTab from './BankeuTrackingTab';
 import DesaBankeuLpjPage from './DesaBankeuLpjPage';
+import DesaPageHeader from '../../../components/desa/DesaPageHeader';
 
 const DesaBankeuPage = () => {
   const [selectedYear, setSelectedYear] = useState(null);
@@ -10,92 +11,74 @@ const DesaBankeuPage = () => {
 
   // Year Selection Screen
   if (!selectedYear) {
+    const years = [
+      {
+        tahun: 2025,
+        icon: LuClipboardCheck,
+        label: "LPJ Bantuan Keuangan",
+        desc: "Laporan pertanggungjawaban penggunaan bantuan keuangan TA 2025.",
+        badge: "LPJ",
+      },
+      {
+        tahun: 2026,
+        icon: LuFileText,
+        label: "Proposal Bantuan Keuangan",
+        desc: "Pengajuan proposal dan pemantauan verifikasi TA 2026.",
+        badge: "Proposal",
+      },
+      {
+        tahun: 2027,
+        icon: LuFileText,
+        label: "Proposal Bantuan Keuangan",
+        desc: "Pengajuan proposal dan pemantauan verifikasi TA 2027.",
+        badge: "Proposal",
+      },
+    ];
+
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-50 p-4 md:p-8">
-        <div className="max-w-4xl mx-auto">
-          {/* Header */}
-          <div className="text-center mb-12">
-            <div className="inline-flex h-20 w-20 bg-gradient-to-br from-slate-500 to-slate-600 rounded-3xl items-center justify-center mb-6 shadow-2xl shadow-slate-500/30">
-              <LuDollarSign className="h-10 w-10 text-white" />
-            </div>
-            <h1 className="text-3xl md:text-4xl font-bold bg-gradient-to-r from-gray-800 via-slate-700 to-slate-600 bg-clip-text text-transparent mb-3">
-              Bantuan Keuangan Desa
-            </h1>
-            <p className="text-gray-600 text-lg">
-              Pilih tahun anggaran untuk mengelola proposal
-            </p>
-          </div>
+      <div className="space-y-5">
+        <DesaPageHeader
+          icon={LuDollarSign}
+          eyebrow="Bantuan Keuangan"
+          title="Bantuan Keuangan Desa"
+          description="Pilih tahun anggaran untuk mengelola proposal atau laporan pertanggungjawaban."
+        />
 
-          {/* Year Cards */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 max-w-3xl mx-auto">
-            {/* TA 2025 - LPJ */}
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+          {years.map((year) => (
             <button
-              onClick={() => setSelectedYear(2025)}
-              className="group relative bg-white rounded-2xl shadow-lg hover:shadow-2xl border-2 border-slate-200 hover:border-slate-400 p-8 transition-all duration-300 text-center overflow-hidden hover:-translate-y-2"
+              key={year.tahun}
+              onClick={() => setSelectedYear(year.tahun)}
+              className="group rounded-xl border border-slate-200 bg-white p-5 text-left transition hover:border-slate-300 hover:shadow-sm"
             >
-              <div className="absolute inset-0 bg-gradient-to-br from-slate-400/5 to-slate-500/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-              <div className="relative">
-                <div className="h-16 w-16 mx-auto bg-gradient-to-br from-slate-700 to-slate-900 rounded-2xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform duration-300 shadow-lg shadow-slate-900/20">
-                  <span className="text-3xl">📑</span>
+              <div className="flex items-start justify-between gap-3">
+                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-slate-900 text-white">
+                  <year.icon className="h-5 w-5" />
                 </div>
-                <h3 className="text-2xl font-bold text-gray-800 mb-2">TA 2025</h3>
-                <p className="text-sm text-gray-600 leading-relaxed">
-                  LPJ Bantuan Keuangan<br/>Tahun Anggaran 2025
-                </p>
+                <span className="rounded-full bg-slate-100 px-2.5 py-1 text-[11px] font-semibold text-slate-600">
+                  {year.badge}
+                </span>
               </div>
+              <h3 className="mt-4 text-xl font-semibold tracking-tight text-slate-900">
+                TA {year.tahun}
+              </h3>
+              <p className="mt-1 text-sm font-medium text-slate-700">{year.label}</p>
+              <p className="mt-2 text-sm leading-6 text-slate-500">{year.desc}</p>
+              <span className="mt-4 inline-flex items-center gap-1.5 text-sm font-semibold text-slate-900">
+                Buka
+                <LuArrowRight className="h-4 w-4 text-slate-400 transition group-hover:translate-x-0.5 group-hover:text-slate-900" />
+              </span>
             </button>
+          ))}
+        </div>
 
-            {/* TA 2026 */}
-            <button
-              onClick={() => setSelectedYear(2026)}
-              className="group relative bg-white rounded-2xl shadow-lg hover:shadow-2xl border-2 border-gray-200 hover:border-slate-400 p-8 transition-all duration-300 text-center overflow-hidden hover:-translate-y-2"
-            >
-              <div className="absolute inset-0 bg-gradient-to-br from-slate-400/5 to-slate-500/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-              <div className="relative">
-                <div className="h-16 w-16 mx-auto bg-gradient-to-br from-slate-500 to-slate-600 rounded-2xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform duration-300 shadow-lg shadow-slate-500/25">
-                  <span className="text-3xl">📋</span>
-                </div>
-                <h3 className="text-2xl font-bold text-gray-800 mb-2">TA 2026</h3>
-                <p className="text-sm text-gray-600 leading-relaxed">
-                  Proposal Bantuan Keuangan<br/>Tahun Anggaran 2026
-                </p>
-              </div>
-            </button>
-
-            {/* TA 2027 */}
-            <button
-              onClick={() => setSelectedYear(2027)}
-              className="group relative bg-white rounded-2xl shadow-lg hover:shadow-2xl border-2 border-gray-200 hover:border-slate-400 p-8 transition-all duration-300 text-center overflow-hidden hover:-translate-y-2"
-            >
-              <div className="absolute inset-0 bg-gradient-to-br from-slate-400/5 to-slate-500/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-              <div className="relative">
-                <div className="h-16 w-16 mx-auto bg-gradient-to-br from-slate-500 to-slate-600 rounded-2xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform duration-300 shadow-lg shadow-slate-500/25">
-                  <span className="text-3xl">📝</span>
-                </div>
-                <h3 className="text-2xl font-bold text-gray-800 mb-2">TA 2027</h3>
-                <p className="text-sm text-gray-600 leading-relaxed">
-                  Proposal Bantuan Keuangan<br/>Tahun Anggaran 2027
-                </p>
-              </div>
-            </button>
-          </div>
-
-          {/* Info Box */}
-          <div className="mt-12 max-w-3xl mx-auto">
-            <div className="bg-slate-50 border-l-4 border-slate-500 p-4 rounded-lg">
-              <div className="flex items-start gap-3">
-                <LuDollarSign className="w-6 h-6 text-slate-600 flex-shrink-0 mt-0.5" />
-                <div>
-                  <h4 className="font-semibold text-slate-900 mb-1">Informasi Penting</h4>
-                  <ul className="text-sm text-slate-800 space-y-1">
-                    <li>• Setiap tahun anggaran memiliki proposal yang terpisah</li>
-                    <li>• Pastikan memilih tahun yang sesuai dengan periode pengajuan</li>
-                    <li>• Data proposal tidak akan tercampur antar tahun anggaran</li>
-                  </ul>
-                </div>
-              </div>
-            </div>
-          </div>
+        <div className="rounded-xl border border-slate-200 bg-white p-5">
+          <h4 className="text-sm font-semibold text-slate-900">Informasi Penting</h4>
+          <ul className="mt-2 space-y-1.5 text-sm leading-6 text-slate-500">
+            <li>• Setiap tahun anggaran memiliki proposal yang terpisah.</li>
+            <li>• Pastikan memilih tahun yang sesuai dengan periode pengajuan.</li>
+            <li>• Data proposal tidak akan tercampur antar tahun anggaran.</li>
+          </ul>
         </div>
       </div>
     );
@@ -104,24 +87,20 @@ const DesaBankeuPage = () => {
   // TA 2025: Show LPJ page directly
   if (selectedYear === 2025) {
     return (
-      <div className="relative">
+      <div className="space-y-5">
         {/* Back button */}
-        <div className="bg-white border-b border-gray-200">
-          <div className="max-w-7xl mx-auto px-4">
-            <div className="flex items-center gap-3 h-14">
-              <button
-                onClick={() => setSelectedYear(null)}
-                className="flex items-center gap-1.5 text-gray-500 hover:text-slate-600 transition-colors text-sm font-medium"
-              >
-                <LuArrowLeft className="w-4 h-4" />
-                <span>Kembali</span>
-              </button>
-              <div className="h-6 w-px bg-gray-300" />
-              <div className="flex items-center gap-2 text-sm font-semibold text-amber-700">
-                <LuClipboardCheck className="w-4 h-4" />
-                <span>LPJ Bantuan Keuangan TA 2025</span>
-              </div>
-            </div>
+        <div className="flex h-14 items-center gap-3 rounded-xl border border-slate-200 bg-white px-4">
+          <button
+            onClick={() => setSelectedYear(null)}
+            className="flex items-center gap-1.5 text-sm font-medium text-slate-500 transition-colors hover:text-slate-900"
+          >
+            <LuArrowLeft className="h-4 w-4" />
+            <span>Kembali</span>
+          </button>
+          <div className="h-5 w-px bg-slate-200" />
+          <div className="flex items-center gap-2 text-sm font-semibold text-slate-900">
+            <LuClipboardCheck className="h-4 w-4 text-slate-400" />
+            <span>LPJ Bantuan Keuangan TA 2025</span>
           </div>
         </div>
         <DesaBankeuLpjPage tahun={2025} />
@@ -136,43 +115,36 @@ const DesaBankeuPage = () => {
   ];
 
   return (
-    <div className="relative">
+    <div className="space-y-5">
       {/* Tab Header bar */}
-      <div className="bg-white border-b border-gray-200">
-        <div className="max-w-7xl mx-auto px-4">
-          <div className="flex items-center gap-3 h-14">
-            {/* Back button */}
+      <div className="flex h-14 items-center gap-3 rounded-xl border border-slate-200 bg-white px-3 sm:px-4">
+        {/* Back button */}
+        <button
+          onClick={() => { setSelectedYear(null); setActiveTab('pengajuan'); }}
+          className="flex items-center gap-1.5 text-sm font-medium text-slate-500 transition-colors hover:text-slate-900"
+        >
+          <LuArrowLeft className="h-4 w-4" />
+          <span className="hidden sm:inline">TA {selectedYear}</span>
+        </button>
+
+        <div className="h-5 w-px bg-slate-200" />
+
+        {/* Tabs */}
+        <div className="flex items-center gap-1">
+          {tabs.map(tab => (
             <button
-              onClick={() => { setSelectedYear(null); setActiveTab('pengajuan'); }}
-              className="flex items-center gap-1.5 text-gray-500 hover:text-slate-600 transition-colors text-sm font-medium mr-2"
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id)}
+              className={`flex items-center gap-2 rounded-lg px-3.5 py-2 text-sm font-semibold transition-colors ${
+                activeTab === tab.id
+                  ? 'bg-slate-900 text-white'
+                  : 'text-slate-500 hover:bg-slate-100 hover:text-slate-900'
+              }`}
             >
-              <LuArrowLeft className="w-4 h-4" />
-              <span className="hidden sm:inline">TA {selectedYear}</span>
+              <tab.icon className="h-4 w-4" />
+              <span>{tab.label}</span>
             </button>
-
-            <div className="h-6 w-px bg-gray-300" />
-
-            {/* Tabs */}
-            <div className="flex items-center gap-1">
-              {tabs.map(tab => (
-                <button
-                  key={tab.id}
-                  onClick={() => setActiveTab(tab.id)}
-                  className={`relative flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold transition-all duration-200 ${
-                    activeTab === tab.id
-                      ? 'bg-slate-50 text-slate-700 shadow-sm'
-                      : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'
-                  }`}
-                >
-                  <tab.icon className="w-4 h-4" />
-                  <span>{tab.label}</span>
-                  {activeTab === tab.id && (
-                    <span className="absolute bottom-0 left-1/2 -translate-x-1/2 w-8 h-0.5 bg-slate-600 rounded-full" />
-                  )}
-                </button>
-              ))}
-            </div>
-          </div>
+          ))}
         </div>
       </div>
 
@@ -180,11 +152,7 @@ const DesaBankeuPage = () => {
       {activeTab === 'pengajuan' ? (
         <BankeuProposalPage tahun={selectedYear} />
       ) : (
-        <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-50 p-4 md:p-6">
-          <div className="max-w-4xl mx-auto">
-            <BankeuTrackingTab tahun={selectedYear} />
-          </div>
-        </div>
+        <BankeuTrackingTab tahun={selectedYear} />
       )}
     </div>
   );
