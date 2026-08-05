@@ -102,8 +102,10 @@ const MenuAksi = ({ aksi }) => {
 			>
 				<MoreVertical className="h-4 w-4" />
 			</button>
+			{/* z-[60] supaya menu yang terbuka di baris paling bawah tetap di atas
+			    bilah navigasi mengambang milik PegawaiLayout (z-50). */}
 			{buka && (
-				<div className="absolute right-0 top-full z-20 mt-1 w-44 overflow-hidden rounded-lg border border-slate-200 bg-white py-1 shadow-lg">
+				<div className="absolute right-0 top-full z-[60] mt-1 w-44 overflow-hidden rounded-lg border border-slate-200 bg-white py-1 shadow-lg">
 					{aksi.map((a) => (
 						<button
 							key={a.label}
@@ -294,18 +296,23 @@ const ModalBerbagi = ({ objek, onTutup }) => {
 		}
 	};
 
+	// z-[100], bukan z-50: bilah navigasi bawah PegawaiLayout juga z-50 dan
+	// berada setelah konten di DOM, jadi pada z yang sama dia menang dan menutupi
+	// footer modal — tombol "Bagikan" terlihat aktif tapi kliknya tertelan nav.
+	// Tingginya juga dibatasi + isinya bisa digulir supaya di layar pendek footer
+	// tidak terdorong keluar viewport.
 	return (
-		<div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+		<div className="fixed inset-0 z-[100] flex items-end justify-center sm:items-center sm:p-4">
 			<div className="fixed inset-0 bg-black/50" onClick={onTutup} />
-			<div className="relative w-full max-w-md rounded-2xl bg-white shadow-2xl">
-				<div className="flex items-center justify-between border-b border-slate-200 px-5 py-4">
+			<div className="relative flex max-h-[92vh] w-full flex-col rounded-t-2xl bg-white shadow-2xl sm:max-w-md sm:rounded-2xl">
+				<div className="flex flex-shrink-0 items-center justify-between border-b border-slate-200 px-5 py-4">
 					<h3 className="text-base font-semibold text-slate-900">Bagikan</h3>
 					<button onClick={onTutup} className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-900">
 						<X className="h-5 w-5" />
 					</button>
 				</div>
 
-				<div className="space-y-4 px-5 py-4">
+				<div className="flex-1 space-y-4 overflow-y-auto px-5 py-4">
 					<p className="truncate rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700">
 						{objek.nama}
 					</p>
@@ -389,7 +396,7 @@ const ModalBerbagi = ({ objek, onTutup }) => {
 					</div>
 				</div>
 
-				<div className="flex gap-2 border-t border-slate-200 px-5 py-4">
+				<div className="flex flex-shrink-0 gap-2 border-t border-slate-200 px-5 py-4">
 					<button
 						onClick={onTutup}
 						className="flex-1 rounded-lg border border-slate-200 px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50"
@@ -899,8 +906,11 @@ const DrivePage = ({ bidangId }) => {
 							))}
 						</div>
 					) : (
-						<div className="overflow-hidden rounded-xl border border-slate-200 bg-white">
-							<div className="flex items-center gap-3 border-b border-slate-200 bg-slate-50 px-4 py-2.5 text-xs font-medium uppercase tracking-wide text-slate-500">
+						// Sengaja tanpa overflow-hidden: menu aksi tiap baris melayang keluar
+						// kotak ini. Dengan overflow-hidden, pada baris-baris terbawah seluruh
+						// menunya — termasuk "Bagikan" — ikut terpotong dan tidak bisa diklik.
+						<div className="rounded-xl border border-slate-200 bg-white">
+							<div className="flex items-center gap-3 rounded-t-xl border-b border-slate-200 bg-slate-50 px-4 py-2.5 text-xs font-medium uppercase tracking-wide text-slate-500">
 								<span className="w-5" />
 								<span className="flex-1">Nama</span>
 								<span className="hidden w-24 sm:block">Ukuran</span>
@@ -942,7 +952,7 @@ const DrivePage = ({ bidangId }) => {
 			)}
 
 			{pratinjau && (
-				<div className="fixed inset-0 z-50 flex flex-col bg-slate-950/95">
+				<div className="fixed inset-0 z-[100] flex flex-col bg-slate-950/95">
 					<div className="flex items-center justify-between px-4 py-3">
 						<p className="min-w-0 flex-1 truncate text-sm font-medium text-white">{pratinjau.berkas.nama}</p>
 						<div className="flex items-center gap-2">
