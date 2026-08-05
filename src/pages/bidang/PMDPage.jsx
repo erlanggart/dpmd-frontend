@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useBidangPath } from '../../hooks/useBidangPath';
 import { useAuth } from '../../context/AuthContext';
 import {
-  Users, Activity, Clock, UserCheck, Scale,
+  Users, Activity, Clock, HardDrive, UserCheck, Scale,
   Building2, ChevronRight, ArrowUpRight, BarChart3, GitMerge, RotateCcw,
 } from 'lucide-react';
 import api from '../../api';
@@ -308,6 +308,14 @@ const PMDPage = () => {
       icon: GitMerge,
       route: getPath('/bidang/pmd/kelembagaan/rtrw-comparison'),
       stat: { value: 'Komparatif', label: 'RT · RW · ADD · BPJS' },
+    },
+    {
+      id: 'drive', tone: 'sky',
+      title: 'Drive Bidang', short: 'Drive',
+      desc: 'Penyimpanan berkas internal bidang, bisa dibagikan ke bidang lain',
+      icon: HardDrive,
+      route: getPath('/bidang/pmd/drive'),
+      stat: { value: '25 GB', label: 'kuota bidang' },
     },
   ];
 

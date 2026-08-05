@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useBidangPath } from '../../hooks/useBidangPath';
 import { useAuth } from '../../context/AuthContext';
 import {
-  Landmark, Activity, Clock, DollarSign,
+  Landmark, Activity, Clock, DollarSign, HardDrive,
   FileCheck, TrendingUp, ChevronRight, ArrowUpRight, RotateCcw,
 } from 'lucide-react';
 import api from '../../api';
@@ -329,6 +329,14 @@ const KKDPage = () => {
       icon: DollarSign,
       route: getPath('/kkd/bp'),
       stat: { value: 'Tahap I–II', label: 'per periode' },
+    },
+    {
+      id: 'drive', tone: 'slate',
+      title: 'Drive Bidang', short: 'DRIVE',
+      desc: 'Penyimpanan berkas internal bidang, bisa dibagikan ke bidang lain',
+      icon: HardDrive,
+      route: getPath('/kkd/drive'),
+      stat: { value: '25 GB', label: 'kuota bidang' },
     },
   ];
 

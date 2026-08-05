@@ -229,6 +229,9 @@ const ArsipBarangPage = lazy(() => import("./pages/bidang/sekretariat/arsip-bara
 const ArsipBarangFormPage = lazy(() => import("./pages/bidang/sekretariat/arsip-barang/ArsipBarangFormPage"));
 const ArsipBarangDetailPage = lazy(() => import("./pages/bidang/sekretariat/arsip-barang/ArsipBarangDetailPage"));
 const ArsipBarangQrPage = lazy(() => import("./pages/bidang/sekretariat/arsip-barang/ArsipBarangQrPage"));
+// Drive per bidang. Satu komponen dipakai lima bidang; yang membedakan cuma
+// `bidangId`, jadi tidak ada halaman kembar per bidang.
+const DrivePage = lazy(() => import("./pages/bidang/drive/DrivePage"));
 const OutputInfrastrukturPage = lazy(() => import("./pages/bidang/sekretariat/prolap/OutputInfrastrukturPage"));
 const OutputKeuanganPage = lazy(() => import("./pages/bidang/sekretariat/prolap/OutputKeuanganPage"));
 const OutputKelembagaanPage = lazy(() => import("./pages/bidang/sekretariat/prolap/OutputKelembagaanPage"));
@@ -1114,6 +1117,7 @@ function App() {
 
                   {/* SPKED (Sarana Prasarana Kewilayahan dan Ekonomi Desa) */}
                   <Route path="spked" element={<SpkedPage />} />
+                  <Route path="spked/drive" element={<DrivePage bidangId={3} />} />
 
                   {/* KKD (Kekayaan dan Keuangan Desa) */}
                   <Route path="kkd" element={<KKDPage />} />
@@ -1180,6 +1184,7 @@ function App() {
                   />
                   <Route path="produk-hukum" element={<ProdukHukumPemdesPage detailBasePath="/bidang/pmd/produk-hukum" />} />
                   <Route path="produk-hukum/:id" element={<ProdukHukumDetailPemdesPage backPath="/bidang/pmd/produk-hukum" />} />
+                  <Route path="drive" element={<DrivePage bidangId={5} />} />
                 </Route>{" "}
 
                 {/* Routes KKD - Nested under /kkd */}
@@ -1202,6 +1207,7 @@ function App() {
                   <Route path="add" element={<AddDashboard />} />
                   <Route path="bhprd" element={<BhprdDashboard />} />
                   <Route path="dd" element={<DdDashboard />} />
+                  <Route path="drive" element={<DrivePage bidangId={4} />} />
                 </Route>
                 {/* Routes Pemdes - Nested under /pemdes */}
                 <Route
@@ -1225,6 +1231,7 @@ function App() {
                   <Route path="aparatur-desa" element={<PemdesAparaturDesaPage />} />
                   <Route path="produk-hukum" element={<ProdukHukumPemdesPage />} />
                   <Route path="produk-hukum/:id" element={<ProdukHukumDetailPemdesPage />} />
+                  <Route path="drive" element={<DrivePage bidangId={6} />} />
                 </Route>
 
                 {/* Routes Sekretariat - Nested under /sekretariat (moved from /pegawai) */}
@@ -1283,6 +1290,7 @@ function App() {
                   <Route path="pencairan/penyedia" element={<RoleProtectedRoute allowedRoles={["bendahara", "superadmin"]}><PenyediaPage /></RoleProtectedRoute>} />
 
                   {/* Arsip Barang — tujuan QR label ada di "arsip-barang/qr/:token" */}
+                  <Route path="drive" element={<DrivePage bidangId={2} />} />
                   <Route path="arsip-barang" element={<ArsipBarangPage />} />
                   <Route path="arsip-barang/baru" element={<ArsipBarangFormPage />} />
                   <Route path="arsip-barang/qr/:token" element={<ArsipBarangQrPage />} />
@@ -1343,6 +1351,13 @@ function App() {
                   <Route path="bidang/kkd" element={<KKDPage />} />
                   <Route path="bidang/pmd" element={<PMDPage />} />
                   <Route path="bidang/pemdes" element={<PemdesPage />} />
+
+                  {/* Drive per bidang — superadmin melihat Drive bidang mana pun */}
+                  <Route path="bidang/sekretariat/drive" element={<DrivePage bidangId={2} />} />
+                  <Route path="bidang/spked/drive" element={<DrivePage bidangId={3} />} />
+                  <Route path="bidang/kkd/drive" element={<DrivePage bidangId={4} />} />
+                  <Route path="bidang/pmd/drive" element={<DrivePage bidangId={5} />} />
+                  <Route path="bidang/pemdes/drive" element={<DrivePage bidangId={6} />} />
 
                   {/* Sekretariat sub-routes */}
                   <Route path="bidang/sekretariat/disposisi" element={<DisposisiRouter />} />

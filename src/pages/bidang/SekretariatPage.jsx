@@ -19,6 +19,7 @@ import {
 	ClipboardList,
 	IdCard,
 	DollarSign,
+	HardDrive,
 	Package,
 	LayoutGrid,
 	Search,
@@ -163,6 +164,14 @@ const UMPEG_FEATURES = [
 		icon: Package,
 		path: '/sekretariat/arsip-barang',
 		accent: '#c026d3',
+	},
+	{
+		key: 'drive',
+		title: 'Drive Bidang',
+		description: 'Penyimpanan berkas internal bidang',
+		icon: HardDrive,
+		path: '/sekretariat/drive',
+		accent: '#475569',
 	},
 ];
 

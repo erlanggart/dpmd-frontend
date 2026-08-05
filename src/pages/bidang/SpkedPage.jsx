@@ -1,5 +1,7 @@
 import React, { useState, useEffect, useRef, Suspense, lazy } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
+import { useBidangPath } from '../../hooks/useBidangPath';
 import {
 	Building2,
 	Activity,
@@ -15,6 +17,7 @@ import {
 	ShieldCheck,
 	BadgeCheck,
 	CalendarOff,
+	HardDrive,
 } from 'lucide-react';
 import api from '../../api';
 import AnggaranBidangSection from '../../components/bidang/AnggaranBidangSection';
@@ -93,6 +96,8 @@ const PanelModul = ({ children }) => (
 );
 
 const SpkedPage = () => {
+	const navigate = useNavigate();
+	const { getPath } = useBidangPath();
 	const { user } = useAuth();
 	const isBendahara = user?.role === 'bendahara' || user?.role === 'superadmin';
 	const [loading, setLoading] = useState(true);
@@ -255,6 +260,13 @@ const SpkedPage = () => {
 										setActiveTab('bankeu');
 										setBankeuYear(null);
 									}}
+								/>
+								<AksiCard
+									icon={HardDrive}
+									judul="Drive Bidang"
+									deskripsi="Penyimpanan berkas internal bidang, bisa dibagikan ke bidang lain"
+									accent="#475569"
+									onClick={() => navigate(getPath('/bidang/spked/drive'))}
 								/>
 							</div>
 						</div>
