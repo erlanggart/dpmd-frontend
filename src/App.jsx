@@ -232,6 +232,10 @@ const ArsipBarangQrPage = lazy(() => import("./pages/bidang/sekretariat/arsip-ba
 // Drive per bidang. Satu komponen dipakai lima bidang; yang membedakan cuma
 // `bidangId`, jadi tidak ada halaman kembar per bidang.
 const DrivePage = lazy(() => import("./pages/bidang/drive/DrivePage"));
+const FormulirListPage = lazy(() => import("./pages/bidang/formulir/FormulirListPage"));
+const FormulirEditorPage = lazy(() => import("./pages/bidang/formulir/FormulirEditorPage"));
+const FormulirResponsPage = lazy(() => import("./pages/bidang/formulir/FormulirResponsPage"));
+const IsiFormulirPage = lazy(() => import("./pages/public/IsiFormulirPage"));
 const OutputInfrastrukturPage = lazy(() => import("./pages/bidang/sekretariat/prolap/OutputInfrastrukturPage"));
 const OutputKeuanganPage = lazy(() => import("./pages/bidang/sekretariat/prolap/OutputKeuanganPage"));
 const OutputKelembagaanPage = lazy(() => import("./pages/bidang/sekretariat/prolap/OutputKelembagaanPage"));
@@ -935,6 +939,49 @@ function App() {
                 <Route path="/dashboard/disposisi" element={<DisposisiRedirect />} />
                 <Route path="/dashboard/disposisi/:id" element={<DisposisiRedirect />} />
                 
+                {/* Pengisian formulir lewat tautan yang dibagikan - No auth required.
+                    Alamatnya sengaja pendek (/f/...) karena sering ditempel di
+                    WhatsApp dan dibacakan lewat telepon. */}
+                <Route path="/f/:token" element={<IsiFormulirPage />} />
+
+                {/* Editor & respons formulir. Satu alamat untuk semua bidang: bidang
+                    pemiliknya ditentukan dari id formulir, bukan dari alamatnya.
+                    Tanpa layout bidang — kedua halaman ini memakai layar penuh. */}
+                <Route
+                  path="/formulir/:id"
+                  element={
+                    <RoleProtectedRoute
+                      allowedRoles={[
+                        "pegawai",
+                        "kepala_bidang",
+                        "ketua_tim",
+                        "kepala_dinas",
+                        "sekretaris_dinas",
+                        "superadmin",
+                      ]}
+                    >
+                      <FormulirEditorPage />
+                    </RoleProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/formulir/:id/respons"
+                  element={
+                    <RoleProtectedRoute
+                      allowedRoles={[
+                        "pegawai",
+                        "kepala_bidang",
+                        "ketua_tim",
+                        "kepala_dinas",
+                        "sekretaris_dinas",
+                        "superadmin",
+                      ]}
+                    >
+                      <FormulirResponsPage />
+                    </RoleProtectedRoute>
+                  }
+                />
+
                 {/* Public Meeting Join - No auth required */}
                 <Route path="/join/:roomId" element={<PublicMeetingPage />} />
 
@@ -1118,6 +1165,7 @@ function App() {
                   {/* SPKED (Sarana Prasarana Kewilayahan dan Ekonomi Desa) */}
                   <Route path="spked" element={<SpkedPage />} />
                   <Route path="spked/drive" element={<DrivePage bidangId={3} />} />
+                  <Route path="spked/formulir" element={<FormulirListPage bidangId={3} />} />
 
                   {/* KKD (Kekayaan dan Keuangan Desa) */}
                   <Route path="kkd" element={<KKDPage />} />
@@ -1185,6 +1233,7 @@ function App() {
                   <Route path="produk-hukum" element={<ProdukHukumPemdesPage detailBasePath="/bidang/pmd/produk-hukum" />} />
                   <Route path="produk-hukum/:id" element={<ProdukHukumDetailPemdesPage backPath="/bidang/pmd/produk-hukum" />} />
                   <Route path="drive" element={<DrivePage bidangId={5} />} />
+                  <Route path="formulir" element={<FormulirListPage bidangId={5} />} />
                 </Route>{" "}
 
                 {/* Routes KKD - Nested under /kkd */}
@@ -1208,6 +1257,7 @@ function App() {
                   <Route path="bhprd" element={<BhprdDashboard />} />
                   <Route path="dd" element={<DdDashboard />} />
                   <Route path="drive" element={<DrivePage bidangId={4} />} />
+                  <Route path="formulir" element={<FormulirListPage bidangId={4} />} />
                 </Route>
                 {/* Routes Pemdes - Nested under /pemdes */}
                 <Route
@@ -1232,6 +1282,7 @@ function App() {
                   <Route path="produk-hukum" element={<ProdukHukumPemdesPage />} />
                   <Route path="produk-hukum/:id" element={<ProdukHukumDetailPemdesPage />} />
                   <Route path="drive" element={<DrivePage bidangId={6} />} />
+                  <Route path="formulir" element={<FormulirListPage bidangId={6} />} />
                 </Route>
 
                 {/* Routes Sekretariat - Nested under /sekretariat (moved from /pegawai) */}
@@ -1291,6 +1342,7 @@ function App() {
 
                   {/* Arsip Barang — tujuan QR label ada di "arsip-barang/qr/:token" */}
                   <Route path="drive" element={<DrivePage bidangId={2} />} />
+                  <Route path="formulir" element={<FormulirListPage bidangId={2} />} />
                   <Route path="arsip-barang" element={<ArsipBarangPage />} />
                   <Route path="arsip-barang/baru" element={<ArsipBarangFormPage />} />
                   <Route path="arsip-barang/qr/:token" element={<ArsipBarangQrPage />} />
@@ -1354,10 +1406,15 @@ function App() {
 
                   {/* Drive per bidang — superadmin melihat Drive bidang mana pun */}
                   <Route path="bidang/sekretariat/drive" element={<DrivePage bidangId={2} />} />
+                  <Route path="bidang/sekretariat/formulir" element={<FormulirListPage bidangId={2} />} />
                   <Route path="bidang/spked/drive" element={<DrivePage bidangId={3} />} />
+                  <Route path="bidang/spked/formulir" element={<FormulirListPage bidangId={3} />} />
                   <Route path="bidang/kkd/drive" element={<DrivePage bidangId={4} />} />
+                  <Route path="bidang/kkd/formulir" element={<FormulirListPage bidangId={4} />} />
                   <Route path="bidang/pmd/drive" element={<DrivePage bidangId={5} />} />
+                  <Route path="bidang/pmd/formulir" element={<FormulirListPage bidangId={5} />} />
                   <Route path="bidang/pemdes/drive" element={<DrivePage bidangId={6} />} />
+                  <Route path="bidang/pemdes/formulir" element={<FormulirListPage bidangId={6} />} />
 
                   {/* Sekretariat sub-routes */}
                   <Route path="bidang/sekretariat/disposisi" element={<DisposisiRouter />} />

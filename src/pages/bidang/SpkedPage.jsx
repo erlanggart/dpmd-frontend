@@ -18,6 +18,7 @@ import {
 	BadgeCheck,
 	CalendarOff,
 	HardDrive,
+	ClipboardList,
 } from 'lucide-react';
 import api from '../../api';
 import AnggaranBidangSection from '../../components/bidang/AnggaranBidangSection';
@@ -267,6 +268,13 @@ const SpkedPage = () => {
 									deskripsi="Penyimpanan berkas internal bidang, bisa dibagikan ke bidang lain"
 									accent="#475569"
 									onClick={() => navigate(getPath('/bidang/spked/drive'))}
+								/>
+								<AksiCard
+									icon={ClipboardList}
+									judul="Formulir"
+									deskripsi="Susun formulir sendiri, bagikan tautannya, rekap jawabannya"
+									accent="#475569"
+									onClick={() => navigate(getPath('/bidang/spked/formulir'))}
 								/>
 							</div>
 						</div>

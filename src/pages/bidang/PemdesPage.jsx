@@ -10,7 +10,7 @@ import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useBidangPath } from '../../hooks/useBidangPath';
 import { useAuth } from '../../context/AuthContext';
-import { Landmark, Users, FileText, HardDrive, MapPinned, Scale, ArrowUpRight, RotateCcw, Building2, Wallet } from 'lucide-react';
+import { Landmark, Users, FileText, HardDrive, ClipboardList, MapPinned, Scale, ArrowUpRight, RotateCcw, Building2, Wallet } from 'lucide-react';
 import api from '../../api';
 import toast from 'react-hot-toast';
 import DaftarPegawaiBidang from '../../components/bidang/DaftarPegawaiBidang';
@@ -180,6 +180,15 @@ const PemdesPage = () => {
 				// Kuota baru diketahui setelah Drive-nya dibuka, jadi tidak ada angka
 				// yang bisa ditampilkan di kartu.
 				angka: { nilai: null, label: 'berkas & folder' },
+			},
+			{
+				id: 'formulir',
+				accent: '#475569',
+				judul: 'Formulir',
+				deskripsi: 'Susun formulir sendiri, bagikan tautannya, rekap jawabannya',
+				icon: ClipboardList,
+				route: getPath('/pemdes/formulir'),
+				angka: { nilai: null, label: 'survei & pendataan' },
 			},
 			{
 				id: 'musdesus',

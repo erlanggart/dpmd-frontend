@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useBidangPath } from '../../hooks/useBidangPath';
 import { useAuth } from '../../context/AuthContext';
 import {
-  Landmark, Activity, Clock, DollarSign, HardDrive,
+  Landmark, Activity, Clock, DollarSign, HardDrive, ClipboardList,
   FileCheck, TrendingUp, ChevronRight, ArrowUpRight, RotateCcw,
 } from 'lucide-react';
 import api from '../../api';
@@ -337,6 +337,14 @@ const KKDPage = () => {
       icon: HardDrive,
       route: getPath('/kkd/drive'),
       stat: { value: '25 GB', label: 'kuota bidang' },
+    },
+    {
+      id: 'formulir', tone: 'slate',
+      title: 'Formulir', short: 'FORM',
+      desc: 'Susun formulir sendiri, bagikan tautannya, rekap jawabannya',
+      icon: ClipboardList,
+      route: getPath('/kkd/formulir'),
+      stat: { value: 'Survei', label: 'pendataan & pendaftaran' },
     },
   ];
 

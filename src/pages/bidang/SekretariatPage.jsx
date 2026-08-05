@@ -173,6 +173,14 @@ const UMPEG_FEATURES = [
 		path: '/sekretariat/drive',
 		accent: '#475569',
 	},
+	{
+		key: 'formulir',
+		title: 'Formulir',
+		description: 'Survei & pendataan, rekap jawaban otomatis',
+		icon: ClipboardList,
+		path: '/sekretariat/formulir',
+		accent: '#475569',
+	},
 ];
 
 // Log aktivitas dulu ikut jadi kartu di dalam Umpeg lalu menimpa isinya. Kini

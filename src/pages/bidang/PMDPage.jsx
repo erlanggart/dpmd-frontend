@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useBidangPath } from '../../hooks/useBidangPath';
 import { useAuth } from '../../context/AuthContext';
 import {
-  Users, Activity, Clock, HardDrive, UserCheck, Scale,
+  Users, Activity, Clock, HardDrive, ClipboardList, UserCheck, Scale,
   Building2, ChevronRight, ArrowUpRight, BarChart3, GitMerge, RotateCcw,
 } from 'lucide-react';
 import api from '../../api';
@@ -316,6 +316,14 @@ const PMDPage = () => {
       icon: HardDrive,
       route: getPath('/bidang/pmd/drive'),
       stat: { value: '25 GB', label: 'kuota bidang' },
+    },
+    {
+      id: 'formulir', tone: 'slate',
+      title: 'Formulir', short: 'Form',
+      desc: 'Susun formulir sendiri, bagikan tautannya, rekap jawabannya',
+      icon: ClipboardList,
+      route: getPath('/bidang/pmd/formulir'),
+      stat: { value: 'Survei', label: 'pendataan & pendaftaran' },
     },
   ];
 
