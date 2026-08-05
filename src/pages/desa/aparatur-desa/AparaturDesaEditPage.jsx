@@ -19,13 +19,8 @@ const AparaturDesaEditPage = () => {
 		const load = async () => {
 			try {
 				setLoading(true);
-				const [detailRes, phRes] = await Promise.all([
-					getAparaturDesaById(id),
-					getProdukHukumList({ all: true }),
-				]);
+				const detailRes = await getAparaturDesaById(id);
 				setInitialData(detailRes.data.data);
-				const data = phRes.data.data;
-				setProdukHukum(Array.isArray(data) ? data : data?.data || []);
 			} catch (e) {
 				console.error("Error loading edit data:", e);
 				setError("Gagal memuat data edit aparatur.");
@@ -33,6 +28,24 @@ const AparaturDesaEditPage = () => {
 				setLoading(false);
 			}
 		};
+
+		// Daftar produk hukum dimuat terpisah, bukan dalam satu Promise.all dengan
+		// detail aparatur: endpoint-nya dijaga izin "produk-hukum" tersendiri, jadi
+		// operator desa yang hanya diberi hak "aparatur-desa" mendapat 403 di sini —
+		// dan itu dulu menggagalkan seluruh halaman edit, bukan cuma daftar
+		// pilihannya. Halaman daftar aparatur sudah lama menanganinya seperti ini.
+		const loadProdukHukum = async () => {
+			try {
+				const phRes = await getProdukHukumList({ all: true });
+				const data = phRes.data.data;
+				setProdukHukum(Array.isArray(data) ? data : data?.data || []);
+			} catch (e) {
+				console.error("Gagal memuat produk hukum untuk pilihan:", e);
+				setProdukHukum([]);
+			}
+		};
+
+		loadProdukHukum();
 		load();
 	}, [id]);
 

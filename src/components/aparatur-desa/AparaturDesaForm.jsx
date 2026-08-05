@@ -31,6 +31,78 @@ const emptyToUndef = (schema) =>
 const emptyToNull = (schema) =>
 	z.preprocess((v) => (v === "" ? null : v), schema);
 
+/**
+ * API mengirim nilai apa adanya dari database: enum Prisma memakai garis bawah
+ * ("Laki_laki", "Tidak_Aktif") dan tanggal berupa ISO lengkap
+ * ("1983-05-27T00:00:00.000Z"). Keduanya tidak cocok dengan isi <option> dan
+ * <input type="date"> di form ini — akibatnya, saat mengubah data yang sudah
+ * ada, pilihan tampil kosong dan validasi selalu menolak ("wajib diisi").
+ * Karena itu nilai dari server dinormalkan dulu ke bentuk yang dipakai form.
+ */
+const keTanggalInput = (nilai) => {
+	if (!nilai) return "";
+	if (typeof nilai === "string" && /^\d{4}-\d{2}-\d{2}$/.test(nilai)) return nilai;
+	const d = new Date(nilai);
+	if (Number.isNaN(d.getTime())) return "";
+	// Pakai komponen UTC: tanggalnya disimpan sebagai DATE polos, jadi menggeser
+	// ke zona waktu lokal bisa memundurkannya sehari.
+	return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}-${String(
+		d.getUTCDate()
+	).padStart(2, "0")}`;
+};
+
+const dariServer = (data) => {
+	if (!data) return data;
+	return {
+		...data,
+		jenis_kelamin: data.jenis_kelamin ? String(data.jenis_kelamin).replace(/_/g, "-") : "",
+		status: data.status ? String(data.status).replace(/_/g, " ") : "",
+		tanggal_lahir: keTanggalInput(data.tanggal_lahir),
+		tanggal_pengangkatan: keTanggalInput(data.tanggal_pengangkatan),
+		tanggal_pemberhentian: keTanggalInput(data.tanggal_pemberhentian),
+	};
+};
+
+// Pilihan baku. Ditulis sebagai data, bukan markup berulang, supaya bisa dipakai
+// juga untuk memeriksa apakah nilai yang tersimpan dikenali.
+const OPSI_JABATAN = [
+	{
+		grup: "Pemerintah Desa",
+		nilai: [
+			"Kepala Desa",
+			"Sekretaris Desa",
+			"Kepala Urusan Tata Usaha dan Umum",
+			"Kepala Urusan Keuangan",
+			"Kepala Urusan Perencanaan",
+			"Kepala Seksi Pemerintahan",
+			"Kepala Seksi Kesejahteraan",
+			"Kepala Seksi Pelayanan",
+			"Staf Desa",
+		],
+	},
+	{
+		grup: "Kepala Dusun",
+		nilai: ["Kadus I", "Kadus II", "Kadus III", "Kadus IV", "Kadus V", "Kadus VI", "Kadus VII", "Kadus VIII", "Kadus IX", "Kadus X"],
+	},
+	{
+		grup: "Badan Permusyawaratan Desa (BPD)",
+		nilai: ["Ketua BPD", "Wakil Ketua BPD", "Sekretaris BPD", "Anggota BPD"],
+	},
+];
+const SEMUA_JABATAN = OPSI_JABATAN.flatMap((g) => g.nilai);
+const OPSI_PENDIDIKAN = ["Tidak Sekolah", "SD", "SMP", "SMA/SMK", "D1", "D2", "D3", "S1", "S2", "S3"];
+const OPSI_AGAMA = ["Islam", "Kristen Protestan", "Katolik", "Hindu", "Buddha", "Konghucu", "Kepercayaan"];
+
+/**
+ * Sebagian besar data hasil merge arsip Dapur Desa memakai kosakata lain —
+ * "KEPALA DESA", "SLTA/Sederajat", "KATOLIK". Nilai itu sah dan tersimpan di
+ * database, tapi tidak ada di daftar opsi, sehingga <select> menampilkannya
+ * sebagai pilihan kosong: operator melihat kolom seolah belum terisi padahal
+ * datanya ada. Nilai tersimpan karena itu ditambahkan sebagai opsi tersendiri.
+ */
+const OpsiTersimpan = ({ nilai, dikenal }) =>
+	nilai && !dikenal.includes(nilai) ? <option value={nilai}>{nilai} (data tersimpan)</option> : null;
+
 const aparaturSchema = z.object({
 	// Biodata
 	nama_lengkap: z.string().min(1, "Nama lengkap wajib diisi"),
@@ -192,11 +264,12 @@ const AparaturDesaForm = ({
 		register,
 		handleSubmit,
 		control,
+		watch,
 		formState: { errors, isSubmitting },
 		reset,
 	} = useForm({
 		resolver: zodResolver(aparaturSchema),
-		defaultValues: initialData || {
+		defaultValues: dariServer(initialData) || {
 			status: "Aktif",
 			jenis_kelamin: "Laki-laki",
 		},
@@ -206,7 +279,7 @@ const AparaturDesaForm = ({
 		const defaultValues = {
 			status: "Aktif",
 			jenis_kelamin: "Laki-laki",
-			...initialData,
+			...dariServer(initialData),
 			// Ensure IDs are strings for select compatibility
 			produk_hukum_id: initialData?.produk_hukum_id?.toString() || "",
 		};
@@ -330,35 +403,16 @@ const AparaturDesaForm = ({
 					<Field label="Jabatan" required error={errors.jabatan?.message}>
 						<select {...register("jabatan")} className={selectCls}>
 							<option value="">Pilih Jabatan</option>
-							<optgroup label="Pemerintah Desa">
-								<option value="Kepala Desa">Kepala Desa</option>
-								<option value="Sekretaris Desa">Sekretaris Desa</option>
-								<option value="Kepala Urusan Tata Usaha dan Umum">Kepala Urusan Tata Usaha dan Umum</option>
-								<option value="Kepala Urusan Keuangan">Kepala Urusan Keuangan</option>
-								<option value="Kepala Urusan Perencanaan">Kepala Urusan Perencanaan</option>
-								<option value="Kepala Seksi Pemerintahan">Kepala Seksi Pemerintahan</option>
-								<option value="Kepala Seksi Kesejahteraan">Kepala Seksi Kesejahteraan</option>
-								<option value="Kepala Seksi Pelayanan">Kepala Seksi Pelayanan</option>
-								<option value="Staf Desa">Staf Desa</option>
-							</optgroup>
-							<optgroup label="Kepala Dusun">
-								<option value="Kadus I">Kadus I</option>
-								<option value="Kadus II">Kadus II</option>
-								<option value="Kadus III">Kadus III</option>
-								<option value="Kadus IV">Kadus IV</option>
-								<option value="Kadus V">Kadus V</option>
-								<option value="Kadus VI">Kadus VI</option>
-								<option value="Kadus VII">Kadus VII</option>
-								<option value="Kadus VIII">Kadus VIII</option>
-								<option value="Kadus IX">Kadus IX</option>
-								<option value="Kadus X">Kadus X</option>
-							</optgroup>
-							<optgroup label="Badan Permusyawaratan Desa (BPD)">
-								<option value="Ketua BPD">Ketua BPD</option>
-								<option value="Wakil Ketua BPD">Wakil Ketua BPD</option>
-								<option value="Sekretaris BPD">Sekretaris BPD</option>
-								<option value="Anggota BPD">Anggota BPD</option>
-							</optgroup>
+							<OpsiTersimpan nilai={watch("jabatan")} dikenal={SEMUA_JABATAN} />
+							{OPSI_JABATAN.map((g) => (
+								<optgroup key={g.grup} label={g.grup}>
+									{g.nilai.map((v) => (
+										<option key={v} value={v}>
+											{v}
+										</option>
+									))}
+								</optgroup>
+							))}
 						</select>
 					</Field>
 					<Field label="Tempat Lahir" required error={errors.tempat_lahir?.message}>
@@ -376,28 +430,23 @@ const AparaturDesaForm = ({
 					<Field label="Pendidikan Terakhir" required error={errors.pendidikan_terakhir?.message}>
 						<select {...register("pendidikan_terakhir")} className={selectCls}>
 							<option value="">Pilih Pendidikan</option>
-							<option value="Tidak Sekolah">Tidak Sekolah</option>
-							<option value="SD">SD</option>
-							<option value="SMP">SMP</option>
-							<option value="SMA/SMK">SMA/SMK</option>
-							<option value="D1">D1</option>
-							<option value="D2">D2</option>
-							<option value="D3">D3</option>
-							<option value="S1">S1</option>
-							<option value="S2">S2</option>
-							<option value="S3">S3</option>
+							<OpsiTersimpan nilai={watch("pendidikan_terakhir")} dikenal={OPSI_PENDIDIKAN} />
+							{OPSI_PENDIDIKAN.map((v) => (
+								<option key={v} value={v}>
+									{v}
+								</option>
+							))}
 						</select>
 					</Field>
 					<Field label="Agama" required error={errors.agama?.message}>
 						<select {...register("agama")} className={selectCls}>
 							<option value="">Pilih Agama</option>
-							<option value="Islam">Islam</option>
-							<option value="Kristen Protestan">Kristen Protestan</option>
-							<option value="Katolik">Katolik</option>
-							<option value="Hindu">Hindu</option>
-							<option value="Buddha">Buddha</option>
-							<option value="Konghucu">Konghucu</option>
-							<option value="Kepercayaan">Kepercayaan</option>
+							<OpsiTersimpan nilai={watch("agama")} dikenal={OPSI_AGAMA} />
+							{OPSI_AGAMA.map((v) => (
+								<option key={v} value={v}>
+									{v}
+								</option>
+							))}
 						</select>
 					</Field>
 					<Field label="Status" required error={errors.status?.message}>
