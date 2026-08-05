@@ -64,20 +64,25 @@ const DaftarPegawaiBidang = ({ bidangId, bidangName }) => {
 		});
 	};
 
+	// Pimpinan diberi penanda gelap supaya terbaca sebagai jenjang, bukan warna acak.
 	const getRoleColor = (role) => {
 		const colors = {
-			'kepala_bidang': 'bg-purple-100 text-purple-800 border-purple-200',
-			'sekretaris': 'bg-blue-100 text-blue-800 border-blue-200',
-			'koordinator': 'bg-green-100 text-green-800 border-green-200',
-			'ketua_tim': 'bg-orange-100 text-orange-800 border-orange-200',
-			'bendahara': 'bg-emerald-100 text-emerald-800 border-emerald-200',
-			'staff': 'bg-gray-100 text-gray-800 border-gray-200'
+			'kepala_dinas': 'bg-slate-900 text-white border-slate-900',
+			'sekretaris_dinas': 'bg-slate-800 text-white border-slate-800',
+			'kepala_bidang': 'bg-slate-100 text-slate-800 border-slate-200',
+			'sekretaris': 'bg-slate-100 text-slate-800 border-slate-200',
+			'koordinator': 'bg-slate-100 text-slate-800 border-slate-200',
+			'ketua_tim': 'bg-slate-100 text-slate-800 border-slate-200',
+			'bendahara': 'bg-emerald-50 text-emerald-700 border-emerald-100',
+			'staff': 'bg-slate-50 text-slate-600 border-slate-200'
 		};
-		return colors[role] || 'bg-gray-100 text-gray-800 border-gray-200';
+		return colors[role] || 'bg-slate-50 text-slate-600 border-slate-200';
 	};
 
 	const getRoleLabel = (role) => {
 		const labels = {
+			'kepala_dinas': 'Kepala Dinas',
+			'sekretaris_dinas': 'Sekretaris Dinas',
 			'kepala_bidang': 'Kepala Bidang',
 			'sekretaris': 'Sekretaris',
 			'koordinator': 'Koordinator',
@@ -88,14 +93,24 @@ const DaftarPegawaiBidang = ({ bidangId, bidangName }) => {
 		return labels[role] || role;
 	};
 
+	// Yang ditampilkan di badge adalah JABATAN pegawai kalau memang terdata.
+	// Peran akun hanya dipakai sebagai cadangan supaya kolomnya tidak kosong —
+	// dulu peran selalu yang dipakai, jadi Kepala Dinas terbaca "Staff".
+	const getJabatanLabel = (p) => {
+		const jabatan = (p.user?.jabatan || '').trim();
+		return jabatan || getRoleLabel(p.role);
+	};
+
 	const getRoleOrder = (role) => {
 		const orders = {
-			'kepala_bidang': 1,
-			'sekretaris': 2,
-			'koordinator': 3,
-			'ketua_tim': 4,
-			'bendahara': 5,
-			'staff': 6
+			'kepala_dinas': 1,
+			'sekretaris_dinas': 2,
+			'kepala_bidang': 3,
+			'sekretaris': 4,
+			'koordinator': 5,
+			'ketua_tim': 6,
+			'bendahara': 7,
+			'staff': 8
 		};
 		return orders[role] || 99;
 	};
@@ -150,15 +165,21 @@ const DaftarPegawaiBidang = ({ bidangId, bidangName }) => {
 							<h4 className="font-bold text-gray-800 text-sm truncate">
 								{p.user?.fullname || 'Nama tidak tersedia'}
 							</h4>
-							{p.user?.jabatan && (
+							{/* Peran akun hanya jadi baris pelengkap ketika jabatan resminya
+							    terdata — badge di kanan sudah memuat jabatan itu, jadi tidak
+							    perlu ditulis dua kali. */}
+							{(p.user?.jabatan || '').trim() && (
 								<p className="text-xs text-gray-500 truncate flex items-center gap-1 mt-0.5">
 									<Briefcase className="h-3 w-3 flex-shrink-0" />
-									{p.user.jabatan}
+									{getRoleLabel(p.role)}
 								</p>
 							)}
 						</div>
-						<span className={`flex-shrink-0 px-2.5 py-0.5 rounded-full text-[11px] font-semibold border ${getRoleColor(p.role)}`}>
-							{getRoleLabel(p.role)}
+						<span
+							title={getJabatanLabel(p)}
+							className={`flex-shrink-0 max-w-[45%] truncate px-2.5 py-0.5 rounded-full text-[11px] font-semibold border ${getRoleColor(p.role)}`}
+						>
+							{getJabatanLabel(p)}
 						</span>
 					</div>
 
