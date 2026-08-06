@@ -1296,10 +1296,12 @@ const DinasLuarModal = ({ onClose, onConfirm }) => {
 
 	return (
 		<>
-			<motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 bg-black/30 backdrop-blur-sm z-50" onClick={onClose} />
-			<motion.div {...slideUp} className="fixed bottom-0 left-0 right-0 z-50">
+			<motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 bg-black/30 backdrop-blur-sm z-[60]" onClick={onClose} />
+			<motion.div {...slideUp} className="fixed bottom-0 left-0 right-0 z-[70]">
 				<div className="bg-white rounded-t-3xl shadow-xl" style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}>
-					<div className="max-w-lg mx-auto p-5 pb-28">
+					{/* pb-8, bukan pb-28: sejak lembar ini naik ke atas bilah navigasi,
+					    ruang kosong setinggi bilah itu tidak lagi diperlukan. */}
+					<div className="max-w-lg mx-auto p-5 pb-8">
 						<div className="w-10 h-1 bg-slate-200 rounded-full mx-auto mb-5" />
 						<div className="flex items-center gap-3 mb-4">
 							<div className="w-10 h-10 bg-violet-50 rounded-xl flex items-center justify-center overflow-hidden">
@@ -1397,13 +1399,13 @@ const CameraGPSModal = ({ type, onClose, onSubmit }) => {
 
 	return (
 		<>
-			<motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50" onClick={close} />
+			<motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 bg-black/40 backdrop-blur-sm z-[60]" onClick={close} />
 			<motion.div
 				initial={{ opacity: 0, y: 40 }}
 				animate={{ opacity: 1, y: 0 }}
 				exit={{ opacity: 0, y: 40 }}
 				transition={{ type: "spring", stiffness: 300, damping: 25 }}
-				className="fixed inset-0 z-50 flex items-center justify-center p-4"
+				className="fixed inset-0 z-[70] flex items-center justify-center p-4"
 			>
 				<div className="bg-white rounded-2xl shadow-xl max-w-sm w-full overflow-hidden" onClick={(e) => e.stopPropagation()}>
 					{/* Header */}
@@ -1518,10 +1520,16 @@ const IzinModal = ({ onClose, onSubmit }) => {
 
 	return (
 		<>
-			<motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 bg-black/30 backdrop-blur-sm z-50" onClick={onClose} />
-			<motion.div {...slideUp} className="fixed bottom-0 left-0 right-0 z-50">
-				<div className="bg-white rounded-t-3xl shadow-xl">
-					<div className="max-w-lg mx-auto p-5">
+			<motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 bg-black/30 backdrop-blur-sm z-[60]" onClick={onClose} />
+			{/* z-[70] + jarak bawah: bilah navigasi mengambang duduk di z-50 pada
+			    bottom-4, dan lembar yang juga z-50 kalah oleh urutan DOM — tombol
+			    Submit-nya tertimpa lalu kliknya tertelan bilah itu. */}
+			<motion.div {...slideUp} className="fixed bottom-0 left-0 right-0 z-[70]">
+				<div className="bg-white rounded-t-3xl shadow-xl" style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}>
+					{/* Dibatasi 85vh lalu digulir: pada ponsel pendek yang papan
+					    ketiknya terbuka, deretan pilihan + keterangan bisa mendorong
+					    tombolnya keluar layar. */}
+					<div className="max-w-lg mx-auto max-h-[85vh] overflow-y-auto p-5 pb-8">
 						<div className="w-10 h-1 bg-slate-200 rounded-full mx-auto mb-5" />
 						<h3 className="font-bold text-slate-800 mb-3">Izin / Sakit / Cuti / WFH / WFA</h3>
 						<div className="grid grid-cols-5 gap-1.5 mb-3">
