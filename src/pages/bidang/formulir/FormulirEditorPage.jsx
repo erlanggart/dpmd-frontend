@@ -911,36 +911,60 @@ const FormulirEditorPage = () => {
 			{/* ---------- Pratinjau ---------- */}
 			{pratinjau && (
 				<div className="fixed inset-0 z-[100] flex flex-col bg-slate-950/95">
-					<div className="flex flex-shrink-0 items-center justify-between px-4 py-3">
-						<p className="text-sm font-medium text-white">Pratinjau — begini tampilan bagi pengisi</p>
+					<div className="flex flex-shrink-0 items-center justify-between gap-3 border-b border-white/10 px-4 py-3">
+						<p className="min-w-0 truncate text-sm font-medium text-white">
+							Pratinjau — begini tampilan bagi pengisi
+						</p>
 						<button
 							onClick={() => setPratinjau(false)}
-							className="rounded-lg p-2 text-white/70 transition-colors hover:bg-white/10 hover:text-white"
+							className="flex-shrink-0 rounded-lg p-2 text-white/70 transition-colors hover:bg-white/10 hover:text-white"
 							aria-label="Tutup pratinjau"
 						>
 							<X className="h-5 w-5" />
 						</button>
 					</div>
-					<div className="flex-1 overflow-y-auto px-4 pb-8">
-						<div className="mx-auto max-w-2xl space-y-3">
-							<div className="rounded-xl border-t-4 border-slate-900 bg-white px-5 py-5 sm:px-6">
-								<h1 className="text-xl font-semibold text-slate-900">{formulir.judul}</h1>
-								{formulir.deskripsi && (
-									<p className="mt-2 whitespace-pre-line text-sm text-slate-600">{formulir.deskripsi}</p>
-								)}
-							</div>
-							{pertanyaan.map((p) => (
-								<div key={p.kunci} className="overflow-hidden rounded-xl border border-slate-200">
-									<PertanyaanIsian
-										pertanyaan={{ ...p, id: p.kunci }}
-										nilai={jawabanPratinjau[p.kunci] ?? (p.tipe === "kotak_centang" ? [] : "")}
-										onUbah={(v) => setJawabanPratinjau((j) => ({ ...j, [p.kunci]: v }))}
-										berkas={[]}
-										onBerkas={() => {}}
-									/>
+					{/* Latar terang di dalam bingkai gelap: yang ditiru halaman /f/:token,
+					    dan di sana latarnya memang slate-100, bukan gelap. */}
+					<div className="flex-1 overflow-y-auto bg-slate-100 px-4 py-6 sm:px-6">
+						<div className="mx-auto max-w-2xl space-y-3 sm:space-y-4">
+							<div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+								<div className="h-1.5 w-full bg-slate-900" />
+								<div className="px-5 py-6 sm:px-7 sm:py-8">
+									<h1 className="text-xl font-semibold leading-tight tracking-tight text-slate-900 sm:text-2xl">
+										{formulir.judul}
+									</h1>
+									<p className="mt-1.5 text-sm font-medium text-slate-500">
+										Dinas Pemberdayaan Masyarakat dan Desa Kabupaten Bogor
+									</p>
+									{formulir.deskripsi && (
+										<p className="mt-4 whitespace-pre-line text-sm leading-6 text-slate-600">
+											{formulir.deskripsi}
+										</p>
+									)}
 								</div>
-							))}
-							<p className="pb-4 text-center text-xs text-white/50">
+							</div>
+							{(() => {
+								let urut = 0;
+								return pertanyaan.map((p) => {
+									if (p.tipe !== "bagian") urut += 1;
+									return (
+										<div
+											key={p.kunci}
+											className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm"
+										>
+											<PertanyaanIsian
+												pertanyaan={{ ...p, id: p.kunci }}
+												nomor={p.tipe === "bagian" ? undefined : urut}
+												nilai={jawabanPratinjau[p.kunci] ?? (p.tipe === "kotak_centang" ? [] : "")}
+												onUbah={(v) => setJawabanPratinjau((j) => ({ ...j, [p.kunci]: v }))}
+												berkas={[]}
+												onBerkas={() => {}}
+											/>
+										</div>
+									);
+								});
+							})()}
+							<p className="pb-4 pt-2 text-center text-xs text-slate-400">
 								Pratinjau tidak menyimpan jawaban.
 							</p>
 						</div>
