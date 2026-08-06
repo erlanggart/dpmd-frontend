@@ -96,6 +96,54 @@ export const jawabanKeTeks = (nilai) => {
 };
 
 /**
+ * Kelompokkan respons per hari untuk grafik tren.
+ *
+ * Hari tanpa respons tetap dikembalikan sebagai nol: kalau dilewati begitu saja,
+ * jeda seminggu tergambar serapat jeda sehari dan kurvanya berbohong.
+ */
+export const responsPerHari = (respons) => {
+	if (!respons.length) return [];
+	const kunci = (d) =>
+		`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+
+	const hitung = new Map();
+	for (const r of respons) {
+		const d = new Date(r.dikirim_pada);
+		if (Number.isNaN(d.getTime())) continue;
+		const k = kunci(d);
+		hitung.set(k, (hitung.get(k) || 0) + 1);
+	}
+	if (!hitung.size) return [];
+
+	const tanggal = [...hitung.keys()].sort();
+	const akhir = new Date(`${tanggal[tanggal.length - 1]}T00:00:00`);
+	const hasil = [];
+	for (let d = new Date(`${tanggal[0]}T00:00:00`); d <= akhir; d.setDate(d.getDate() + 1)) {
+		const k = kunci(d);
+		hasil.push({
+			kunci: k,
+			label: d.toLocaleDateString("id-ID", { day: "numeric", month: "short" }),
+			jumlah: hitung.get(k) || 0,
+		});
+	}
+	return hasil;
+};
+
+/**
+ * Nama tiap titik pada skala linier.
+ *
+ * Yang tersimpan cuma angkanya; keterangan ujungnya ada di pengaturan dan hanya
+ * berlaku untuk titik pertama dan terakhir. Tanpa ini, legenda grafik hanya
+ * berbunyi "1 2 3 4" dan pembaca rekap harus menebak arah mana yang bagus.
+ */
+export const labelTitikSkala = (pengaturan = {}, sebaran = []) =>
+	sebaran.map((d, i) => {
+		if (i === 0 && pengaturan.label_min) return `${d.label} · ${pengaturan.label_min}`;
+		if (i === sebaran.length - 1 && pengaturan.label_maks) return `${d.label} · ${pengaturan.label_maks}`;
+		return d.label;
+	});
+
+/**
  * Nilai `datetime-local` untuk <input>, dari ISO yang dikirim server.
  * Dipakai di panel setelan batas waktu.
  */
