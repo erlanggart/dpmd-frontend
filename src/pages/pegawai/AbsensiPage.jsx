@@ -3,7 +3,7 @@
 // Simple & Clean Attendance — minimal, UX-friendly, Lottie icons
 // ═══════════════════════════════════════════════════════════════
 import React, { useState, useEffect, useCallback, useRef } from "react";
-import { useSearchParams } from "react-router-dom";
+import { useSearchParams, useOutletContext } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import {
 	FiCheckCircle, FiXCircle, FiCalendar,
@@ -103,6 +103,20 @@ const AbsensiPage = () => {
 	const [successPopup, setSuccessPopup] = useState({ show: false, data: null });
 	const [showLeaderboard, setShowLeaderboard] = useState(false);
 	const [showMonthPicker, setShowMonthPicker] = useState(false);
+
+	// Bilah navigasi mengambang milik layout disingkirkan selama ada lembar yang
+	// terbuka. Menaikkan z-index lembarnya saja pernah dilakukan dan benar, tapi
+	// itu menyisakan adu lapisan yang gampang terulang — dan tombol yang kalah
+	// selalu tombol simpan, karena letaknya persis di zona pil navigasi. Selama
+	// lembar terbuka bilah itu memang tidak ada gunanya.
+	const { setHideBottomNav } = useOutletContext() || {};
+	const adaLembarTerbuka = showIzinModal || showDinasLuarModal || Boolean(showCameraModal);
+
+	useEffect(() => {
+		if (!setHideBottomNav) return undefined;
+		setHideBottomNav(adaLembarTerbuka);
+		return () => setHideBottomNav(false);
+	}, [adaLembarTerbuka, setHideBottomNav]);
 
 	useEffect(() => { const t = setInterval(() => setCurrentTime(new Date()), 1000); return () => clearInterval(t); }, []);
 
