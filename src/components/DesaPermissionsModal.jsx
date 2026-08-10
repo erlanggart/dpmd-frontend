@@ -82,8 +82,9 @@ const DesaPermissionsModal = ({ isOpen, onClose, userData, onUpdated }) => {
 		}
 	};
 
+	// z-[70]: di atas panel rincian pengguna (z-[60]) dan bilah nav HP (z-50)
 	return (
-		<div className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center bg-black/50 p-0 sm:p-4">
+		<div className="fixed inset-0 z-[70] flex items-end sm:items-center justify-center bg-black/50 p-0 sm:p-4">
 			<div className="w-full sm:max-w-2xl max-h-[92vh] overflow-y-auto rounded-t-3xl sm:rounded-2xl bg-white shadow-2xl">
 				<div className="sticky top-0 flex items-start justify-between gap-3 border-b border-slate-100 bg-white px-5 py-4">
 					<div className="flex items-center gap-3 min-w-0">

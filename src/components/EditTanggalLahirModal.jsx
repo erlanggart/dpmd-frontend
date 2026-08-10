@@ -67,8 +67,9 @@ const EditTanggalLahirModal = ({ isOpen, onClose, onUpdated, userData }) => {
 
 	if (!isOpen) return null;
 
+	// z-[70]: di atas panel rincian pengguna (z-[60]) dan bilah nav HP (z-50)
 	return (
-		<div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+		<div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[70] p-4">
 			<div className="bg-white rounded-2xl shadow-2xl w-full max-w-md transform transition-all">
 				{/* Header */}
 				<div className="flex items-center justify-between p-6 border-b border-gray-200 bg-gradient-to-r from-orange-50 to-amber-50">

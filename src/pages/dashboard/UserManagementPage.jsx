@@ -151,6 +151,69 @@ const BarisPengguna = ({ user, terpilih, onPilih }) => {
 	);
 };
 
+/**
+ * Bentuk kartu untuk layar sempit. Tabel di bawah 768px memaksa gulir mendatar
+ * — dua kolomnya pun sudah disembunyikan — jadi di HP baris yang sama disajikan
+ * bertumpuk, satu ketukan penuh untuk membuka panel rincian.
+ */
+const KartuPengguna = ({ user, terpilih, onPilih }) => {
+	const avatarUrl = getAvatarUrl(user.avatar);
+	const peran = getRoleInfo(user.role);
+	const unit = unitKerja(user);
+	const UnitIcon = unit?.icon;
+
+	return (
+		<button
+			type="button"
+			onClick={() => onPilih(user)}
+			className={`flex w-full items-start gap-3 px-4 py-3 text-left transition-colors ${
+				terpilih ? 'bg-slate-50' : 'active:bg-slate-50'
+			}`}
+		>
+			<div className="relative h-10 w-10 shrink-0 overflow-hidden rounded-xl bg-slate-100">
+				{avatarUrl ? (
+					<img src={avatarUrl} alt={user.name} className="h-full w-full object-cover" />
+				) : (
+					<div className="flex h-full w-full items-center justify-center bg-slate-900 text-sm font-bold text-white">
+						{user.name?.charAt(0)?.toUpperCase() || 'U'}
+					</div>
+				)}
+			</div>
+
+			<div className="min-w-0 flex-1">
+				<div className="flex items-start justify-between gap-2">
+					<p className="flex min-w-0 items-center gap-1.5 text-sm font-semibold text-slate-900">
+						<span className="truncate">{user.name}</span>
+						{user.profile_incomplete && (
+							<LuTriangleAlert className="h-3.5 w-3.5 shrink-0 text-amber-500" title="Identitas belum dilengkapi" />
+						)}
+					</p>
+					<span
+						className={`mt-1 h-1.5 w-1.5 shrink-0 rounded-full ${user.is_active ? 'bg-emerald-500' : 'bg-slate-300'}`}
+						title={user.is_active ? 'Aktif' : 'Nonaktif'}
+					/>
+				</div>
+				<p className="truncate text-xs text-slate-500">{user.email}</p>
+
+				<div className="mt-2 flex flex-wrap items-center gap-1.5">
+					<span className="inline-flex items-center gap-1.5 rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-semibold text-slate-700">
+						<span className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: peran.dot }} />
+						{peran.label}
+					</span>
+					{unit && (
+						<span className="inline-flex min-w-0 items-center gap-1 text-[11px] text-slate-500">
+							<UnitIcon className="h-3 w-3 shrink-0 text-slate-400" />
+							<span className="truncate">{unit.label}</span>
+						</span>
+					)}
+				</div>
+			</div>
+
+			<LuChevronRight className="mt-2 h-4 w-4 shrink-0 text-slate-300" />
+		</button>
+	);
+};
+
 const UserManagementPage = () => {
 	const [users, setUsers] = useState([]);
 	const [loading, setLoading] = useState(true);
@@ -713,13 +776,13 @@ const UserManagementPage = () => {
 		<div className="min-h-screen bg-slate-50">
 			<div className="mx-auto max-w-6xl space-y-5 px-4 py-6 sm:px-6 lg:px-8">
 				{/* ---------- Kepala ---------- */}
-				<div className="flex flex-wrap items-start justify-between gap-4">
-					<div className="flex items-start gap-4">
-						<div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-slate-900 text-white">
-							<LuUsers className="h-6 w-6" />
+				<div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-start sm:justify-between sm:gap-4">
+					<div className="flex items-start gap-3 sm:gap-4">
+						<div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-slate-900 text-white sm:h-12 sm:w-12">
+							<LuUsers className="h-5 w-5 sm:h-6 sm:w-6" />
 						</div>
-						<div>
-							<h1 className="text-2xl font-bold tracking-tight text-slate-900">Manajemen Pengguna</h1>
+						<div className="min-w-0">
+							<h1 className="text-xl font-bold tracking-tight text-slate-900 sm:text-2xl">Manajemen Pengguna</h1>
 							<p className="mt-1 text-sm text-slate-500">
 								<span className="font-semibold text-slate-700">{users.length}</span> akun terdaftar
 								{nonaktif > 0 && <> · {nonaktif} nonaktif</>}
@@ -729,10 +792,10 @@ const UserManagementPage = () => {
 					</div>
 
 					<div className="flex items-center gap-2">
-						<div className="relative">
+						<div className="relative flex-1 sm:flex-none">
 							<button
 								onClick={() => setShowExportMenu((buka) => !buka)}
-								className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm font-medium text-slate-700 shadow-sm transition-colors hover:bg-slate-50"
+								className="flex w-full items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm font-medium text-slate-700 shadow-sm transition-colors hover:bg-slate-50 sm:w-auto sm:justify-start"
 							>
 								<LuDownload className="h-4 w-4" />
 								Ekspor
@@ -744,7 +807,8 @@ const UserManagementPage = () => {
 							{showExportMenu && (
 								<>
 									<div className="fixed inset-0 z-30" onClick={() => setShowExportMenu(false)} />
-									<div className="absolute right-0 z-40 mt-2 w-64 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-lg">
+									{/* Lebarnya dibatasi lebar layar supaya tidak menjorok keluar di HP. */}
+									<div className="absolute right-0 z-40 mt-2 w-[min(16rem,calc(100vw-2rem))] overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-lg">
 										<button
 											onClick={() => {
 												handleExportUsers('current');
@@ -781,7 +845,7 @@ const UserManagementPage = () => {
 						{canManage && (
 							<button
 								onClick={() => setShowAddModal(true)}
-								className="flex items-center gap-2 rounded-xl bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-slate-800"
+								className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-slate-800 sm:flex-none"
 							>
 								<LuPlus className="h-4 w-4" />
 								Tambah User
@@ -827,7 +891,7 @@ const UserManagementPage = () => {
 
 				{/* ---------- Alat ---------- */}
 				<div className="flex flex-wrap items-center gap-2">
-					<div className="relative min-w-0 flex-1 sm:max-w-sm">
+					<div className="relative w-full min-w-0 sm:w-auto sm:flex-1 sm:max-w-sm">
 						<LuSearch className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
 						<input
 							type="text"
@@ -851,7 +915,7 @@ const UserManagementPage = () => {
 						<select
 							value={filterBidang}
 							onChange={(e) => setFilterBidang(e.target.value)}
-							className="rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-50 focus:border-slate-900 focus:outline-none"
+							className="min-w-0 flex-1 rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-50 focus:border-slate-900 focus:outline-none sm:flex-none"
 						>
 							<option value="all">Semua Bidang</option>
 							{bidangList.map((bidang) => (
@@ -866,7 +930,7 @@ const UserManagementPage = () => {
 						<select
 							value={filterDinas}
 							onChange={(e) => setFilterDinas(e.target.value)}
-							className="rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-50 focus:border-slate-900 focus:outline-none"
+							className="min-w-0 flex-1 rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-50 focus:border-slate-900 focus:outline-none sm:flex-none"
 						>
 							<option value="all">Semua Dinas</option>
 							{dinasList.map((dinas) => (
@@ -896,7 +960,19 @@ const UserManagementPage = () => {
 						</div>
 					) : (
 						<>
-							<div className="overflow-x-auto">
+							{/* HP: daftar kartu. md ke atas: tabel. */}
+							<div className="divide-y divide-slate-100 md:hidden">
+								{paginatedUsers.map((user) => (
+									<KartuPengguna
+										key={user.id}
+										user={user}
+										terpilih={detailUser?.id === user.id}
+										onPilih={setDetailUser}
+									/>
+								))}
+							</div>
+
+							<div className="hidden overflow-x-auto md:block">
 								<table className="w-full min-w-[640px]">
 									<thead>
 										<tr className="border-b border-slate-100 text-left text-[11px] uppercase tracking-wider text-slate-400">
@@ -921,8 +997,8 @@ const UserManagementPage = () => {
 							</div>
 
 							{/* ---------- Halaman ---------- */}
-							<div className="flex flex-wrap items-center justify-between gap-3 border-t border-slate-100 px-4 py-3">
-								<div className="flex items-center gap-2 text-xs text-slate-500">
+							<div className="flex flex-wrap items-center justify-between gap-2 border-t border-slate-100 px-4 py-3 sm:gap-3">
+								<div className="flex flex-1 items-center gap-2 text-xs text-slate-500 sm:flex-none">
 									<span className="tabular-nums">
 										{startIndex + 1}–{Math.min(startIndex + itemsPerPage, filteredUsers.length)} dari{' '}
 										{filteredUsers.length}
@@ -945,18 +1021,19 @@ const UserManagementPage = () => {
 										onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
 										disabled={currentPage === 1}
 										aria-label="Halaman sebelumnya"
-										className="rounded-lg border border-slate-200 p-2 text-slate-600 transition-colors hover:bg-slate-50 disabled:opacity-40 disabled:hover:bg-transparent"
+										className="rounded-lg border border-slate-200 p-2.5 text-slate-600 transition-colors hover:bg-slate-50 disabled:opacity-40 disabled:hover:bg-transparent sm:p-2"
 									>
 										<LuChevronLeft className="h-4 w-4" />
 									</button>
 									<span className="px-2 text-xs tabular-nums text-slate-500">
-										Halaman {currentPage} dari {totalPages}
+										<span className="hidden sm:inline">Halaman </span>
+										{currentPage} / {totalPages}
 									</span>
 									<button
 										onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
 										disabled={currentPage === totalPages}
 										aria-label="Halaman berikutnya"
-										className="rounded-lg border border-slate-200 p-2 text-slate-600 transition-colors hover:bg-slate-50 disabled:opacity-40 disabled:hover:bg-transparent"
+										className="rounded-lg border border-slate-200 p-2.5 text-slate-600 transition-colors hover:bg-slate-50 disabled:opacity-40 disabled:hover:bg-transparent sm:p-2"
 									>
 										<LuChevronRight className="h-4 w-4" />
 									</button>
