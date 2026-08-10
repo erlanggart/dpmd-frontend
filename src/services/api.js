@@ -1,6 +1,7 @@
 // src/services/api.js
 import axios from "axios";
 import { performFullLogout } from "../utils/sessionPersistence";
+import { simpanTokenBaru } from "../utils/tokenRenewal";
 
 // Helper: Detect if in VPN mode
 const isVpnMode = () => {
@@ -49,10 +50,21 @@ api.interceptors.request.use(
 );
 
 api.interceptors.response.use(
-	(response) => response,
+	(response) => {
+		// Instance ini ikut memakai expressToken yang sama, jadi perpanjangan token
+		// yang datang lewat sini harus ikut disimpan — kalau tidak, request yang
+		// kebetulan lewat instance ini membuang token barunya.
+		simpanTokenBaru(response);
+		return response;
+	},
 	(error) => {
+		// Permintaan yang memang tidak membawa token bisa membalas 401 tanpa ada
+		// hubungannya dengan sesi yang sedang berjalan. Melempar user keluar karena
+		// itu salah alamat.
+		const membawaToken = Boolean(error.config?.headers?.Authorization);
+
 		// Cek jika error adalah 401
-		if (error.response && error.response.status === 401) {
+		if (error.response && error.response.status === 401 && membawaToken) {
 			// Hanya redirect jika bukan di halaman login atau landing
 			if (window.location.pathname !== "/login" && window.location.pathname !== "/") {
 				performFullLogout().then(() => {

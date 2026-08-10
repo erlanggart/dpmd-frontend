@@ -160,6 +160,20 @@ export const AuthProvider = ({ children }) => {
 		checkAndRestoreSession();
 	}, []); // Run only once on mount
 
+	// Ikuti token yang diperpanjang server (lihat utils/tokenRenewal.js). Tanpa
+	// ini, state di sini memegang token lama sampai halaman dimuat ulang — dan
+	// token lama itu mati beberapa hari kemudian, sementara yang di localStorage
+	// sudah segar. Event yang sama juga dipancarkan saat sesi berubah di tab lain.
+	useEffect(() => {
+		const ikutiTokenBaru = (event) => {
+			const tokenBaru = event.detail?.token;
+			if (tokenBaru) setExpressToken(tokenBaru);
+		};
+
+		window.addEventListener('sessionUpdated', ikutiTokenBaru);
+		return () => window.removeEventListener('sessionUpdated', ikutiTokenBaru);
+	}, []);
+
 	// Activity monitoring - just for tracking, NO EXPIRY CHECK
 	// BACKUP on EVERY user interaction for maximum reliability
 	useEffect(() => {

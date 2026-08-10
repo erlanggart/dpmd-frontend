@@ -1,6 +1,7 @@
 import axios from "axios";
 import api from "../api";
 import { API_ENDPOINTS } from "../config/apiConfig";
+import { simpanTokenBaru } from "../utils/tokenRenewal";
 
 /**
  * Formulir per bidang (seperti Google Forms).
@@ -29,6 +30,14 @@ apiPublik.interceptors.request.use((config) => {
 		config.headers.Authorization = `Bearer ${token}`;
 	}
 	return config;
+});
+
+// Tanpa interceptor 401 — itu justru alasan instance ini ada. Yang tetap perlu
+// diikuti hanya perpanjangan token, supaya pengguna yang sudah login tidak
+// kehilangan token barunya saat request-nya kebetulan lewat jalur ini.
+apiPublik.interceptors.response.use((response) => {
+	simpanTokenBaru(response);
+	return response;
 });
 
 // ---------- Pengelolaan ----------

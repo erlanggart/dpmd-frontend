@@ -2,6 +2,7 @@
 import axios from "axios";
 import { API_ENDPOINTS } from "./config/apiConfig";
 import { performFullLogout } from "./utils/sessionPersistence";
+import { simpanTokenBaru } from "./utils/tokenRenewal";
 
 // Flag to prevent multiple simultaneous logouts
 let isLoggingOut = false;
@@ -73,15 +74,23 @@ api.interceptors.request.use(
 );
 
 api.interceptors.response.use(
-	(response) => response,
+	(response) => {
+		simpanTokenBaru(response);
+		return response;
+	},
 	(error) => {
 		// Skip cancelled/aborted requests — don't trigger logout for stale navigated-away requests
 		if (axios.isCancel(error) || error.code === 'ERR_CANCELED' || error.code === 'ECONNABORTED') {
 			return Promise.reject(error);
 		}
 
+		// Permintaan yang memang tidak membawa token — endpoint publik seperti
+		// pengisian formulir tamu — bisa membalas 401 tanpa ada hubungannya dengan
+		// sesi yang sedang berjalan. Melempar user keluar karena itu salah alamat.
+		const membawaToken = Boolean(error.config?.headers?.Authorization);
+
 		// Check if error is 401
-		if (error.response && error.response.status === 401) {
+		if (error.response && error.response.status === 401 && membawaToken) {
 			// Role di database berubah (mis. akun desa dijadikan Admin Desa), sehingga
 			// token lama ditolak. Simpan alasannya supaya halaman login bisa
 			// menjelaskan, bukan sekadar melempar user keluar tanpa keterangan.

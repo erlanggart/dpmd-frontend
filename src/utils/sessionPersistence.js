@@ -74,6 +74,18 @@ export const performFullLogout = async () => {
  * Call this once when the app starts
  */
 export const initSessionPersistence = () => {
+  // Minta browser menandai penyimpanan sebagai persisten. Tanpa ini localStorage
+  // dan IndexedDB boleh dibuang browser saat ruang penyimpanan menipis — dan
+  // yang ikut terbuang adalah sesi, sehingga user merasa "ke-logout sendiri"
+  // padahal tidak pernah menekan keluar. Untuk PWA yang sudah dipasang, Chrome
+  // umumnya mengabulkan tanpa bertanya.
+  if (navigator.storage?.persist) {
+    navigator.storage.persisted()
+      .then((sudah) => (sudah ? true : navigator.storage.persist()))
+      .then((hasil) => console.log(`[Session] Penyimpanan persisten: ${hasil ? 'aktif' : 'ditolak browser'}`))
+      .catch(() => {});
+  }
+
   if (!('indexedDB' in window)) {
     console.warn('[Session] IndexedDB not supported, using localStorage only');
     return;
