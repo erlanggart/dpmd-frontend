@@ -379,7 +379,7 @@ const SpkedPage = () => {
 					<div key="bantuan-provinsi-lpj" className="animate-fadeIn">
 						<PanelModul>
 							<BankeuLpjMonitoringPage
-								tahun={2026}
+								tahun={2025}
 								programName="Bantuan Provinsi"
 								endpointBase="/dpmd/bantuan-provinsi-lpj"
 								storageBase="/storage/uploads/bantuan_provinsi_lpj"

@@ -3,7 +3,7 @@ import DesaBankeuLpjPage from '../bankeu/DesaBankeuLpjPage';
 
 const DesaBantuanProvinsiLpjPage = () => (
   <DesaBankeuLpjPage
-    tahun={2026}
+    tahun={2025}
     programName="Bantuan Provinsi"
     endpointBase="/desa/bantuan-provinsi-lpj"
     storageBase="/storage/uploads/bantuan_provinsi_lpj"
