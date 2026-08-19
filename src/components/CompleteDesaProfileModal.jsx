@@ -73,6 +73,13 @@ const CompleteDesaProfileModal = () => {
 			.then((res) => {
 				const data = res.data?.data;
 				if (!data) return;
+				// Response bisa berasal dari cache milik akun sebelumnya di perangkat
+				// yang sama; kalau pemiliknya bukan user aktif, jangan dipakai — nama
+				// dan flag ganti-sandi akun lain akan menempel di sesi ini.
+				if (String(data.id) !== String(user.id)) {
+					console.warn('[Profil Desa] Profil bukan milik user aktif, diabaikan');
+					return;
+				}
 				updateUser({
 					name: data.name,
 					jabatan_desa: data.jabatan_desa,

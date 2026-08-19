@@ -54,9 +54,10 @@ const DPMDStaffLayout = lazy(() => import("./layouts/DPMDStaffLayout"));
 
 // HomeRedirect component - smart redirect based on user state and navigation context
 function HomeRedirect() {
-  const { user, isCheckingSession } = useAuth();
+  const { user, isCheckingSession, expressToken } = useAuth();
   const location = useLocation();
-  const token = localStorage.getItem("expressToken");
+  // Sesi di memori didahulukan; localStorage boleh dibuang browser kapan saja.
+  const token = expressToken || localStorage.getItem("expressToken");
 
   // Hide splash screen once session check is done
   useEffect(() => {
@@ -466,9 +467,13 @@ const UserManagementPage = lazy(
 );
 
 const ProtectedRoute = ({ children }) => {
-  const token = localStorage.getItem("expressToken");
-  const { isCheckingSession } = useAuth();
+  const { isCheckingSession, expressToken } = useAuth();
   const location = useLocation();
+  // Token di memori didahulukan. Browser boleh membuang localStorage kapan saja
+  // saat ruang menipis; kalau penjaga rute cuma membaca localStorage, user yang
+  // sedang memakai aplikasi mendadak terlempar ke halaman depan seolah keluar
+  // sendiri. Selama sesi masih hidup di memori, dia tetap boleh masuk.
+  const token = expressToken || localStorage.getItem("expressToken");
 
   // CRITICAL: Wait for session restore (IndexedDB) before deciding to redirect
   if (isCheckingSession) {
@@ -497,7 +502,7 @@ const BIDANG_SEKRETARIAT = 2;
 // masuk (mis. [2] = Sekretariat). Superadmin selalu lolos karena tidak terikat
 // pada satu bidang.
 const RoleProtectedRoute = ({ children, allowedRoles, allowedBidang }) => {
-  const { user, isCheckingSession } = useAuth();
+  const { user, isCheckingSession, expressToken } = useAuth();
   const location = useLocation();
 
   const getStoredUser = () => {
@@ -527,7 +532,9 @@ const RoleProtectedRoute = ({ children, allowedRoles, allowedBidang }) => {
     );
   }
 
-  const token = localStorage.getItem("expressToken");
+  // Sama seperti ProtectedRoute: sesi di memori menang atas localStorage yang
+  // bisa dibuang browser sewaktu-waktu.
+  const token = expressToken || localStorage.getItem("expressToken");
 
   if (!token) {
     return <Navigate to="/" state={{ from: location }} replace />;

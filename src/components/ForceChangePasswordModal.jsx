@@ -48,6 +48,18 @@ const ForceChangePasswordModal = () => {
         setError(res.data?.message || 'Gagal mengganti password.');
       }
     } catch (err) {
+      // 409 = server bilang sandinya sudah bukan bawaan, jadi popup ini memang
+      // tidak perlu muncul. Sesi di aplikasi ini tidak pernah kedaluwarsa, jadi
+      // flag lama bisa ikut terbawa lama setelah sandinya diganti di tempat lain.
+      // Tanpa penanganan ini user terkunci di popup yang menolak semua isian dan
+      // satu-satunya jalan keluar adalah tombol Keluar.
+      if (err.response?.status === 409) {
+        updateUser({ must_change_password: false });
+        toast.success('Password Anda sudah aman. Silakan lanjut beraktivitas.', { icon: '🔒', duration: 4000 });
+        setNewPassword('');
+        setConfirm('');
+        return;
+      }
       setError(err.response?.data?.message || 'Gagal mengganti password. Coba lagi.');
     } finally {
       setSubmitting(false);

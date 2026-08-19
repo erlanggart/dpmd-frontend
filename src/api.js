@@ -2,10 +2,38 @@
 import axios from "axios";
 import { API_ENDPOINTS } from "./config/apiConfig";
 import { performFullLogout } from "./utils/sessionPersistence";
-import { simpanTokenBaru } from "./utils/tokenRenewal";
+import { simpanTokenBaru, perbaruiSesiKedaluwarsa } from "./utils/tokenRenewal";
 
 // Flag to prevent multiple simultaneous logouts
 let isLoggingOut = false;
+
+/**
+ * Hentikan sesi dan kembalikan user ke halaman login.
+ *
+ * HANYA boleh dipanggil kalau server benar-benar menyatakan sesi ini habis —
+ * bukan karena jaringan bermasalah, bukan karena satu request gagal. Sesi di
+ * aplikasi ini permanen: user tidak boleh keluar kecuali dia menekan keluar
+ * atau memang sudah tidak berhak masuk.
+ */
+const hentikanSesi = (pesan) => {
+	if (isLoggingOut) return;
+	if (window.location.pathname === "/login" || window.location.pathname === "/") return;
+
+	isLoggingOut = true;
+	try {
+		sessionStorage.setItem("authNotice", pesan);
+	} catch {
+		// sessionStorage bisa diblokir (mode privat); abaikan saja.
+	}
+
+	performFullLogout()
+		.then(() => {
+			window.location.href = "/login";
+		})
+		.finally(() => {
+			isLoggingOut = false;
+		});
+};
 
 const api = axios.create({
 	baseURL: API_ENDPOINTS.EXPRESS_BASE, // Express only
@@ -78,7 +106,7 @@ api.interceptors.response.use(
 		simpanTokenBaru(response);
 		return response;
 	},
-	(error) => {
+	async (error) => {
 		// Skip cancelled/aborted requests — don't trigger logout for stale navigated-away requests
 		if (axios.isCancel(error) || error.code === 'ERR_CANCELED' || error.code === 'ECONNABORTED') {
 			return Promise.reject(error);
@@ -89,37 +117,44 @@ api.interceptors.response.use(
 		// sesi yang sedang berjalan. Melempar user keluar karena itu salah alamat.
 		const membawaToken = Boolean(error.config?.headers?.Authorization);
 
-		// Check if error is 401
-		if (error.response && error.response.status === 401 && membawaToken) {
-			// Role di database berubah (mis. akun desa dijadikan Admin Desa), sehingga
-			// token lama ditolak. Simpan alasannya supaya halaman login bisa
-			// menjelaskan, bukan sekadar melempar user keluar tanpa keterangan.
-			const isRoleChanged = error.response.data?.code === "ROLE_CHANGED";
-			if (isRoleChanged) {
-				try {
-					sessionStorage.setItem(
-						"authNotice",
-						error.response.data.message ||
-							"Hak akses akun Anda telah diperbarui. Silakan login kembali.",
-					);
-				} catch {
-					// sessionStorage bisa diblokir (mode privat); abaikan saja.
-				}
+		if (error.response?.status !== 401 || !membawaToken) {
+			return Promise.reject(error);
+		}
+
+		// Role di database berubah (mis. akun desa dijadikan Admin Desa). Ini
+		// keputusan admin, bukan sesi yang rusak — token lama memang harus mati dan
+		// user wajib login ulang. Alasannya disimpan supaya halaman login bisa
+		// menjelaskan, bukan sekadar melempar user keluar tanpa keterangan.
+		if (error.response.data?.code === "ROLE_CHANGED") {
+			hentikanSesi(
+				error.response.data.message ||
+					"Hak akses akun Anda telah diperbarui. Silakan login kembali.",
+			);
+			return Promise.reject(error);
+		}
+
+		// Sisanya: token kedaluwarsa atau ditolak. Sesi di aplikasi ini permanen,
+		// jadi jangan langsung melempar user keluar — tukar dulu tokennya diam-diam
+		// lalu ulangi request yang gagal. User tidak melihat apa-apa.
+		if (!error.config.__sudahDiperbarui) {
+			const hasil = await perbaruiSesiKedaluwarsa();
+
+			if (hasil.status === "baru") {
+				error.config.__sudahDiperbarui = true;
+				// Interceptor request akan memasang token terbaru dari localStorage.
+				return api.request(error.config);
 			}
 
-			// Only redirect if NOT on login or landing page, and not already logging out
-			if (window.location.pathname !== "/login" && window.location.pathname !== "/" && !isLoggingOut) {
-				isLoggingOut = true;
-				performFullLogout().then(() => {
-					// Khusus perubahan role, langsung ke halaman login supaya
-					// pesan penjelasannya terbaca.
-					window.location.href = isRoleChanged ? "/login" : "/";
-				}).finally(() => {
-					isLoggingOut = false;
-				});
+			if (hasil.status === "ditolak") {
+				hentikanSesi(hasil.message || "Sesi Anda sudah berakhir. Silakan login kembali.");
+				return Promise.reject(error);
 			}
 		}
 
+		// Pembaruan gagal karena jaringan/server, bukan karena sesinya habis.
+		// Biarkan sesi apa adanya: user tetap di dalam aplikasi dan request ini
+		// bisa dicoba lagi nanti. Mengeluarkan user di sini persis bug yang
+		// membuat PWA terasa "keluar sendiri".
 		return Promise.reject(error);
 	}
 );

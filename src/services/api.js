@@ -1,7 +1,6 @@
 // src/services/api.js
 import axios from "axios";
-import { performFullLogout } from "../utils/sessionPersistence";
-import { simpanTokenBaru } from "../utils/tokenRenewal";
+import { simpanTokenBaru, perbaruiSesiKedaluwarsa } from "../utils/tokenRenewal";
 
 // Helper: Detect if in VPN mode
 const isVpnMode = () => {
@@ -57,19 +56,21 @@ api.interceptors.response.use(
 		simpanTokenBaru(response);
 		return response;
 	},
-	(error) => {
+	async (error) => {
 		// Permintaan yang memang tidak membawa token bisa membalas 401 tanpa ada
 		// hubungannya dengan sesi yang sedang berjalan. Melempar user keluar karena
 		// itu salah alamat.
 		const membawaToken = Boolean(error.config?.headers?.Authorization);
 
-		// Cek jika error adalah 401
-		if (error.response && error.response.status === 401 && membawaToken) {
-			// Hanya redirect jika bukan di halaman login atau landing
-			if (window.location.pathname !== "/login" && window.location.pathname !== "/") {
-				performFullLogout().then(() => {
-					window.location.href = "/";
-				});
+		// Sesi di aplikasi ini permanen, jadi instance ini TIDAK lagi mengeluarkan
+		// user sendiri. Satu-satunya yang boleh memutuskan sesi berakhir adalah
+		// interceptor di src/api.js, dan itu pun hanya setelah server menolak
+		// pembaruan token. Di sini cukup tukar token lalu ulangi requestnya.
+		if (error.response?.status === 401 && membawaToken && !error.config.__sudahDiperbarui) {
+			const hasil = await perbaruiSesiKedaluwarsa();
+			if (hasil.status === "baru") {
+				error.config.__sudahDiperbarui = true;
+				return api.request(error.config);
 			}
 		}
 

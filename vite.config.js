@@ -118,6 +118,17 @@ export default defineConfig({
 						}
 					},
 					{
+						// Endpoint sesi TIDAK BOLEH disajikan dari cache. Kunci cache Workbox
+						// hanya URL — header Authorization diabaikan — sehingga response milik
+						// akun sebelumnya di perangkat yang sama bisa terpakai oleh akun yang
+						// sedang login: identitas user tertukar dan popup "Ganti Password
+						// Wajib" menyala padahal sandinya sudah bukan bawaan.
+						// Harus berada SEBELUM aturan /api/ umum di bawah; Workbox memakai
+						// rute pertama yang cocok.
+						urlPattern: /\/api\/auth\//i,
+						handler: 'NetworkOnly'
+					},
+					{
 						// Tanpa domain agar tetap cocok setelah pindah ke dpmd.bogorkab.go.id.
 						// JANGAN diberi jangkar ^: Workbox mencocokkan regex ini ke URL
 						// lengkap (href), sehingga ^\/api\/ tidak akan pernah cocok. Tanpa

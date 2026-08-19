@@ -1,6 +1,6 @@
 // src/context/AuthContext.jsx
 import React, { createContext, useContext, useState, useEffect, useRef } from "react";
-import { clearAllSessionData, backupSessionToIndexedDB, restoreSessionFromIndexedDB, performFullLogout } from "../utils/sessionPersistence";
+import { clearAllSessionData, backupSessionToIndexedDB, restoreSessionFromIndexedDB, performFullLogout, clearLogoutFlag, clearApiResponseCache } from "../utils/sessionPersistence";
 import { resetDesaPermissionRefresh } from "../hooks/useDesaPermissions";
 
 // 1. Membuat Context
@@ -210,35 +210,48 @@ export const AuthProvider = ({ children }) => {
 		if (!user || !expressToken) return; // Only run if logged in
 		
 		const handleVisibilityChange = async () => {
-			if (document.visibilityState === 'visible') {
-				console.log('[Auth] 👁️ App became visible, verifying session...');
-				
-				// Check localStorage first
-				let session = loadSession();
-				
-				if (!session) {
-					// If localStorage empty, try restore from IndexedDB
-					console.log('[Auth] � Session missing, attempting restore from IndexedDB...');
-					const restored = await restoreSessionFromIndexedDB();
-					
-					if (restored) {
-						session = loadSession();
-						if (session) {
-							setUser(session.user);
-							setExpressToken(session.token);
-							console.log('[Auth] ✅ Session restored on visibility change');
-							return;
-						}
-					}
-					
-					// Session truly lost, logout
-					console.log('[Auth] ⚠️ Session lost, logging out...');
-					logout();
-				} else {
-					// Session valid, just update activity
-					updateActivity();
-					console.log('[Auth] ✅ Session verified, activity updated');
+			if (document.visibilityState !== 'visible') return;
+
+			console.log('[Auth] 👁️ App became visible, verifying session...');
+
+			// Check localStorage first
+			let session = loadSession();
+
+			if (session) {
+				updateActivity();
+				console.log('[Auth] ✅ Session verified, activity updated');
+				return;
+			}
+
+			// localStorage kosong — coba pulihkan dari IndexedDB.
+			console.log('[Auth] 📦 Session missing, attempting restore from IndexedDB...');
+			const restored = await restoreSessionFromIndexedDB();
+
+			if (restored) {
+				session = loadSession();
+				if (session) {
+					setUser(session.user);
+					setExpressToken(session.token);
+					console.log('[Auth] ✅ Session restored on visibility change');
+					return;
 				}
+			}
+
+			// Kedua penyimpanan kosong. DULU di sini user langsung dikeluarkan — dan
+			// itulah yang membuat PWA terasa "keluar sendiri": browser boleh membuang
+			// localStorage kapan saja saat ruang menipis, tanpa user melakukan apa pun.
+			// Sekarang sesi yang masih dipegang di memori dipakai untuk menulis ulang
+			// penyimpanan, jadi aplikasi berperilaku seperti aplikasi mobile: sekali
+			// masuk, tetap masuk sampai user sendiri menekan keluar.
+			console.warn('[Auth] ⚠️ Penyimpanan sesi terhapus browser — menulis ulang dari memori');
+			if (user && expressToken) {
+				localStorage.setItem('user', JSON.stringify(user));
+				localStorage.setItem('expressToken', expressToken);
+				localStorage.setItem(
+					'authSession',
+					JSON.stringify({ user, token: expressToken, lastActivity: Date.now() }),
+				);
+				backupSessionToIndexedDB();
 			}
 		};
 
@@ -251,11 +264,22 @@ export const AuthProvider = ({ children }) => {
 	// NO EXPIRY - session is permanent until manual logout
 	const login = async (userData, _deprecated = null, expressAuthToken = null) => {
 		console.log('[Auth] 🔐 Logging in user...');
-		
+
+		// Tanda logout hanya dibersihkan saat sesi dipulihkan dari IndexedDB, dan
+		// pemulihan itu cuma jalan kalau localStorage kosong. Logout yang tidak
+		// diikuti pemuatan ulang halaman karenanya meninggalkan tanda menyala
+		// sampai entah kapan — dan sesi baru ini akan ditolak dipulihkan nanti.
+		clearLogoutFlag();
+
+		// Cache response /api milik akun sebelumnya di perangkat yang sama tidak
+		// boleh terbawa ke sesi ini: kuncinya hanya URL, sehingga profil akun lama
+		// bisa tersaji sebagai profil akun ini.
+		clearApiResponseCache();
+
 		// Set state first for immediate UI update
 		setUser(userData);
 		setExpressToken(expressAuthToken);
-		
+
 		// WAIT for session to be saved AND backed up to IndexedDB
 		const backed = await saveSession(userData, expressAuthToken);
 		

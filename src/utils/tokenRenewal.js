@@ -10,6 +10,9 @@
  * perpanjangan tidak hilang hanya karena request-nya lewat instance yang lain.
  */
 
+import axios from "axios";
+import { API_ENDPOINTS } from "../config/apiConfig";
+
 /** Baca muatan JWT. Bagian tengahnya base64url, bukan base64 biasa. */
 const bacaMuatanJwt = (token) => {
 	const bagian = token.split(".")[1];
@@ -52,6 +55,76 @@ export const simpanTokenBaru = (response) => {
 	} catch {
 		// Penyimpanan bisa penuh atau diblokir; token lama masih berlaku, jadi
 		// kegagalan di sini tidak boleh mengganggu response yang sedang jalan.
+	}
+};
+
+/** Tulis token ke localStorage + authSession dan beri tahu AuthContext. */
+const pasangToken = (token) => {
+	localStorage.setItem("expressToken", token);
+	const sesiStr = localStorage.getItem("authSession");
+	if (!sesiStr) return;
+	const sesi = JSON.parse(sesiStr);
+	sesi.token = token;
+	sesi.lastActivity = Date.now();
+	localStorage.setItem("authSession", JSON.stringify(sesi));
+	window.dispatchEvent(new CustomEvent("sessionUpdated", { detail: sesi }));
+};
+
+// Beberapa request bisa gagal 401 berbarengan; cukup satu permintaan pembaruan
+// yang benar-benar berangkat, sisanya menunggu hasil yang sama.
+let pembaruanBerjalan = null;
+
+/**
+ * Tukar token yang sudah kedaluwarsa dengan token baru.
+ *
+ * Perpanjangan bergulir lewat header X-Renewed-Token hanya bekerja selama user
+ * membuka aplikasi dalam masa berlaku token. Kalau PWA didiamkan lebih lama dari
+ * itu, tokennya keburu mati — dan tanpa jalur ini user terlempar keluar padahal
+ * tidak pernah menekan keluar.
+ *
+ * Kembalian:
+ *   { status: 'baru', token }   → token berhasil ditukar, request boleh diulang
+ *   { status: 'ditolak', code } → server menyatakan sesi ini memang habis
+ *   { status: 'gagal' }         → jaringan bermasalah; sesi JANGAN dibuang
+ */
+export const perbaruiSesiKedaluwarsa = async () => {
+	if (pembaruanBerjalan) return pembaruanBerjalan;
+
+	pembaruanBerjalan = (async () => {
+		const tokenLama = localStorage.getItem("expressToken");
+		if (!tokenLama || tokenLama === "VPN_ACCESS_TOKEN") {
+			return { status: "ditolak", code: "SESSION_INVALID" };
+		}
+
+		try {
+			// Instance sendiri, tanpa interceptor — kalau tidak, kegagalan di sini
+			// akan memicu penanganan 401 yang justru memanggil fungsi ini lagi.
+			const res = await axios.post(
+				`${API_ENDPOINTS.EXPRESS_BASE}/auth/renew`,
+				{ token: tokenLama },
+				{ headers: { "Content-Type": "application/json" }, timeout: 20000 },
+			);
+
+			const tokenBaru = res.data?.data?.token;
+			if (!tokenBaru) return { status: "gagal" };
+
+			pasangToken(tokenBaru);
+			return { status: "baru", token: tokenBaru };
+		} catch (error) {
+			// Hanya jawaban tegas dari server yang boleh dianggap sesi habis.
+			// Jaringan putus, server sedang mati, atau timeout bukan alasan
+			// mengeluarkan user.
+			if (error.response?.status === 401) {
+				return { status: "ditolak", code: error.response.data?.code, message: error.response.data?.message };
+			}
+			return { status: "gagal" };
+		}
+	})();
+
+	try {
+		return await pembaruanBerjalan;
+	} finally {
+		pembaruanBerjalan = null;
 	}
 };
 

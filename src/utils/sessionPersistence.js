@@ -32,6 +32,44 @@ export const checkAndClearLogoutFlag = () => {
 };
 
 /**
+ * Buang tanda logout tanpa memeriksanya. Wajib dipanggil saat login berhasil:
+ * logout yang tidak diikuti pemuatan ulang halaman (mis. tombol Keluar di popup
+ * ganti sandi) meninggalkan tanda ini menyala. Kalau localStorage kemudian
+ * dibuang browser, sesi yang masih tersimpan di IndexedDB ikut ditolak dan user
+ * terlempar keluar tanpa pernah menekan keluar.
+ */
+export const clearLogoutFlag = () => {
+  try {
+    localStorage.removeItem(LOGOUT_FLAG_KEY);
+  } catch (e) { /* ignore */ }
+};
+
+/**
+ * Hapus cache response /api milik service worker.
+ *
+ * Kunci cache Workbox hanya URL, header Authorization tidak ikut diperhitungkan,
+ * dan cache ini bertahan sampai satu jam. Tanpa pembersihan di batas sesi,
+ * response akun sebelumnya di perangkat yang sama bisa disajikan ke akun yang
+ * baru login — identitas user tertukar dan flag seperti must_change_password
+ * ikut terbawa. Dipanggil saat logout DAN saat login.
+ */
+export const clearApiResponseCache = async () => {
+  if (typeof caches === 'undefined') return;
+  try {
+    const names = await caches.keys();
+    await Promise.all(
+      names
+        .filter((name) => name.includes('api-cache'))
+        .map((name) => caches.delete(name))
+    );
+  } catch (error) {
+    // Cache Storage bisa tidak tersedia (mode privat); bukan alasan menggagalkan
+    // login atau logout.
+    console.error('[Session] Gagal membersihkan cache API:', error);
+  }
+};
+
+/**
  * Perform a complete logout - clears localStorage, IndexedDB, and sets flag
  * Use this instead of manually removing localStorage items
  */
@@ -50,7 +88,11 @@ export const performFullLogout = async () => {
   localStorage.removeItem('superadminReturnSession');
   localStorage.removeItem('superadminReturnToken');
   localStorage.removeItem('superadminReturnUser');
-  
+
+  // Buang cache response /api supaya akun berikutnya di perangkat ini tidak
+  // kebagian data akun yang baru saja keluar.
+  await clearApiResponseCache();
+
   // Clear IndexedDB
   try {
     const db = await openSessionDB();
@@ -355,7 +397,9 @@ export const clearAllSessionData = async () => {
     localStorage.removeItem('superadminReturnSession');
     localStorage.removeItem('superadminReturnToken');
     localStorage.removeItem('superadminReturnUser');
-    
+
+    await clearApiResponseCache();
+
     // Clear IndexedDB
     const db = await openSessionDB();
     const tx = db.transaction('sessions', 'readwrite');

@@ -16,6 +16,7 @@ let refreshedThisPageLoad = false;
 export const useDesaPermissions = () => {
 	const { user, updateUser } = useAuth();
 	const role = user?.role;
+	const userId = user?.id;
 	const stored = user?.desa_permissions;
 
 	// Akun non-desa tidak memakai mekanisme ini, jadi langsung dianggap siap.
@@ -38,7 +39,11 @@ export const useDesaPermissions = () => {
 		(async () => {
 			try {
 				const res = await api.get("/auth/profile");
-				const permissions = res?.data?.data?.desa_permissions;
+				const profil = res?.data?.data;
+				// Profil milik akun lain (mis. tersaji dari cache perangkat bersama)
+				// tidak boleh menentukan hak akses sesi ini.
+				if (String(profil?.id) !== String(userId)) return;
+				const permissions = profil?.desa_permissions;
 				if (!cancelled && Array.isArray(permissions)) {
 					updateUser({ desa_permissions: permissions });
 				}
@@ -54,7 +59,7 @@ export const useDesaPermissions = () => {
 		return () => {
 			cancelled = true;
 		};
-	}, [role, stored, updateUser]);
+	}, [role, userId, stored, updateUser]);
 
 	const permissions = Array.isArray(stored) ? stored : [];
 
