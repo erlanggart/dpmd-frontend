@@ -5,22 +5,26 @@ const SW_CUSTOM_VERSION = '1.1.0';
 console.log(`[SW-Custom] Version ${SW_CUSTOM_VERSION} loaded`);
 console.log('[SW-Custom] Push notification handler initializing...');
 
-// Clear old icon caches on activation to force icon refresh
-self.addEventListener('activate', (event) => {
-	event.waitUntil(
-		caches.keys().then(cacheNames => {
-			return Promise.all(
-				cacheNames.map(cacheName => {
-					// Delete media/asset caches that may hold old icons
-					if (cacheName.includes('media-cache') || cacheName.includes('workbox-precache')) {
-						console.log('[SW-Custom] Clearing cache for icon refresh:', cacheName);
-						return caches.delete(cacheName);
-					}
-				})
-			);
-		})
-	);
-});
+// DULU di sini ada listener `activate` yang menghapus setiap cache bernama
+// `media-cache` atau `workbox-precache`, dengan maksud memaksa ikon aplikasi
+// disegarkan. Itu justru mematikan seluruh kemampuan offline aplikasi:
+//
+// Nama cache precache Workbox adalah `workbox-precache-v2-<scope>`, jadi baris
+// itu cocok dan menghapusnya. Urutan hidup service worker adalah install lalu
+// activate — Workbox mengunduh ratusan berkas cangkang aplikasi (index.html,
+// seluruh chunk JS/CSS, ikon) saat install, dan listener ini langsung membuang
+// semuanya beberapa milidetik kemudian. Sisa hidup service worker itu berjalan
+// dengan precache kosong, sementara rute navigasinya tetap diarahkan ke entri
+// precache `index.html` yang tidak pernah ada.
+//
+// Akibatnya setiap navigasi wajib menempuh jaringan. Begitu sinyal putus atau
+// timbul-tenggelam, navigasi gagal — dan di jendela PWA standalone tidak ada
+// halaman error bawaan browser, sehingga yang user lihat hanya layar putih.
+//
+// Penyegaran ikon tidak pernah butuh ini: ikon ikut precache, bukan
+// `media-cache`, dan Workbox sudah mengganti entri yang isinya berubah lewat
+// revision manifest ditambah `cleanupOutdatedCaches`. Jangan hapus cache milik
+// Workbox dari sini.
 
 // Semua disposisi berbagi satu tag supaya beberapa disposisi yang datang
 // beruntun menimpa satu sama lain, bukan menumpuk jadi banyak pop-up.

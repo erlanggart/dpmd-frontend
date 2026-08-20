@@ -302,16 +302,47 @@ export const restoreSessionFromIndexedDB = async () => {
   }
 };
 
+// indexedDB.open() tidak dijamin pernah menjawab. Kalau tab lain masih memegang
+// koneksi versi lama, yang menyala adalah `onblocked` — bukan onsuccess maupun
+// onerror. Di WebView Android dan Safari iOS permintaan ini juga bisa diam saja
+// saat ruang penyimpanan menipis. Tanpa batas waktu, pemanggilnya menggantung
+// selamanya, dan pemeriksaan sesi di AuthContext ikut menggantung: aplikasi
+// berhenti di layar kosong tanpa pernah menampilkan apa pun.
+const OPEN_DB_TIMEOUT_MS = 3000;
+
 /**
  * Helper to open IndexedDB connection
  */
 const openSessionDB = () => {
   return new Promise((resolve, reject) => {
-    const request = indexedDB.open('DPMD_SessionDB', 1);
-    
-    request.onsuccess = () => resolve(request.result);
-    request.onerror = () => reject(request.error);
-    
+    let settled = false;
+    const finish = (fn, value) => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timer);
+      fn(value);
+    };
+
+    const timer = setTimeout(
+      () => finish(reject, new Error('IndexedDB tidak merespons dalam batas waktu')),
+      OPEN_DB_TIMEOUT_MS,
+    );
+
+    let request;
+    try {
+      request = indexedDB.open('DPMD_SessionDB', 1);
+    } catch (error) {
+      // Mode privat tertentu melempar begitu IndexedDB disentuh.
+      finish(reject, error);
+      return;
+    }
+
+    request.onsuccess = () => finish(resolve, request.result);
+    request.onerror = () => finish(reject, request.error);
+    // Koneksi lama dari tab lain menahan pembukaan ini. Menunggu tanpa akhir
+    // bukan pilihan; pemanggil punya localStorage sebagai jalur cadangan.
+    request.onblocked = () => finish(reject, new Error('IndexedDB diblokir koneksi lain'));
+
     request.onupgradeneeded = (event) => {
       const db = event.target.result;
       if (!db.objectStoreNames.contains('sessions')) {

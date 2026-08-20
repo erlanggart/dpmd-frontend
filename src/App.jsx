@@ -47,6 +47,8 @@ import BankeuPerubahanPublicPage from "./pages/BankeuPerubahanPublicPage";
 import NotFound from "./pages/NotFound";
 import Forbidden from "./pages/Forbidden";
 import Spinner from "./components/ui/Spinner";
+import SessionLoadingScreen from "./components/ui/SessionLoadingScreen";
+import ErrorBoundary from "./components/ErrorBoundary";
 
 
 // Lazy load DPMDStaffLayout once at module level
@@ -59,20 +61,13 @@ function HomeRedirect() {
   // Sesi di memori didahulukan; localStorage boleh dibuang browser kapan saja.
   const token = expressToken || localStorage.getItem("expressToken");
 
-  // Hide splash screen once session check is done
-  useEffect(() => {
-    if (!isCheckingSession) {
-      const splash = document.getElementById('splash-screen');
-      if (splash) {
-        splash.classList.add('hide');
-        setTimeout(() => splash.remove(), 500);
-      }
-    }
-  }, [isCheckingSession]);
-
-  // Wait for session restore before deciding
+  // Wait for session restore before deciding.
+  // JANGAN mengembalikan null di sini. `start_url` PWA adalah "/", jadi rute ini
+  // yang dilihat user setiap kali aplikasi dibuka dari layar utama — dan
+  // mengembalikan null berarti layar putih kosong selama pemeriksaan sesi
+  // berjalan, tanpa batas kalau pemeriksaan itu tersendat.
   if (isCheckingSession) {
-    return null; // Splash screen in index.html handles this
+    return <SessionLoadingScreen />;
   }
 
   // Not logged in, always show landing page
@@ -477,14 +472,7 @@ const ProtectedRoute = ({ children }) => {
 
   // CRITICAL: Wait for session restore (IndexedDB) before deciding to redirect
   if (isCheckingSession) {
-    return (
-      <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-blue-600 via-blue-700 to-blue-800">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-4 border-white/30 border-t-white mx-auto mb-4"></div>
-          <p className="text-white/80 text-sm font-medium">Memuat...</p>
-        </div>
-      </div>
-    );
+    return <SessionLoadingScreen />;
   }
 
   if (!token) {
@@ -522,14 +510,7 @@ const RoleProtectedRoute = ({ children, allowedRoles, allowedBidang }) => {
 
   // CRITICAL: Wait for session restore (IndexedDB) before deciding to redirect
   if (isCheckingSession) {
-    return (
-      <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-blue-600 via-blue-700 to-blue-800">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-4 border-white/30 border-t-white mx-auto mb-4"></div>
-          <p className="text-white/80 text-sm font-medium">Memuat...</p>
-        </div>
-      </div>
-    );
+    return <SessionLoadingScreen />;
   }
 
   // Sama seperti ProtectedRoute: sesi di memori menang atas localStorage yang
@@ -910,13 +891,20 @@ function App() {
         <EditModeProvider>
           <ThemeColorWrapper>
             <NetworkProvider>
-            {/* Push Notification Initializer: ensures permission prompt and auto-subscribe */}
-            <PushNotificationInitializer />
-            {/* Popup wajib ganti password default — global untuk semua role */}
-            <ForceChangePasswordModal />
-            {/* Popup wajib lengkapi identitas — khusus Admin Desa */}
-            <CompleteDesaProfileModal />
-            <ImpersonationReturnBanner />
+            {/* Komponen global di bawah ini selalu terpasang dan sama-sama memanggil
+                jaringan. Sebelum ada penjaga ini, satu error di salah satunya
+                melepas seluruh pohon rute dan menyisakan layar putih. Popup yang
+                gagal cukup tidak muncul; halaman tetap bisa dipakai. */}
+            <ErrorBoundary fallback={null}>
+              {/* Push Notification Initializer: ensures permission prompt and auto-subscribe */}
+              <PushNotificationInitializer />
+              {/* Popup wajib ganti password default — global untuk semua role */}
+              <ForceChangePasswordModal />
+              {/* Popup wajib lengkapi identitas — khusus Admin Desa */}
+              <CompleteDesaProfileModal />
+              <ImpersonationReturnBanner />
+            </ErrorBoundary>
+            <ErrorBoundary>
             <Suspense
               fallback={
                 <div className="flex h-screen items-center justify-center">
@@ -1724,6 +1712,7 @@ function App() {
                 <Route path="*" element={<NotFound />} />
               </Routes>
             </Suspense>
+            </ErrorBoundary>
 
 
             <Toaster
