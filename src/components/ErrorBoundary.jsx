@@ -23,9 +23,27 @@ const ERROR_CHUNK_GAGAL = [
 
 const MUAT_ULANG_KEY = "dpmd_reload_chunk";
 
+// Jarak minimal antar muat-ulang otomatis. Penanda waktu dipakai, bukan sekadar
+// ada/tidaknya penanda: boundary ini mount lebih dulu dan baru gagal kemudian
+// (chunk diminta saat berpindah rute), jadi penanda yang dibersihkan saat mount
+// selalu sudah hilang ketika kegagalan berikutnya datang — hasilnya halaman
+// memuat ulang tanpa henti dan user hanya melihat layar putih berkedip.
+const MUAT_ULANG_JEDA_MS = 30_000;
+
 const adalahChunkGagal = (error) => {
 	const pesan = String(error?.message || error || "").toLowerCase();
 	return ERROR_CHUNK_GAGAL.some((petunjuk) => pesan.includes(petunjuk));
+};
+
+/** Baru boleh memuat ulang kalau muat-ulang otomatis terakhir sudah cukup lama. */
+const bolehMuatUlang = () => {
+	try {
+		const terakhir = Number(sessionStorage.getItem(MUAT_ULANG_KEY)) || 0;
+		return Date.now() - terakhir > MUAT_ULANG_JEDA_MS;
+	} catch {
+		// Tanpa sessionStorage tidak ada cara mencegah putaran; jangan muat ulang.
+		return false;
+	}
 };
 
 class ErrorBoundary extends Component {
@@ -38,26 +56,17 @@ class ErrorBoundary extends Component {
 	componentDidCatch(error, info) {
 		console.error("[ErrorBoundary] Render gagal:", error, info?.componentStack);
 
-		// Muat ulang sekali saja. Kalau setelah dimuat ulang chunk-nya tetap gagal,
-		// masalahnya bukan unduhan yang putus — dan memuat ulang terus-menerus
-		// hanya menghasilkan layar putih yang berkedip.
-		if (adalahChunkGagal(error) && !sessionStorage.getItem(MUAT_ULANG_KEY)) {
+		// Chunk yang gagal diunduh biasanya sembuh dengan sekali muat ulang. Kalau
+		// setelah itu gagal lagi dalam waktu dekat, masalahnya bukan unduhan yang
+		// putus — hentikan dan tampilkan pesan supaya user tidak terjebak di
+		// halaman yang memuat ulang terus-menerus.
+		if (adalahChunkGagal(error) && bolehMuatUlang()) {
 			try {
 				sessionStorage.setItem(MUAT_ULANG_KEY, String(Date.now()));
 			} catch {
-				// sessionStorage bisa diblokir; lanjut memuat ulang tanpa penanda.
+				// Tidak akan terjadi: bolehMuatUlang() sudah gagal lebih dulu.
 			}
 			window.location.reload();
-		}
-	}
-
-	componentDidMount() {
-		// Render berhasil, jadi penanda muat-ulang boleh dilepas untuk kejadian
-		// berikutnya.
-		try {
-			sessionStorage.removeItem(MUAT_ULANG_KEY);
-		} catch {
-			// Diblokir; tidak ada yang perlu dibersihkan.
 		}
 	}
 
