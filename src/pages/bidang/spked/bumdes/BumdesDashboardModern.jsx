@@ -39,6 +39,7 @@ import API_CONFIG from '../../../../config/api';
 import api from '../../../../api';
 import autoTable from 'jspdf-autotable';
 import * as XLSX from 'xlsx';
+import { isTidakAktif, cocokStatus } from '../../../../utils/bumdesStatus';
 
 // Simplified CSS for better performance
 const notificationStyles = `
@@ -1435,7 +1436,7 @@ const BumdesDashboardModern = ({ initialData = null, onLogout = null }) => {
     }
     
     // Untuk data yang sudah upload, gunakan semua filter
-    const matchesStatus = statusFilter === 'all' || bumdes.status === statusFilter;
+    const matchesStatus = cocokStatus(bumdes.status, statusFilter);
     const matchesKecamatan = kecamatanFilter === 'all' || bumdes.kecamatan === kecamatanFilter;
     const matchesJenisUsaha = jenisUsahaFilter === 'all' || bumdes.JenisUsaha === jenisUsahaFilter;
     
@@ -1654,7 +1655,7 @@ const BumdesDashboardModern = ({ initialData = null, onLogout = null }) => {
       desaInfo.kodeDesa?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       bumdes.kecamatan?.toLowerCase().includes(searchTerm.toLowerCase());
     
-    const matchesStatus = statusFilter === 'all' || bumdes.status === statusFilter;
+    const matchesStatus = cocokStatus(bumdes.status, statusFilter);
     const matchesKecamatan = kecamatanFilter === 'all' || bumdes.kecamatan === kecamatanFilter;
     const matchesJenisUsaha = jenisUsahaFilter === 'all' || bumdes.JenisUsaha === jenisUsahaFilter;
     
@@ -2183,7 +2184,7 @@ const BumdesDashboardModern = ({ initialData = null, onLogout = null }) => {
             
             <StatCard
               title="BUMDes Tidak Aktif"
-              value={filteredAndSearchedData.filter(b => b.status === 'tidak aktif').length}
+              value={filteredAndSearchedData.filter(b => isTidakAktif(b.status)).length}
               subtitle="Tidak beroperasi"
               icon={FiPause}
               color="bg-gradient-to-br from-slate-800 to-slate-900"
@@ -2299,13 +2300,13 @@ const BumdesDashboardModern = ({ initialData = null, onLogout = null }) => {
                 <div>
                   <div className="flex justify-between text-sm font-medium text-slate-700 mb-1">
                     <span>BUMDes Tidak Aktif</span>
-                    <span>{filteredAndSearchedData.filter(b => b.status === 'tidak aktif').length} unit</span>
+                    <span>{filteredAndSearchedData.filter(b => isTidakAktif(b.status)).length} unit</span>
                   </div>
                   <div className="w-full bg-slate-200 rounded-full h-3">
                     <div 
                       className="bg-gradient-to-r from-slate-500 to-gray-600 h-3 rounded-full transition-all duration-1000 ease-out"
                       style={{ 
-                        width: `${Math.round((filteredAndSearchedData.filter(b => b.status === 'tidak aktif').length / statistics.totalBumdesUploaded) * 100)}%` 
+                        width: `${Math.round((filteredAndSearchedData.filter(b => isTidakAktif(b.status)).length / statistics.totalBumdesUploaded) * 100)}%` 
                       }}
                     ></div>
                   </div>
@@ -2398,7 +2399,7 @@ const BumdesDashboardModern = ({ initialData = null, onLogout = null }) => {
                 options={[
                   { value: 'all', label: 'Semua Status' },
                   { value: 'aktif', label: 'Aktif' },
-                  { value: 'tidak aktif', label: 'Tidak Aktif' }
+                  { value: 'tidak_aktif', label: 'Tidak Aktif' }
                 ]}
                 placeholder="Status Operasional"
               />

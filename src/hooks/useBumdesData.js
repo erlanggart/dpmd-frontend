@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import api from '../api.js';
 import { generateSafeDataHash } from '../utils/hashUtils.js';
+import { isTidakAktif, cocokStatus } from '../utils/bumdesStatus';
 
 export const useBumdesData = (initialData = null) => {
   const [bumdesData, setBumdesData] = useState([]);
@@ -205,7 +206,7 @@ export const useBumdesFilter = (bumdesData) => {
 
     // Filter by status
     if (selectedStatus) {
-      filtered = filtered.filter(item => item.status === selectedStatus);
+      filtered = filtered.filter(item => cocokStatus(item.status, selectedStatus));
     }
 
     // Filter by period (could be extended based on date fields)
@@ -231,7 +232,7 @@ export const useBumdesFilter = (bumdesData) => {
     const totalBumdesUploaded = filteredData.length; // BUMDes yang sudah mengupload
     const totalBumdesBelumUpload = TOTAL_DESA_BOGOR - bumdesData.length; // BUMDes belum mengupload dari total data
     const activeBumdes = filteredData.filter(item => item.status === 'aktif').length;
-    const inactiveBumdes = filteredData.filter(item => item.status === 'tidak aktif').length;
+    const inactiveBumdes = filteredData.filter(item => isTidakAktif(item.status)).length;
     const totalKecamatan = [...new Set(filteredData.map(item => item.kecamatan).filter(Boolean))].length;
     
     // Persentase berdasarkan 416 desa sebagai 100%
@@ -246,7 +247,7 @@ export const useBumdesFilter = (bumdesData) => {
       }
       acc[key].uploaded++;
       if (item.status === 'aktif') acc[key].aktif++;
-      if (item.status === 'tidak aktif') acc[key].nonAktif++;
+      if (isTidakAktif(item.status)) acc[key].nonAktif++;
       return acc;
     }, {});
 

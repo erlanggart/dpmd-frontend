@@ -1004,7 +1004,7 @@ function BumdesForm({ onSwitchToDashboard }) {
                                     onChange={handleChange}
                                     options={[
                                         { value: 'aktif', label: 'Aktif' },
-                                        { value: 'tidak aktif', label: 'Tidak Aktif' }
+                                        { value: 'tidak_aktif', label: 'Tidak Aktif' }
                                     ]}
                                 />
                                 

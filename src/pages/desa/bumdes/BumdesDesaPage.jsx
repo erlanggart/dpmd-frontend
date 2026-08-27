@@ -32,122 +32,63 @@ const BumdesDesaPage = () => {
 		sk: []
 	});
 	const [formData, setFormData] = useState({
-		// 1. Identitas BUMDes
-		namabumdesa: "",
-		desa: "",
-		kecamatan: "",
-		kode_desa: "",
-		TahunPendirian: "",
-		AlamatBumdes: "",
-		AlamatBumdesa: "", // Alias untuk AlamatBumdes
-		NoHpBumdes: "",
-		TelfonBumdes: "", // Alias untuk NoHpBumdes
-		EmailBumdes: "",
-		Alamatemail: "", // Alias untuk EmailBumdes
-		status: "aktif",
-		keterangan_tidak_aktif: "",
+		// 1. Identitas
+		namabumdesa: "", desa: "", kecamatan: "", kode_desa: "",
+		TahunPendirian: "", AlamatBumdesa: "", TelfonBumdes: "", Alamatemail: "",
+		status: "aktif", keterangan_tidak_aktif: "",
 
-		// 2. Dasar Hukum Pendirian
-		NoPerdes: "",
-		NomorPerdes: "", // Alias untuk NoPerdes
-		TanggalPerdes: "",
-		NoSKKemenkumham: "",
-		TanggalSKKemenkumham: "",
-		produk_hukum_perdes_id: "",
-		produk_hukum_sk_bumdes_id: "",
+		// 2. Dasar hukum & legalitas
+		NomorPerdes: "", produk_hukum_perdes_id: "", produk_hukum_sk_bumdes_id: "",
+		NIB: "", LKPP: "", NPWP: "", badanhukum: "",
 
-		// 2b. Legalitas
-		NIB: "",
-		LKPP: "",
-		NPWP: "",
-		badanhukum: "",
+		// 3. Kepengurusan
+		NamaPenasihat: "", JenisKelaminPenasihat: "", HPPenasihat: "",
+		NamaPengawas: "", JenisKelaminPengawas: "", HPPengawas: "",
+		NamaDirektur: "", JenisKelaminDirektur: "", HPDirektur: "",
+		NamaSekretaris: "", JenisKelaminSekretaris: "", HPSekretaris: "",
+		NamaBendahara: "", JenisKelaminBendahara: "", HPBendahara: "",
+		NamaStafLainnya: "", JenisKelaminStafLainnya: "", HPStafLainnya: "",
 
-		// 3. Kepengurusan/Organisasi
-		NamaPenasihat: "",
-		JenisKelaminPenasihat: "",
-		HPPenasihat: "",
-		NamaPengawas: "",
-		JenisKelaminPengawas: "",
-		HPPengawas: "",
-		NamaDirektur: "",
-		JenisKelaminDirektur: "",
-		HPDirektur: "",
-		NamaSekretaris: "",
-		JenisKelaminSekretaris: "",
-		HPSekretaris: "",
-		NamaBendahara: "",
-		JenisKelaminBendahara: "",
-		HPBendahara: "",
-
-		// 4. Sumber Daya Manusia
+		// 4. Tenaga kerja & bidang usaha
 		TotalTenagaKerja: "",
-		TenagaKerjaLaki: "",
-		TenagaKerjaPerempuan: "",
+		JenisUsaha: "", JenisUsahaUtama: "", JenisUsahaLainnya: "", JenisUsaha2021: "",
 
-		// 5. Bidang Usaha
-		JenisUsaha: "",
-		JenisUsahaUtama: "",
-		JenisUsahaLainnya: "",
-		KelasUsaha: "",
-		StatusUsaha: "",
+		// 5. Ketahanan pangan
+		JenisUsahaKetahananPangan: "", KeteranganUsahaKetahananPangan: "",
+		VolumeKetahananPangan: "", AnggaranModalKetahananPangan: "",
 
-		// 6. Modal dan Aset
-		ModalAwal: "",
-		ModalSekarang: "",
-		Aset: "",
-		KekayaanBersih: "",
-		PenyertaanModal2019: "",
-		PenyertaanModal2020: "",
-		PenyertaanModal2021: "",
-		PenyertaanModal2022: "",
-		PenyertaanModal2023: "",
-		PenyertaanModal2024: "",
-		SumberLain: "",
-		JenisAset: "",
-		NilaiAset: "",
+		// 6. Permodalan & aset
+		PenyertaanModal2019: "", PenyertaanModal2020: "", PenyertaanModal2021: "",
+		PenyertaanModal2022: "", PenyertaanModal2023: "", PenyertaanModal2024: "",
+		PenganggaranPenyertaanModal2025: "", PenyertaanModalTPKK: "",
+		TotalRealisasiPenyertaanModal20192025: "", JumlahModalAwal: "",
+		SumberLain: "", JenisAset: "", NilaiAset: "",
 
-		// 7. Omzet dan Keuntungan (3 tahun terakhir)
-		Omzet2022: "",
-		Omzet2023: "",
-		Omzet2024: "",
-		SHU2022: "",
-		SHU2023: "",
-		SHU2024: "",
-		Laba2022: "",
-		Laba2023: "",
-		Laba2024: "",
+		// 7. Omset & laba
+		Omset2023: "", Laba2023: "",
+		Omset2024Sem1: "", Laba2024Sem1: "",
+		Omset2024: "", Laba2024: "",
+		Omset2025: "", Laba2025: "",
 
-		// 8. Potensi dan Program
-		PotensiWisata: "",
-		OVOP: "",
-		Ketapang2024: "",
-		Ketapang2025: "",
-		DesaWisata: "",
-		KerjasamaPihakKetiga: "",
-		"TahunMulai-TahunBerakhir": "",
+		// 8. Kontribusi PADes
+		KontribusiTerhadapPADes2021: "", KontribusiTerhadapPADes2022: "",
+		KontribusiTerhadapPADes2023: "", KontribusiTerhadapPADes2024: "",
+		KontribusiTerhadapPADes2025: "",
 
-		// 9. Kontribusi PADes
-		KontribusiPADesRP: "",
-		KontribusiPADesPersen: "",
-		KontribusiTerhadapPADes2021: "",
-		KontribusiTerhadapPADes2022: "",
-		KontribusiTerhadapPADes2023: "",
-		KontribusiTerhadapPADes2024: "",
+		// 9. Kemitraan
+		KerjasamaPihakKetiga: "", "TahunMulai_TahunBerakhir": "",
+		KontribusiKemitraanPADes2024: "", KontribusiKemitraanPADes2025: "",
 
-		// 10. Peran dalam Program
-		PeranOVOP: "",
-		PeranKetapang2025: "",
-		PeranDesaWisata: "",
+		// 10. Peran dalam program pemerintah
+		Ketapang2024: "", Ketapang2025: "", DesaWisata: "", DesaWisataStatus: "",
+		PeranMBG: "", MekanismeKerjaSamaMBG: "", JumlahSPPG: "", TahunKerjaSamaMBG: "",
 
 		// 11. Bantuan
-		BantuanKementrian: "",
-		BantuanLaptopShopee: "",
+		BantuanKementrian: "", BantuanLaptopShopee: "", BantuanLainnya: "",
 
-		// 12. Laporan Keuangan
-		LaporanKeuangan: "",
-
-		// 13. Status Upload
-		upload_status: "not_uploaded",
+		// 12. Tambahan
+		ECommerce: "", LinkSK: "", LinkLapKeuangan2021: "",
+		LinkSKKepengurusan2021: "", CatatanTambahan: "",
 	});
 
 	// State untuk file uploads - Perdes dan SK sudah terintegrasi dengan Produk Hukum Desa
@@ -255,13 +196,6 @@ const BumdesDesaPage = () => {
 		setFormData(prev => ({
 			...prev,
 			[field]: value
-		}));
-	};
-
-	const handleFileChange = (field, file) => {
-		setFileUploads(prev => ({
-			...prev,
-			[field]: file
 		}));
 	};
 
@@ -470,6 +404,16 @@ const BumdesDesaPage = () => {
 		</div>
 	);
 
+	// Tampilan baca-saja untuk kolom yang diisi DPMD, bukan desa.
+	const renderBaca = (label, field) => (
+		<div>
+			<label className="mb-1.5 block text-sm font-medium text-slate-700">{label}</label>
+			<div className="rounded-lg border border-slate-200 bg-slate-50 px-3.5 py-2.5 text-sm text-slate-600">
+				{formData[field] || <span className="text-slate-400">Belum ada data</span>}
+			</div>
+		</div>
+	);
+
 	const renderSelect = (label, field, options, placeholder = "Pilih opsi", showInfo = false) => (
 		<div>
 			<label className="mb-1.5 block text-sm font-medium text-slate-700">
@@ -612,18 +556,18 @@ const BumdesDesaPage = () => {
 						{renderInput("Tahun Pendirian", "TahunPendirian", "number", "Contoh: 2020")}
 						{renderSelect("Status BUMDes", "status", [
 							{ value: "aktif", label: "Aktif" },
-							{ value: "tidak aktif", label: "Tidak Aktif" }
+							{ value: "tidak_aktif", label: "Tidak Aktif" }
 						], "Pilih status BUMDes")}
-						{formData.status === "tidak aktif" && (
+						{formData.status === "tidak_aktif" && (
 							<div className="md:col-span-2">
 								{renderTextarea("Keterangan Tidak Aktif", "keterangan_tidak_aktif", "Jelaskan alasan tidak aktif")}
 							</div>
 						)}
-						{renderInput("No. HP BUMDes", "NoHpBumdes", "tel", "Contoh: 08123456789")}
+						{renderInput("No. HP BUMDes", "TelfonBumdes", "tel", "Contoh: 08123456789")}
 						<div className="md:col-span-2">
-							{renderTextarea("Alamat BUMDes", "AlamatBumdes", "Masukkan alamat lengkap BUMDes")}
+							{renderTextarea("Alamat BUMDes", "AlamatBumdesa", "Masukkan alamat lengkap BUMDes")}
 						</div>
-						{renderInput("Email BUMDes", "EmailBumdes", "email", "contoh@email.com")}
+						{renderInput("Email BUMDes", "Alamatemail", "email", "contoh@email.com")}
 					</div>
 				))}
 
@@ -692,10 +636,7 @@ const BumdesDesaPage = () => {
 									Input Manual (Jika dokumen belum diupload)
 								</summary>
 								<div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4 p-4 bg-slate-50 rounded-lg">
-									{renderInput("No. Perdes", "NoPerdes", "text", "Masukkan nomor Perdes")}
-									{renderInput("Tanggal Perdes", "TanggalPerdes", "date")}
-									{renderInput("No. SK Kemenkumham", "NoSKKemenkumham", "text", "Masukkan nomor SK")}
-									{renderInput("Tanggal SK Kemenkumham", "TanggalSKKemenkumham", "date")}
+									{renderInput("Nomor Perdes", "NomorPerdes", "text", "Contoh: 05 Tahun 2024")}
 								</div>
 							</details>
 						</div>
@@ -784,106 +725,214 @@ const BumdesDesaPage = () => {
 								{renderInput("No HP Bendahara", "HPBendahara", "text", "Contoh: 08123456789")}
 							</div>
 						</div>
+
+						<div>
+							<h4 className="font-semibold text-slate-700 mb-3">Staf Lainnya</h4>
+							<div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+								{renderInput("Nama Staf Lainnya", "NamaStafLainnya", "text", "Masukkan nama staf")}
+								{renderSelect("Jenis Kelamin", "JenisKelaminStafLainnya", [
+									{ value: "Laki-laki", label: "Laki-laki" },
+									{ value: "Perempuan", label: "Perempuan" }
+								])}
+								{renderInput("No HP Staf Lainnya", "HPStafLainnya", "text", "Contoh: 08123456789")}
+							</div>
+						</div>
 					</div>
 				))}
 
 				{/* 4. Sumber Daya Manusia */}
 				{renderFormSection("4. Sumber Daya Manusia", <FiUsers className="text-slate-600" />, (
 					<div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-						{renderInput("Total Tenaga Kerja", "TotalTenagaKerja", "number", "Jumlah total")}
-						{renderInput("Tenaga Kerja Laki-laki", "TenagaKerjaLaki", "number", "Jumlah laki-laki")}
-						{renderInput("Tenaga Kerja Perempuan", "TenagaKerjaPerempuan", "number", "Jumlah perempuan")}
+						{renderInput("Total Tenaga Kerja", "TotalTenagaKerja", "number", "Jumlah total pekerja")}
 					</div>
 				))}
 
 				{/* 5. Bidang Usaha */}
 				{renderFormSection("5. Bidang Usaha", <FiShoppingBag className="text-slate-600" />, (
 					<div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-						{renderInput("Jenis Usaha", "JenisUsaha", "text", "Contoh: Perdagangan, Jasa")}
-						{renderInput("Kelas Usaha", "KelasUsaha", "text", "Contoh: Mikro, Kecil")}
-						{renderInput("Status Usaha", "StatusUsaha", "text", "Contoh: Aktif, Tidak Aktif")}
+						{renderInput("Kategori Usaha", "JenisUsaha", "text", "Contoh: Perdagangan dan Jasa Umum")}
+						{renderInput("Jenis Usaha Utama", "JenisUsahaUtama", "text", "Usaha yang paling utama dijalankan")}
+						{renderInput("Jenis Usaha Lainnya", "JenisUsahaLainnya", "text", "Usaha lain di luar usaha utama")}
 					</div>
 				))}
 
-				{/* 6. Modal dan Aset */}
-				{renderFormSection("6. Modal dan Aset", <FiDollarSign className="text-slate-600" />, (
-					<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-						{renderInput("Modal Awal (Rp)", "ModalAwal", "number", "Contoh: 50000000")}
-						{renderInput("Modal Sekarang (Rp)", "ModalSekarang", "number", "Contoh: 75000000")}
-						{renderInput("Total Aset (Rp)", "Aset", "number", "Contoh: 100000000")}
-						{renderInput("Kekayaan Bersih (Rp)", "KekayaanBersih", "number", "Contoh: 80000000")}
-					</div>
-				))}
-
-				{/* 7. Omzet dan Keuntungan (3 tahun terakhir) */}
-				{renderFormSection("7. Omzet dan Keuntungan (3 Tahun Terakhir)", <FiDollarSign className="text-slate-600" />, (
+				{/* 6. Permodalan dan Aset */}
+				{renderFormSection("6. Permodalan dan Aset", <FiDollarSign className="text-slate-600" />, (
 					<div className="space-y-4">
 						<div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-							<h4 className="md:col-span-3 font-semibold text-slate-700">Omzet Tahunan</h4>
-							{renderInput("Omzet 2022 (Rp)", "Omzet2022", "number", "Omzet tahun 2022")}
-							{renderInput("Omzet 2023 (Rp)", "Omzet2023", "number", "Omzet tahun 2023")}
-							{renderInput("Omzet 2024 (Rp)", "Omzet2024", "number", "Omzet tahun 2024")}
+							<h4 className="md:col-span-3 font-semibold text-slate-700">Penyertaan Modal Desa</h4>
+							{renderInput("Penyertaan Modal 2019 (Rp)", "PenyertaanModal2019", "number", "0")}
+							{renderInput("Penyertaan Modal 2020 (Rp)", "PenyertaanModal2020", "number", "0")}
+							{renderInput("Penyertaan Modal 2021 (Rp)", "PenyertaanModal2021", "number", "0")}
+							{renderInput("Penyertaan Modal 2022 (Rp)", "PenyertaanModal2022", "number", "0")}
+							{renderInput("Penyertaan Modal 2023 (Rp)", "PenyertaanModal2023", "number", "0")}
+							{renderInput("Penyertaan Modal 2024 (Rp)", "PenyertaanModal2024", "number", "0")}
+							{renderInput("Penganggaran Penyertaan Modal 2025 (Rp)", "PenganggaranPenyertaanModal2025", "number", "0")}
+							{renderInput("Penyertaan Modal TPKK/Kelompok (Rp)", "PenyertaanModalTPKK", "number", "0")}
+							{renderInput("Total Realisasi 2019-2025 (Rp)", "TotalRealisasiPenyertaanModal20192025", "number", "0")}
 						</div>
-						<div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-							<h4 className="md:col-span-3 font-semibold text-slate-700">Sisa Hasil Usaha (SHU)</h4>
-							{renderInput("SHU 2022 (Rp)", "SHU2022", "number", "SHU tahun 2022")}
-							{renderInput("SHU 2023 (Rp)", "SHU2023", "number", "SHU tahun 2023")}
-							{renderInput("SHU 2024 (Rp)", "SHU2024", "number", "SHU tahun 2024")}
-						</div>
-						<div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-							<h4 className="md:col-span-3 font-semibold text-slate-700">Laba Bersih</h4>
-							{renderInput("Laba 2022 (Rp)", "Laba2022", "number", "Laba tahun 2022")}
-							{renderInput("Laba 2023 (Rp)", "Laba2023", "number", "Laba tahun 2023")}
-							{renderInput("Laba 2024 (Rp)", "Laba2024", "number", "Laba tahun 2024")}
+						<div className="grid grid-cols-1 md:grid-cols-2 gap-4 border-t border-slate-100 pt-4">
+							<h4 className="md:col-span-2 font-semibold text-slate-700">Modal Lain dan Aset</h4>
+							{renderInput("Jumlah Modal Awal (Rp)", "JumlahModalAwal", "number", "0")}
+							{renderInput("Modal dari Sumber Lain (Rp)", "SumberLain", "number", "0")}
+							{renderInput("Jenis Aset", "JenisAset", "text", "Contoh: Tanah, bangunan, kendaraan")}
+							{renderInput("Nilai Aset (Rp)", "NilaiAset", "number", "0")}
 						</div>
 					</div>
 				))}
 
-				{/* 8. Potensi dan Program */}
-				{renderFormSection("8. Potensi dan Program", <FiMapPin className="text-slate-600" />, (
+				{/* 7. Omset dan Laba */}
+				{renderFormSection("7. Omset dan Laba", <FiDollarSign className="text-slate-600" />, (
+					<div className="space-y-4">
+						<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+							<h4 className="md:col-span-2 font-semibold text-slate-700">Tahun 2023</h4>
+							{renderInput("Omset 2023 (Rp)", "Omset2023", "number", "0")}
+							{renderInput("Laba 2023 (Rp)", "Laba2023", "number", "0")}
+						</div>
+						<div className="grid grid-cols-1 md:grid-cols-2 gap-4 border-t border-slate-100 pt-4">
+							<h4 className="md:col-span-2 font-semibold text-slate-700">Tahun 2024</h4>
+							{renderInput("Omset 2024 Semester 1 (Rp)", "Omset2024Sem1", "number", "0")}
+							{renderInput("Laba 2024 Semester 1 (Rp)", "Laba2024Sem1", "number", "0")}
+							{renderInput("Omset 2024 Setahun (Rp)", "Omset2024", "number", "0")}
+							{renderInput("Laba 2024 Setahun (Rp)", "Laba2024", "number", "0")}
+						</div>
+						<div className="grid grid-cols-1 md:grid-cols-2 gap-4 border-t border-slate-100 pt-4">
+							<h4 className="md:col-span-2 font-semibold text-slate-700">Tahun 2025</h4>
+							{renderInput("Omset 2025 (Rp)", "Omset2025", "number", "0")}
+							{renderInput("Laba 2025 (Rp)", "Laba2025", "number", "0")}
+						</div>
+					</div>
+				))}
+
+				{/* 8. Usaha Ketahanan Pangan */}
+				{renderFormSection("8. Usaha Ketahanan Pangan", <FiShoppingBag className="text-slate-600" />, (
 					<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-						{renderInput("Potensi Wisata", "PotensiWisata", "text", "Jelaskan potensi wisata")}
-						{renderInput("OVOP (One Village One Product)", "OVOP", "text", "Produk unggulan desa")}
-						{renderInput("Program Ketapang 2025", "Ketapang2025", "text", "Peran dalam program")}
-						{renderInput("Program Desa Wisata", "DesaWisata", "text", "Peran dalam program")}
+						{renderInput("Jenis Usaha Ketahanan Pangan", "JenisUsahaKetahananPangan", "text", "Contoh: Peternakan, Pertanian")}
+						{renderInput("Volume Ketahanan Pangan", "VolumeKetahananPangan", "text", "Contoh: 1000 ekor")}
+						<div className="md:col-span-2">
+							{renderTextarea("Keterangan Usaha Ketahanan Pangan", "KeteranganUsahaKetahananPangan", "Rincian usaha ketahanan pangan yang dijalankan", 2)}
+						</div>
+						{renderInput("Anggaran Penyertaan Modal Ketahanan Pangan (Rp)", "AnggaranModalKetahananPangan", "number", "0")}
 					</div>
 				))}
 
-				{/* 9. Kontribusi PADes */}
+				{/* 9. Kontribusi terhadap PADes */}
 				{renderFormSection("9. Kontribusi terhadap Pendapatan Asli Desa", <FiDollarSign className="text-slate-600" />, (
-					<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-						{renderInput("Kontribusi PADes (Rp)", "KontribusiPADesRP", "number", "Nominal kontribusi")}
-						{renderInput("Kontribusi PADes (%)", "KontribusiPADesPersen", "number", "Persentase kontribusi")}
+					<div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+						{renderInput("Kontribusi PADes 2021 (Rp)", "KontribusiTerhadapPADes2021", "number", "0")}
+						{renderInput("Kontribusi PADes 2022 (Rp)", "KontribusiTerhadapPADes2022", "number", "0")}
+						{renderInput("Kontribusi PADes 2023 (Rp)", "KontribusiTerhadapPADes2023", "number", "0")}
+						{renderInput("Kontribusi PADes 2024 (Rp)", "KontribusiTerhadapPADes2024", "number", "0")}
+						{renderInput("Kontribusi PADes 2025 (Rp)", "KontribusiTerhadapPADes2025", "number", "0")}
 					</div>
 				))}
 
-				{/* 10. Peran dalam Program */}
-				{renderFormSection("10. Peran dalam Program Kabupaten", <FiMapPin className="text-slate-600" />, (
+				{/* 10. Kemitraan dan Kerja Sama */}
+				{renderFormSection("10. Kemitraan dan Kerja Sama", <FiUsers className="text-slate-600" />, (
+					<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+						<div className="md:col-span-2">
+							{renderTextarea("Mitra / Kerja Sama Pihak Ketiga", "KerjasamaPihakKetiga", "Contoh: PT Solusi Limbah Abadi", 2)}
+						</div>
+						{renderInput("Tahun Mulai - Tahun Berakhir", "TahunMulai_TahunBerakhir", "text", "Contoh: 2022-2025")}
+						<div className="hidden md:block" />
+						{renderInput("Kontribusi Kemitraan ke PADes 2024 (Rp)", "KontribusiKemitraanPADes2024", "number", "0")}
+						{renderInput("Kontribusi Kemitraan ke PADes 2025 (Rp)", "KontribusiKemitraanPADes2025", "number", "0")}
+					</div>
+				))}
+
+				{/* 11. Peran dalam Program Pemerintah */}
+				{renderFormSection("11. Peran dalam Program Pemerintah", <FiMapPin className="text-slate-600" />, (
 					<div className="space-y-4">
-						{renderTextarea("Peran dalam OVOP", "PeranOVOP", "Jelaskan peran dalam program OVOP")}
-						{renderTextarea("Peran dalam Ketapang 2025", "PeranKetapang2025", "Jelaskan peran dalam program Ketapang 2025")}
-						{renderTextarea("Peran dalam Desa Wisata", "PeranDesaWisata", "Jelaskan peran dalam program Desa Wisata")}
+						<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+							<h4 className="md:col-span-2 font-semibold text-slate-700">Ketahanan Pangan</h4>
+							{renderSelect("Peran Ketahanan Pangan 2024", "Ketapang2024", [
+								{ value: "Pengelola", label: "Pengelola" },
+								{ value: "Distribusi", label: "Distribusi" },
+								{ value: "Pemasaran", label: "Pemasaran" },
+								{ value: "Tidak ada peran", label: "Tidak ada peran" }
+							])}
+							{renderSelect("Peran Ketahanan Pangan 2025", "Ketapang2025", [
+								{ value: "Pengelola", label: "Pengelola" },
+								{ value: "Distribusi", label: "Distribusi" },
+								{ value: "Pemasaran", label: "Pemasaran" },
+								{ value: "Tidak ada peran", label: "Tidak ada peran" }
+							])}
+						</div>
+						<div className="grid grid-cols-1 md:grid-cols-2 gap-4 border-t border-slate-100 pt-4">
+							<h4 className="md:col-span-2 font-semibold text-slate-700">Desa Wisata</h4>
+							{renderSelect("Termasuk Desa Wisata", "DesaWisataStatus", [
+								{ value: "Ya", label: "Ya" },
+								{ value: "Tidak", label: "Tidak" }
+							])}
+							{renderInput("Peran pada Desa Wisata", "DesaWisata", "text", "Contoh: Pengelola Utama")}
+						</div>
+						<div className="grid grid-cols-1 md:grid-cols-2 gap-4 border-t border-slate-100 pt-4">
+							<h4 className="md:col-span-2 font-semibold text-slate-700">Makan Bergizi Gratis (MBG)</h4>
+							{renderInput("Peran dalam MBG", "PeranMBG", "text", "Contoh: Pemasok Bahan Baku")}
+							{renderInput("Mekanisme Kerja Sama", "MekanismeKerjaSamaMBG", "text", "Contoh: Langsung dengan SPPG/Yayasan")}
+							{renderInput("Jumlah SPPG", "JumlahSPPG", "number", "0")}
+							{renderInput("Tahun Kerja Sama", "TahunKerjaSamaMBG", "text", "Contoh: 2025")}
+						</div>
 					</div>
 				))}
 
-				{/* 11. Bantuan */}
-				{renderFormSection("11. Bantuan yang Diterima", <FiDollarSign className="text-slate-600" />, (
+				{/* 12. Bantuan yang Diterima */}
+				{renderFormSection("12. Bantuan yang Diterima", <FiDollarSign className="text-slate-600" />, (
 					<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-						{renderInput("Bantuan Kementerian", "BantuanKementrian", "text", "Jenis bantuan dari kementerian")}
-						{renderInput("Bantuan Laptop Shopee", "BantuanLaptopShopee", "text", "Bantuan program laptop")}
+						{renderInput("Bantuan Pengembangan Kemendesa", "BantuanKementrian", "text", "Contoh: Tahap 1")}
+						{renderInput("Bantuan Laptop Shopee", "BantuanLaptopShopee", "text", "Contoh: Tahap 2")}
+						<div className="md:col-span-2">
+							{renderTextarea("Bantuan Lainnya", "BantuanLainnya", "Bantuan lain di luar dua program di atas", 2)}
+						</div>
 					</div>
 				))}
 
-				{/* 12. Laporan Keuangan */}
-				{renderFormSection("12. Laporan Keuangan", <FiFileText className="text-slate-600" />, (
-					<div>
-						{renderTextarea("Status Laporan Keuangan", "LaporanKeuangan", "Jelaskan kondisi laporan keuangan BUMDes", 4)}
+				{/* 13. Informasi Tambahan */}
+				{renderFormSection("13. Informasi Tambahan", <FiFileText className="text-slate-600" />, (
+					<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+						{renderInput("E-Commerce", "ECommerce", "text", "Contoh: Shopee, Tokopedia")}
+						{renderInput("Tautan SK", "LinkSK", "text", "Tautan dokumen SK")}
+						{renderInput("Tautan Laporan Keuangan 2021", "LinkLapKeuangan2021", "text", "Tautan dokumen")}
+						{renderInput("Tautan SK Kepengurusan 2021", "LinkSKKepengurusan2021", "text", "Tautan dokumen")}
+						<div className="md:col-span-2">
+							{renderTextarea("Catatan Tambahan", "CatatanTambahan", "Catatan lain tentang BUMDes ini", 3)}
+						</div>
+					</div>
+				))}
+
+				{/* 14. Penilaian dan Pembinaan DPMD — hanya bisa dibaca.
+				    Nilainya ditetapkan bidang SPKED, jadi desa melihat hasilnya
+				    tapi tidak bisa mengubahnya dari sini. */}
+				{renderFormSection("14. Penilaian dan Pembinaan DPMD", <FiEye className="text-slate-600" />, (
+					<div className="space-y-4">
+						<p className="rounded-lg bg-slate-50 px-4 py-3 text-sm text-slate-600">
+							Bagian ini diisi oleh Bidang SPKED DPMD dan tidak dapat diubah dari halaman desa.
+							Hubungi Bidang SPKED bila ada data yang perlu diperbaiki.
+						</p>
+						<div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+							<h4 className="md:col-span-3 font-semibold text-slate-700">Pemeringkatan</h4>
+							{renderBaca("Pemeringkatan 2024", "Pemeringkatan2024")}
+							{renderBaca("Pemeringkatan 2024 (Semester 1)", "Pemeringkatan2024Sem1")}
+							{renderBaca("Pemeringkatan 2026 (dari penilaian 2025)", "Pemeringkatan2026")}
+						</div>
+						<div className="grid grid-cols-1 md:grid-cols-3 gap-4 border-t border-slate-100 pt-4">
+							<h4 className="md:col-span-3 font-semibold text-slate-700">Riwayat Status Badan Hukum</h4>
+							{renderBaca("Status 2026", "StatusBadanHukum2026")}
+							{renderBaca("Status 2025", "StatusBadanHukum2025")}
+							{renderBaca("Status 2024", "StatusBadanHukum2024")}
+						</div>
+						<div className="grid grid-cols-1 md:grid-cols-3 gap-4 border-t border-slate-100 pt-4">
+							<h4 className="md:col-span-3 font-semibold text-slate-700">Pembinaan dan Desk</h4>
+							{renderBaca("Pembinaan 2024", "Pembinaan2024")}
+							{renderBaca("Desk Pendataan 2025", "DeskPendataan2025")}
+							{renderBaca("Kehadiran Desk 2026", "KehadiranDesk2026")}
+						</div>
 					</div>
 				))}
 			</div>
 
-			{/* 13. Upload Dokumen */}
-			{renderFormSection("13. Upload Dokumen", <FiFileText className="text-slate-600" />, (
+			{/* 15. Upload Dokumen */}
+			{renderFormSection("15. Upload Dokumen", <FiFileText className="text-slate-600" />, (
 				<div className="space-y-6">
 					{/* Laporan Keuangan Files */}
 					<div className="border-b pb-4">
