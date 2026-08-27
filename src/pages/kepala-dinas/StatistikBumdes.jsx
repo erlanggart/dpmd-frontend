@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import BumdesCharts from './components/BumdesCharts';
-import BumdesStatsCards from './components/BumdesStatsCards';
+import BumdesEkonomi from './components/BumdesEkonomi';
 import BumdesDirectory from './components/BumdesDirectory';
 import { Store, TrendingUp, Building2, PauseCircle, AlertCircle } from 'lucide-react';
 import PageHeader from '../../components/statistik/PageHeader';
@@ -181,11 +181,13 @@ const StatistikBumdes = () => {
           />
         </div>
 
-        {/* Charts */}
-        <BumdesCharts bumdes={bumdesData} />
+        {/* Gambaran ekonomi — setiap angka menyebut berapa BUMDes yang
+            menyusunnya. Menggantikan kartu total lama yang memakai penyebut
+            416 padahal hanya sekitar separuh yang melapor. */}
+        <BumdesEkonomi data={daftar} />
 
-        {/* Stats Cards */}
-        <BumdesStatsCards bumdes={bumdesData} />
+        {/* Sebaran per kecamatan dan status */}
+        <BumdesCharts bumdes={bumdesData} />
 
         {/* Direktori: pencarian + detail per BUMDes */}
         <BumdesDirectory data={daftar} />
