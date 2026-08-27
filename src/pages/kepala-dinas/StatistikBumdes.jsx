@@ -3,6 +3,7 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import BumdesCharts from './components/BumdesCharts';
 import BumdesStatsCards from './components/BumdesStatsCards';
+import BumdesDirectory from './components/BumdesDirectory';
 import { Store, TrendingUp, Building2, PauseCircle, AlertCircle } from 'lucide-react';
 import PageHeader from '../../components/statistik/PageHeader';
 import { useDataCache } from '../../context/DataCacheContext';
@@ -17,6 +18,7 @@ const API_CONFIG = {
 };
 
 const CACHE_KEY = 'statistik-bumdes';
+const CACHE_KEY_DAFTAR = 'statistik-bumdes-daftar';
 
 const SummaryCard = ({ icon: Icon, label, value, sub, tone = 'default' }) => {
   const iconClass =
@@ -45,14 +47,17 @@ const SummaryCard = ({ icon: Icon, label, value, sub, tone = 'default' }) => {
 const StatistikBumdes = () => {
   const [loading, setLoading] = useState(true);
   const [bumdesData, setBumdesData] = useState(null);
+  const [daftar, setDaftar] = useState([]);
   const [error, setError] = useState(null);
   const { getCachedData, setCachedData, isCached } = useDataCache();
 
   useEffect(() => {
-    // Check if data is already cached
-    if (isCached(CACHE_KEY)) {
-      const cachedData = getCachedData(CACHE_KEY);
-      setBumdesData(cachedData.data);
+    // Ringkasan dan daftar disimpan terpisah di cache; keduanya harus sama-sama
+    // ada sebelum boleh melewati pemanggilan ke server, kalau tidak direktori
+    // akan tampil kosong padahal datanya cuma belum diambil.
+    if (isCached(CACHE_KEY) && isCached(CACHE_KEY_DAFTAR)) {
+      setBumdesData(getCachedData(CACHE_KEY).data);
+      setDaftar(getCachedData(CACHE_KEY_DAFTAR).data || []);
       setLoading(false);
     } else {
       fetchBumdesData();
@@ -63,22 +68,31 @@ const StatistikBumdes = () => {
     try {
       setLoading(true);
       const token = localStorage.getItem('expressToken');
+      const config = token ? { headers: { Authorization: `Bearer ${token}` } } : {};
 
-      const config = {};
-      if (token !== 'VPN_ACCESS_TOKEN') {
-        config.headers = {
-          Authorization: `Bearer ${token}`
-        };
+      // Diambil berbarengan: ringkasan untuk kartu dan grafik, daftar untuk
+      // direktori. Daftar dibiarkan gagal sendiri tanpa menjatuhkan halaman —
+      // ringkasan tetap berguna walau direktorinya tidak tersedia.
+      const [ringkasan, daftarRes] = await Promise.allSettled([
+        axios.get(API_CONFIG.getEndpoint('/dashboard'), config),
+        axios.get(API_CONFIG.getEndpoint('/bumdes'), config),
+      ]);
+
+      if (ringkasan.status === 'rejected') throw ringkasan.reason;
+
+      const data = ringkasan.value.data.data.bumdes;
+      setBumdesData(data);
+      setCachedData(CACHE_KEY, data);
+
+      if (daftarRes.status === 'fulfilled') {
+        const isi = daftarRes.value.data?.data || [];
+        setDaftar(isi);
+        setCachedData(CACHE_KEY_DAFTAR, isi);
+      } else {
+        console.error('Gagal memuat daftar BUMDes:', daftarRes.reason);
+        setDaftar([]);
       }
 
-      const response = await axios.get(
-        API_CONFIG.getEndpoint('/dashboard'),
-        config
-      );
-
-      const data = response.data.data.bumdes;
-      setBumdesData(data);
-      setCachedData(CACHE_KEY, data); // Save to cache
       setError(null);
     } catch (err) {
       console.error('Error fetching bumdes data:', err);
@@ -172,6 +186,9 @@ const StatistikBumdes = () => {
 
         {/* Stats Cards */}
         <BumdesStatsCards bumdes={bumdesData} />
+
+        {/* Direktori: pencarian + detail per BUMDes */}
+        <BumdesDirectory data={daftar} />
       </div>
     </div>
   );
