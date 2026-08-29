@@ -26,22 +26,12 @@
 // di atas lantai 2:1 untuk sekuensial tapi di bawah 3:1, sehingga setiap
 // batang WAJIB berlabel nilai yang terbaca tanpa hover.
 import React, { useMemo } from 'react';
-import { AlertTriangle, TrendingUp, Users, Wallet, Award, Database } from 'lucide-react';
-
-/** Ramp sekuensial slate, terang -> gelap. Monoton menurun (syarat sekuensial). */
-const RAMP = ['#94a3b8', '#64748b', '#475569', '#334155', '#1e293b', '#0f172a'];
-
-const nf = new Intl.NumberFormat('id-ID');
-
-const rupiahRingkas = (n) => {
-  if (n === null || n === undefined || Number.isNaN(n)) return '—';
-  const abs = Math.abs(n);
-  if (abs >= 1e12) return `Rp ${(n / 1e12).toFixed(1).replace('.', ',')} T`;
-  if (abs >= 1e9) return `Rp ${(n / 1e9).toFixed(1).replace('.', ',')} M`;
-  if (abs >= 1e6) return `Rp ${Math.round(n / 1e6)} Jt`;
-  if (abs >= 1e3) return `Rp ${Math.round(n / 1e3)} Rb`;
-  return `Rp ${nf.format(n)}`;
-};
+import { AlertTriangle, TrendingUp, Users, Wallet, Database } from 'lucide-react';
+import { Kartu, Judul, Batang, Kosong } from './bumdesViz';
+import { RAMP, nf, rupiahRingkas } from './bumdesFormat';
+import {
+  KELAS_OMSET as KELAS_OMSET_BERSAMA, beroperasi, kelasOmsetDari, omsetTerbaru,
+} from './bumdesFilter';
 
 const rupiahPenuh = (n) =>
   n === null || n === undefined ? '—' : `Rp ${nf.format(Math.round(n))}`;
@@ -53,58 +43,9 @@ const median = (angka) => {
   return urut.length % 2 ? urut[t] : (urut[t - 1] + urut[t]) / 2;
 };
 
-/* --------------------------------------------------------------- potongan -- */
-
-const Kartu = ({ children, className = '' }) => (
-  <section className={`rounded-2xl border border-slate-200 bg-white p-5 ${className}`}>
-    {children}
-  </section>
-);
-
-const Judul = ({ icon: Icon, children, catatan }) => (
-  <div className="mb-4">
-    <div className="flex items-center gap-2">
-      {Icon && <Icon className="h-4 w-4 text-slate-400" />}
-      <h3 className="text-sm font-semibold text-slate-900">{children}</h3>
-    </div>
-    {catatan && <p className="mt-1 text-xs leading-relaxed text-slate-500">{catatan}</p>}
-  </div>
-);
-
-/**
- * Batang horizontal dengan label nilai yang selalu terlihat.
- * Label wajib: langkah ramp paling terang tidak mencapai kontras 3:1.
- */
-const Batang = ({ label, nilai, tampil, maks, warna, keterangan, judulHover }) => {
-  const persen = maks > 0 ? Math.max(1.5, (nilai / maks) * 100) : 0;
-  return (
-    <div title={judulHover}>
-      <div className="flex items-baseline justify-between gap-3">
-        <span className="text-sm text-slate-700">{label}</span>
-        <span className="text-sm font-semibold tabular-nums text-slate-900">{tampil}</span>
-      </div>
-      <div className="mt-1.5 h-2.5 w-full rounded-[4px] bg-slate-100">
-        <div
-          className="h-2.5 rounded-[4px]"
-          style={{ width: `${persen}%`, backgroundColor: warna }}
-        />
-      </div>
-      {keterangan && <p className="mt-1 text-[11px] text-slate-500">{keterangan}</p>}
-    </div>
-  );
-};
-
 /* ------------------------------------------------------------------ utama -- */
 
-const KELAS_OMSET = [
-  { label: 'di bawah Rp 10 Jt', min: 0, maks: 1e7 },
-  { label: 'Rp 10–50 Jt', min: 1e7, maks: 5e7 },
-  { label: 'Rp 50–250 Jt', min: 5e7, maks: 2.5e8 },
-  { label: 'Rp 250 Jt – 1 M', min: 2.5e8, maks: 1e9 },
-  { label: 'di atas Rp 1 M', min: 1e9, maks: Infinity },
-];
-
-const URUTAN_PERINGKAT = ['Perintis', 'Pemula', 'Berkembang', 'Maju'];
+const KELAS_OMSET = KELAS_OMSET_BERSAMA.filter((k) => k.min !== null);
 
 const BumdesEkonomi = ({ data = [] }) => {
   const s = useMemo(() => {
@@ -112,9 +53,10 @@ const BumdesEkonomi = ({ data = [] }) => {
     if (!total) return null;
 
     const angkaAda = (v) => v !== null && v !== undefined;
-    const omsetTerbaru = (d) => (angkaAda(d.omset_2025) ? d.omset_2025 : d.omset_2024);
 
-    const beroperasi = data.filter((d) => (d.omset_2025 > 0) || (d.omset_2024 > 0)).length;
+    // Definisi "berusaha" datang dari bumdesFilter, sama persis dengan kartu
+    // ringkasan di atas halaman dan dengan penyaring skala omset.
+    const jumlahBeroperasi = data.filter(beroperasi).length;
 
     // Kelengkapan: tiga angka inti (aset, omset, laba).
     let lengkap = 0, sebagian = 0, kosong = 0;
@@ -143,35 +85,31 @@ const BumdesEkonomi = ({ data = [] }) => {
     const laba = jumlah('laba_2025');
     const pades = jumlah('pades_2025');
 
-    const omsetPositif = data.map((d) => d.omset_2025).filter((v) => v > 0);
+    // Kelas ukuran usaha memakai omset tahun TERBARU yang diisi tiap BUMDes —
+    // patokan yang sama dengan penyaring "Skala omset". Memakai kolom 2025 saja
+    // menghitung 220 BUMDes sementara penyaringnya mengiris 232.
+    const omsetPositif = data.filter(beroperasi).map(omsetTerbaru);
     const medianOmset = median(omsetPositif);
 
     const kelas = KELAS_OMSET.map((k) => ({
       ...k,
-      n: omsetPositif.filter((v) => v >= k.min && v < k.maks).length,
+      n: data.filter((d) => kelasOmsetDari(d) === k.id).length,
     }));
-
-    const peringkat = URUTAN_PERINGKAT.map((p) => ({
-      label: p,
-      n: data.filter((d) => String(d.pemeringkatan_2024 || '').trim().toLowerCase() === p.toLowerCase()).length,
-    }));
-    const peringkatTerdata = peringkat.reduce((t, p) => t + p.n, 0);
 
     return {
-      total, beroperasi, lengkap, sebagian, kosong,
+      total, beroperasi: jumlahBeroperasi, lengkap, sebagian, kosong,
       modal, modalN: modalBersih.length, janggal,
       omset, laba, pades,
       medianOmset, omsetPositifN: omsetPositif.length,
-      kelas, peringkat, peringkatTerdata,
+      kelas,
     };
   }, [data]);
 
-  if (!s) return null;
+  if (!s) return <Kartu><Kosong /></Kartu>;
 
   const persen = (n) => Math.round((n / s.total) * 100);
   const maksCorong = Math.max(s.omset.nilai, s.laba.nilai, s.pades.nilai, 1);
   const maksKelas = Math.max(...s.kelas.map((k) => k.n), 1);
-  const maksPeringkat = Math.max(...s.peringkat.map((p) => p.n), 1);
 
   return (
     <div className="space-y-5">
@@ -179,7 +117,7 @@ const BumdesEkonomi = ({ data = [] }) => {
       <Kartu>
         <Judul
           icon={Database}
-          catatan="Status “aktif” adalah label administratif. Yang dihitung di sini adalah BUMDes yang melaporkan omset di atas nol — ukuran kegiatan usaha yang sebenarnya."
+          catatan="Status “aktif” adalah label administratif. Yang dihitung di sini adalah BUMDes yang melaporkan omset di atas nol pada tahun terbaru yang diisinya — ukuran kegiatan usaha yang sebenarnya, dan angka yang sama dengan kartu “Melaporkan omset di atas nol” di atas."
         >
           Seberapa banyak yang benar-benar berusaha
         </Judul>
@@ -232,16 +170,19 @@ const BumdesEkonomi = ({ data = [] }) => {
           </Judul>
           <div className="space-y-3.5">
             <Batang
+              urutan={0}
               label="Omset" nilai={s.omset.nilai} tampil={rupiahRingkas(s.omset.nilai)}
               maks={maksCorong} warna={RAMP[5]} judulHover={rupiahPenuh(s.omset.nilai)}
               keterangan={`dari ${s.omset.n} BUMDes yang mengisi`}
             />
             <Batang
+              urutan={1}
               label="Laba" nilai={s.laba.nilai} tampil={rupiahRingkas(s.laba.nilai)}
               maks={maksCorong} warna={RAMP[3]} judulHover={rupiahPenuh(s.laba.nilai)}
               keterangan={`dari ${s.laba.n} BUMDes · ${s.omset.nilai > 0 ? ((s.laba.nilai / s.omset.nilai) * 100).toFixed(1) : 0}% dari omset`}
             />
             <Batang
+              urutan={2}
               label="Kembali ke kas desa (PADes)" nilai={s.pades.nilai} tampil={rupiahRingkas(s.pades.nilai)}
               maks={maksCorong} warna={RAMP[1]} judulHover={rupiahPenuh(s.pades.nilai)}
               keterangan={`dari ${s.pades.n} BUMDes · ${s.laba.nilai > 0 ? ((s.pades.nilai / s.laba.nilai) * 100).toFixed(0) : 0}% dari laba`}
@@ -280,38 +221,17 @@ const BumdesEkonomi = ({ data = [] }) => {
                 tampil={`${nf.format(k.n)} BUMDes`}
                 maks={maksKelas}
                 warna={RAMP[i + 1]}
+                urutan={i}
                 judulHover={`${k.n} BUMDes beromset ${k.label}`}
               />
             ))}
           </div>
           <p className="mt-4 text-[11px] leading-relaxed text-slate-500">
-            Dihitung dari {s.omsetPositifN} BUMDes yang beromset di atas nol pada 2025.
+            Dihitung dari {s.omsetPositifN} BUMDes yang beromset di atas nol pada tahun
+            terbaru yang diisinya — patokan yang sama dengan penyaring “Skala omset”.
           </p>
         </Kartu>
       </div>
-
-      {/* 4 — Pemeringkatan resmi */}
-      <Kartu>
-        <Judul
-          icon={Award}
-          catatan="Penilaian resmi 2024 — satu-satunya penilaian yang lengkap untuk seluruh BUMDes. Pemeringkatan 2026 masih berjalan dan belum mencakup semuanya, jadi belum dipakai di sini."
-        >
-          Kelas BUMDes menurut penilaian resmi
-        </Judul>
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-          {s.peringkat.map((p, i) => (
-            <Batang
-              key={p.label}
-              label={p.label}
-              nilai={p.n}
-              tampil={`${nf.format(p.n)} (${s.peringkatTerdata ? Math.round((p.n / s.peringkatTerdata) * 100) : 0}%)`}
-              maks={maksPeringkat}
-              warna={RAMP[i + 1]}
-              judulHover={`${p.n} BUMDes berkelas ${p.label}`}
-            />
-          ))}
-        </div>
-      </Kartu>
 
       {/* 5 — Mutu data: disebut, bukan disembunyikan */}
       {s.janggal.length > 0 && (
