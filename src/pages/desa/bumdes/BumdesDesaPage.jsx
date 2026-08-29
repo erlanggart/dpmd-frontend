@@ -20,6 +20,64 @@ import {
 import api from "../../../api";
 import BumdesDesaService from "../../../services/bumdesDesaService";
 import DesaPageHeader from "../../../components/desa/DesaPageHeader";
+import API_CONFIG from "../../../config/api";
+
+// Dokumen BUMDes disimpan sebagai path relatif atau nama berkas saja. Desa harus
+// bisa membukanya, bukan cuma membaca namanya: berkas ini bisa saja diunggah
+// pegawai SPKED, bukan oleh desa sendiri.
+const FOLDER_DOKUMEN = {
+	LaporanKeuangan2021: "bumdes_laporan_keuangan",
+	LaporanKeuangan2022: "bumdes_laporan_keuangan",
+	LaporanKeuangan2023: "bumdes_laporan_keuangan",
+	LaporanKeuangan2024: "bumdes_laporan_keuangan",
+	ProfilBUMDesa: "bumdes_dokumen_badanhukum",
+	BeritaAcara: "bumdes_dokumen_badanhukum",
+	AnggaranDasar: "bumdes_dokumen_badanhukum",
+	AnggaranRumahTangga: "bumdes_dokumen_badanhukum",
+	ProgramKerja: "bumdes_dokumen_badanhukum",
+	Perdes: "bumdes_dokumen_badanhukum",
+	SK_BUM_Desa: "bumdes_dokumen_badanhukum",
+};
+
+const tautanDokumen = (field, nilai) => {
+	if (!nilai) return null;
+	const berkas = String(nilai).split("/").pop();
+	const folder = FOLDER_DOKUMEN[field];
+	if (!berkas || !folder) return null;
+	return `${API_CONFIG.STORAGE_URL}/${folder}/${berkas}`;
+};
+
+const DokumenTersimpan = ({ field, nilai }) => {
+	const tautan = tautanDokumen(field, nilai);
+	if (!tautan) return null;
+	return (
+		<a
+			href={tautan}
+			target="_blank"
+			rel="noreferrer"
+			className="text-xs text-slate-600 hover:text-slate-900 underline flex items-center gap-1"
+		>
+			<FiFileText /> {String(nilai).split("/").pop()}
+		</a>
+	);
+};
+
+const ProdukHukumTerpilih = ({ id, daftar }) => {
+	if (!id) return null;
+	const dipilih = (daftar || []).find((x) => String(x.id) === String(id));
+	if (!dipilih?.file) return null;
+	const berkas = String(dipilih.file).split("/").pop();
+	return (
+		<a
+			href={`${API_CONFIG.STORAGE_URL}/produk-hukum/${berkas}`}
+			target="_blank"
+			rel="noreferrer"
+			className="mt-1 text-xs text-slate-600 hover:text-slate-900 underline flex items-center gap-1"
+		>
+			<FiFileText /> Lihat dokumen: {dipilih.judul || berkas}
+		</a>
+	);
+};
 
 const BumdesDesaPage = () => {
 	const { user } = useAuth();
@@ -616,6 +674,10 @@ const BumdesDesaPage = () => {
 									: "Belum ada PERDES - Upload di menu Produk Hukum",
 								true
 							)}
+							<ProdukHukumTerpilih
+								id={formData.produk_hukum_perdes_id}
+								daftar={produkHukumOptions.perdes}
+							/>
 							
 							{renderSelect(
 								"Surat Keputusan (SK) BUMDES",
@@ -626,6 +688,10 @@ const BumdesDesaPage = () => {
 									: "Belum ada SK - Upload di menu Produk Hukum",
 								true
 							)}
+							<ProdukHukumTerpilih
+								id={formData.produk_hukum_sk_bumdes_id}
+								daftar={produkHukumOptions.sk}
+							/>
 						</div>
 
 						{/* Fallback manual input jika diperlukan */}
@@ -971,9 +1037,10 @@ const BumdesDesaPage = () => {
 										</p>
 									)}
 									{formData[`LaporanKeuangan${year}`] && !fileUploads[`LaporanKeuangan${year}`] && (
-										<p className="text-xs text-slate-600 flex items-center gap-1">
-											<FiFileText /> File tersimpan: {formData[`LaporanKeuangan${year}`].split('/').pop()}
-										</p>
+										<DokumenTersimpan
+											field={`LaporanKeuangan${year}`}
+											nilai={formData[`LaporanKeuangan${year}`]}
+										/>
 									)}
 								</div>
 							))}
@@ -1027,9 +1094,7 @@ const BumdesDesaPage = () => {
 										</p>
 									)}
 									{formData[doc.key] && !fileUploads[doc.key] && (
-										<p className="text-xs text-slate-600 flex items-center gap-1">
-											<FiFileText /> File tersimpan: {formData[doc.key].split('/').pop()}
-										</p>
+										<DokumenTersimpan field={doc.key} nilai={formData[doc.key]} />
 									)}
 								</div>
 							))}

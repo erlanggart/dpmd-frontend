@@ -830,6 +830,13 @@ const BumdesDokumenManager = () => {
                         <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
                           {getDocumentTypeLabel(item.document_type)}
                         </span>
+                        {item.sumber === 'produk_hukum' && (
+                          <div className="mt-1 text-xs text-slate-500" title={item.produk_hukum?.judul || ''}>
+                            dari Produk Hukum desa
+                            {item.produk_hukum?.nomor ? ` · No. ${item.produk_hukum.nomor}` : ''}
+                            {item.produk_hukum?.tahun ? `/${item.produk_hukum.tahun}` : ''}
+                          </div>
+                        )}
                       </td>
                       <td className="px-6 py-4">
                         <div className="max-w-xs">
@@ -873,18 +880,20 @@ const BumdesDokumenManager = () => {
                               >
                                 <FiDownload className="w-4 h-4" />
                               </button>
-                              <button
-                                onClick={() => handleDeleteFile(
-                                  item.filename, 
-                                  activeTab === 'badan-hukum' ? 'bumdes_dokumen_badanhukum' : 'bumdes_laporan_keuangan',
-                                  item.id
-                                )}
-                                disabled={deleteLoading}
-                                className="p-2 bg-red-50 hover:bg-red-100 text-red-600 rounded-lg transition-colors disabled:opacity-50"
-                                title="Hapus file"
-                              >
-                                <FiTrash2 className="w-4 h-4" />
-                              </button>
+                              {item.sumber !== 'produk_hukum' && (
+                                <button
+                                  onClick={() => handleDeleteFile(
+                                    item.filename,
+                                    activeTab === 'badan-hukum' ? 'dokumen_badan_hukum' : 'laporan_keuangan',
+                                    item.bumdes_id ?? item.id
+                                  )}
+                                  disabled={deleteLoading}
+                                  className="p-2 bg-red-50 hover:bg-red-100 text-red-600 rounded-lg transition-colors disabled:opacity-50"
+                                  title="Hapus file"
+                                >
+                                  <FiTrash2 className="w-4 h-4" />
+                                </button>
+                              )}
                             </>
                           )}
                           {!item.file_exists && (
@@ -940,6 +949,13 @@ const BumdesDokumenManager = () => {
                         <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-slate-100 text-slate-800">
                           {getDocumentTypeLabel(item.document_type)}
                         </span>
+                        {item.sumber === 'produk_hukum' && (
+                          <div className="mt-1 text-xs text-slate-500" title={item.produk_hukum?.judul || ''}>
+                            dari Produk Hukum desa
+                            {item.produk_hukum?.nomor ? ` · No. ${item.produk_hukum.nomor}` : ''}
+                            {item.produk_hukum?.tahun ? `/${item.produk_hukum.tahun}` : ''}
+                          </div>
+                        )}
                       </div>
 
                       <div>
@@ -981,12 +997,12 @@ const BumdesDokumenManager = () => {
                           )}
                         </div>
                         
-                        {item.file_exists && (
+                        {item.file_exists && item.sumber !== 'produk_hukum' && (
                           <button
                             onClick={() => handleDeleteFile(
-                              item.filename, 
-                              activeTab === 'badan-hukum' ? 'bumdes_dokumen_badanhukum' : 'bumdes_laporan_keuangan',
-                              item.id
+                              item.filename,
+                              activeTab === 'badan-hukum' ? 'dokumen_badan_hukum' : 'laporan_keuangan',
+                              item.bumdes_id ?? item.id
                             )}
                             disabled={deleteLoading}
                             className="p-2 bg-red-50 hover:bg-red-100 text-red-600 rounded-md transition-colors disabled:opacity-50"
