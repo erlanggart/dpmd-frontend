@@ -61,7 +61,17 @@ const KUNCI_SIAGA = 'gema-siaga';
  */
 const RMS_BICARA = 0.022;      // di atas ini dianggap ada suara orang
 const HENING_SELESAI = 850;    // ms hening berturut-turut = ucapan selesai
-const JEDA_PERINTAH = 8000;    // ms tanpa suara di fase perintah = kembali siaga
+/**
+ * Berapa lama Gema tetap menunggu perintah lanjutan setelah menjawab.
+ *
+ * Dihitung dari HENING TERAKHIR, bukan dari saat fase dimulai — dan itu
+ * pembedaan yang menentukan. Versi pertama memasang penjaga waktu sekali
+ * saat fase dimulai dan tidak pernah menyetelnya ulang, sehingga penjaga itu
+ * meletus di tengah kalimat orang yang sedang bertanya: fase turun ke siaga,
+ * ucapannya selesai tanpa kata bangun, lalu dibuang diam-diam. Akibatnya
+ * setiap pertanyaan lanjutan harus diawali "Halo Gema" lagi.
+ */
+const JEDA_PERINTAH = 15000;   // ms HENING di fase perintah = kembali siaga
 
 /**
  * Pengingat mikrofon menganggur.
@@ -476,7 +486,6 @@ const GemaPage = () => {
 	const pernahBicaraRef = useRef(false); // sudah ada suara di ucapan ini?
 	const heningSejakRef = useRef(0);      // kapan hening mulai
 	const abaikanFinalRef = useRef(false); // sudah ditangani lewat hening
-	const jedaPerintahRef = useRef(0);     // penjaga waktu fase perintah
 
 	// Pengingat mikrofon menganggur.
 	const aktivitasRef = useRef(Date.now());     // kapan terakhir ada suara/perintah
@@ -646,7 +655,9 @@ const GemaPage = () => {
 			const ucapan = String(teks || '').trim();
 			if (!ucapan || jedaRef.current) return;
 
-			clearTimeout(jedaPerintahRef.current);
+			// Ada ucapan = jendela perintah diperpanjang. Pengawas satu detik
+			// membaca penanda yang sama, jadi cukup disetel di sini.
+			aktivitasRef.current = Date.now();
 
 			if (faseRef.current === 'siaga') {
 				// Bukan untuk Gema — halaman ini akan terbuka di ruangan berisi
@@ -669,24 +680,21 @@ const GemaPage = () => {
 		};
 	}, [sapaBalik, tanyakan]);
 
-	// Fase perintah tidak boleh menggantung selamanya kalau tidak jadi bicara.
+	// Penanda deteksi hening dinolkan tiap pergantian fase; tanpa ini sisa
+	// ucapan lama bisa langsung memicu pencarian begitu fase berganti.
+	//
+	// Penjaga waktu fase perintah TIDAK dipasang di sini. Sebelumnya iya, dan
+	// itulah sumber bug "harus bilang Halo Gema lagi": penjaga waktu sekali
+	// pasang meletus di tengah kalimat penanya. Sekarang batas waktunya diperiksa
+	// pengawas satu detik sekali terhadap HENING TERAKHIR, jadi selama orangnya
+	// masih bicara jendelanya tidak pernah tertutup.
 	useEffect(() => {
-		// Penanda deteksi hening dinolkan tiap pergantian fase; tanpa ini sisa
-		// ucapan lama bisa langsung memicu pencarian begitu fase berganti.
 		pernahBicaraRef.current = false;
 		heningSejakRef.current = 0;
 		transkripRef.current = '';
-
-		clearTimeout(jedaPerintahRef.current);
-		if (fase !== 'perintah') return undefined;
-		jedaPerintahRef.current = setTimeout(() => {
-			if (faseRef.current === 'perintah') {
-				setTranskrip('');
-				setFasa(siagaRef.current ? 'siaga' : 'mati');
-			}
-		}, JEDA_PERINTAH);
-		return () => clearTimeout(jedaPerintahRef.current);
-	}, [fase, setFasa]);
+		// Masuk fase perintah = titik nol hitungan hening.
+		if (fase === 'perintah') aktivitasRef.current = Date.now();
+	}, [fase]);
 
 	const pasangPengenal = useCallback(() => {
 		const Pengenal = AmbilPengenalSuara();
@@ -883,6 +891,16 @@ const GemaPage = () => {
 				aktivitasRef.current = Date.now();
 				return;
 			}
+
+			// Jendela perintah lanjutan ditutup hanya setelah benar-benar hening
+			// selama JEDA_PERINTAH. Selama masih ada suara, aktivitasRef terus
+			// diperbarui gelung amplitudo, jadi jendelanya ikut memanjang sendiri.
+			if (faseRef.current === 'perintah'
+				&& Date.now() - aktivitasRef.current >= JEDA_PERINTAH) {
+				setTranskrip('');
+				setFasa('siaga');
+				return;
+			}
 			if (popupDiamRef.current) return;
 			if (Date.now() - aktivitasRef.current < ambangDiamRef.current) return;
 
@@ -891,7 +909,7 @@ const GemaPage = () => {
 			setPopupDiam(true);
 		}, 1000);
 		return () => clearInterval(jam);
-	}, []);
+	}, [setFasa]);
 
 	// Hitung mundur popup. Habis waktunya = tidak ada orang di depan layar,
 	// jadi mikrofon dimatikan.
