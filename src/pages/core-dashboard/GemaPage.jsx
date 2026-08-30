@@ -50,13 +50,56 @@ const KATA_BANGUN = /\b(h?a?l+o+|hai|hei|hey|oke|ok)\s*,?\s*(gema|gemma|gima|jem
 
 const KUNCI_SIAGA = 'gema-siaga';
 
+/**
+ * Ambang deteksi selesai bicara.
+ *
+ * Menunggu SpeechRecognition menyatakan hasilnya final terasa lambat — Chrome
+ * kadang menahannya satu sampai dua detik setelah orangnya berhenti. Padahal
+ * amplitudo mikrofon sudah tahu lebih dulu. Jadi akhir ucapan ditentukan dari
+ * hening, dan hasil sementara langsung dicari; jalur `isFinal` tetap dipasang
+ * sebagai cadangan, mana yang lebih dulu datang.
+ */
+const RMS_BICARA = 0.022;      // di atas ini dianggap ada suara orang
+const HENING_SELESAI = 850;    // ms hening berturut-turut = ucapan selesai
+const JEDA_PERINTAH = 8000;    // ms tanpa suara di fase perintah = kembali siaga
+
 const BALASAN_SAPAAN = [
 	'Ya, saya dengar. Mau cari data apa?',
 	'Halo! Sebutkan datanya, saya carikan.',
 	'Siap. Data apa yang dicari?',
 ];
 
-/** Ucapkan teks dengan suara Indonesia bila tersedia. */
+/**
+ * Pilih suara terbaik yang tersedia untuk bahasa Indonesia.
+ *
+ * Daftar suara peramban terisi ASINKRON: pemanggilan pertama sering
+ * mengembalikan array kosong, dan itulah sebabnya kalimat pertama kerap terdengar
+ * memakai suara Inggris. Karena itu daftarnya dibaca ulang tiap kali, bukan
+ * disimpan sekali di awal.
+ */
+const pilihSuara = () => {
+	const daftar = window.speechSynthesis?.getVoices?.() || [];
+	if (!daftar.length) return null;
+	return (
+		daftar.find((v) => v.lang === 'id-ID' && v.localService)
+		|| daftar.find((v) => v.lang === 'id-ID')
+		|| daftar.find((v) => v.lang?.toLowerCase().startsWith('id'))
+		|| null
+	);
+};
+
+/**
+ * Ucapkan teks.
+ *
+ * Dua penyakit speechSynthesis yang ditangani di sini:
+ *
+ *  1. Kalimat panjang terpotong di tengah. Chrome menghentikan pengucapan
+ *     sekitar lima belas detik; penawarnya memanggil resume() berkala selama
+ *     masih berbicara.
+ *  2. onend kadang tidak pernah datang bila pengucapan gagal diam-diam. Ada
+ *     penjaga waktu yang menutup jalur itu supaya Gema tidak tersangkut selamanya
+ *     di fase "menjawab" dan berhenti mendengar.
+ */
 const ucapkan = (teks, saatSelesai) => {
 	if (typeof window === 'undefined' || !window.speechSynthesis || !teks) {
 		saatSelesai?.();
@@ -66,13 +109,32 @@ const ucapkan = (teks, saatSelesai) => {
 
 	const suara = new SpeechSynthesisUtterance(teks);
 	suara.lang = 'id-ID';
-	suara.rate = 1.02;
+	suara.rate = 1.03;
+	suara.pitch = 1;
 
-	const indo = window.speechSynthesis.getVoices().find((v) => v.lang?.toLowerCase().startsWith('id'));
-	if (indo) suara.voice = indo;
+	const terpilih = pilihSuara();
+	if (terpilih) suara.voice = terpilih;
 
-	suara.onend = () => saatSelesai?.();
-	suara.onerror = () => saatSelesai?.();
+	let selesai = false;
+	const tutup = () => {
+		if (selesai) return;
+		selesai = true;
+		clearInterval(penjagaJeda);
+		clearTimeout(penjagaWaktu);
+		saatSelesai?.();
+	};
+
+	const penjagaJeda = setInterval(() => {
+		if (window.speechSynthesis.speaking) window.speechSynthesis.resume();
+		else tutup();
+	}, 4000);
+
+	// Perkiraan kasar: ~13 huruf per detik, ditambah margin lebar.
+	const perkiraanMs = Math.min(30000, 2500 + (teks.length / 13) * 1000);
+	const penjagaWaktu = setTimeout(tutup, perkiraanMs);
+
+	suara.onend = tutup;
+	suara.onerror = tutup;
 	window.speechSynthesis.speak(suara);
 };
 
@@ -278,7 +340,7 @@ const JUDUL_FASE = {
 const CATATAN_FASE = {
 	mati: 'Sekali diizinkan, Gema langsung siaga sendiri di kunjungan berikutnya.',
 	siaga: 'Gema siaga. Tidak perlu menekan apa pun.',
-	perintah: 'Misalnya: “cari data desa berstatus mandiri”.',
+	perintah: 'Berhenti bicara sebentar, Gema langsung mencari. Mis. “cari data desa berstatus mandiri”.',
 	berpikir: 'Sedang membaca data sistem…',
 	menjawab: 'Ketuk lingkaran untuk menghentikan suara.',
 };
@@ -306,6 +368,14 @@ const GemaPage = () => {
 	const faseRef = useRef('mati');
 	const siagaRef = useRef(false);
 	const jedaRef = useRef(false); // true selama Gema bicara
+
+	// Dipakai deteksi selesai bicara. Semuanya ref karena dibaca di dalam gelung
+	// requestAnimationFrame yang tidak pernah dipasang ulang.
+	const transkripRef = useRef('');       // ucapan terbaru, termasuk yang belum final
+	const pernahBicaraRef = useRef(false); // sudah ada suara di ucapan ini?
+	const heningSejakRef = useRef(0);      // kapan hening mulai
+	const abaikanFinalRef = useRef(false); // sudah ditangani lewat hening
+	const jedaPerintahRef = useRef(0);     // penjaga waktu fase perintah
 
 	const didukung = useMemo(() => Boolean(AmbilPengenalSuara()), []);
 
@@ -357,10 +427,39 @@ const GemaPage = () => {
 					const d = (buffer[i] - 128) / 128;
 					jumlah += d * d;
 				}
+				const rms = Math.sqrt(jumlah / buffer.length);
+
 				// Akar kuadrat menaikkan bisikan tanpa membuat teriakan meledak.
-				const nilai = Math.min(1, Math.sqrt(Math.sqrt(jumlah / buffer.length) * 4));
+				const nilai = Math.min(1, Math.sqrt(rms * 4));
 				// Hanya tulis kalau berubah cukup berarti — hemat kerja tata letak.
 				if (Math.abs(nilai - terakhir) > 0.01) { tulisTenaga(nilai); terakhir = nilai; }
+
+				// ── Deteksi selesai bicara ──────────────────────────────────
+				// Tidak berlaku selama Gema sendiri yang bicara, dan hanya di fase
+				// yang memang menunggu ucapan.
+				const fasaKini = faseRef.current;
+				const menunggu = fasaKini === 'siaga' || fasaKini === 'perintah';
+				if (!jedaRef.current && menunggu) {
+					const kini = performance.now();
+					if (rms >= RMS_BICARA) {
+						pernahBicaraRef.current = true;
+						heningSejakRef.current = 0;
+						abaikanFinalRef.current = false;
+					} else if (pernahBicaraRef.current) {
+						if (!heningSejakRef.current) heningSejakRef.current = kini;
+						else if (kini - heningSejakRef.current >= HENING_SELESAI) {
+							const ucapan = transkripRef.current.trim();
+							pernahBicaraRef.current = false;
+							heningSejakRef.current = 0;
+							if (ucapan) {
+								abaikanFinalRef.current = true;
+								transkripRef.current = '';
+								prosesUcapanRef.current(ucapan);
+							}
+						}
+					}
+				}
+
 				rafRef.current = requestAnimationFrame(langkah);
 			};
 			rafRef.current = requestAnimationFrame(langkah);
@@ -386,7 +485,10 @@ const GemaPage = () => {
 
 		const selesaiBicara = () => {
 			jedaRef.current = false;
-			setFasa(siagaRef.current ? 'siaga' : 'mati');
+			// Kembali MENUNGGU PERINTAH, bukan ke kata bangun: pertanyaan lanjutan
+			// ("kalau yang maju berapa?") jadi wajar tanpa menyapa ulang. Tidak
+			// menggantung — penjaga waktu JEDA_PERINTAH mengembalikannya ke siaga.
+			setFasa(siagaRef.current ? 'perintah' : 'mati');
 		};
 
 		try {
@@ -404,6 +506,13 @@ const GemaPage = () => {
 		}
 	}, [setFasa]);
 
+	/**
+	 * Satu-satunya pintu masuk ucapan, dipakai dua jalur sekaligus: deteksi
+	 * hening dan hasil final dari peramban. Mana pun yang datang lebih dulu
+	 * menang; yang belakangan diabaikan lewat `abaikanFinalRef`.
+	 */
+	const prosesUcapanRef = useRef(() => {});
+
 	const sapaBalik = useCallback(() => {
 		const balas = BALASAN_SAPAAN[Math.floor(Math.random() * BALASAN_SAPAAN.length)];
 		setRiwayat((r) => [{ peran: 'gema', teks: balas, waktu: Date.now() }, ...r].slice(0, 8));
@@ -417,6 +526,56 @@ const GemaPage = () => {
 	}, [setFasa]);
 
 	/* ------------------------------------------------------- pengenalan -- */
+
+	// Isi sebenarnya dari prosesUcapan. Ditaruh di ref supaya penangan
+	// SpeechRecognition dan gelung rAF — yang keduanya dipasang sekali dan hidup
+	// lama — selalu memanggil versi terbaru, bukan yang terkunci di render awal.
+	useEffect(() => {
+		prosesUcapanRef.current = (teks) => {
+			const ucapan = String(teks || '').trim();
+			if (!ucapan || jedaRef.current) return;
+
+			clearTimeout(jedaPerintahRef.current);
+
+			if (faseRef.current === 'siaga') {
+				// Bukan untuk Gema — halaman ini akan terbuka di ruangan berisi
+				// orang mengobrol, jadi diam adalah jawaban yang benar.
+				if (!KATA_BANGUN.test(ucapan)) { setTranskrip(''); return; }
+
+				// "Halo Gema, cari data desa mandiri" — sisanya langsung dicari.
+				const sisa = ucapan.replace(KATA_BANGUN, '').replace(/^[\s,.]+/, '').trim();
+				if (sisa.length >= 3) tanyakan(sisa);
+				else sapaBalik();
+				return;
+			}
+
+			if (faseRef.current === 'perintah') {
+				const sisa = ucapan.replace(KATA_BANGUN, '').replace(/^[\s,.]+/, '').trim();
+				if (sisa.length >= 3) { tanyakan(sisa); return; }
+				// Terlalu pendek untuk jadi perintah; tetap menunggu.
+				setTranskrip('');
+			}
+		};
+	}, [sapaBalik, tanyakan]);
+
+	// Fase perintah tidak boleh menggantung selamanya kalau tidak jadi bicara.
+	useEffect(() => {
+		// Penanda deteksi hening dinolkan tiap pergantian fase; tanpa ini sisa
+		// ucapan lama bisa langsung memicu pencarian begitu fase berganti.
+		pernahBicaraRef.current = false;
+		heningSejakRef.current = 0;
+		transkripRef.current = '';
+
+		clearTimeout(jedaPerintahRef.current);
+		if (fase !== 'perintah') return undefined;
+		jedaPerintahRef.current = setTimeout(() => {
+			if (faseRef.current === 'perintah') {
+				setTranskrip('');
+				setFasa(siagaRef.current ? 'siaga' : 'mati');
+			}
+		}, JEDA_PERINTAH);
+		return () => clearTimeout(jedaPerintahRef.current);
+	}, [fase, setFasa]);
 
 	const pasangPengenal = useCallback(() => {
 		const Pengenal = AmbilPengenalSuara();
@@ -438,24 +597,22 @@ const GemaPage = () => {
 				if (ev.results[i].isFinal) final += potongan;
 				else sementara += potongan;
 			}
-			setTranskrip((final || sementara).trim());
+
+			const tampak = (final || sementara).trim();
+			setTranskrip(tampak);
+			// Disimpan ke ref juga: deteksi hening membacanya dari dalam gelung
+			// rAF, dan hasil SEMENTARA sudah cukup untuk dicari.
+			if (tampak) transkripRef.current = tampak;
+
 			if (!final) return;
 
-			const teks = final.trim();
+			// Sudah ditangani deteksi hening lebih dulu — jangan dikerjakan dua kali.
+			if (abaikanFinalRef.current) { abaikanFinalRef.current = false; return; }
 
-			if (faseRef.current === 'siaga') {
-				if (!KATA_BANGUN.test(teks)) return; // bukan untuk Gema; abaikan
-				// "Halo Gema, cari data desa mandiri" — sisanya langsung jadi perintah.
-				const sisa = teks.replace(KATA_BANGUN, '').replace(/^[\s,.]+/, '').trim();
-				if (sisa.length >= 3) tanyakan(sisa);
-				else sapaBalik();
-				return;
-			}
-
-			if (faseRef.current === 'perintah') {
-				const sisa = teks.replace(KATA_BANGUN, '').replace(/^[\s,.]+/, '').trim();
-				if (sisa.length >= 3) tanyakan(sisa);
-			}
+			transkripRef.current = '';
+			pernahBicaraRef.current = false;
+			heningSejakRef.current = 0;
+			prosesUcapanRef.current(final.trim());
 		};
 
 		pengenal.onerror = (ev) => {
@@ -482,7 +639,9 @@ const GemaPage = () => {
 		};
 
 		return pengenal;
-	}, [hentikanAudio, sapaBalik, setFasa, tanyakan]);
+		// sapaBalik dan tanyakan tidak lagi disebut di sini: keduanya dipanggil
+		// lewat prosesUcapanRef, yang selalu memegang versi terbaru.
+	}, [hentikanAudio, setFasa]);
 
 	const nyalakanSiaga = useCallback(async () => {
 		if (!didukung) { setModeKetik(true); return; }
