@@ -2,26 +2,37 @@
 //
 // Gema — asisten suara Core Dashboard. Purwarupa.
 //
-// TIGA HAL YANG DIPILIH SEJAK AWAL, karena akan sulit diubah belakangan:
+// CARA KERJANYA SEPERTI SIRI: tidak ada tombol yang harus ditekan. Begitu izin
+// mikrofon diberikan, Gema siaga terus dan menunggu kata bangun "Halo Gema".
+// Sekali diizinkan, kunjungan berikutnya langsung siaga sendiri.
+//
+// SATU BATAS YANG TIDAK BISA DILEWATI: peramban wajib meminta izin mikrofon
+// sekali, dan izin itu hanya bisa diminta lewat tindakan pengguna. Jadi ada satu
+// ketukan di kunjungan pertama saja — sesudah itu tidak pernah lagi.
+//
+// EMPAT HAL YANG DIPILIH SEJAK AWAL, karena sulit diubah belakangan:
 //
 // 1. SUARANYA MEMAKAI KEMAMPUAN BAWAAN PERAMBAN — SpeechRecognition untuk
-//    mendengar, speechSynthesis untuk menjawab. Tanpa pustaka, tanpa kunci API,
-//    tanpa suara yang dikirim ke luar. Konsekuensinya jujur: pengenalan suara
-//    baru ada di Chrome dan Edge. Peramban lain TIDAK ditinggalkan — kotak
-//    ketik selalu tersedia dan menempuh jalur yang sama persis.
+//    mendengar, speechSynthesis untuk menjawab. Tanpa pustaka, tanpa kunci API.
+//    Konsekuensinya jujur: pengenalan suara baru ada di Chrome dan Edge, dan di
+//    Chrome audionya diproses di server Google. Peramban lain TIDAK
+//    ditinggalkan — kotak ketik menempuh jalur yang sama persis.
 //
-// 2. ANIMASINYA DIGERAKKAN AMPLITUDO SUNGGUHAN, bukan gerak berulang yang
-//    kebetulan mirip. Cincin membesar karena orangnya memang bicara lebih
-//    keras — itu yang membuat alat ini terasa mendengarkan, bukan berpura-pura.
+// 2. GEMA BERHENTI MENDENGAR SAAT DIRINYA BICARA. Tanpa itu ia menangkap
+//    suaranya sendiri, mengira ada perintah baru, lalu menjawab lagi — berputar
+//    tanpa henti.
 //
-// 3. GELUNG ANIMASINYA BERHENTI SAAT TIDAK MENDENGAR. Halaman ini akan dibuka
-//    lama di layar dinas; animasi yang berputar selamanya pernah membekukan
-//    dasbor di ponsel kelas bawah.
+// 3. AMPLITUDO DITULIS KE CSS VARIABLE, BUKAN KE STATE REACT. Siaga berarti
+//    gelung ini hidup terus; enam puluh render per detik akan membuat halaman
+//    yang dibuka seharian jadi berat. Nilainya masuk lewat ref, nol render.
 //
-// Jawabannya SELALU datang dari basis data lewat /api/gema/tanya. Gema tidak
-// pernah mengarang: kalau pertanyaannya di luar cakupan, ia bilang tidak tahu.
+// 4. SIAGA BERHENTI SAAT TAB TIDAK TERLIHAT. Mikrofon dan gelung animasi tidak
+//    boleh jalan di latar belakang; keduanya hidup lagi begitu tabnya dibuka.
+//
+// Jawabannya SELALU dari basis data lewat /api/gema/tanya. Gema tidak pernah
+// mengarang: di luar cakupan, ia bilang tidak tahu.
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Mic, Square, Keyboard, Sparkles, AlertCircle, Volume2, Loader2, Send } from 'lucide-react';
+import { Mic, MicOff, Keyboard, Sparkles, AlertCircle, Volume2, Loader2, Send, Ear } from 'lucide-react';
 import api from '../../api';
 
 /* ----------------------------------------------------------------- utilitas -- */
@@ -31,12 +42,18 @@ const AmbilPengenalSuara = () =>
 		? window.SpeechRecognition || window.webkitSpeechRecognition
 		: null);
 
-const SAPAAN = /\b(halo|hallo|hai|hei)\s*gema\b/i;
+/**
+ * Kata bangun. Ditulis longgar karena pengenalan suara sering meleset tipis:
+ * "halo gema" kerap terdengar "halo gemma", "hallo gema", bahkan "alo gema".
+ */
+const KATA_BANGUN = /\b(h?a?l+o+|hai|hei|hey|oke|ok)\s*,?\s*(gema|gemma|gima|jema)\b/i;
+
+const KUNCI_SIAGA = 'gema-siaga';
 
 const BALASAN_SAPAAN = [
-	'Halo! Gema siap. Mau cari data apa?',
-	'Ya, saya dengar. Silakan sebutkan data yang dicari.',
-	'Halo! Sebutkan saja datanya, saya carikan.',
+	'Ya, saya dengar. Mau cari data apa?',
+	'Halo! Sebutkan datanya, saya carikan.',
+	'Siap. Data apa yang dicari?',
 ];
 
 /** Ucapkan teks dengan suara Indonesia bila tersedia. */
@@ -50,10 +67,8 @@ const ucapkan = (teks, saatSelesai) => {
 	const suara = new SpeechSynthesisUtterance(teks);
 	suara.lang = 'id-ID';
 	suara.rate = 1.02;
-	suara.pitch = 1;
 
-	const daftar = window.speechSynthesis.getVoices();
-	const indo = daftar.find((v) => v.lang?.toLowerCase().startsWith('id'));
+	const indo = window.speechSynthesis.getVoices().find((v) => v.lang?.toLowerCase().startsWith('id'));
 	if (indo) suara.voice = indo;
 
 	suara.onend = () => saatSelesai?.();
@@ -64,41 +79,49 @@ const ucapkan = (teks, saatSelesai) => {
 /* -------------------------------------------------------------- lingkaran -- */
 
 /**
- * Tombol mikrofon. `tenaga` 0–1 datang dari amplitudo mikrofon dan menggerakkan
- * dua cincin luar; saat diam nilainya 0 dan cincinnya benar-benar berhenti.
+ * Lingkaran Gema. Cincinnya digerakkan variabel CSS `--tenaga` (0–1) yang
+ * ditulis langsung ke DOM dari gelung amplitudo — bukan lewat state, supaya
+ * siaga panjang tidak berarti render tanpa henti.
  */
-const LingkaranMik = ({ keadaan, tenaga, onKlik }) => {
-	const mendengar = keadaan === 'mendengar';
-	const sibuk = keadaan === 'berpikir';
-	const bicara = keadaan === 'menjawab';
-
-	// Dinaikkan sedikit dengan akar supaya bisikan tetap terlihat bergerak,
-	// tapi teriakan tidak membuat cincinnya meledak keluar layar.
-	const dorong = mendengar ? Math.min(1, Math.sqrt(tenaga)) : 0;
+const LingkaranGema = React.forwardRef(({ fase, onKlik, bisaDiketuk }, ref) => {
+	const mendengar = fase === 'siaga' || fase === 'perintah';
+	const menunggu = fase === 'perintah';
+	const sibuk = fase === 'berpikir';
+	const bicara = fase === 'menjawab';
 
 	return (
-		<div className="relative flex h-64 w-64 items-center justify-center sm:h-72 sm:w-72">
-			{/* Cincin amplitudo */}
+		<div
+			ref={ref}
+			className="relative flex h-64 w-64 items-center justify-center sm:h-72 sm:w-72"
+			style={{ '--tenaga': 0 }}
+		>
+			{/* Dua cincin amplitudo. Skalanya dihitung di CSS dari --tenaga. */}
 			<span
 				aria-hidden="true"
-				className="absolute rounded-full bg-slate-900/[0.06] transition-[transform,opacity] duration-100 ease-out"
+				className="absolute h-full w-full rounded-full bg-slate-900/[0.06] transition-opacity duration-500"
 				style={{
-					height: '100%', width: '100%',
-					transform: `scale(${0.72 + dorong * 0.28})`,
-					opacity: mendengar ? 0.5 + dorong * 0.5 : 0,
+					transform: 'scale(calc(0.72 + var(--tenaga) * 0.3))',
+					opacity: mendengar ? 1 : 0,
 				}}
 			/>
 			<span
 				aria-hidden="true"
-				className="absolute rounded-full bg-slate-900/[0.09] transition-[transform,opacity] duration-75 ease-out"
+				className="absolute h-[78%] w-[78%] rounded-full bg-slate-900/[0.09] transition-opacity duration-500"
 				style={{
-					height: '78%', width: '78%',
-					transform: `scale(${0.8 + dorong * 0.2})`,
-					opacity: mendengar ? 0.6 + dorong * 0.4 : 0,
+					transform: 'scale(calc(0.82 + var(--tenaga) * 0.22))',
+					opacity: mendengar ? 1 : 0,
 				}}
 			/>
 
-			{/* Denyut halus saat menjawab — tidak bergantung mikrofon */}
+			{/* Cincin tipis penanda "sedang menunggu perintah" */}
+			{menunggu && (
+				<span
+					aria-hidden="true"
+					className="absolute h-[92%] w-[92%] animate-ping rounded-full border border-slate-900/20"
+					style={{ animationDuration: '1.8s' }}
+				/>
+			)}
+
 			{bicara && (
 				<span
 					aria-hidden="true"
@@ -107,7 +130,6 @@ const LingkaranMik = ({ keadaan, tenaga, onKlik }) => {
 				/>
 			)}
 
-			{/* Busur berputar saat mencari */}
 			{sibuk && (
 				<svg
 					aria-hidden="true"
@@ -126,41 +148,48 @@ const LingkaranMik = ({ keadaan, tenaga, onKlik }) => {
 			<button
 				type="button"
 				onClick={onKlik}
-				aria-label={mendengar ? 'Berhenti mendengarkan' : 'Mulai bicara dengan Gema'}
-				aria-pressed={mendengar}
-				className={`relative flex h-32 w-32 items-center justify-center rounded-full text-white shadow-xl outline-none transition-[transform,background-color,box-shadow] duration-300 focus-visible:ring-4 focus-visible:ring-slate-900/20 sm:h-36 sm:w-36 ${
-					mendengar
-						? 'bg-slate-900 shadow-slate-900/30'
-						: 'bg-slate-900 shadow-slate-900/20 hover:-translate-y-0.5 hover:shadow-2xl'
-				}`}
-				style={{ transform: mendengar ? `scale(${1 + dorong * 0.06})` : undefined }}
+				disabled={!bisaDiketuk}
+				aria-label={
+					fase === 'mati' ? 'Aktifkan Gema' : menunggu ? 'Gema menunggu perintah' : 'Gema siaga'
+				}
+				className={`relative flex h-32 w-32 items-center justify-center rounded-full text-white shadow-xl outline-none transition-[background-color,box-shadow,transform] duration-300 focus-visible:ring-4 focus-visible:ring-slate-900/20 sm:h-36 sm:w-36 ${
+					fase === 'mati'
+						? 'bg-slate-400 hover:-translate-y-0.5 hover:bg-slate-500'
+						: 'bg-slate-900 shadow-slate-900/25'
+				} ${bisaDiketuk ? 'cursor-pointer' : 'cursor-default'}`}
+				style={{ transform: mendengar ? 'scale(calc(1 + var(--tenaga) * 0.05))' : undefined }}
 			>
-				{sibuk ? (
-					<Loader2 className="h-11 w-11 animate-spin" />
-				) : bicara ? (
-					<Volume2 className="h-11 w-11" />
-				) : mendengar ? (
-					<Square className="h-9 w-9 fill-current" />
-				) : (
-					<Mic className="h-12 w-12" />
-				)}
+				{sibuk ? <Loader2 className="h-11 w-11 animate-spin" />
+					: bicara ? <Volume2 className="h-11 w-11" />
+					: menunggu ? <Ear className="h-11 w-11" />
+					: fase === 'mati' ? <MicOff className="h-11 w-11" />
+					: <Mic className="h-12 w-12" />}
 			</button>
 		</div>
 	);
-};
+});
+LingkaranGema.displayName = 'LingkaranGema';
 
 /* ------------------------------------------------------------------ utama -- */
 
-const KEADAAN_TEKS = {
-	diam: 'Ucapkan “Halo Gema”',
-	mendengar: 'Mendengarkan…',
+const JUDUL_FASE = {
+	mati: 'Aktifkan Gema untuk mulai mendengarkan',
+	siaga: 'Ucapkan “Halo Gema”',
+	perintah: 'Saya dengar — sebutkan datanya',
 	berpikir: 'Mencari datanya…',
 	menjawab: 'Gema menjawab',
 };
 
+const CATATAN_FASE = {
+	mati: 'Sekali diizinkan, Gema langsung siaga sendiri di kunjungan berikutnya.',
+	siaga: 'Gema siaga. Tidak perlu menekan apa pun.',
+	perintah: 'Misalnya: “cari data desa berstatus mandiri”.',
+	berpikir: 'Sedang membaca data sistem…',
+	menjawab: 'Ketuk lingkaran untuk menghentikan suara.',
+};
+
 const GemaPage = () => {
-	const [keadaan, setKeadaan] = useState('diam');
-	const [tenaga, setTenaga] = useState(0);
+	const [fase, setFase] = useState('mati');
 	const [transkrip, setTranskrip] = useState('');
 	const [jawaban, setJawaban] = useState(null);
 	const [galat, setGalat] = useState(null);
@@ -169,42 +198,47 @@ const GemaPage = () => {
 	const [ketikan, setKetikan] = useState('');
 	const [riwayat, setRiwayat] = useState([]);
 
+	const lingkaranRef = useRef(null);
 	const pengenalRef = useRef(null);
 	const streamRef = useRef(null);
 	const audioRef = useRef(null);
 	const rafRef = useRef(0);
-	const sengajaBerhentiRef = useRef(false);
+
+	// Penangan SpeechRecognition dipasang sekali dan hidup lama, jadi tidak boleh
+	// membaca state langsung — nilainya akan terkunci di render pertama.
+	const faseRef = useRef('mati');
+	const siagaRef = useRef(false);
+	const jedaRef = useRef(false); // true selama Gema bicara
 
 	const didukung = useMemo(() => Boolean(AmbilPengenalSuara()), []);
+
+	const setFasa = useCallback((f) => { faseRef.current = f; setFase(f); }, []);
 
 	useEffect(() => {
 		api.get('/gema/kemampuan')
 			.then((r) => setSaran((r.data?.data || []).map((k) => k.contoh)))
 			.catch(() => setSaran([]));
+		window.speechSynthesis?.getVoices();
 	}, []);
 
-	// Daftar suara peramban baru terisi setelah event ini; tanpa menyentuhnya
-	// sekali, pemilihan suara Indonesia sering meleset di pemanggilan pertama.
-	useEffect(() => {
-		if (typeof window !== 'undefined' && window.speechSynthesis) {
-			window.speechSynthesis.getVoices();
-		}
-	}, []);
+	/* ------------------------------------------------------- amplitudo -- */
 
-	/* ------------------------------------------------------------ mikrofon -- */
+	const tulisTenaga = (v) => {
+		lingkaranRef.current?.style.setProperty('--tenaga', String(v));
+	};
 
 	const hentikanAudio = useCallback(() => {
 		cancelAnimationFrame(rafRef.current);
 		rafRef.current = 0;
-		setTenaga(0);
+		tulisTenaga(0);
 		streamRef.current?.getTracks?.().forEach((t) => t.stop());
 		streamRef.current = null;
 		audioRef.current?.close?.().catch(() => {});
 		audioRef.current = null;
 	}, []);
 
-	/** Baca amplitudo mikrofon dan alirkan ke animasi, hanya selama mendengar. */
-	const mulaiPantauAmplitudo = useCallback(async () => {
+	const mulaiAmplitudo = useCallback(async () => {
+		if (audioRef.current) return true;
 		try {
 			const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
 			streamRef.current = stream;
@@ -213,90 +247,93 @@ const GemaPage = () => {
 			const konteks = new Konteks();
 			audioRef.current = konteks;
 
-			const sumber = konteks.createMediaStreamSource(stream);
 			const penganalisis = konteks.createAnalyser();
 			penganalisis.fftSize = 512;
-			sumber.connect(penganalisis);
+			konteks.createMediaStreamSource(stream).connect(penganalisis);
 
 			const buffer = new Uint8Array(penganalisis.fftSize);
+			let terakhir = 0;
 			const langkah = () => {
 				penganalisis.getByteTimeDomainData(buffer);
-				// RMS terhadap titik tengah 128 — ukuran kenyaringan, bukan cuma puncak.
 				let jumlah = 0;
 				for (let i = 0; i < buffer.length; i += 1) {
 					const d = (buffer[i] - 128) / 128;
 					jumlah += d * d;
 				}
-				const rms = Math.sqrt(jumlah / buffer.length);
-				setTenaga(Math.min(1, rms * 4));
+				// Akar kuadrat menaikkan bisikan tanpa membuat teriakan meledak.
+				const nilai = Math.min(1, Math.sqrt(Math.sqrt(jumlah / buffer.length) * 4));
+				// Hanya tulis kalau berubah cukup berarti — hemat kerja tata letak.
+				if (Math.abs(nilai - terakhir) > 0.01) { tulisTenaga(nilai); terakhir = nilai; }
 				rafRef.current = requestAnimationFrame(langkah);
 			};
 			rafRef.current = requestAnimationFrame(langkah);
+			return true;
 		} catch {
-			// Izin mikrofon ditolak: pengenalan suara tetap dicoba, hanya
-			// animasinya yang diam. Bukan alasan untuk menggagalkan semuanya.
-			setTenaga(0);
+			return false;
 		}
 	}, []);
 
-	/* -------------------------------------------------------------- tanya -- */
+	/* ------------------------------------------------------------ tanya -- */
 
 	const tanyakan = useCallback(async (teks) => {
 		const bersih = String(teks || '').trim();
 		if (!bersih) return;
 
+		setTranskrip('');
 		setRiwayat((r) => [{ peran: 'orang', teks: bersih, waktu: Date.now() }, ...r].slice(0, 8));
-
-		// Sapaan dijawab tanpa menyentuh server — tidak ada data yang perlu dicari.
-		if (SAPAAN.test(bersih) && bersih.replace(SAPAAN, '').trim().length < 3) {
-			const balas = BALASAN_SAPAAN[Math.floor(Math.random() * BALASAN_SAPAAN.length)];
-			setKeadaan('menjawab');
-			setRiwayat((r) => [{ peran: 'gema', teks: balas, waktu: Date.now() }, ...r].slice(0, 8));
-			ucapkan(balas, () => setKeadaan('diam'));
-			return;
-		}
-
-		setKeadaan('berpikir');
+		setFasa('berpikir');
 		setGalat(null);
+
+		// Gema tidak boleh mendengar suaranya sendiri.
+		jedaRef.current = true;
+
+		const selesaiBicara = () => {
+			jedaRef.current = false;
+			setFasa(siagaRef.current ? 'siaga' : 'mati');
+		};
+
 		try {
 			const r = await api.post('/gema/tanya', { teks: bersih });
 			const d = r.data?.data;
 			setJawaban(d);
 			setRiwayat((h) => [{ peran: 'gema', teks: d?.kalimat, waktu: Date.now() }, ...h].slice(0, 8));
-			setKeadaan('menjawab');
-			ucapkan(d?.kalimat, () => setKeadaan('diam'));
+			setFasa('menjawab');
+			ucapkan(d?.kalimat, selesaiBicara);
 		} catch (e) {
 			const pesan = e.response?.data?.message || 'Gema gagal mengambil datanya';
 			setGalat(pesan);
-			setKeadaan('menjawab');
-			ucapkan(pesan, () => setKeadaan('diam'));
+			setFasa('menjawab');
+			ucapkan(pesan, selesaiBicara);
 		}
-	}, []);
+	}, [setFasa]);
 
-	/* ---------------------------------------------------------- pengenalan -- */
+	const sapaBalik = useCallback(() => {
+		const balas = BALASAN_SAPAAN[Math.floor(Math.random() * BALASAN_SAPAAN.length)];
+		setRiwayat((r) => [{ peran: 'gema', teks: balas, waktu: Date.now() }, ...r].slice(0, 8));
+		jedaRef.current = true;
+		setFasa('menjawab');
+		ucapkan(balas, () => {
+			jedaRef.current = false;
+			// Setelah menyapa, Gema menunggu perintah — bukan kembali ke kata bangun.
+			setFasa(siagaRef.current ? 'perintah' : 'mati');
+		});
+	}, [setFasa]);
 
-	const berhenti = useCallback(() => {
-		sengajaBerhentiRef.current = true;
-		try { pengenalRef.current?.stop(); } catch { /* sudah berhenti */ }
-		hentikanAudio();
-		setKeadaan((k) => (k === 'mendengar' ? 'diam' : k));
-	}, [hentikanAudio]);
+	/* ------------------------------------------------------- pengenalan -- */
 
-	const mulai = useCallback(async () => {
+	const pasangPengenal = useCallback(() => {
 		const Pengenal = AmbilPengenalSuara();
-		if (!Pengenal) { setModeKetik(true); return; }
-
-		setGalat(null);
-		setTranskrip('');
-		sengajaBerhentiRef.current = false;
+		if (!Pengenal) return null;
 
 		const pengenal = new Pengenal();
 		pengenal.lang = 'id-ID';
-		pengenal.continuous = false;
+		pengenal.continuous = true;
 		pengenal.interimResults = true;
 		pengenal.maxAlternatives = 1;
 
 		pengenal.onresult = (ev) => {
+			if (jedaRef.current) return;
+
 			let sementara = '';
 			let final = '';
 			for (let i = ev.resultIndex; i < ev.results.length; i += 1) {
@@ -304,97 +341,198 @@ const GemaPage = () => {
 				if (ev.results[i].isFinal) final += potongan;
 				else sementara += potongan;
 			}
-			setTranskrip(final || sementara);
-			if (final) {
-				sengajaBerhentiRef.current = true;
-				try { pengenal.stop(); } catch { /* abaikan */ }
-				hentikanAudio();
-				tanyakan(final);
+			setTranskrip((final || sementara).trim());
+			if (!final) return;
+
+			const teks = final.trim();
+
+			if (faseRef.current === 'siaga') {
+				if (!KATA_BANGUN.test(teks)) return; // bukan untuk Gema; abaikan
+				// "Halo Gema, cari data desa mandiri" — sisanya langsung jadi perintah.
+				const sisa = teks.replace(KATA_BANGUN, '').replace(/^[\s,.]+/, '').trim();
+				if (sisa.length >= 3) tanyakan(sisa);
+				else sapaBalik();
+				return;
+			}
+
+			if (faseRef.current === 'perintah') {
+				const sisa = teks.replace(KATA_BANGUN, '').replace(/^[\s,.]+/, '').trim();
+				if (sisa.length >= 3) tanyakan(sisa);
 			}
 		};
 
 		pengenal.onerror = (ev) => {
-			hentikanAudio();
-			setKeadaan('diam');
-			if (ev.error === 'no-speech') setGalat('Tidak ada suara yang tertangkap. Coba lagi.');
-			else if (ev.error === 'not-allowed') setGalat('Akses mikrofon ditolak peramban. Izinkan dulu di setelan situs.');
-			else if (ev.error !== 'aborted') setGalat(`Pengenalan suara gagal (${ev.error}).`);
+			if (ev.error === 'not-allowed' || ev.error === 'service-not-allowed') {
+				siagaRef.current = false;
+				try { localStorage.removeItem(KUNCI_SIAGA); } catch { /* abaikan */ }
+				hentikanAudio();
+				setFasa('mati');
+				setGalat('Akses mikrofon ditolak peramban. Izinkan di setelan situs, lalu aktifkan lagi.');
+			}
+			// 'no-speech' dan 'aborted' wajar terjadi saat siaga panjang —
+			// onend yang akan menyalakannya kembali.
 		};
 
+		// Chrome menghentikan pengenalan sendiri setelah sunyi cukup lama. Selama
+		// siaga masih menyala, dinyalakan lagi — inilah yang membuatnya terasa
+		// "selalu mendengar".
 		pengenal.onend = () => {
-			hentikanAudio();
-			// Berhenti sendiri tanpa hasil apa pun — kembalikan ke keadaan diam.
-			setKeadaan((k) => (k === 'mendengar' ? 'diam' : k));
+			if (!siagaRef.current) return;
+			setTimeout(() => {
+				if (!siagaRef.current) return;
+				try { pengenal.start(); } catch { /* sudah jalan */ }
+			}, 350);
 		};
 
-		pengenalRef.current = pengenal;
-		setKeadaan('mendengar');
-		mulaiPantauAmplitudo();
-		try {
-			pengenal.start();
-		} catch {
-			setKeadaan('diam');
-			setGalat('Mikrofon sedang dipakai proses lain.');
-		}
-	}, [hentikanAudio, mulaiPantauAmplitudo, tanyakan]);
+		return pengenal;
+	}, [hentikanAudio, sapaBalik, setFasa, tanyakan]);
 
-	// Bersih-bersih saat halaman ditinggalkan: mikrofon dan suara tidak boleh
-	// terus hidup setelah penggunanya pindah halaman.
+	const nyalakanSiaga = useCallback(async () => {
+		if (!didukung) { setModeKetik(true); return; }
+		setGalat(null);
+
+		const dapatMik = await mulaiAmplitudo();
+		if (!dapatMik) {
+			setGalat('Mikrofon tidak bisa diakses. Periksa izin situs di peramban.');
+			return;
+		}
+
+		if (!pengenalRef.current) pengenalRef.current = pasangPengenal();
+		siagaRef.current = true;
+		try { localStorage.setItem(KUNCI_SIAGA, '1'); } catch { /* abaikan */ }
+
+		setFasa('siaga');
+		try { pengenalRef.current?.start(); } catch { /* sudah jalan */ }
+	}, [didukung, mulaiAmplitudo, pasangPengenal, setFasa]);
+
+	const matikanSiaga = useCallback(() => {
+		siagaRef.current = false;
+		try { localStorage.removeItem(KUNCI_SIAGA); } catch { /* abaikan */ }
+		try { pengenalRef.current?.stop(); } catch { /* sudah berhenti */ }
+		window.speechSynthesis?.cancel();
+		hentikanAudio();
+		setTranskrip('');
+		setFasa('mati');
+	}, [hentikanAudio, setFasa]);
+
+	// Kunjungan berikutnya: kalau izin mikrofonnya sudah diberikan dan siaga
+	// pernah dinyalakan, Gema hidup sendiri tanpa ketukan apa pun.
+	useEffect(() => {
+		let batal = false;
+		(async () => {
+			if (!didukung) return;
+			let pernah = false;
+			try { pernah = localStorage.getItem(KUNCI_SIAGA) === '1'; } catch { /* abaikan */ }
+			if (!pernah) return;
+
+			// Hanya menyalakan sendiri bila izinnya memang sudah 'granted';
+			// kalau belum, memanggil getUserMedia di sini cuma memunculkan
+			// permintaan izin yang tidak diminta pengguna.
+			try {
+				const izin = await navigator.permissions?.query({ name: 'microphone' });
+				if (izin && izin.state !== 'granted') return;
+			} catch { /* peramban tanpa Permissions API — coba saja */ }
+
+			if (!batal) nyalakanSiaga();
+		})();
+		return () => { batal = true; };
+	}, [didukung, nyalakanSiaga]);
+
+	// Tab tersembunyi: mikrofon dan gelung animasi dihentikan, dinyalakan lagi
+	// saat kembali terlihat.
+	useEffect(() => {
+		const saatBerubah = () => {
+			if (document.hidden) {
+				if (siagaRef.current) {
+					try { pengenalRef.current?.stop(); } catch { /* abaikan */ }
+					cancelAnimationFrame(rafRef.current);
+					rafRef.current = 0;
+					tulisTenaga(0);
+				}
+			} else if (siagaRef.current && !rafRef.current) {
+				mulaiAmplitudo();
+				try { pengenalRef.current?.start(); } catch { /* sudah jalan */ }
+			}
+		};
+		document.addEventListener('visibilitychange', saatBerubah);
+		return () => document.removeEventListener('visibilitychange', saatBerubah);
+	}, [mulaiAmplitudo]);
+
+	// Meninggalkan halaman: mikrofon dan suara tidak boleh terus hidup.
 	useEffect(() => () => {
+		siagaRef.current = false;
 		try { pengenalRef.current?.abort(); } catch { /* abaikan */ }
 		hentikanAudio();
 		window.speechSynthesis?.cancel();
 	}, [hentikanAudio]);
 
-	const tekanMik = () => {
-		if (keadaan === 'mendengar') berhenti();
-		else if (keadaan === 'diam') mulai();
-		else if (keadaan === 'menjawab') { window.speechSynthesis?.cancel(); setKeadaan('diam'); }
+	const ketukLingkaran = () => {
+		if (fase === 'mati') nyalakanSiaga();
+		else if (fase === 'menjawab') {
+			window.speechSynthesis?.cancel();
+			jedaRef.current = false;
+			setFasa(siagaRef.current ? 'siaga' : 'mati');
+		}
 	};
 
-	/* -------------------------------------------------------------- render -- */
-
-	const petunjuk = transkrip || KEADAAN_TEKS[keadaan];
+	/* ------------------------------------------------------------ render -- */
 
 	return (
 		<div className="min-h-screen bg-slate-50 p-4 pt-20 sm:p-6 lg:p-8 lg:pt-8">
 			<div className="mx-auto max-w-5xl">
-				{/* Panggung */}
 				<section className="relative overflow-hidden rounded-3xl border border-slate-200 bg-white">
 					<div className="flex flex-col items-center px-5 py-10 sm:py-14">
-						<div className="mb-1 inline-flex items-center gap-2 rounded-full bg-slate-100 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500">
+						<div className="inline-flex items-center gap-2 rounded-full bg-slate-100 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500">
 							<Sparkles className="h-3.5 w-3.5" />
 							Gema · Purwarupa
+							{fase !== 'mati' && (
+								<span className="ml-1 flex items-center gap-1 text-emerald-600">
+									<span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+									Siaga
+								</span>
+							)}
 						</div>
 
 						<p
 							aria-live="polite"
-							className={`mt-5 min-h-[3.5rem] max-w-2xl text-center text-xl font-semibold leading-snug tracking-tight transition-colors sm:text-2xl ${
+							className={`mt-5 min-h-[3.5rem] max-w-2xl text-center text-xl font-semibold leading-snug tracking-tight sm:text-2xl ${
 								transkrip ? 'text-slate-900' : 'text-slate-400'
 							}`}
 						>
-							{petunjuk}
+							{transkrip || JUDUL_FASE[fase]}
 						</p>
 
-						<div className="mt-2">
-							<LingkaranMik keadaan={keadaan} tenaga={tenaga} onKlik={tekanMik} />
+						<LingkaranGema
+							ref={lingkaranRef}
+							fase={fase}
+							onKlik={ketukLingkaran}
+							bisaDiketuk={fase === 'mati' || fase === 'menjawab'}
+						/>
+
+						<p className="mt-1 max-w-md text-center text-sm text-slate-500">
+							{CATATAN_FASE[fase]}
+						</p>
+
+						<div className="mt-5 flex flex-wrap items-center justify-center gap-2">
+							{fase !== 'mati' && (
+								<button
+									type="button"
+									onClick={matikanSiaga}
+									className="inline-flex items-center gap-2 rounded-lg border border-slate-200 px-3.5 py-2 text-xs font-medium text-slate-600 transition-colors hover:bg-slate-50 hover:text-slate-900"
+								>
+									<MicOff className="h-3.5 w-3.5" />
+									Matikan mikrofon
+								</button>
+							)}
+							<button
+								type="button"
+								onClick={() => setModeKetik((v) => !v)}
+								className="inline-flex items-center gap-2 rounded-lg border border-slate-200 px-3.5 py-2 text-xs font-medium text-slate-600 transition-colors hover:bg-slate-50 hover:text-slate-900"
+							>
+								<Keyboard className="h-3.5 w-3.5" />
+								{modeKetik ? 'Sembunyikan kotak ketik' : 'Ketik saja'}
+							</button>
 						</div>
-
-						<p className="mt-1 text-center text-sm text-slate-500">
-							{keadaan === 'diam' && 'Ketuk mikrofon, lalu sebutkan data yang dicari.'}
-							{keadaan === 'mendengar' && 'Ketuk sekali lagi untuk berhenti.'}
-							{keadaan === 'berpikir' && 'Sedang membaca data sistem…'}
-							{keadaan === 'menjawab' && 'Ketuk untuk menghentikan suara.'}
-						</p>
-
-						<button
-							type="button"
-							onClick={() => setModeKetik((v) => !v)}
-							className="mt-5 inline-flex items-center gap-2 rounded-lg border border-slate-200 px-3.5 py-2 text-xs font-medium text-slate-600 transition-colors hover:bg-slate-50 hover:text-slate-900"
-						>
-							<Keyboard className="h-3.5 w-3.5" />
-							{modeKetik ? 'Sembunyikan kotak ketik' : 'Ketik saja'}
-						</button>
 
 						{modeKetik && (
 							<form
@@ -433,7 +571,6 @@ const GemaPage = () => {
 					</div>
 				)}
 
-				{/* Contoh perintah */}
 				{saran.length > 0 && !jawaban && (
 					<div className="mt-5 rounded-2xl border border-slate-200 bg-white p-5">
 						<p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
@@ -454,7 +591,6 @@ const GemaPage = () => {
 					</div>
 				)}
 
-				{/* Jawaban */}
 				{jawaban && (
 					<div className="mt-5 space-y-4">
 						<div className="rounded-2xl border border-slate-200 bg-white p-5">
@@ -499,10 +635,7 @@ const GemaPage = () => {
 										<thead className="sticky top-0 bg-slate-50">
 											<tr className="border-b border-slate-200 text-left">
 												{jawaban.kolom.map((k) => (
-													<th
-														key={k.kunci}
-														className="px-4 py-3 text-[11px] font-semibold uppercase tracking-wide text-slate-500"
-													>
+													<th key={k.kunci} className="px-4 py-3 text-[11px] font-semibold uppercase tracking-wide text-slate-500">
 														{k.label}
 													</th>
 												))}
@@ -526,7 +659,6 @@ const GemaPage = () => {
 					</div>
 				)}
 
-				{/* Percakapan */}
 				{riwayat.length > 0 && (
 					<div className="mt-5 rounded-2xl border border-slate-200 bg-white p-5">
 						<p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Percakapan</p>
