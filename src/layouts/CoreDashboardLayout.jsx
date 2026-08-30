@@ -16,6 +16,7 @@ import {
   PanelLeftClose,
   PanelLeftOpen,
   Home,
+  AudioLines,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
@@ -31,10 +32,11 @@ const ROLE_BASE_PATH = {
 
 const MENU_ITEMS = [
   { path: '/core-dashboard/dashboard', icon: LayoutDashboard, label: 'Dashboard', end: true },
+  { path: '/core-dashboard/gema', icon: AudioLines, label: 'Gema' },
   { path: '/core-dashboard/statistik-bumdes', icon: Store, label: 'Statistik BUMDes' },
   { path: '/core-dashboard/statistik-kelembagaan', icon: Landmark, label: 'Statistik Kelembagaan' },
   { path: '/core-dashboard/statistik-profil-desa', icon: MapPin, label: 'Statistik Profil Desa' },
-  { path: '/core-dashboard/statistik-produk-hukum', icon: Scale, label: 'Statistik Produk Hukum' },
+  { path: '/core-dashboard/statistik-produk-hukum', icon: Scale, label: 'Produk Hukum' },
   { path: '/core-dashboard/statistik-aparatur-desa', icon: Users, label: 'Aparatur Desa' },
   { path: '/core-dashboard/statistik-perjadin', icon: Briefcase, label: 'Perjalanan Dinas' },
   { path: '/core-dashboard/statistik-bankeu', icon: HandCoins, label: 'Statistik Bankeu' },

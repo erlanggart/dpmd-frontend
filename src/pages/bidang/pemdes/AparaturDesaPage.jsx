@@ -24,6 +24,10 @@ import {
 	IdCard,
 	Info,
 	ChevronDown,
+	Paperclip,
+	ExternalLink,
+	Scale,
+	Clock,
 } from 'lucide-react';
 import { PieChart, Pie, Cell, Tooltip as RechartsTooltip } from 'recharts';
 import api from '../../../api';
@@ -80,8 +84,47 @@ const getBaseHost = () => {
 	return apiBase.replace(/\/?api\/?$/, '');
 };
 
-const pasFotoUrl = (person) =>
-	person?.file_pas_foto ? `${getBaseHost()}/uploads/aparatur_desa_files/${person.file_pas_foto}` : null;
+const berkasUrl = (nama) =>
+	nama ? `${getBaseHost()}/uploads/aparatur_desa_files/${nama}` : null;
+
+const pasFotoUrl = (person) => berkasUrl(person?.file_pas_foto);
+
+/** Tujuh berkas yang bisa dilampirkan ke satu aparatur, sesuai kolom tabelnya. */
+const BERKAS = [
+	{ kunci: 'file_pas_foto', label: 'Pas Foto' },
+	{ kunci: 'file_ktp', label: 'KTP' },
+	{ kunci: 'file_kk', label: 'Kartu Keluarga' },
+	{ kunci: 'file_akta_kelahiran', label: 'Akta Kelahiran' },
+	{ kunci: 'file_ijazah_terakhir', label: 'Ijazah Terakhir' },
+	{ kunci: 'file_bpjs_kesehatan', label: 'Kartu BPJS Kesehatan' },
+	{ kunci: 'file_bpjs_ketenagakerjaan', label: 'Kartu BPJS Ketenagakerjaan' },
+];
+
+/** Selisih tahun-bulan dari sebuah tanggal sampai sekarang. */
+const rentangSejak = (tanggal) => {
+	if (!tanggal) return null;
+	const mulai = new Date(tanggal);
+	if (Number.isNaN(mulai.getTime())) return null;
+	const kini = new Date();
+	let bulan = (kini.getFullYear() - mulai.getFullYear()) * 12 + (kini.getMonth() - mulai.getMonth());
+	if (kini.getDate() < mulai.getDate()) bulan -= 1;
+	if (bulan < 0) return null;
+	const tahun = Math.floor(bulan / 12);
+	const sisa = bulan % 12;
+	if (tahun === 0) return `${sisa} bulan`;
+	return sisa === 0 ? `${tahun} tahun` : `${tahun} tahun ${sisa} bulan`;
+};
+
+const formatWaktu = (nilai) => {
+	if (!nilai) return '-';
+	const d = new Date(nilai);
+	return Number.isNaN(d.getTime())
+		? '-'
+		: d.toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' }) +
+			', ' + d.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
+};
+
+const LABEL_SUMBER = { desa: 'Diisi sendiri oleh desa', dapur_desa: 'Impor arsip Dapur Desa' };
 
 // ============================================================
 // Blok UI kecil
@@ -331,7 +374,36 @@ const DetailSection = ({ title, icon: Icon, children, className = '' }) => (
 	</div>
 );
 
+/** Satu baris berkas: tautan bila ada, keterangan jujur bila belum diunggah. */
+const BarisBerkas = ({ label, nama }) => {
+	const url = berkasUrl(nama);
+	return (
+		<div className="flex items-center justify-between gap-3 py-2">
+			<span className="min-w-0 truncate text-sm text-slate-700">{label}</span>
+			{url ? (
+				<a
+					href={url}
+					target="_blank"
+					rel="noreferrer"
+					className="inline-flex flex-shrink-0 items-center gap-1.5 text-xs font-semibold text-slate-900 underline-offset-2 hover:underline"
+				>
+					<ExternalLink className="h-3.5 w-3.5" />
+					Buka
+				</a>
+			) : (
+				<span className="flex-shrink-0 text-xs text-slate-400">Belum diunggah</span>
+			)}
+		</div>
+	);
+};
+
 const DetailModal = ({ aparatur, onClose }) => {
+	// Baris dari daftar sudah memuat seluruh kolom aparatur, tapi TIDAK memuat
+	// relasi produk hukumnya — itu hanya ikut di endpoint detail. Jadi baris yang
+	// sudah ada dipakai lebih dulu supaya modal terbuka seketika, lalu ditimpa
+	// hasil detail begitu tiba.
+	const [detail, setDetail] = useState(null);
+
 	useEffect(() => {
 		const onKey = (event) => {
 			if (event.key === 'Escape') onClose();
@@ -345,7 +417,23 @@ const DetailModal = ({ aparatur, onClose }) => {
 		};
 	}, [onClose]);
 
+	const idAparatur = aparatur?.id;
+	useEffect(() => {
+		if (!idAparatur) return undefined;
+		let batal = false;
+		setDetail(null);
+		api.get(`/pemdes/aparatur-desa/${idAparatur}`)
+			.then((r) => { if (!batal) setDetail(r.data?.data || null); })
+			.catch(() => { /* baris daftar sudah cukup; detail hanya menambah relasi */ });
+		return () => { batal = true; };
+	}, [idAparatur]);
+
 	if (!aparatur) return null;
+
+	const a = detail ? { ...aparatur, ...detail } : aparatur;
+	const usia = rentangSejak(a.tanggal_lahir);
+	const masaKerja = a.tanggal_pemberhentian ? null : rentangSejak(a.tanggal_pengangkatan);
+	const jumlahBerkas = BERKAS.filter((b) => a[b.kunci]).length;
 
 	return (
 		<div
@@ -389,38 +477,42 @@ const DetailModal = ({ aparatur, onClose }) => {
 						    mereka menimpa separuh atas foto (avatar static = layer bawah). */}
 						<div className="relative z-10 flex flex-col items-center px-6 pb-5 text-center">
 							<Avatar
-								person={aparatur}
+								person={a}
 								className="-mt-16 h-28 w-28 text-3xl ring-4 ring-white shadow-sm"
 							/>
 							<h2 className="mt-3 text-xl font-bold tracking-tight text-slate-900 sm:text-2xl">
-								{aparatur.nama_lengkap}
+								{a.nama_lengkap}
 							</h2>
 							<div className="mt-2.5 flex flex-wrap items-center justify-center gap-2">
 								<span
 									className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold ${
-										isBpd(aparatur.jabatan) ? 'bg-slate-100 text-slate-700' : 'bg-slate-100 text-slate-700'
+										isBpd(a.jabatan) ? 'bg-slate-100 text-slate-700' : 'bg-slate-100 text-slate-700'
 									}`}
 								>
 									<Briefcase className="h-3.5 w-3.5" />
-									{aparatur.jabatan}
+									{a.jabatan}
 								</span>
 								<span
 									className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold ${
-										aparatur.status === 'Aktif' ? 'bg-emerald-50 text-emerald-700' : 'bg-rose-50 text-rose-700'
+										a.status === 'Aktif' ? 'bg-emerald-50 text-emerald-700' : 'bg-rose-50 text-rose-700'
 									}`}
 								>
-									{aparatur.status === 'Aktif' ? <CheckCircle2 className="h-3.5 w-3.5" /> : <XCircle className="h-3.5 w-3.5" />}
-									{aparatur.status === 'Aktif' ? 'Aktif' : 'Tidak Aktif'}
+									{a.status === 'Aktif' ? <CheckCircle2 className="h-3.5 w-3.5" /> : <XCircle className="h-3.5 w-3.5" />}
+									{a.status === 'Aktif' ? 'Aktif' : 'Tidak Aktif'}
 								</span>
 							</div>
 							<p className="mt-2.5 inline-flex items-center gap-1.5 text-sm text-slate-500">
 								<MapPin className="h-3.5 w-3.5 text-slate-400" />
-								{aparatur.desas?.nama || '-'} &middot; Kec. {aparatur.desas?.kecamatans?.nama || '-'}
+								{a.desas?.nama || '-'} &middot; Kec. {a.desas?.kecamatans?.nama || '-'}
 							</p>
 						</div>
 					</div>
 
 					{/* --- Rincian --- */}
+					{/* Seluruh kolom yang dimiliki satu aparatur ditampilkan, termasuk
+					    yang masih kosong. Menyembunyikan kolom kosong membuat pembaca
+					    tidak bisa membedakan "tidak ada kolomnya" dari "belum diisi" —
+					    padahal justru yang belum diisi itulah yang perlu ditagih. */}
 					<div className="space-y-4 px-5 pb-6 sm:px-6">
 					<div className="grid gap-4 md:grid-cols-2">
 						<DetailSection title="Data Pribadi" icon={UserCircle}>
@@ -428,61 +520,88 @@ const DetailModal = ({ aparatur, onClose }) => {
 								<DetailField
 									label="Jenis Kelamin"
 									value={
-										aparatur.jenis_kelamin === 'Laki_laki'
+										a.jenis_kelamin === 'Laki_laki'
 											? 'Laki-laki'
-											: aparatur.jenis_kelamin === 'Perempuan'
+											: a.jenis_kelamin === 'Perempuan'
 											? 'Perempuan'
 											: '-'
 									}
 								/>
-								<DetailField label="Agama" value={aparatur.agama} />
-								<DetailField label="Tempat Lahir" value={aparatur.tempat_lahir} />
-								<DetailField label="Tanggal Lahir" value={formatDate(aparatur.tanggal_lahir)} />
-								<DetailField label="Pendidikan Terakhir" value={aparatur.pendidikan_terakhir} />
+								<DetailField label="Agama" value={a.agama} />
+								<DetailField label="Tempat Lahir" value={a.tempat_lahir} />
+								<DetailField label="Tanggal Lahir" value={formatDate(a.tanggal_lahir)} />
+								<DetailField label="Usia" value={usia} />
+								<DetailField label="Pendidikan Terakhir" value={a.pendidikan_terakhir} />
 							</div>
 						</DetailSection>
 
-						<DetailSection title="Lokasi Tugas" icon={MapPin}>
+						<DetailSection title="Jabatan & Lokasi Tugas" icon={MapPin}>
 							<div className="grid grid-cols-2 gap-3">
-								<DetailField label="Desa" value={aparatur.desas?.nama} />
-								<DetailField label="Kecamatan" value={aparatur.desas?.kecamatans?.nama} />
+								<DetailField label="Jabatan" value={a.jabatan} />
+								<DetailField label="Status" value={a.status} />
+								<DetailField label="Desa" value={a.desas?.nama} />
+								<DetailField label="Kecamatan" value={a.desas?.kecamatans?.nama} />
 							</div>
 						</DetailSection>
 					</div>
 
 					<DetailSection title="Data Kepegawaian" icon={IdCard}>
 						<div className="grid grid-cols-2 gap-3 md:grid-cols-4">
-							{aparatur.nipd && <DetailField label="NIPD" value={aparatur.nipd} />}
-							{aparatur.niap && <DetailField label="NIAP" value={aparatur.niap} />}
-							{aparatur.pangkat_golongan && <DetailField label="Pangkat/Golongan" value={aparatur.pangkat_golongan} />}
-							<DetailField label="Tgl. Pengangkatan" value={formatDate(aparatur.tanggal_pengangkatan)} />
-							<DetailField label="No. SK Pengangkatan" value={aparatur.nomor_sk_pengangkatan} />
-							{aparatur.tanggal_pemberhentian && (
-								<DetailField label="Tgl. Pemberhentian" value={formatDate(aparatur.tanggal_pemberhentian)} />
-							)}
-							{aparatur.nomor_sk_pemberhentian && (
-								<DetailField label="No. SK Pemberhentian" value={aparatur.nomor_sk_pemberhentian} />
-							)}
+							<DetailField label="NIPD" value={a.nipd} />
+							<DetailField label="NIAP" value={a.niap} />
+							<DetailField label="Pangkat/Golongan" value={a.pangkat_golongan} />
+							<DetailField label="Masa Kerja" value={masaKerja} />
+							<DetailField label="Tgl. Pengangkatan" value={formatDate(a.tanggal_pengangkatan)} />
+							<DetailField label="No. SK Pengangkatan" value={a.nomor_sk_pengangkatan} />
+							<DetailField label="Tgl. Pemberhentian" value={formatDate(a.tanggal_pemberhentian)} />
+							<DetailField label="No. SK Pemberhentian" value={a.nomor_sk_pemberhentian} />
 						</div>
-						{aparatur.keterangan && (
-							<div className="mt-3 border-t border-slate-200 pt-3">
-								<DetailField label="Keterangan" value={aparatur.keterangan} />
-							</div>
-						)}
+						<div className="mt-3 border-t border-slate-200 pt-3">
+							<DetailField label="Keterangan" value={a.keterangan} />
+						</div>
 					</DetailSection>
 
-					{(aparatur.bpjs_kesehatan_nomor || aparatur.bpjs_ketenagakerjaan_nomor) && (
-						<DetailSection title="BPJS" icon={FileText}>
-							<div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-								{aparatur.bpjs_kesehatan_nomor && (
-									<DetailField label="BPJS Kesehatan" value={aparatur.bpjs_kesehatan_nomor} />
-								)}
-								{aparatur.bpjs_ketenagakerjaan_nomor && (
-									<DetailField label="BPJS Ketenagakerjaan" value={aparatur.bpjs_ketenagakerjaan_nomor} />
-								)}
+					<div className="grid gap-4 md:grid-cols-2">
+						<DetailSection title="BPJS" icon={Shield}>
+							<div className="grid grid-cols-1 gap-3">
+								<DetailField label="No. BPJS Kesehatan" value={a.bpjs_kesehatan_nomor} />
+								<DetailField label="No. BPJS Ketenagakerjaan" value={a.bpjs_ketenagakerjaan_nomor} />
 							</div>
 						</DetailSection>
-					)}
+
+						<DetailSection title="Dasar Hukum" icon={Scale}>
+							{a.produk_hukums ? (
+								<div className="grid grid-cols-1 gap-3">
+									<DetailField label="Produk Hukum" value={a.produk_hukums.judul} />
+									<div className="grid grid-cols-2 gap-3">
+										<DetailField label="Nomor" value={a.produk_hukums.nomor} />
+										<DetailField label="Tahun" value={a.produk_hukums.tahun} />
+									</div>
+								</div>
+							) : (
+								<p className="text-sm text-slate-400">
+									Belum ditautkan ke produk hukum desa.
+								</p>
+							)}
+						</DetailSection>
+					</div>
+
+					<DetailSection title={`Berkas (${jumlahBerkas} dari ${BERKAS.length} terunggah)`} icon={Paperclip}>
+						<div className="divide-y divide-slate-200">
+							{BERKAS.map((b) => (
+								<BarisBerkas key={b.kunci} label={b.label} nama={a[b.kunci]} />
+							))}
+						</div>
+					</DetailSection>
+
+					<DetailSection title="Sumber & Rekam Data" icon={Clock}>
+						<div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+							<DetailField label="Sumber Data" value={LABEL_SUMBER[a.sumber_data] || a.sumber_data} />
+							<DetailField label="ID Dapur Desa" value={a.dapur_id} />
+							<DetailField label="Dibuat" value={formatWaktu(a.created_at)} />
+							<DetailField label="Diperbarui" value={formatWaktu(a.updated_at)} />
+						</div>
+					</DetailSection>
 					</div>
 				</div>
 

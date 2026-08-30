@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import FormulirBumdes from '../../../components/bumdes/FormulirBumdes';
 import { useAuth } from "../../../context/AuthContext";
 import Swal from "sweetalert2";
 import {
@@ -428,50 +429,10 @@ const BumdesDesaPage = () => {
 			disabled ? "cursor-not-allowed bg-slate-50 text-slate-500" : "bg-white"
 		}`;
 
-	const renderInput = (label, field, type = "text", placeholder = "", required = false, readOnly = false) => (
-		<div>
-			<label className="mb-1.5 block text-sm font-medium text-slate-700">
-				{label} {required && <span className="text-rose-500">*</span>}
-				{readOnly && <span className="ml-2 text-xs text-slate-400">(Otomatis dari akun desa)</span>}
-			</label>
-			<input
-				type={type}
-				value={formData[field] || ""}
-				onChange={(e) => handleInputChange(field, e.target.value)}
-				placeholder={placeholder}
-				disabled={!isEditing || readOnly}
-				readOnly={readOnly}
-				className={fieldClass(!isEditing || readOnly)}
-			/>
-		</div>
-	);
-
-	const renderTextarea = (label, field, placeholder = "", rows = 3) => (
-		<div>
-			<label className="mb-1.5 block text-sm font-medium text-slate-700">
-				{label}
-			</label>
-			<textarea
-				value={formData[field] || ""}
-				onChange={(e) => handleInputChange(field, e.target.value)}
-				placeholder={placeholder}
-				rows={rows}
-				disabled={!isEditing}
-				className={fieldClass(!isEditing)}
-			/>
-		</div>
-	);
-
-	// Tampilan baca-saja untuk kolom yang diisi DPMD, bukan desa.
-	const renderBaca = (label, field) => (
-		<div>
-			<label className="mb-1.5 block text-sm font-medium text-slate-700">{label}</label>
-			<div className="rounded-lg border border-slate-200 bg-slate-50 px-3.5 py-2.5 text-sm text-slate-600">
-				{formData[field] || <span className="text-slate-400">Belum ada data</span>}
-			</div>
-		</div>
-	);
-
+	// renderInput / renderTextarea / renderBaca sudah tidak ada di sini:
+	// kolom-kolomnya digambar FormulirBumdes dari skema bersama. Yang tersisa
+	// hanya renderSelect, karena pemilih Perdes/SK memakai bentuk opsi khas
+	// modul Produk Hukum (nomor - judul (tahun)), bukan {value,label} biasa.
 	const renderSelect = (label, field, options, placeholder = "Pilih opsi", showInfo = false) => (
 		<div>
 			<label className="mb-1.5 block text-sm font-medium text-slate-700">
@@ -602,400 +563,80 @@ const BumdesDesaPage = () => {
 				}
 			/>
 
-			{/* Form Sections */}
-			<div className="space-y-5">
-				{/* 1. Identitas BUMDes */}
-				{renderFormSection("1. Identitas BUMDes", <FiShoppingBag className="text-slate-600" />, (
-					<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-						{renderInput("Nama BUMDes", "namabumdesa", "text", "Masukkan nama BUMDes", true)}
-						{renderInput("Nama Desa", "desa", "text", "", false, true)}
-						{renderInput("Kecamatan", "kecamatan", "text", "", false, true)}
-						{renderInput("Kode Desa", "kode_desa", "text", "", false, true)}
-						{renderInput("Tahun Pendirian", "TahunPendirian", "number", "Contoh: 2020")}
-						{renderSelect("Status BUMDes", "status", [
-							{ value: "aktif", label: "Aktif" },
-							{ value: "tidak_aktif", label: "Tidak Aktif" }
-						], "Pilih status BUMDes")}
-						{formData.status === "tidak_aktif" && (
-							<div className="md:col-span-2">
-								{renderTextarea("Keterangan Tidak Aktif", "keterangan_tidak_aktif", "Jelaskan alasan tidak aktif")}
-							</div>
-						)}
-						{renderInput("No. HP BUMDes", "TelfonBumdes", "tel", "Contoh: 08123456789")}
-						<div className="md:col-span-2">
-							{renderTextarea("Alamat BUMDes", "AlamatBumdesa", "Masukkan alamat lengkap BUMDes")}
-						</div>
-						{renderInput("Email BUMDes", "Alamatemail", "email", "contoh@email.com")}
-					</div>
-				))}
+			{/* Kolom-kolomnya tidak lagi ditulis di sini.
+			    Seluruh daftar kolom BUM Desa ada di components/bumdes/skemaBumdes.js
+			    dan dipakai bersama dengan formulir Bidang SPKED. Dulu keduanya
+			    ditulis terpisah dan menyimpang sampai tiga puluh kolom — SPKED
+			    tidak punya Omset/Laba 2025, blok MBG, maupun ketahanan pangan.
+			    Kolom yang tidak ada di formulir bukan cuma tak bisa diisi, ia juga
+			    tak terlihat, jadi tidak ada yang sadar hilang.
 
-				{/* 2. Dasar Hukum Pendirian */}
-				{renderFormSection("2. Dasar Hukum Pendirian", <FiFileText className="text-slate-600" />, (
-					<div className="space-y-6">
-						<div className="bg-slate-50 border border-slate-200 rounded-lg p-4">
-							<div className="flex items-center gap-2 mb-2">
+			    Yang tinggal di berkas ini hanya yang memang khas desa: pemilih
+			    Perdes/SK dari modul Produk Hukum (slot di bawah) dan unggahan
+			    dokumen di bagian 15. */}
+			<FormulirBumdes
+				data={formData}
+				onUbah={handleInputChange}
+				bisaSunting={isEditing}
+				mode="desa"
+				slotDasarHukum={
+					<div className="space-y-4">
+						<div className="rounded-lg border border-slate-200 bg-slate-50 p-4">
+							<div className="mb-2 flex items-center gap-2">
 								<FiFileText className="text-slate-600" />
 								<span className="text-sm font-medium text-slate-800">
 									Dokumen Hukum Terintegrasi
 								</span>
 							</div>
 							<p className="text-sm text-slate-700">
-								Pilih dokumen PERDES dan SK BUMDES yang sudah diupload melalui menu Produk Hukum. 
-								Jika dokumen belum tersedia, silakan upload terlebih dahulu di menu Produk Hukum.
+								Pilih dokumen PERDES dan SK BUMDES yang sudah diunggah lewat menu
+								Produk Hukum. Bila belum ada, unggah dulu di menu tersebut.
 							</p>
 						</div>
 
-						<div className="grid grid-cols-1 gap-6">
-							{/* Info jika tidak ada data */}
-							{(!produkHukumOptions.perdes || produkHukumOptions.perdes.length === 0) && 
-							 (!produkHukumOptions.sk || produkHukumOptions.sk.length === 0) && (
-								<div className="col-span-1 bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-									<div className="flex items-start gap-3">
-										<FiAlertCircle className="text-yellow-600 mt-1" />
-										<div className="flex-1">
-											<h4 className="text-sm font-medium text-yellow-800 mb-1">
-												Belum Ada Produk Hukum
-											</h4>
-											<p className="text-xs text-yellow-700">
-												Anda belum mengupload Peraturan Desa (PERDES) atau SK BUMDES. 
-												Silakan upload terlebih dahulu melalui menu <strong>Produk Hukum</strong>.
-											</p>
-										</div>
-									</div>
-								</div>
-							)}
-							
-							{renderSelect(
-								"Peraturan Desa (PERDES) BUMDES",
-								"produk_hukum_perdes_id",
-								produkHukumOptions.perdes || [],
-								produkHukumOptions.perdes?.length > 0 
-									? "Pilih PERDES BUMDES yang sudah diupload" 
-									: "Belum ada PERDES - Upload di menu Produk Hukum",
-								true
-							)}
-							<ProdukHukumTerpilih
-								id={formData.produk_hukum_perdes_id}
-								daftar={produkHukumOptions.perdes}
-							/>
-							
-							{renderSelect(
-								"Surat Keputusan (SK) BUMDES",
-								"produk_hukum_sk_bumdes_id",
-								produkHukumOptions.sk || [],
-								produkHukumOptions.sk?.length > 0 
-									? "Pilih SK BUMDES yang sudah diupload" 
-									: "Belum ada SK - Upload di menu Produk Hukum",
-								true
-							)}
-							<ProdukHukumTerpilih
-								id={formData.produk_hukum_sk_bumdes_id}
-								daftar={produkHukumOptions.sk}
-							/>
-						</div>
-
-						{/* Fallback manual input jika diperlukan */}
-						<div className="border-t pt-4">
-							<details className="group">
-								<summary className="flex items-center gap-2 cursor-pointer text-sm text-slate-600 hover:text-slate-800">
-									<span className="transform group-open:rotate-90 transition-transform">▶</span>
-									Input Manual (Jika dokumen belum diupload)
-								</summary>
-								<div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4 p-4 bg-slate-50 rounded-lg">
-									{renderInput("Nomor Perdes", "NomorPerdes", "text", "Contoh: 05 Tahun 2024")}
-								</div>
-							</details>
-						</div>
-					</div>
-				))}
-
-				{/* 2b. Legalitas */}
-				{renderFormSection("2b. Legalitas", <FiFileText className="text-slate-600" />, (
-					<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-						{renderInput("NIB (Nomor Induk Berusaha)", "NIB", "text", "Masukkan NIB")}
-						{renderInput("LKPP (Lembaga Kebijakan Pengadaan)", "LKPP", "text", "Masukkan LKPP")}
-						{renderInput("NPWP", "NPWP", "text", "Masukkan NPWP")}
-						{renderSelect("Status Badan Hukum", "badanhukum", [
-							{ value: "Terbit Sertifikat Badan Hukum", label: "Terbit Sertifikat Badan Hukum" },
-							{ value: "Nama Terverifikasi", label: "Nama Terverifikasi" },
-							{ value: "Perbaikan Dokumen", label: "Perbaikan Dokumen" },
-							{ value: "Belum Melakukan Proses", label: "Belum Melakukan Proses" }
-						], "Pilih status badan hukum")}
-					</div>
-				))}
-
-				{/* 3. Kepengurusan/Organisasi */}
-				{renderFormSection("3. Kepengurusan/Organisasi", <FiUsers className="text-slate-600" />, (
-					<div className="space-y-6">
-						{/* Penasihat */}
-						<div className="border-b pb-4">
-							<h4 className="font-semibold text-slate-700 mb-3">Penasihat</h4>
-							<div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-								{renderInput("Nama Penasihat", "NamaPenasihat", "text", "Masukkan nama penasihat")}
-								{renderSelect("Jenis Kelamin", "JenisKelaminPenasihat", [
-									{ value: "Laki-laki", label: "Laki-laki" },
-									{ value: "Perempuan", label: "Perempuan" }
-								], "Pilih jenis kelamin")}
-								{renderInput("No HP Penasihat", "HPPenasihat", "text", "Contoh: 08123456789")}
+						{(!produkHukumOptions.perdes || produkHukumOptions.perdes.length === 0) &&
+						 (!produkHukumOptions.sk || produkHukumOptions.sk.length === 0) && (
+							<div className="rounded-lg border border-yellow-200 bg-yellow-50 p-4">
+								<h4 className="mb-1 text-sm font-medium text-yellow-800">
+									Belum Ada Produk Hukum
+								</h4>
+								<p className="text-xs text-yellow-700">
+									Anda belum mengunggah Peraturan Desa (PERDES) atau SK BUMDES.
+									Silakan unggah lebih dulu lewat menu <strong>Produk Hukum</strong>.
+								</p>
 							</div>
-						</div>
+						)}
 
-						{/* Pengawas */}
-						<div className="border-b pb-4">
-							<h4 className="font-semibold text-slate-700 mb-3">Pengawas</h4>
-							<div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-								{renderInput("Nama Pengawas", "NamaPengawas", "text", "Masukkan nama pengawas")}
-								{renderSelect("Jenis Kelamin", "JenisKelaminPengawas", [
-									{ value: "Laki-laki", label: "Laki-laki" },
-									{ value: "Perempuan", label: "Perempuan" }
-								], "Pilih jenis kelamin")}
-								{renderInput("No HP Pengawas", "HPPengawas", "text", "Contoh: 08123456789")}
-							</div>
-						</div>
+						{renderSelect(
+							"Peraturan Desa (PERDES) BUMDES",
+							"produk_hukum_perdes_id",
+							produkHukumOptions.perdes || [],
+							produkHukumOptions.perdes?.length > 0
+								? "Pilih PERDES BUMDES yang sudah diupload"
+								: "Belum ada PERDES - Upload di menu Produk Hukum",
+							true
+						)}
+						<ProdukHukumTerpilih
+							id={formData.produk_hukum_perdes_id}
+							daftar={produkHukumOptions.perdes}
+						/>
 
-						{/* Direktur */}
-						<div className="border-b pb-4">
-							<h4 className="font-semibold text-slate-700 mb-3">Direktur</h4>
-							<div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-								{renderInput("Nama Direktur", "NamaDirektur", "text", "Masukkan nama direktur")}
-								{renderSelect("Jenis Kelamin", "JenisKelaminDirektur", [
-									{ value: "Laki-laki", label: "Laki-laki" },
-									{ value: "Perempuan", label: "Perempuan" }
-								], "Pilih jenis kelamin")}
-								{renderInput("No HP Direktur", "HPDirektur", "text", "Contoh: 08123456789")}
-							</div>
-						</div>
-
-						{/* Sekretaris */}
-						<div className="border-b pb-4">
-							<h4 className="font-semibold text-slate-700 mb-3">Sekretaris</h4>
-							<div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-								{renderInput("Nama Sekretaris", "NamaSekretaris", "text", "Masukkan nama sekretaris")}
-								{renderSelect("Jenis Kelamin", "JenisKelaminSekretaris", [
-									{ value: "Laki-laki", label: "Laki-laki" },
-									{ value: "Perempuan", label: "Perempuan" }
-								], "Pilih jenis kelamin")}
-								{renderInput("No HP Sekretaris", "HPSekretaris", "text", "Contoh: 08123456789")}
-							</div>
-						</div>
-
-						{/* Bendahara */}
-						<div>
-							<h4 className="font-semibold text-slate-700 mb-3">Bendahara</h4>
-							<div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-								{renderInput("Nama Bendahara", "NamaBendahara", "text", "Masukkan nama bendahara")}
-								{renderSelect("Jenis Kelamin", "JenisKelaminBendahara", [
-									{ value: "Laki-laki", label: "Laki-laki" },
-									{ value: "Perempuan", label: "Perempuan" }
-								], "Pilih jenis kelamin")}
-								{renderInput("No HP Bendahara", "HPBendahara", "text", "Contoh: 08123456789")}
-							</div>
-						</div>
-
-						<div>
-							<h4 className="font-semibold text-slate-700 mb-3">Staf Lainnya</h4>
-							<div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-								{renderInput("Nama Staf Lainnya", "NamaStafLainnya", "text", "Masukkan nama staf")}
-								{renderSelect("Jenis Kelamin", "JenisKelaminStafLainnya", [
-									{ value: "Laki-laki", label: "Laki-laki" },
-									{ value: "Perempuan", label: "Perempuan" }
-								])}
-								{renderInput("No HP Staf Lainnya", "HPStafLainnya", "text", "Contoh: 08123456789")}
-							</div>
-						</div>
+						{renderSelect(
+							"Surat Keputusan (SK) BUMDES",
+							"produk_hukum_sk_bumdes_id",
+							produkHukumOptions.sk || [],
+							produkHukumOptions.sk?.length > 0
+								? "Pilih SK BUMDES yang sudah diupload"
+								: "Belum ada SK - Upload di menu Produk Hukum",
+							true
+						)}
+						<ProdukHukumTerpilih
+							id={formData.produk_hukum_sk_bumdes_id}
+							daftar={produkHukumOptions.sk}
+						/>
 					</div>
-				))}
-
-				{/* 4. Sumber Daya Manusia */}
-				{renderFormSection("4. Sumber Daya Manusia", <FiUsers className="text-slate-600" />, (
-					<div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-						{renderInput("Total Tenaga Kerja", "TotalTenagaKerja", "number", "Jumlah total pekerja")}
-					</div>
-				))}
-
-				{/* 5. Bidang Usaha */}
-				{renderFormSection("5. Bidang Usaha", <FiShoppingBag className="text-slate-600" />, (
-					<div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-						{renderInput("Kategori Usaha", "JenisUsaha", "text", "Contoh: Perdagangan dan Jasa Umum")}
-						{renderInput("Jenis Usaha Utama", "JenisUsahaUtama", "text", "Usaha yang paling utama dijalankan")}
-						{renderInput("Jenis Usaha Lainnya", "JenisUsahaLainnya", "text", "Usaha lain di luar usaha utama")}
-					</div>
-				))}
-
-				{/* 6. Permodalan dan Aset */}
-				{renderFormSection("6. Permodalan dan Aset", <FiDollarSign className="text-slate-600" />, (
-					<div className="space-y-4">
-						<div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-							<h4 className="md:col-span-3 font-semibold text-slate-700">Penyertaan Modal Desa</h4>
-							{renderInput("Penyertaan Modal 2019 (Rp)", "PenyertaanModal2019", "number", "0")}
-							{renderInput("Penyertaan Modal 2020 (Rp)", "PenyertaanModal2020", "number", "0")}
-							{renderInput("Penyertaan Modal 2021 (Rp)", "PenyertaanModal2021", "number", "0")}
-							{renderInput("Penyertaan Modal 2022 (Rp)", "PenyertaanModal2022", "number", "0")}
-							{renderInput("Penyertaan Modal 2023 (Rp)", "PenyertaanModal2023", "number", "0")}
-							{renderInput("Penyertaan Modal 2024 (Rp)", "PenyertaanModal2024", "number", "0")}
-							{renderInput("Penganggaran Penyertaan Modal 2025 (Rp)", "PenganggaranPenyertaanModal2025", "number", "0")}
-							{renderInput("Penyertaan Modal TPKK/Kelompok (Rp)", "PenyertaanModalTPKK", "number", "0")}
-							{renderInput("Total Realisasi 2019-2025 (Rp)", "TotalRealisasiPenyertaanModal20192025", "number", "0")}
-						</div>
-						<div className="grid grid-cols-1 md:grid-cols-2 gap-4 border-t border-slate-100 pt-4">
-							<h4 className="md:col-span-2 font-semibold text-slate-700">Modal Lain dan Aset</h4>
-							{renderInput("Jumlah Modal Awal (Rp)", "JumlahModalAwal", "number", "0")}
-							{renderInput("Modal dari Sumber Lain (Rp)", "SumberLain", "number", "0")}
-							{renderInput("Jenis Aset", "JenisAset", "text", "Contoh: Tanah, bangunan, kendaraan")}
-							{renderInput("Nilai Aset (Rp)", "NilaiAset", "number", "0")}
-						</div>
-					</div>
-				))}
-
-				{/* 7. Omset dan Laba */}
-				{renderFormSection("7. Omset dan Laba", <FiDollarSign className="text-slate-600" />, (
-					<div className="space-y-4">
-						<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-							<h4 className="md:col-span-2 font-semibold text-slate-700">Tahun 2023</h4>
-							{renderInput("Omset 2023 (Rp)", "Omset2023", "number", "0")}
-							{renderInput("Laba 2023 (Rp)", "Laba2023", "number", "0")}
-						</div>
-						<div className="grid grid-cols-1 md:grid-cols-2 gap-4 border-t border-slate-100 pt-4">
-							<h4 className="md:col-span-2 font-semibold text-slate-700">Tahun 2024</h4>
-							{renderInput("Omset 2024 Semester 1 (Rp)", "Omset2024Sem1", "number", "0")}
-							{renderInput("Laba 2024 Semester 1 (Rp)", "Laba2024Sem1", "number", "0")}
-							{renderInput("Omset 2024 Setahun (Rp)", "Omset2024", "number", "0")}
-							{renderInput("Laba 2024 Setahun (Rp)", "Laba2024", "number", "0")}
-						</div>
-						<div className="grid grid-cols-1 md:grid-cols-2 gap-4 border-t border-slate-100 pt-4">
-							<h4 className="md:col-span-2 font-semibold text-slate-700">Tahun 2025</h4>
-							{renderInput("Omset 2025 (Rp)", "Omset2025", "number", "0")}
-							{renderInput("Laba 2025 (Rp)", "Laba2025", "number", "0")}
-						</div>
-					</div>
-				))}
-
-				{/* 8. Usaha Ketahanan Pangan */}
-				{renderFormSection("8. Usaha Ketahanan Pangan", <FiShoppingBag className="text-slate-600" />, (
-					<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-						{renderInput("Jenis Usaha Ketahanan Pangan", "JenisUsahaKetahananPangan", "text", "Contoh: Peternakan, Pertanian")}
-						{renderInput("Volume Ketahanan Pangan", "VolumeKetahananPangan", "text", "Contoh: 1000 ekor")}
-						<div className="md:col-span-2">
-							{renderTextarea("Keterangan Usaha Ketahanan Pangan", "KeteranganUsahaKetahananPangan", "Rincian usaha ketahanan pangan yang dijalankan", 2)}
-						</div>
-						{renderInput("Anggaran Penyertaan Modal Ketahanan Pangan (Rp)", "AnggaranModalKetahananPangan", "number", "0")}
-					</div>
-				))}
-
-				{/* 9. Kontribusi terhadap PADes */}
-				{renderFormSection("9. Kontribusi terhadap Pendapatan Asli Desa", <FiDollarSign className="text-slate-600" />, (
-					<div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-						{renderInput("Kontribusi PADes 2021 (Rp)", "KontribusiTerhadapPADes2021", "number", "0")}
-						{renderInput("Kontribusi PADes 2022 (Rp)", "KontribusiTerhadapPADes2022", "number", "0")}
-						{renderInput("Kontribusi PADes 2023 (Rp)", "KontribusiTerhadapPADes2023", "number", "0")}
-						{renderInput("Kontribusi PADes 2024 (Rp)", "KontribusiTerhadapPADes2024", "number", "0")}
-						{renderInput("Kontribusi PADes 2025 (Rp)", "KontribusiTerhadapPADes2025", "number", "0")}
-					</div>
-				))}
-
-				{/* 10. Kemitraan dan Kerja Sama */}
-				{renderFormSection("10. Kemitraan dan Kerja Sama", <FiUsers className="text-slate-600" />, (
-					<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-						<div className="md:col-span-2">
-							{renderTextarea("Mitra / Kerja Sama Pihak Ketiga", "KerjasamaPihakKetiga", "Contoh: PT Solusi Limbah Abadi", 2)}
-						</div>
-						{renderInput("Tahun Mulai - Tahun Berakhir", "TahunMulai_TahunBerakhir", "text", "Contoh: 2022-2025")}
-						<div className="hidden md:block" />
-						{renderInput("Kontribusi Kemitraan ke PADes 2024 (Rp)", "KontribusiKemitraanPADes2024", "number", "0")}
-						{renderInput("Kontribusi Kemitraan ke PADes 2025 (Rp)", "KontribusiKemitraanPADes2025", "number", "0")}
-					</div>
-				))}
-
-				{/* 11. Peran dalam Program Pemerintah */}
-				{renderFormSection("11. Peran dalam Program Pemerintah", <FiMapPin className="text-slate-600" />, (
-					<div className="space-y-4">
-						<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-							<h4 className="md:col-span-2 font-semibold text-slate-700">Ketahanan Pangan</h4>
-							{renderSelect("Peran Ketahanan Pangan 2024", "Ketapang2024", [
-								{ value: "Pengelola", label: "Pengelola" },
-								{ value: "Distribusi", label: "Distribusi" },
-								{ value: "Pemasaran", label: "Pemasaran" },
-								{ value: "Tidak ada peran", label: "Tidak ada peran" }
-							])}
-							{renderSelect("Peran Ketahanan Pangan 2025", "Ketapang2025", [
-								{ value: "Pengelola", label: "Pengelola" },
-								{ value: "Distribusi", label: "Distribusi" },
-								{ value: "Pemasaran", label: "Pemasaran" },
-								{ value: "Tidak ada peran", label: "Tidak ada peran" }
-							])}
-						</div>
-						<div className="grid grid-cols-1 md:grid-cols-2 gap-4 border-t border-slate-100 pt-4">
-							<h4 className="md:col-span-2 font-semibold text-slate-700">Desa Wisata</h4>
-							{renderSelect("Termasuk Desa Wisata", "DesaWisataStatus", [
-								{ value: "Ya", label: "Ya" },
-								{ value: "Tidak", label: "Tidak" }
-							])}
-							{renderInput("Peran pada Desa Wisata", "DesaWisata", "text", "Contoh: Pengelola Utama")}
-						</div>
-						<div className="grid grid-cols-1 md:grid-cols-2 gap-4 border-t border-slate-100 pt-4">
-							<h4 className="md:col-span-2 font-semibold text-slate-700">Makan Bergizi Gratis (MBG)</h4>
-							{renderInput("Peran dalam MBG", "PeranMBG", "text", "Contoh: Pemasok Bahan Baku")}
-							{renderInput("Mekanisme Kerja Sama", "MekanismeKerjaSamaMBG", "text", "Contoh: Langsung dengan SPPG/Yayasan")}
-							{renderInput("Jumlah SPPG", "JumlahSPPG", "number", "0")}
-							{renderInput("Tahun Kerja Sama", "TahunKerjaSamaMBG", "text", "Contoh: 2025")}
-						</div>
-					</div>
-				))}
-
-				{/* 12. Bantuan yang Diterima */}
-				{renderFormSection("12. Bantuan yang Diterima", <FiDollarSign className="text-slate-600" />, (
-					<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-						{renderInput("Bantuan Pengembangan Kemendesa", "BantuanKementrian", "text", "Contoh: Tahap 1")}
-						{renderInput("Bantuan Laptop Shopee", "BantuanLaptopShopee", "text", "Contoh: Tahap 2")}
-						<div className="md:col-span-2">
-							{renderTextarea("Bantuan Lainnya", "BantuanLainnya", "Bantuan lain di luar dua program di atas", 2)}
-						</div>
-					</div>
-				))}
-
-				{/* 13. Informasi Tambahan */}
-				{renderFormSection("13. Informasi Tambahan", <FiFileText className="text-slate-600" />, (
-					<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-						{renderInput("E-Commerce", "ECommerce", "text", "Contoh: Shopee, Tokopedia")}
-						{renderInput("Tautan SK", "LinkSK", "text", "Tautan dokumen SK")}
-						{renderInput("Tautan Laporan Keuangan 2021", "LinkLapKeuangan2021", "text", "Tautan dokumen")}
-						{renderInput("Tautan SK Kepengurusan 2021", "LinkSKKepengurusan2021", "text", "Tautan dokumen")}
-						<div className="md:col-span-2">
-							{renderTextarea("Catatan Tambahan", "CatatanTambahan", "Catatan lain tentang BUMDes ini", 3)}
-						</div>
-					</div>
-				))}
-
-				{/* 14. Penilaian dan Pembinaan DPMD — hanya bisa dibaca.
-				    Nilainya ditetapkan bidang SPKED, jadi desa melihat hasilnya
-				    tapi tidak bisa mengubahnya dari sini. */}
-				{renderFormSection("14. Penilaian dan Pembinaan DPMD", <FiEye className="text-slate-600" />, (
-					<div className="space-y-4">
-						<p className="rounded-lg bg-slate-50 px-4 py-3 text-sm text-slate-600">
-							Bagian ini diisi oleh Bidang SPKED DPMD dan tidak dapat diubah dari halaman desa.
-							Hubungi Bidang SPKED bila ada data yang perlu diperbaiki.
-						</p>
-						<div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-							<h4 className="md:col-span-3 font-semibold text-slate-700">Pemeringkatan</h4>
-							{renderBaca("Pemeringkatan 2024", "Pemeringkatan2024")}
-							{renderBaca("Pemeringkatan 2024 (Semester 1)", "Pemeringkatan2024Sem1")}
-							{renderBaca("Pemeringkatan 2026 (dari penilaian 2025)", "Pemeringkatan2026")}
-						</div>
-						<div className="grid grid-cols-1 md:grid-cols-3 gap-4 border-t border-slate-100 pt-4">
-							<h4 className="md:col-span-3 font-semibold text-slate-700">Riwayat Status Badan Hukum</h4>
-							{renderBaca("Status 2026", "StatusBadanHukum2026")}
-							{renderBaca("Status 2025", "StatusBadanHukum2025")}
-							{renderBaca("Status 2024", "StatusBadanHukum2024")}
-						</div>
-						<div className="grid grid-cols-1 md:grid-cols-3 gap-4 border-t border-slate-100 pt-4">
-							<h4 className="md:col-span-3 font-semibold text-slate-700">Pembinaan dan Desk</h4>
-							{renderBaca("Pembinaan 2024", "Pembinaan2024")}
-							{renderBaca("Desk Pendataan 2025", "DeskPendataan2025")}
-							{renderBaca("Kehadiran Desk 2026", "KehadiranDesk2026")}
-						</div>
-					</div>
-				))}
-			</div>
+				}
+			/>
 
 			{/* 15. Upload Dokumen */}
 			{renderFormSection("15. Upload Dokumen", <FiFileText className="text-slate-600" />, (

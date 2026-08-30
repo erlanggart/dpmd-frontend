@@ -17,6 +17,7 @@ import toast from 'react-hot-toast';
 import { useSipanda } from '../../../hooks/useSipanda';
 import { useBidangPath } from '../../../hooks/useBidangPath';
 import SelectBox from '../../../components/ui/SelectBox';
+import { persen, fmtPersen } from '../../../utils/persen';
 
 ChartJS.register(LineElement, PointElement, CategoryScale, LinearScale, Tooltip, Filler);
 
@@ -165,7 +166,7 @@ export default function PenyaluranDashboard({
       cairAmt,
       cairCount: cair.length,
       count: entries.length,
-      pct: entries.length ? Math.round((cair.length / entries.length) * 100) : 0,
+      pct: persen(cair.length, entries.length),
     };
   }, [entries]);
 
@@ -200,7 +201,7 @@ export default function PenyaluranDashboard({
     });
     return dims.map((d) => {
       const v = m[d] || { total: 0, cair: 0, count: 0, cairCount: 0 };
-      const pctDesa = v.count ? (v.cairCount / v.count) * 100 : 0;
+      const pctDesa = persen(v.cairCount, v.count);
       const phase = v.cairCount === 0 ? 'pending' : v.cairCount >= v.count ? 'done' : 'active';
       return { label: d, ...v, desaTotal: v.count, desaCair: v.cairCount, pctDesa, phase };
     });
@@ -221,8 +222,8 @@ export default function PenyaluranDashboard({
       total, cair, belum: total - cair, count, cairCount,
       desa: new Set(fundRows.map((r) => `${r.kecamatan}|${r.desa}`)).size,
       kec: new Set(fundRows.map((r) => r.kecamatan)).size,
-      pctAmt: total ? (cair / total) * 100 : 0,
-      pctCount: count ? (cairCount / count) * 100 : 0,
+      pctAmt: persen(cair, total),
+      pctCount: persen(cairCount, count),
       totalDims: dimBreakdown.length,
       doneCount: done.length,
       pendingCount: pending.length,
@@ -260,7 +261,7 @@ export default function PenyaluranDashboard({
       if (r.sudah_cair === 'Y') m[r.kecamatan].c += 1;
     });
     return Object.entries(m)
-      .map(([kec, v]) => ({ kec, n: v.n, c: v.c, pct: v.n ? (v.c / v.n) * 100 : 0 }))
+      .map(([kec, v]) => ({ kec, n: v.n, c: v.c, pct: persen(v.c, v.n) }))
       .sort((a, b) => a.pct - b.pct || b.n - a.n)
       .slice(0, 8);
   }, [fundRows, dimField, isMonthly, laggingFocus]);
@@ -453,7 +454,7 @@ export default function PenyaluranDashboard({
         <div className="mt-4 grid grid-cols-2 lg:grid-cols-4 gap-px bg-slate-200/80 rounded-xl overflow-hidden border border-slate-200/80">
           <StatCell label="Total Desa" value={fmtInt(stats.desa)} sub={`${stats.kec} kecamatan`} />
           <StatCell label="Total Anggaran" value={fmtRp(stats.total)} sub={`${fmtInt(stats.count)} penyaluran`} />
-          <StatCell label="Sudah Cair" value={`${stats.pct}%`} sub={`${fmtInt(stats.cairCount)} dari ${fmtInt(stats.count)}`} subTone="text-emerald-600" />
+          <StatCell label="Sudah Cair" value={fmtPersen(stats.pct)} sub={`${fmtInt(stats.cairCount)} dari ${fmtInt(stats.count)}`} subTone="text-emerald-600" />
           <StatCell label="Nilai Cair" value={fmtRp(stats.cairAmt)} sub="sudah tersalur" subTone="text-emerald-600" />
         </div>
 
@@ -462,7 +463,7 @@ export default function PenyaluranDashboard({
           <div className="flex-1 h-2 rounded-full bg-slate-200 overflow-hidden">
             <div className={`h-full rounded-full transition-all duration-500 ${A.bar}`} style={{ width: `${stats.pct}%` }} />
           </div>
-          <span className="text-[11px] font-semibold text-slate-500 shrink-0">{stats.pct}% pencairan</span>
+          <span className="text-[11px] font-semibold text-slate-500 shrink-0">{fmtPersen(stats.pct)} pencairan</span>
         </div>
       </div>
 
@@ -484,7 +485,7 @@ export default function PenyaluranDashboard({
             <div>
               <div className="flex items-baseline gap-2.5 flex-wrap">
                 <span className="text-[10.5px] font-bold tracking-[0.12em] uppercase text-brand-600">Realisasi Anggaran</span>
-                <span className={`text-[11px] font-bold ${A.kicker}`}>{Math.round(moduleAgg.pctAmt)}% tersalur</span>
+                <span className={`text-[11px] font-bold ${A.kicker}`}>{fmtPersen(moduleAgg.pctAmt)} tersalur</span>
               </div>
               <div className="mt-1.5 flex items-end gap-2 flex-wrap">
                 <span className="text-[26px] sm:text-[30px] font-extrabold tracking-tight text-slate-900 leading-none" title={fmtRpFull(moduleAgg.cair)}>{fmtRp(moduleAgg.cair)}</span>
@@ -512,7 +513,7 @@ export default function PenyaluranDashboard({
                   ]
                 : [
                     { Icon: CheckCircle2, label: 'Tahap Selesai', value: `${moduleAgg.doneCount}/${moduleAgg.totalDims}`, sub: 'tahap penuh cair', tone: A.tile },
-                    { Icon: Clock, label: 'Tahap Berjalan', value: moduleAgg.active ? moduleAgg.active.label : (moduleAgg.pendingCount ? 'Belum mulai' : 'Selesai'), sub: moduleAgg.active ? `${Math.round(moduleAgg.active.pctDesa)}% desa cair` : '—', tone: 'bg-amber-50 text-amber-600 ring-amber-200/60' },
+                    { Icon: Clock, label: 'Tahap Berjalan', value: moduleAgg.active ? moduleAgg.active.label : (moduleAgg.pendingCount ? 'Belum mulai' : 'Selesai'), sub: moduleAgg.active ? `${fmtPersen(moduleAgg.active.pctDesa)} desa cair` : '—', tone: 'bg-amber-50 text-amber-600 ring-amber-200/60' },
                     { Icon: MapPin, label: 'Cakupan', value: fmtInt(moduleAgg.desa), sub: `${fmtInt(moduleAgg.kec)} kecamatan`, tone: 'bg-slate-100 text-slate-500 ring-slate-200/60' },
                   ]
               ).map(({ Icon, label, value, sub, tone }) => (
@@ -572,7 +573,7 @@ export default function PenyaluranDashboard({
                         <div className={`h-full ${p.bar} transition-all duration-700`} style={{ width: `${d.pctDesa}%` }} />
                       </div>
                       <div className="w-[70px] sm:w-24 shrink-0 text-right" title={`${fmtInt(d.desaCair)}/${fmtInt(d.desaTotal)} desa cair`}>
-                        <div className={`text-[12px] font-bold tabular-nums ${p.text}`}>{Math.round(d.pctDesa)}%</div>
+                        <div className={`text-[12px] font-bold tabular-nums ${p.text}`}>{fmtPersen(d.pctDesa)}</div>
                         <div className="text-[10px] text-slate-400 leading-tight">{d.cair > 0 ? fmtRp(d.cair) : '—'}</div>
                       </div>
                     </button>
@@ -586,7 +587,7 @@ export default function PenyaluranDashboard({
               <div className="space-y-2.5">
                 {statusAll.map(([s, n]) => {
                   const t = statusTone(s);
-                  const pct = fundRows.length ? (n / fundRows.length) * 100 : 0;
+                  const pct = persen(n, fundRows.length);
                   return (
                     <div key={s} className="flex items-center gap-2.5">
                       <span className="w-28 sm:w-44 shrink-0 flex items-center gap-1.5 min-w-0">
@@ -597,7 +598,7 @@ export default function PenyaluranDashboard({
                         <div className="h-full rounded-full" style={{ width: `${Math.max(pct, 1.5)}%`, backgroundColor: t.hex }} />
                       </div>
                       <span className="w-16 shrink-0 text-right text-[11px] font-bold text-slate-700 tabular-nums">
-                        {fmtInt(n)}<span className="text-slate-400 font-medium"> · {Math.round(pct)}%</span>
+                        {fmtInt(n)}<span className="text-slate-400 font-medium"> · {fmtPersen(pct)}</span>
                       </span>
                     </div>
                   );
@@ -626,7 +627,7 @@ export default function PenyaluranDashboard({
                         <div className="flex-1 h-3.5 rounded-full bg-slate-100 overflow-hidden min-w-0">
                           <div className={`h-full rounded-full ${k.pct >= 100 ? A.bar : k.pct > 0 ? 'bg-amber-500' : 'bg-rose-400'}`} style={{ width: `${Math.max(k.pct, 2)}%` }} />
                         </div>
-                        <span className="w-11 shrink-0 text-right text-[11px] font-bold text-slate-700 tabular-nums">{Math.round(k.pct)}%</span>
+                        <span className="w-12 shrink-0 text-right text-[11px] font-bold text-slate-700 tabular-nums">{fmtPersen(k.pct)}</span>
                         <span className="w-10 shrink-0 text-right text-[10px] text-slate-400">{k.c}/{k.n}</span>
                       </div>
                     ))}
@@ -676,7 +677,7 @@ export default function PenyaluranDashboard({
             {statusDist.map(([s, n]) => {
               const t = statusTone(s);
               const active = statusFilter === s;
-              const pct = stats.count ? Math.round((n / stats.count) * 100) : 0;
+              const pct = persen(n, stats.count);
               return (
                 <button
                   key={s}
@@ -701,7 +702,7 @@ export default function PenyaluranDashboard({
                     <span className="text-[19px] font-bold leading-none tabular-nums text-slate-900">
                       {fmtInt(n)}
                     </span>
-                    <span className="text-[10.5px] font-medium text-slate-400">desa · {pct}%</span>
+                    <span className="text-[10.5px] font-medium text-slate-400">desa · {fmtPersen(pct)}</span>
                   </div>
 
                   <div className="mt-2 h-1 w-full overflow-hidden rounded-full bg-slate-100">

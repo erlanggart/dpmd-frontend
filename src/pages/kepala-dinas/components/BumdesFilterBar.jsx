@@ -47,7 +47,7 @@ const Keping = ({ children, onHapus }) => (
   </span>
 );
 
-const BumdesFilterBar = ({ data, filter, onChange, jumlahHasil }) => {
+const BumdesFilterBar = ({ data, filter, onChange, jumlahHasil, tersemat = false }) => {
   const [terbuka, setTerbuka] = useState(false);
 
   // Setiap pilihan menyebut jumlahnya, dan jumlah itu dihitung dengan ember
@@ -133,7 +133,14 @@ const BumdesFilterBar = ({ data, filter, onChange, jumlahHasil }) => {
   ].filter(Boolean);
 
   return (
-    <div className="sticky top-16 z-20 -mx-4 border-b lg:top-0 border-slate-200 bg-slate-50/95 px-4 py-3 backdrop-blur sm:-mx-6 sm:px-6 lg:-mx-8 lg:px-8">
+    // Margin negatif dan `sticky` disetel untuk halaman penuh: bilahnya
+    // melebar sampai tepi layar dan menempel di bawah kepala halaman. Saat
+    // tersemat di dalam panel bidang, keduanya salah — margin negatifnya
+    // menjorok keluar panel lalu terpotong `overflow-hidden`, dan `sticky`
+    // menempel pada wadah yang salah.
+    <div className={tersemat
+      ? 'z-20 rounded-xl border border-slate-200 bg-white px-4 py-3'
+      : 'sticky top-16 z-20 -mx-4 border-b lg:top-0 border-slate-200 bg-slate-50/95 px-4 py-3 backdrop-blur sm:-mx-6 sm:px-6 lg:-mx-8 lg:px-8'}>
       <div className="mx-auto max-w-7xl">
         <div className="flex flex-col gap-3 lg:flex-row lg:items-end">
           {/* Pencarian */}

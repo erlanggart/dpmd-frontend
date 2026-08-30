@@ -23,7 +23,20 @@ export default defineConfig([
       },
     },
     rules: {
-      'no-unused-vars': ['error', { varsIgnorePattern: '^[A-Z_]', argsIgnorePattern: '^[A-Z_]' }],
+      // Konfigurasi ini tidak memuat eslint-plugin-react, jadi `no-unused-vars`
+      // tidak bisa melihat pemakaian di dalam JSX: `<Foo />` tidak terhitung
+      // sebagai pemakaian variabel `Foo`. Penambalnya adalah varsIgnorePattern
+      // di bawah — nama komponen selalu diawali huruf besar, jadi semuanya
+      // terlewat dari pemeriksaan.
+      //
+      // `motion` dari framer-motion adalah satu-satunya pengecualian yang
+      // dipakai di sini: namanya huruf kecil dan hanya muncul sebagai
+      // `<motion.div>`, sehingga dilaporkan "tidak pernah dipakai" di 32
+      // berkas — padahal menghapus impornya akan mematikan halamannya.
+      'no-unused-vars': [
+        'error',
+        { varsIgnorePattern: '^([A-Z_]|motion$)', argsIgnorePattern: '^[A-Z_]' },
+      ],
     },
   },
 ])

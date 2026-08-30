@@ -5,6 +5,7 @@ import { useAuth } from '../../context/AuthContext';
 import {
   Landmark, Activity, Clock, DollarSign, HardDrive, ClipboardList,
   FileCheck, TrendingUp, ChevronRight, ArrowUpRight, RotateCcw,
+	Gavel,
 } from 'lucide-react';
 import api from '../../api';
 import toast from 'react-hot-toast';
@@ -329,6 +330,14 @@ const KKDPage = () => {
       icon: DollarSign,
       route: getPath('/kkd/bp'),
       stat: { value: 'Tahap I–II', label: 'per periode' },
+    },
+    {
+      id: 'produk-hukum-kabupaten', tone: 'slate',
+      title: 'Produk Hukum Kabupaten', short: 'PH KAB',
+      desc: 'Perda, Perbup, SK, dan Surat Edaran yang dipegang bidang ini',
+      icon: Gavel,
+      route: getPath('/kkd/produk-hukum-kabupaten'),
+      stat: { value: 'Bidang', label: 'unggah & kelola' },
     },
     {
       id: 'drive', tone: 'slate',

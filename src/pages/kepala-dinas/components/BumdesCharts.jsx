@@ -1,13 +1,6 @@
-// Grafik kelembagaan: proses badan hukum, kelas pemeringkatan, sebaran wilayah.
-//
-// Ketiganya dihitung dari daftar yang sedang disaring — bukan dari ringkasan
-// terpisah di server. Sebelumnya grafik memakai agregat /dashboard sementara
-// tabel memakai daftar, jadi keduanya bisa menampilkan angka berbeda untuk hal
-// yang sama. Sekarang hanya ada satu sumber.
-//
-// Batang bisa diklik untuk memasang filter yang bersangkutan; itu jalan
-// tercepat dari "39 kecamatan" ke "Jonggol saja" tanpa membuka menu.
-import React, { useMemo } from 'react';
+// Grafik kelembagaan: badan hukum, pemeringkatan, sebaran kecamatan.
+// Dihitung dari daftar yang sedang disaring. Batang bisa diklik untuk menyaring.
+import React, { useMemo, useState } from 'react';
 import { ScrollText, Award, MapPin } from 'lucide-react';
 import {
   URUTAN_BADAN_HUKUM, URUTAN_PERINGKAT, BADAN_HUKUM_LAINNYA, PERINGKAT_KOSONG,
@@ -16,7 +9,13 @@ import {
 import { Kartu, Judul, Batang, BatangTumpuk, Legenda, Kosong } from './bumdesViz';
 import { RAMP, WARNA_AKTIF, WARNA_TIDAK_AKTIF, nf, persenDari } from './bumdesFormat';
 
+// 39 kecamatan dalam satu kotak gulir menuntut menggulir dua arah sekaligus.
+// Bawaannya sepuluh teratas, sisanya sejauh satu ketukan.
+const BATAS_RINGKAS = 10;
+
 const BumdesCharts = ({ data, filter, onFilter }) => {
+  const [ringkas, setRingkas] = useState(true);
+
   const s = useMemo(() => {
     const total = data.length;
 
@@ -44,7 +43,6 @@ const BumdesCharts = ({ data, filter, onFilter }) => {
       peringkat,
       peringkatTerdata: peringkat.filter((p) => p.label !== PERINGKAT_KOSONG).reduce((t, p) => t + p.n, 0),
       kecamatan,
-      badanHukumTotal: badanHukum.reduce((t, b) => t + b.n, 0),
       aktifTotal: data.filter((d) => isAktif(d.status)).length,
       maksKecamatan: Math.max(1, ...kecamatan.map((k) => k.aktif + k.tidakAktif)),
     };
@@ -61,18 +59,13 @@ const BumdesCharts = ({ data, filter, onFilter }) => {
   const maksBadanHukum = Math.max(1, ...s.badanHukum.map((b) => b.n));
   const maksPeringkat = Math.max(1, ...s.peringkat.map((p) => p.n));
   const tidakAktifTotal = s.total - s.aktifTotal;
+  const tampilKecamatan = ringkas ? s.kecamatan.slice(0, BATAS_RINGKAS) : s.kecamatan;
 
   return (
     <div className="space-y-5">
       <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
-        {/* Proses badan hukum — urutan tangga dari paling jauh ke paling selesai */}
         <Kartu>
-          <Judul
-            icon={ScrollText}
-            catatan="Tahapan pendaftaran badan hukum ke Kemenkumham, diurutkan dari yang paling jauh sampai yang sudah terbit sertifikat. Klik satu tahap untuk menyaring seluruh halaman."
-          >
-            Perjalanan badan hukum
-          </Judul>
+          <Judul icon={ScrollText}>Badan hukum</Judul>
           <div className="space-y-3">
             {s.badanHukum.map((b, i) => (
               <Batang
@@ -92,20 +85,10 @@ const BumdesCharts = ({ data, filter, onFilter }) => {
               />
             ))}
           </div>
-          <p className="mt-4 text-[11px] leading-relaxed text-slate-500">
-            Setiap BUMDes masuk tepat satu tahap; jumlah keempatnya {nf.format(s.badanHukumTotal)},
-            sama dengan {nf.format(s.total)} BUMDes yang sedang ditampilkan.
-          </p>
         </Kartu>
 
-        {/* Pemeringkatan resmi */}
         <Kartu>
-          <Judul
-            icon={Award}
-            catatan="Penilaian resmi 2024 — satu-satunya penilaian yang lengkap untuk seluruh BUMDes. Penilaian 2026 masih berjalan dan belum mencakup semuanya."
-          >
-            Kelas menurut penilaian resmi
-          </Judul>
+          <Judul icon={Award}>Kelas BUMDes</Judul>
           <div className="space-y-3">
             {s.peringkat.map((p, i) => (
               <Batang
@@ -125,18 +108,12 @@ const BumdesCharts = ({ data, filter, onFilter }) => {
               />
             ))}
           </div>
-          <p className="mt-4 text-[11px] leading-relaxed text-slate-500">
-            Persentase dihitung terhadap {nf.format(s.peringkatTerdata)} BUMDes yang sudah dinilai
-            pada penilaian 2024. Kolom “Kelas” di direktori memakai penilaian yang sama.
-          </p>
         </Kartu>
       </div>
 
-      {/* Sebaran wilayah */}
       <Kartu>
         <Judul
           icon={MapPin}
-          catatan="Diurutkan dari kecamatan dengan BUMDes terbanyak. Klik satu baris untuk menyaring seluruh halaman ke kecamatan itu."
           aksi={
             <div className="hidden flex-shrink-0 sm:block">
               <Legenda
@@ -160,8 +137,8 @@ const BumdesCharts = ({ data, filter, onFilter }) => {
           />
         </div>
 
-        <div className="max-h-[30rem] space-y-0.5 overflow-y-auto pr-1">
-          {s.kecamatan.map((k, i) => (
+        <div className={ringkas ? 'space-y-0.5' : 'max-h-[30rem] space-y-0.5 overflow-y-auto pr-1'}>
+          {tampilKecamatan.map((k, i) => (
             <BatangTumpuk
               key={k.label}
               label={k.label}
@@ -177,10 +154,17 @@ const BumdesCharts = ({ data, filter, onFilter }) => {
           ))}
         </div>
 
-        <p className="mt-3 text-[11px] leading-relaxed text-slate-500">
-          {nf.format(s.kecamatan.length)} kecamatan dalam tampilan ini. Panjang batang sebanding
-          dengan kecamatan terbanyak, bukan dengan seluruh kabupaten.
-        </p>
+        {s.kecamatan.length > BATAS_RINGKAS && (
+          <button
+            type="button"
+            onClick={() => setRingkas((v) => !v)}
+            className="mt-3 w-full rounded-lg border border-slate-200 py-2 text-xs font-medium text-slate-600 transition-colors hover:border-slate-300 hover:bg-slate-50 hover:text-slate-900"
+          >
+            {ringkas
+              ? `Tampilkan semua ${nf.format(s.kecamatan.length)} kecamatan`
+              : `Tampilkan ${BATAS_RINGKAS} teratas saja`}
+          </button>
+        )}
       </Kartu>
     </div>
   );

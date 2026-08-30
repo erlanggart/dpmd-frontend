@@ -25,6 +25,7 @@ import {
 	Search,
 	X,
 	Lock,
+	Gavel,
 } from 'lucide-react';
 import api from '../../api';
 import toast from 'react-hot-toast';
@@ -60,6 +61,14 @@ const SUB_BAGIAN = [
 ];
 
 const UMPEG_FEATURES = [
+	{
+		key: 'produk-hukum-kabupaten',
+		title: 'Produk Hukum Kabupaten',
+		description: 'Perda, Perbup, SK, dan Surat Edaran yang dipegang bidang ini',
+		icon: Gavel,
+		path: '/bidang/sekretariat/produk-hukum-kabupaten',
+		accent: '#475569',
+	},
 	{
 		key: 'disposisi',
 		title: 'Disposisi Surat',

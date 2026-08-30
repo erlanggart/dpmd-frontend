@@ -1,5 +1,6 @@
 // src/pages/ketua-tim/KetuaTimDashboard.jsx
 import React, { useState, useEffect } from 'react';
+import { urlServer } from '../../utils/asalServer';
 import { 
   LuCalendar, 
   LuClipboardList, 
@@ -285,7 +286,7 @@ const KetuaTimDashboard = () => {
               {/* Avatar with Image or Initials */}
               {user.avatar ? (
                 <img 
-                  src={`${import.meta.env.VITE_API_BASE_URL?.replace('/api', '') || 'http://127.0.0.1:3001'}${user.avatar}`}
+                  src={urlServer(user.avatar)}
                   alt={user.name}
                   className="h-14 w-14 sm:h-16 sm:w-16 rounded-2xl object-cover shadow-lg border-2 border-white/50"
                   onError={(e) => {

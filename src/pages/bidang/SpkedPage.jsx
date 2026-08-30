@@ -19,6 +19,7 @@ import {
 	CalendarOff,
 	HardDrive,
 	ClipboardList,
+	Gavel,
 } from 'lucide-react';
 import api from '../../api';
 import AnggaranBidangSection from '../../components/bidang/AnggaranBidangSection';
@@ -37,9 +38,12 @@ import {
 import { angka } from '../../components/bidang/bidangFormat';
 
 // Lazy load BUMDes components
-const BumdesForm = lazy(() => import('./spked/bumdes/BumdesForm'));
-const BumdesDashboardModern = lazy(() => import('./spked/bumdes/BumdesDashboardModern'));
-const BumdesDokumenManager = lazy(() => import('./spked/bumdes/BumdesDokumenManager'));
+// Statistik BUMDes dipakai ULANG dari Core Dashboard, bukan disalin. Halaman
+// itu menghitung seluruh isinya dari satu daftar (/kepala-dinas/bumdes) dan
+// satu irisan filter; menyalin logikanya ke sini berarti membuat sumber kedua
+// yang pasti akan menyimpang. Rutenya cukup `auth`, jadi pegawai SPKED boleh
+// memanggilnya, dan cache-nya sama sehingga datanya hanya diambil sekali.
+const StatistikBumdes = lazy(() => import('../kepala-dinas/StatistikBumdes'));
 
 // Lazy load Bankeu component
 const BankeuDashboard = lazy(() => import('./spked/bankeu/BankeuDashboard'));
@@ -72,12 +76,6 @@ const TABS = [
 	{ id: 'activity', label: 'Aktivitas', icon: Activity },
 ];
 
-const SUB_BUMDES = [
-	{ id: 'dashboard', label: 'Dashboard' },
-	{ id: 'form', label: 'Tambah Data' },
-	{ id: 'dokumen', label: 'Dokumen' },
-];
-
 const SUB_BANKEU_2025 = [
 	{ id: 'penyaluran', label: 'Penyaluran T1 & T2' },
 	{ id: 'lpj', label: 'LPJ Bantuan Keuangan' },
@@ -104,7 +102,6 @@ const SpkedPage = () => {
 	const [loading, setLoading] = useState(true);
 	const [data, setData] = useState(null);
 	const [activeTab, setActiveTab] = useState('overview');
-	const [bumdesView, setBumdesView] = useState('dashboard');
 	const [bankeuYear, setBankeuYear] = useState(null); // null = layar pilih tahun
 	const [bankeu2025View, setBankeu2025View] = useState('penyaluran');
 
@@ -263,6 +260,13 @@ const SpkedPage = () => {
 									}}
 								/>
 								<AksiCard
+									icon={Gavel}
+									judul="Produk Hukum Kabupaten"
+									deskripsi="Perda, Perbup, SK, dan Surat Edaran yang dipegang bidang ini"
+									accent="#475569"
+									onClick={() => navigate(getPath('/bidang/spked/produk-hukum-kabupaten'))}
+								/>
+								<AksiCard
 									icon={HardDrive}
 									judul="Drive Bidang"
 									deskripsi="Penyimpanan berkas internal bidang, bisa dibagikan ke bidang lain"
@@ -287,12 +291,12 @@ const SpkedPage = () => {
 				{/* ---------- BUMDes ---------- */}
 				{activeTab === 'bumdes' && (
 					<div key="bumdes" className="animate-fadeIn">
+						{/* Satu tampilan saja. Tambah, ubah, dan kelola dokumen kini
+						    berada DI DALAM halaman statistik — dulu tiga sub-tab
+						    terpisah yang menghitung angkanya sendiri-sendiri. */}
 						<PanelModul>
-							<SubTabs items={SUB_BUMDES} aktif={bumdesView} onPilih={setBumdesView} />
 							<div className="p-5">
-								{bumdesView === 'dashboard' && <BumdesDashboardModern />}
-								{bumdesView === 'form' && <BumdesForm onSwitchToDashboard={() => setBumdesView('dashboard')} />}
-								{bumdesView === 'dokumen' && <BumdesDokumenManager />}
+								<StatistikBumdes tersemat bisaKelola />
 							</div>
 						</PanelModul>
 					</div>

@@ -39,7 +39,7 @@ const KOLOM_URUT = [
  * Direktori hanya mengurus pengurutan, halaman, dan panel detail — kalau ia
  * menyaring lagi sendiri, angkanya bisa berbeda dari grafik di atasnya.
  */
-const BumdesDirectory = ({ data = [], adaFilter = false, onReset }) => {
+const BumdesDirectory = ({ data = [], adaFilter = false, onReset, onUbah }) => {
   const [urut, setUrut] = useState({ key: 'nama', arah: 'asc' });
   const [halaman, setHalaman] = useState(1);
   const [dipilih, setDipilih] = useState(null);
@@ -247,7 +247,7 @@ const BumdesDirectory = ({ data = [], adaFilter = false, onReset }) => {
         </>
       )}
 
-      <BumdesDetailModal item={dipilih} onClose={() => setDipilih(null)} />
+      <BumdesDetailModal item={dipilih} onClose={() => setDipilih(null)} onUbah={onUbah} />
     </section>
   );
 };

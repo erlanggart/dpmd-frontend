@@ -346,7 +346,10 @@ const TambahModal = ({ open, onClose, onSuccess, kecamatanList }) => {
 };
 
 // ── Main Page ─────────────────────────────────────────────────────────────────
-const ProdukHukumPage = ({ detailBasePath = '/pemdes/produk-hukum' }) => {
+// `tersemat` dipakai saat halaman ini menjadi salah satu tab di Core Dashboard
+// "Produk Hukum": kepala halaman gelapnya dilepas supaya tidak ada dua judul
+// bertumpuk, dan tombol Tambah pindah ke baris tindakan yang ringkas.
+const ProdukHukumPage = ({ detailBasePath = '/pemdes/produk-hukum', tersemat = false }) => {
 	const navigate = useNavigate();
 	const { isSuperAdmin, isAdminBidangPMD, user } = useAuth();
 
@@ -436,26 +439,37 @@ const ProdukHukumPage = ({ detailBasePath = '/pemdes/produk-hukum' }) => {
 	const getJenisBadgeColor = (s) => ({ PERDES: 'bg-slate-100 text-slate-700', PERKADES: 'bg-amber-100 text-amber-700', SK_KADES: 'bg-green-100 text-green-700' }[s] || 'bg-slate-100 text-slate-700');
 
 	return (
-		<div className="min-h-screen bg-slate-50 p-4 pt-20 sm:p-6 lg:p-8 lg:pt-8">
-			{/* Header */}
-			<div className="bg-slate-900 rounded-xl p-6 mb-6 text-white">
-				<div className="flex items-center justify-between">
-					<div className="flex items-center gap-3">
-						<Scale className="h-7 w-7" />
-						<div>
-							<h1 className="text-xl sm:text-2xl font-semibold tracking-tight">Produk Hukum Desa</h1>
-							<p className="text-white/80 mt-0.5 text-sm">Data produk hukum dari seluruh desa</p>
-						</div>
-					</div>
-					{isAdmin && (
+		<div className={tersemat ? '' : 'min-h-screen bg-slate-50 p-4 pt-20 sm:p-6 lg:p-8 lg:pt-8'}>
+			{tersemat ? (
+				isAdmin && (
+					<div className="mb-5 flex justify-end">
 						<button onClick={() => setShowTambah(true)}
-							className="flex items-center gap-2 px-4 py-2 bg-white text-brand-700 rounded-lg font-medium text-sm hover:bg-slate-50 transition shadow-sm">
+							className="flex items-center gap-2 rounded-lg bg-slate-900 px-4 py-2 text-sm font-medium text-white transition hover:bg-slate-800">
 							<Plus className="w-4 h-4" />
-							Tambah Produk Hukum
+							Tambah Produk Hukum Desa
 						</button>
-					)}
+					</div>
+				)
+			) : (
+				<div className="bg-slate-900 rounded-xl p-6 mb-6 text-white">
+					<div className="flex items-center justify-between">
+						<div className="flex items-center gap-3">
+							<Scale className="h-7 w-7" />
+							<div>
+								<h1 className="text-xl sm:text-2xl font-semibold tracking-tight">Produk Hukum Desa</h1>
+								<p className="text-white/80 mt-0.5 text-sm">Data produk hukum dari seluruh desa</p>
+							</div>
+						</div>
+						{isAdmin && (
+							<button onClick={() => setShowTambah(true)}
+								className="flex items-center gap-2 px-4 py-2 bg-white text-brand-700 rounded-lg font-medium text-sm hover:bg-slate-50 transition shadow-sm">
+								<Plus className="w-4 h-4" />
+								Tambah Produk Hukum
+							</button>
+						)}
+					</div>
 				</div>
-			</div>
+			)}
 
 			{/* Stats Cards */}
 			{stats && (

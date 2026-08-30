@@ -5,7 +5,7 @@ import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import {
 	User, Briefcase, Calendar, Info,
-	Clock, LogIn, LogOut, Camera, Activity,
+	Clock, LogIn, LogOut, Activity,
 } from "lucide-react";
 import api from "../../api";
 import { getUserAvatarUrl } from "../../utils/avatarUtils";
@@ -134,7 +134,6 @@ const PegawaiDashboard = () => {
 			? { label: "Presensi", icon: Clock, color: "rose", onClick: () => navigate("/dpmd/absensi") }
 			: { label: "Perjadin", icon: Briefcase, color: "emerald", onClick: () => navigate("/pegawai/perjadin") },
 		{ label: "Jadwal", icon: Calendar, color: "sky", onClick: () => navigate("/pegawai/jadwal-kegiatan") },
-		{ label: "Photo Booth", icon: Camera, color: "violet", onClick: () => navigate("/dpmd/photo-booth") },
 		{ label: "Informasi", icon: Info, color: "amber", onClick: () => navigate("/dpmd/informasi") },
 	];
 

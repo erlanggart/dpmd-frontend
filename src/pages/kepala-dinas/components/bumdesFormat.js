@@ -46,9 +46,41 @@ export const persenDari = (n, total) => (total > 0 ? Math.round((n / total) * 10
 
 /* ------------------------------------------------------------------ gerak -- */
 
-const kurangiGerak = () =>
+export const kurangiGerak = () =>
   typeof window !== 'undefined' &&
   window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+
+/** Lengkung perlambatan tunggal halaman ini: cepat di awal, mendarat pelan. */
+export const EASE = 'cubic-bezier(0.16, 1, 0.3, 1)';
+
+/**
+ * Menandai kapan sebuah elemen masuk layar, sekali saja.
+ *
+ * Grafik yang sudah selesai beranimasi sebelum digulir ke bawah sama saja
+ * dengan grafik tanpa animasi. Batang baru tumbuh saat kartunya benar-benar
+ * terlihat, dan tidak diulang saat digulir naik-turun.
+ */
+export const useTampil = () => {
+  const ref = useRef(null);
+  const [terlihat, setTerlihat] = useState(() => kurangiGerak());
+
+  useEffect(() => {
+    const el = ref.current;
+    if (!el || terlihat) return undefined;
+    if (typeof IntersectionObserver === 'undefined') { setTerlihat(true); return undefined; }
+
+    const pengamat = new IntersectionObserver(
+      ([masuk]) => {
+        if (masuk.isIntersecting) { setTerlihat(true); pengamat.disconnect(); }
+      },
+      { threshold: 0.1, rootMargin: '0px 0px -8% 0px' }
+    );
+    pengamat.observe(el);
+    return () => pengamat.disconnect();
+  }, [terlihat]);
+
+  return [ref, terlihat];
+};
 
 /**
  * Angka yang berjalan ke nilai barunya saat filter berubah.
@@ -99,7 +131,19 @@ export const teksAtauNull = (v) => {
  * menunjuk origin frontend sehingga URL rakitan server akan salah alamat.
  * Alamat penyimpanan yang benar sudah ada di API_CONFIG.STORAGE_URL.
  */
-export const urlBerkas = (b) =>
-  (b && b.folder && b.nama
+export const urlBerkas = (b) => {
+  if (!b || !b.nama) return null;
+
+  // `jalur` dipakai berkas yang TIDAK tinggal di bawah /uploads. Dokumen dari
+  // modul Produk Hukum misalnya ada di storage/produk_hukum/, sementara
+  // API_CONFIG.STORAGE_URL menunjuk ke /uploads — merangkainya dengan `folder`
+  // menghasilkan /uploads/produk-hukum/... yang tidak pernah ada isinya.
+  if (b.jalur) {
+    const asal = String(API_CONFIG.STORAGE_URL || '').replace(/\/uploads\/?$/, '');
+    return `${asal}${b.jalur}`;
+  }
+
+  return b.folder
     ? `${API_CONFIG.STORAGE_URL}/${b.folder}/${encodeURIComponent(b.nama)}`
-    : null);
+    : null;
+};

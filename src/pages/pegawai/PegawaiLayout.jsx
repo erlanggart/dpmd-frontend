@@ -1,5 +1,6 @@
 // src/pages/pegawai/PegawaiLayout.jsx
 import React from "react";
+import { urlServer } from '../../utils/asalServer';
 import { Outlet, Navigate, useNavigate, useLocation } from "react-router-dom";
 import { FiHome, FiUser, FiLogOut, FiMenu, FiMail, FiBell, FiCalendar, FiBarChart2, FiFileText, FiDollarSign, FiUsers, FiBriefcase } from "react-icons/fi";
 import { Landmark } from "lucide-react";
@@ -243,7 +244,7 @@ const PegawaiLayout = () => {
 								<div className="flex items-center gap-3">
 								{user.avatar ? (
 									<img 
-										src={`${import.meta.env.VITE_API_BASE_URL?.replace('/api', '') || 'http://127.0.0.1:3001'}${user.avatar}`}
+										src={urlServer(user.avatar)}
 										alt={user.name}
 										className="h-14 w-14 rounded-full object-cover shadow-md"
 										onError={(e) => {

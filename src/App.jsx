@@ -154,7 +154,6 @@ const BeritaManagement = lazy(
   () => import("./pages/dashboard/BeritaManagement"),
 );
 // Bidang apps
-const BumdesApp = lazy(() => import("./pages/bidang/spked/bumdes"));
 const Kelembagaan = lazy(() => import("./pages/bidang/pmd/Kelembagaan"));
 const KelembagaanLainnyaPage = lazy(() => import("./pages/bidang/pmd/KelembagaanLainnyaPage"));
 const PengurusDashboardPage = lazy(() => import("./pages/bidang/pmd/PengurusDashboardPage"));
@@ -248,6 +247,9 @@ const PemdesAparaturDesaPage = lazy(() => import("./pages/bidang/pemdes/Aparatur
 const PemdesProfilDesaPage = lazy(() => import("./pages/bidang/pemdes/ProfilDesaDashboardPage"));
 const PemdesProfilDesaDetailPage = lazy(() => import("./pages/bidang/pemdes/ProfilDesaDetailPage"));
 const ProdukHukumPemdesPage = lazy(() => import("./pages/bidang/pemdes/ProdukHukumPage"));
+const ProdukHukumBidangPage = lazy(() => import("./pages/bidang/ProdukHukumBidangPage"));
+const CoreProdukHukumPage = lazy(() => import("./pages/core-dashboard/ProdukHukumPage"));
+const GemaPage = lazy(() => import("./pages/core-dashboard/GemaPage"));
 const ProdukHukumDetailPemdesPage = lazy(() => import("./pages/bidang/pemdes/ProdukHukumDetailPage"));
 
 const KelembagaanDesaPage = lazy(
@@ -278,7 +280,6 @@ const DisposisiSurat = lazy(
 );
 const DisposisiDetail = lazy(() => import("./pages/dashboard/DisposisiDetail"));
 const BankSuratPage = lazy(() => import("./pages/dashboard/BankSuratPage"));
-const PhotoBoothPage = lazy(() => import("./pages/pegawai/PhotoBoothPage"));
 const EventAttendancePublicPage = lazy(() => import("./pages/event/EventAttendancePublicPage"));
 const CoreDashboardPublic = lazy(
   () => import("./pages/public/CoreDashboardPublic"),
@@ -1115,26 +1116,6 @@ function App() {
                   <Route path="bank-surat" element={<BankSuratPage />} />
                 </Route>
 
-                {/* Photo Booth - full screen tanpa sidebar (di luar DPMDStaffLayout) */}
-                <Route
-                  path="/dpmd/photo-booth"
-                  element={
-                    <RoleProtectedRoute
-                      allowedRoles={[
-                        "pegawai",
-                        "ketua_tim",
-                        "kepala_bidang",
-                        "kepala_dinas",
-                        "sekretaris_dinas",
-                        "bendahara",
-                        "superadmin",
-                      ]}
-                    >
-                      <PhotoBoothPage />
-                    </RoleProtectedRoute>
-                  }
-                />
-
                 {/* Rute Bidang - Accessible by pegawai/kepala_bidang/ketua_tim (their own bidang) & kepala_dinas/superadmin (all) */}
                 <Route
                   path="/bidang"
@@ -1172,6 +1153,14 @@ function App() {
                   <Route path="pemdes/aparatur-desa" element={<PemdesAparaturDesaPage />} />
                   <Route path="pemdes/produk-hukum" element={<ProdukHukumPemdesPage detailBasePath="/bidang/pemdes/produk-hukum" />} />
                   <Route path="pemdes/produk-hukum/:id" element={<ProdukHukumDetailPemdesPage backPath="/bidang/pemdes/produk-hukum" />} />
+
+                  {/* Produk hukum tingkat kabupaten — milik bidang itu sendiri.
+                      Bidang Pemdes punya DUA: "produk-hukum" (Perdes dari 416 desa)
+                      dan "produk-hukum-kabupaten" (Perbup/SK milik bidangnya). */}
+                  <Route path="sekretariat/produk-hukum-kabupaten" element={<ProdukHukumBidangPage bidangId={2} />} />
+                  <Route path="spked/produk-hukum-kabupaten" element={<ProdukHukumBidangPage bidangId={3} />} />
+                  <Route path="kkd/produk-hukum-kabupaten" element={<ProdukHukumBidangPage bidangId={4} />} />
+                  <Route path="pemdes/produk-hukum-kabupaten" element={<ProdukHukumBidangPage bidangId={6} />} />
 
                   {/* Detail Disposisi - Accessible dari semua bidang */}
                   <Route path="disposisi/:id" element={<DisposisiDetail />} />
@@ -1218,6 +1207,7 @@ function App() {
                     path="kelembagaan/:type/:id"
                     element={<KelembagaanDetailPage />}
                   />
+                  <Route path="produk-hukum-kabupaten" element={<ProdukHukumBidangPage bidangId={5} />} />
                   <Route path="pengurus" element={<PengurusDashboardPage />} />
                   <Route path="pengurus/import" element={<PengurusImportPage />} />
                   <Route path="pengurus/:id" element={<PengurusDetailPage />} />
@@ -1411,6 +1401,15 @@ function App() {
                   <Route path="bidang/pemdes/drive" element={<DrivePage bidangId={6} />} />
                   <Route path="bidang/pemdes/formulir" element={<FormulirListPage bidangId={6} />} />
 
+                  {/* Produk hukum tingkat kabupaten — tiap bidang mengelola miliknya sendiri.
+                      Bidang Pemdes punya DUA: "produk-hukum" (kumpulan Perdes dari 416 desa)
+                      dan "produk-hukum-kabupaten" (Perbup/SK milik bidang itu sendiri). */}
+                  <Route path="bidang/sekretariat/produk-hukum-kabupaten" element={<ProdukHukumBidangPage bidangId={2} />} />
+                  <Route path="bidang/spked/produk-hukum-kabupaten" element={<ProdukHukumBidangPage bidangId={3} />} />
+                  <Route path="bidang/kkd/produk-hukum-kabupaten" element={<ProdukHukumBidangPage bidangId={4} />} />
+                  <Route path="bidang/pmd/produk-hukum-kabupaten" element={<ProdukHukumBidangPage bidangId={5} />} />
+                  <Route path="bidang/pemdes/produk-hukum-kabupaten" element={<ProdukHukumBidangPage bidangId={6} />} />
+
                   {/* Sekretariat sub-routes */}
                   <Route path="bidang/sekretariat/disposisi" element={<DisposisiRouter />} />
                   <Route path="bidang/sekretariat/disposisi/:id" element={<DisposisiDetail />} />
@@ -1595,6 +1594,8 @@ function App() {
                 >
                   <Route index element={<Navigate to="dashboard" replace />} />
                   <Route path="dashboard" element={<WelcomeDashboard />} />
+                  {/* Gema — asisten suara. Purwarupa, hanya membaca data. */}
+                  <Route path="gema" element={<GemaPage />} />
                   <Route
                     path="statistik-bumdes"
                     element={<StatistikBumdes />}
@@ -1622,10 +1623,12 @@ function App() {
                       />
                     }
                   />
+                  {/* Bukan lagi khusus desa: halaman ini menyatukan produk hukum
+                      desa, kabupaten (per bidang), dan rujukan peraturan luar. */}
                   <Route
                     path="statistik-produk-hukum"
                     element={
-                      <ProdukHukumPemdesPage
+                      <CoreProdukHukumPage
                         detailBasePath="/core-dashboard/statistik-produk-hukum"
                       />
                     }

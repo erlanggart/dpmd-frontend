@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { io } from 'socket.io-client';
+import { asalSocket, urlServer } from '../../utils/asalServer';
 import { AnimatePresence, motion } from 'framer-motion';
 import {
   FiMessageCircle, FiSend, FiPaperclip, FiX, FiFile, FiDownload,
@@ -7,7 +8,7 @@ import {
 } from 'react-icons/fi';
 import api from '../../api';
 
-const API_URL = import.meta.env.VITE_API_BASE_URL?.replace('/api', '') || 'http://localhost:3001';
+
 
 const REFERENCE_LABELS = {
   bankeu_lpj: 'LPJ Bankeu',
@@ -58,7 +59,7 @@ function Avatar({ user, online, size = 'md' }) {
     <div className="relative flex-shrink-0">
       {user?.avatar ? (
         <img
-          src={`${API_URL}${user.avatar}`}
+          src={urlServer(user.avatar)}
           alt=""
           style={{ width: dim, height: dim }}
           className="rounded-full object-cover ring-2 ring-white/30"
@@ -113,7 +114,7 @@ function FileCard({ msg, isOwn }) {
         <p className="text-[10px] text-gray-400 mt-0.5">{formatFileSize(msg.file_size)}</p>
       </div>
       <a
-        href={`${API_URL}${msg.file_url}`}
+        href={urlServer(msg.file_url)}
         target="_blank"
         rel="noopener noreferrer"
         className={`p-2 rounded-lg transition-colors flex-shrink-0 ${isOwn ? 'hover:bg-emerald-600/10 text-emerald-600' : 'hover:bg-blue-50 text-blue-500'}`}
@@ -298,7 +299,7 @@ export default function ChatDrawer({ referenceType, referenceId, targetUserId, t
     const token = localStorage.getItem('expressToken');
     if (!token) return;
 
-    const s = io(API_URL, { auth: { token }, transports: ['polling', 'websocket'] });
+    const s = io(asalSocket(), { auth: { token }, transports: ['polling', 'websocket'] });
     socketRef.current = s;
 
     s.on('connect', () => {

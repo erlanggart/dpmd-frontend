@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo, lazy, Suspense } from 'react';
 import { useOutletContext } from 'react-router-dom';
 import { io } from 'socket.io-client';
+import { asalSocket, urlServer } from '../../utils/asalServer';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
 	FiMessageCircle, FiSearch, FiSend, FiPaperclip,
@@ -25,7 +26,7 @@ const EMOJI_CATEGORIES = [
 	{ category: 'flags', name: 'Bendera' },
 ];
 
-const API_URL = import.meta.env.VITE_API_BASE_URL?.replace('/api', '') || 'http://localhost:3001';
+
 
 const ROLE_LABELS = {
 	superadmin: 'Superadmin', admin: 'Admin', kepala_dinas: 'Kepala Dinas', sekretaris_dinas: 'Sekretaris Dinas',
@@ -106,7 +107,7 @@ function Avatar({ user, size = 'md', online }) {
 	return (
 		<div className="relative flex-shrink-0">
 			{user?.avatar ? (
-				<img src={`${API_URL}${user.avatar}`} alt=""
+				<img src={urlServer(user.avatar)} alt=""
 					style={{ width: dim, height: dim }}
 					className="rounded-full object-cover" />
 			) : (
@@ -225,7 +226,7 @@ function MessageBubble({ message, isOwn, onDelete, isGroup, onReply, onReact, cu
 						<div className={`rounded-xl mb-2 overflow-hidden ${isOwn ? 'bg-emerald-600/30' : 'bg-slate-50'}`}>
 							<div className="flex items-center gap-2 px-3 py-2">
 								{statusMeta.status_media ? (
-									<img src={`${API_URL}/${statusMeta.status_media}`} alt="" className="w-10 h-10 rounded-lg object-cover flex-shrink-0" />
+									<img src={urlServer(statusMeta.status_media)} alt="" className="w-10 h-10 rounded-lg object-cover flex-shrink-0" />
 								) : (
 									<div className="w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0" style={{ backgroundColor: statusMeta.status_bg || '#059669' }}>
 										<span className="text-white text-[9px] font-bold leading-tight line-clamp-2 text-center px-0.5">
@@ -245,12 +246,12 @@ function MessageBubble({ message, isOwn, onDelete, isGroup, onReply, onReact, cu
 						</div>
 					)}
 					{isImage && message.file_path && (
-						<a href={`${API_URL}/${message.file_path}`} target="_blank" rel="noopener noreferrer" className="block mb-1.5 overflow-hidden rounded-xl">
-							<img src={`${API_URL}/${message.file_path}`} alt="" className="rounded-xl w-full max-h-64 object-cover" loading="lazy" />
+						<a href={urlServer(message.file_path)} target="_blank" rel="noopener noreferrer" className="block mb-1.5 overflow-hidden rounded-xl">
+							<img src={urlServer(message.file_path)} alt="" className="rounded-xl w-full max-h-64 object-cover" loading="lazy" />
 						</a>
 					)}
 					{isFile && (
-						<a href={`${API_URL}/${message.file_path}`} target="_blank" rel="noopener noreferrer"
+						<a href={urlServer(message.file_path)} target="_blank" rel="noopener noreferrer"
 							className={`flex items-center gap-2.5 rounded-xl px-3 py-2 mb-1.5 transition-colors ${
 								isOwn ? 'bg-emerald-600/30 hover:bg-emerald-600/40' : 'bg-slate-50 hover:bg-slate-100'
 							}`}>
@@ -371,7 +372,7 @@ function ConversationItem({ conversation, isActive, onClick, isOnline, onDelete 
 				{is_group ? (
 					<div className="relative flex-shrink-0">
 						{conversation.group_avatar ? (
-							<img src={`${API_URL}/${conversation.group_avatar}`} alt="" style={{ width: 44, height: 44 }} className="rounded-full object-cover" />
+							<img src={urlServer(conversation.group_avatar)} alt="" style={{ width: 44, height: 44 }} className="rounded-full object-cover" />
 						) : (
 							<div style={{ width: 44, height: 44, background: 'linear-gradient(135deg, #8b5cf6, #6366f1)' }}
 								className="rounded-full text-white flex items-center justify-center font-semibold text-sm">
@@ -547,7 +548,7 @@ export default function MessagingPage() {
 		const token = localStorage.getItem('expressToken');
 		if (!token) return;
 
-		const s = io(API_URL, { auth: { token }, transports: ['polling', 'websocket'] });
+		const s = io(asalSocket(), { auth: { token }, transports: ['polling', 'websocket'] });
 		socketRef.current = s;
 
 		s.on('connect', () => {
@@ -1097,7 +1098,7 @@ export default function MessagingPage() {
 							{activeConv.is_group ? (
 								<button onClick={openGroupInfo} className="relative flex-shrink-0">
 									{activeConv.group_avatar ? (
-										<img src={`${API_URL}/${activeConv.group_avatar}`} alt="" style={{ width: 44, height: 44 }} className="rounded-full object-cover" />
+										<img src={urlServer(activeConv.group_avatar)} alt="" style={{ width: 44, height: 44 }} className="rounded-full object-cover" />
 									) : (
 										<div style={{ width: 44, height: 44, background: 'linear-gradient(135deg, #8b5cf6, #6366f1)' }}
 											className="rounded-full text-white flex items-center justify-center font-semibold">
@@ -1301,7 +1302,7 @@ export default function MessagingPage() {
 							{activeConv.is_group ? (
 								<button onClick={openGroupInfo} className="relative flex-shrink-0">
 									{activeConv.group_avatar ? (
-										<img src={`${API_URL}/${activeConv.group_avatar}`} alt="" style={{ width: 40, height: 40 }} className="rounded-full object-cover" />
+										<img src={urlServer(activeConv.group_avatar)} alt="" style={{ width: 40, height: 40 }} className="rounded-full object-cover" />
 									) : (
 										<div style={{ width: 40, height: 40, background: 'linear-gradient(135deg, #8b5cf6, #6366f1)' }}
 											className="rounded-full text-white flex items-center justify-center font-semibold">
@@ -1580,7 +1581,7 @@ export default function MessagingPage() {
 							<div className="px-5 py-6 text-center border-b border-slate-100 flex-shrink-0">
 								<div className="relative w-20 h-20 mx-auto mb-3">
 									{activeConv.group_avatar ? (
-										<img src={`${API_URL}/${activeConv.group_avatar}`} alt="" className="w-20 h-20 rounded-full object-cover" />
+										<img src={urlServer(activeConv.group_avatar)} alt="" className="w-20 h-20 rounded-full object-cover" />
 									) : (
 										<div className="w-20 h-20 rounded-full flex items-center justify-center text-white"
 											style={{ background: 'linear-gradient(135deg, #8b5cf6, #6366f1)' }}>

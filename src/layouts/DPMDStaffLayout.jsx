@@ -489,7 +489,6 @@ const DPMDStaffLayout = () => {
 		{ path: "/dpmd/bank-surat", label: "Bank Surat", icon: 'archive' },
 		{ path: "/dpmd/video-meeting", label: "Video Meeting", icon: 'video' },
 		{ path: "/dpmd/pesan", label: "Pesan", icon: 'chatbot' },
-		{ path: "/dpmd/photo-booth", label: "Photo Booth", icon: 'camera' },
 	];
 
 	// Mobile bottom nav - 3 items: Home, Aksi Cepat (FAB), Profil
@@ -525,7 +524,6 @@ const DPMDStaffLayout = () => {
 				items: [
 					byPath("/dpmd/video-meeting"),
 					byPath("/dpmd/pesan"),
-					byPath("/dpmd/photo-booth"),
 				],
 			},
 		];

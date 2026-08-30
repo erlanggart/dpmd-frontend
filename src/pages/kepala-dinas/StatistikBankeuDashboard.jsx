@@ -20,6 +20,7 @@ import * as XLSX from 'xlsx';
 import toast from 'react-hot-toast';
 import { useDataCache } from '../../context/DataCacheContext';
 import SelectBox from '../../components/ui/SelectBox';
+import { persen, fmtPersen } from '../../utils/persen';
 
 // ─── CONSTANTS ──────────────────────────────────────────────────────
 // Alur Bankeu Perubahan: Desa → Kecamatan → DPMD (TIDAK ada tahap Dinas).
@@ -92,7 +93,7 @@ const getProposalStage = (p) => {
 
 // ─── EXECUTIVE HERO ─────────────────────────────────────────────────
 const ExecutiveHero = ({ activeYear, setActiveYear, summary, totalAnggaran, totalProposals, showDetailAnggaran, setShowDetailAnggaran, onRefresh, onExport, loading }) => {
-  const desaPct = summary?.total_desa ? Math.round((summary.desa_mengusulkan / summary.total_desa) * 100) : 0;
+  const desaPct = persen(summary?.desa_mengusulkan, summary?.total_desa);
 
   return (
     <div className="relative overflow-hidden rounded-2xl">
@@ -212,7 +213,7 @@ const ExecutiveHero = ({ activeYear, setActiveYear, summary, totalAnggaran, tota
                 <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-white/10 ring-1 ring-white/15">
                   <TrendingUp className="h-4 w-4 text-white" />
                 </div>
-                <span className="rounded-full bg-white/10 px-2 py-0.5 text-[11px] font-semibold text-white ring-1 ring-white/15">{desaPct}%</span>
+                <span className="rounded-full bg-white/10 px-2 py-0.5 text-[11px] font-semibold text-white ring-1 ring-white/15">{fmtPersen(desaPct)}</span>
               </div>
               <p className="text-2xl sm:text-3xl font-semibold tracking-tight text-white"><CountUp end={summary?.desa_mengusulkan || 0} /></p>
               <p className="mt-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-brand-400">Desa Mengusulkan</p>
@@ -228,7 +229,7 @@ const ExecutiveHero = ({ activeYear, setActiveYear, summary, totalAnggaran, tota
 const DesaParticipationCard = ({ summary }) => {
   if (!summary) return null;
   const { total_desa = 0, desa_mengusulkan = 0, desa_belum_mengusulkan = 0 } = summary;
-  const pct = total_desa > 0 ? Math.round((desa_mengusulkan / total_desa) * 100) : 0;
+  const pct = persen(desa_mengusulkan, total_desa);
 
   const gaugeData = [{ name: 'Sudah', value: pct, fill: '#10b981' }];
 
@@ -253,7 +254,7 @@ const DesaParticipationCard = ({ summary }) => {
             </RadialBarChart>
           </ResponsiveContainer>
           <div className="absolute inset-0 flex flex-col items-center justify-center">
-            <p className="text-3xl font-semibold text-slate-900">{pct}%</p>
+            <p className="text-3xl font-semibold text-slate-900">{fmtPersen(pct)}</p>
             <p className="text-[10px] text-slate-400 font-medium">Partisipasi</p>
           </div>
         </div>
@@ -463,7 +464,7 @@ const FlowPipeline = ({ stageStats, total }) => (
         const config = STAGE_CONFIG[stage];
         const Icon = config.icon;
         const count = stageStats[stage] || 0;
-        const pct = total > 0 ? ((count / total) * 100).toFixed(0) : 0;
+        const pct = persen(count, total);
         return (
           <React.Fragment key={stage}>
             <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: i * 0.08 }}
@@ -480,7 +481,7 @@ const FlowPipeline = ({ stageStats, total }) => (
                 <div className="mt-3 bg-white/20 rounded-full h-1.5 overflow-hidden">
                   <div className="h-full bg-white/60 rounded-full transition-all duration-700" style={{ width: `${Math.max(pct, 3)}%` }} />
                 </div>
-                <p className="text-[10px] text-white/50 mt-1">{pct}%</p>
+                <p className="text-[10px] text-white/50 mt-1">{fmtPersen(pct)}</p>
               </div>
             </motion.div>
             {i < STAGE_ORDER.length - 1 && (
@@ -499,7 +500,7 @@ const FlowPipeline = ({ stageStats, total }) => (
         const config = STAGE_CONFIG[stage];
         const Icon = config.icon;
         const count = stageStats[stage] || 0;
-        const pct = total > 0 ? ((count / total) * 100).toFixed(0) : 0;
+        const pct = persen(count, total);
         return (
           <motion.div key={stage} initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.06 }}
             className="flex items-center gap-3 p-3 rounded-xl bg-slate-50 hover:bg-slate-100 transition-colors">
@@ -512,7 +513,7 @@ const FlowPipeline = ({ stageStats, total }) => (
                 <div className="flex-1 bg-slate-200 rounded-full h-1.5">
                   <div className={`h-1.5 rounded-full ${config.color}`} style={{ width: `${Math.max(pct, 3)}%` }} />
                 </div>
-                <span className="text-[10px] text-slate-500 font-medium">{pct}%</span>
+                <span className="text-[10px] text-slate-500 font-medium">{fmtPersen(pct)}</span>
               </div>
             </div>
             <div className="text-right flex-shrink-0">

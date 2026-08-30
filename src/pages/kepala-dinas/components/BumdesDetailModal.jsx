@@ -13,7 +13,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import {
   X, Building2, MapPin, Phone, Mail, User, FileText, Wallet, ScrollText,
-  ExternalLink, HandHeart, BadgeCheck, FolderOpen, Inbox,
+  ExternalLink, HandHeart, BadgeCheck, FolderOpen, Inbox, Pencil,
 } from 'lucide-react';
 import { LencanaStatus, LencanaPeringkat } from './BumdesLencana';
 import DokumenViewer from './DokumenViewer';
@@ -82,11 +82,22 @@ const ISIAN_DIPANTAU = [
 
 const adaAngka = (v) => v !== null && v !== undefined && !Number.isNaN(v);
 
-const BumdesDetailModal = ({ item, onClose }) => {
+const BumdesDetailModal = ({ item, onClose, onUbah }) => {
   const [tampil, setTampil] = useState(false);
   const [berkasDibuka, setBerkasDibuka] = useState(null);
 
+  // Penjaga `item` WAJIB ada di dalam efek, bukan lewat early-return sebelum
+  // hook (hook tidak boleh bersyarat). Direktori merender modal ini terus-
+  // menerus dan hanya mengganti `item`, jadi tanpa penjaga ini body dikunci
+  // overflow:hidden sejak halaman dibuka — dan tidak pernah dilepas, karena
+  // komponennya tidak pernah dilepas-pasang.
+  //
+  // Di Core Dashboard gejalanya tidak terlihat: layout-nya punya wadah gulir
+  // sendiri, jadi body tidak dipakai menggulir. Di halaman Bidang SPKED
+  // halamannya menggulir lewat body, sehingga seluruh halaman jadi mati.
   useEffect(() => {
+    if (!item) return undefined;
+
     const t = requestAnimationFrame(() => setTampil(true));
     const onKey = (e) => {
       // Esc menutup pratinjau dulu, baru kartunya — kalau satu tekanan menutup
@@ -94,13 +105,17 @@ const BumdesDetailModal = ({ item, onClose }) => {
       if (e.key === 'Escape' && !berkasDibuka) onClose();
     };
     document.addEventListener('keydown', onKey);
+    const sebelumnya = document.body.style.overflow;
     document.body.style.overflow = 'hidden';
     return () => {
       cancelAnimationFrame(t);
       document.removeEventListener('keydown', onKey);
-      document.body.style.overflow = '';
+      // Kembalikan ke nilai SEBELUMNYA, bukan string kosong: kalau ada modal
+      // lain yang juga mengunci, mengosongkannya akan membuka kunci milik orang.
+      document.body.style.overflow = sebelumnya;
+      setTampil(false);
     };
-  }, [onClose, berkasDibuka]);
+  }, [item, onClose, berkasDibuka]);
 
   const d = useMemo(() => {
     if (!item) return null;
@@ -217,14 +232,29 @@ const BumdesDetailModal = ({ item, onClose }) => {
                 </p>
               </div>
 
-              <button
-                type="button"
-                onClick={onClose}
-                aria-label="Tutup"
-                className="flex-shrink-0 rounded-lg p-2 text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-700"
-              >
-                <X className="h-5 w-5" />
-              </button>
+              <div className="flex flex-shrink-0 items-center gap-2">
+                {/* Hanya muncul bila pemanggilnya memang berwenang mengubah.
+                    Core Dashboard tidak mengirim onUbah, jadi di sana modal ini
+                    tetap hanya-baca. */}
+                {onUbah && (
+                  <button
+                    type="button"
+                    onClick={() => onUbah(item)}
+                    className="inline-flex items-center gap-1.5 rounded-lg bg-slate-900 px-3 py-2 text-xs font-semibold text-white transition-colors hover:bg-slate-800"
+                  >
+                    <Pencil className="h-3.5 w-3.5" />
+                    Ubah Data
+                  </button>
+                )}
+                <button
+                  type="button"
+                  onClick={onClose}
+                  aria-label="Tutup"
+                  className="rounded-lg p-2 text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-700"
+                >
+                  <X className="h-5 w-5" />
+                </button>
+              </div>
             </div>
 
             {!isAktif(item.status) && teksAtauNull(item.keterangan_tidak_aktif) && (

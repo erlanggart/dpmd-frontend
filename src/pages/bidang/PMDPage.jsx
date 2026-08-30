@@ -5,6 +5,7 @@ import { useAuth } from '../../context/AuthContext';
 import {
   Users, Activity, Clock, HardDrive, ClipboardList, UserCheck, Scale,
   Building2, ChevronRight, ArrowUpRight, BarChart3, GitMerge, RotateCcw,
+	Gavel,
 } from 'lucide-react';
 import api from '../../api';
 import toast from 'react-hot-toast';
@@ -292,6 +293,14 @@ const PMDPage = () => {
       icon: Scale,
       route: getPath('/bidang/pmd/produk-hukum'),
       stat: { value: '346', label: 'dokumen' },
+    },
+    {
+      id: 'produk-hukum-kabupaten', tone: 'slate',
+      title: 'Produk Hukum Kabupaten', short: 'PH Kabupaten',
+      desc: 'Perda, Perbup, SK, dan Surat Edaran yang dipegang bidang ini',
+      icon: Gavel,
+      route: getPath('/bidang/pmd/produk-hukum-kabupaten'),
+      stat: { value: 'Bidang', label: 'unggah & kelola' },
     },
     {
       id: 'posyandu', tone: 'rose',

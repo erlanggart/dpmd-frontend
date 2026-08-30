@@ -1,16 +1,10 @@
-// Kesiapan kelembagaan: peran di program pemerintah, identitas legal, dan
-// kelengkapan berkas. Tiga hal yang paling sering ditanyakan ke dinas dan
-// paling sulit dijawab kalau harus membuka satu per satu.
-//
-// Peran program, jenis identitas legal, dan jenis dokumen adalah kategori TANPA
-// urutan, jadi seluruh batangnya satu warna. Hanya ringkasan kelengkapan
-// (lengkap / sebagian / belum ada) yang berurut, dan itu memakai tangga slate.
+// Kesiapan kelembagaan: peran program, identitas legal, kelengkapan dokumen.
 import React, { useMemo } from 'react';
 import { HandHeart, BadgeCheck, FolderCheck } from 'lucide-react';
 import {
-  DOKUMEN_INTI, berperan, adaIsi, jumlahLegalitas, kelasDokumen, jumlahDokumen,
+  DOKUMEN_INTI, berperan, adaIsi, jumlahLegalitas, kelasDokumen,
 } from './bumdesFilter';
-import { Kartu, Judul, Batang, Kosong } from './bumdesViz';
+import { Kartu, Judul, Batang, PitaBertumpuk, Kosong } from './bumdesViz';
 import { RAMP, WARNA_TUNGGAL, nf, persenDari } from './bumdesFormat';
 
 const LABEL_DOKUMEN = {
@@ -56,10 +50,7 @@ const BumdesKesiapan = ({ data, filter, onFilter }) => {
       sebagian: data.filter((d) => kelasDokumen(d) === 'sebagian').length,
       kosong: data.filter((d) => kelasDokumen(d) === 'kosong').length,
     };
-    const rerataDokumen =
-      data.reduce((t, d) => t + jumlahDokumen(d), 0) / total;
-
-    return { total, program, tanpaPeran, legal, legalLengkap, legalKosong, dokumen, kelas, rerataDokumen };
+    return { total, program, tanpaPeran, legal, legalLengkap, legalKosong, dokumen, kelas };
   }, [data]);
 
   if (!s) return <Kartu><Kosong /></Kartu>;
@@ -71,14 +62,8 @@ const BumdesKesiapan = ({ data, filter, onFilter }) => {
   return (
     <div className="space-y-5">
       <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
-        {/* Peran dalam program pemerintah */}
         <Kartu>
-          <Judul
-            icon={HandHeart}
-            catatan="Berapa BUMDes yang benar-benar mengisi perannya, bukan sekadar tercatat sebagai sasaran program. Isian “tidak ada peran” dan sel kosong dihitung sebagai belum berperan."
-          >
-            Peran dalam program pemerintah
-          </Judul>
+          <Judul icon={HandHeart}>Peran program pemerintah</Judul>
           <div className="space-y-3.5">
             {s.program.map((p, i) => (
               <Batang
@@ -99,7 +84,7 @@ const BumdesKesiapan = ({ data, filter, onFilter }) => {
           </div>
           <div className="mt-4 border-t border-slate-100 pt-3">
             <Batang
-              label="Belum berperan di program mana pun"
+              label="Belum berperan"
               nilai={s.tanpaPeran}
               tampil={`${nf.format(s.tanpaPeran)} · ${persenDari(s.tanpaPeran, s.total)}%`}
               maks={maksProgram}
@@ -114,14 +99,8 @@ const BumdesKesiapan = ({ data, filter, onFilter }) => {
           </div>
         </Kartu>
 
-        {/* Identitas legal */}
         <Kartu>
-          <Judul
-            icon={BadgeCheck}
-            catatan="Tiga identitas yang menentukan apakah BUMDes bisa membuka rekening, ikut pengadaan, dan menerima bantuan."
-          >
-            Identitas legal usaha
-          </Judul>
+          <Judul icon={BadgeCheck}>Identitas legal</Judul>
           <div className="space-y-3.5">
             {s.legal.map((l, i) => (
               <Batang
@@ -163,7 +142,7 @@ const BumdesKesiapan = ({ data, filter, onFilter }) => {
               })}
               className="rounded-lg bg-slate-50 px-3 py-2.5 text-left transition-colors hover:bg-slate-100"
             >
-              <dt className="text-[11px] font-medium text-slate-500">Belum punya satu pun</dt>
+              <dt className="text-[11px] font-medium text-slate-500">Belum punya</dt>
               <dd className="mt-0.5 text-lg font-semibold text-slate-900">
                 {nf.format(s.legalKosong)}
                 <span className="ml-1.5 text-xs font-normal text-slate-500">
@@ -175,51 +154,47 @@ const BumdesKesiapan = ({ data, filter, onFilter }) => {
         </Kartu>
       </div>
 
-      {/* Kelengkapan dokumen */}
       <Kartu>
-        <Judul
-          icon={FolderCheck}
-          catatan={`Tujuh dokumen inti yang harus dipegang setiap BUM Desa. Rata-rata ${s.rerataDokumen.toFixed(1)} dari 7 dokumen sudah terunggah pada tampilan ini.`}
-        >
-          Kelengkapan dokumen kelembagaan
-        </Judul>
+        <Judul icon={FolderCheck}>Kelengkapan dokumen</Judul>
 
-        {/* Ringkasan berurut: lengkap -> sebagian -> belum ada */}
-        <div
-          className="flex h-3 w-full gap-[2px] overflow-hidden rounded-[4px]"
-          role="img"
-          aria-label={`Lengkap ${s.kelas.lengkap}, sebagian ${s.kelas.sebagian}, belum ada ${s.kelas.kosong} dari ${s.total} BUMDes`}
-        >
-          <span
-            className="h-3 motion-safe:transition-[width] motion-safe:duration-700"
-            style={{
-              width: `${persenDari(s.kelas.lengkap, s.total)}%`,
-              backgroundColor: RAMP[5],
-              transitionTimingFunction: 'cubic-bezier(0.22, 1, 0.36, 1)',
-            }}
-          />
-          <span
-            className="h-3 motion-safe:transition-[width] motion-safe:duration-700"
-            style={{
-              width: `${persenDari(s.kelas.sebagian, s.total)}%`,
-              backgroundColor: RAMP[1],
-              transitionTimingFunction: 'cubic-bezier(0.22, 1, 0.36, 1)',
-            }}
-          />
-          <span
-            className="h-3 bg-slate-100 motion-safe:transition-[width] motion-safe:duration-700"
-            style={{
-              width: `${persenDari(s.kelas.kosong, s.total)}%`,
-              transitionTimingFunction: 'cubic-bezier(0.22, 1, 0.36, 1)',
-            }}
-          />
-        </div>
+        <PitaBertumpuk
+          total={s.total}
+          segmen={[
+            {
+              id: 'lengkap',
+              label: 'Lengkap 7 dokumen',
+              nilai: s.kelas.lengkap,
+              warna: RAMP[5],
+              onKlik: () => onFilter({
+                ...filter, dokumen: filter.dokumen === 'lengkap' ? 'semua' : 'lengkap',
+              }),
+            },
+            {
+              id: 'sebagian',
+              label: 'Sebagian',
+              nilai: s.kelas.sebagian,
+              warna: RAMP[1],
+              onKlik: () => onFilter({
+                ...filter, dokumen: filter.dokumen === 'sebagian' ? 'semua' : 'sebagian',
+              }),
+            },
+            {
+              id: 'kosong',
+              label: 'Belum ada',
+              nilai: s.kelas.kosong,
+              warna: '#f1f5f9',
+              onKlik: () => onFilter({
+                ...filter, dokumen: filter.dokumen === 'kosong' ? 'semua' : 'kosong',
+              }),
+            },
+          ]}
+        />
 
         <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-3">
           {[
             { id: 'lengkap', label: 'Lengkap 7 dokumen', n: s.kelas.lengkap },
-            { id: 'sebagian', label: 'Sebagian saja', n: s.kelas.sebagian },
-            { id: 'kosong', label: 'Belum ada sama sekali', n: s.kelas.kosong },
+            { id: 'sebagian', label: 'Sebagian', n: s.kelas.sebagian },
+            { id: 'kosong', label: 'Belum ada', n: s.kelas.kosong },
           ].map((k) => (
             <button
               key={k.id}

@@ -3,6 +3,7 @@
 // Menggantikan: KepalaDinasDashboard, SekretarisDinasDashboard, KepalaBidangDashboard, KetuaTimDashboard, PegawaiDashboard
 
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
+import { urlServer } from '../../utils/asalServer';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
@@ -1015,7 +1016,7 @@ const DPMDDashboard = () => {
                       <div className="h-full w-full rounded-full bg-white p-[2px]">
                         {group.user?.avatar ? (
                           <img
-                            src={`${import.meta.env.VITE_API_BASE_URL?.replace('/api', '') || 'http://127.0.0.1:3001'}${group.user.avatar}`}
+                            src={urlServer(group.user.avatar)}
                             alt="" className="h-full w-full rounded-full object-cover"
                           />
                         ) : (
@@ -1191,7 +1192,7 @@ const DPMDDashboard = () => {
               <div className="w-10 h-10 rounded-full bg-gradient-to-br from-emerald-400 to-teal-500 flex items-center justify-center text-white text-sm font-bold shadow-lg">
                 {activeStatusGroup.user?.avatar ? (
                   <img
-                    src={`${import.meta.env.VITE_API_BASE_URL?.replace('/api', '') || 'http://127.0.0.1:3001'}${activeStatusGroup.user.avatar}`}
+                    src={urlServer(activeStatusGroup.user.avatar)}
                     alt="" className="w-full h-full rounded-full object-cover"
                   />
                 ) : (
@@ -1229,7 +1230,7 @@ const DPMDDashboard = () => {
               const currentStatus = activeStatusGroup.statuses[activeStatusIndex];
               const hasMedia = currentStatus?.media_path;
               const mediaUrl = hasMedia
-                ? `${import.meta.env.VITE_API_BASE_URL?.replace('/api', '') || 'http://127.0.0.1:3001'}/${currentStatus.media_path}`
+                ? urlServer(currentStatus.media_path)
                 : null;
               const isVideo = hasMedia && (currentStatus.media_path.endsWith('.mp4') || currentStatus.media_path.endsWith('.webm') || currentStatus.media_path.endsWith('.mov'));
 
