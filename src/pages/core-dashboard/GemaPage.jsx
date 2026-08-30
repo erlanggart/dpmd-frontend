@@ -63,6 +63,21 @@ const RMS_BICARA = 0.022;      // di atas ini dianggap ada suara orang
 const HENING_SELESAI = 850;    // ms hening berturut-turut = ucapan selesai
 const JEDA_PERINTAH = 8000;    // ms tanpa suara di fase perintah = kembali siaga
 
+/**
+ * Pengingat mikrofon menganggur.
+ *
+ * Halaman ini bisa ditinggal terbuka di komputer meja sementara orangnya rapat
+ * di ruangan yang sama. Mikrofon yang menyala tanpa disadari itu mengganggu —
+ * dan lampu mikrofon di bilah alamat peramban terlalu kecil untuk disadari.
+ *
+ * Setelah diam, Gema bertanya. Kalau pertanyaannya pun tidak dijawab, mikrofon
+ * dimatikan sendiri: tidak ada yang di depan layar, dan membiarkannya menyala
+ * adalah pilihan yang lebih buruk daripada mematikannya.
+ */
+const DIAM_TANYA = 60000;       // ms tanpa suara = munculkan pengingat
+const DIAM_TANYA_LAGI = 300000; // ms, setelah pengguna memilih tetap menyalakan
+const HITUNG_MUNDUR = 30;       // detik sebelum mikrofon dimatikan sendiri
+
 const BALASAN_SAPAAN = [
 	'Ya, saya dengar. Mau cari data apa?',
 	'Halo! Sebutkan datanya, saya carikan.',
@@ -327,6 +342,89 @@ const PopupIzinMik = ({ onIzinkan, onNanti, sedangMeminta }) => {
 	);
 };
 
+/* --------------------------------------------------------- popup diam -- */
+
+/**
+ * Pengingat bahwa mikrofon masih menyala padahal sudah lama tidak dipakai.
+ *
+ * Hitung mundurnya bukan tekanan, melainkan jawaban untuk keadaan yang paling
+ * mungkin: tidak ada orang di depan layar. Kalau memang ada, satu ketukan
+ * membatalkannya dan Gema tidak bertanya lagi selama lima menit.
+ */
+const PopupDiam = ({ sisaDetik, onMatikan, onTetap }) => {
+	const [tampil, setTampil] = useState(false);
+	useEffect(() => {
+		const t = requestAnimationFrame(() => setTampil(true));
+		return () => cancelAnimationFrame(t);
+	}, []);
+
+	return (
+		<div
+			className={`fixed inset-0 z-[60] flex items-end justify-center bg-slate-900/50 p-0 backdrop-blur-sm transition-opacity duration-200 sm:items-center sm:p-4 ${
+				tampil ? 'opacity-100' : 'opacity-0'
+			}`}
+		>
+			<div
+				role="alertdialog"
+				aria-modal="true"
+				aria-labelledby="judul-diam-gema"
+				className={`w-full max-w-md overflow-hidden rounded-t-3xl bg-white shadow-2xl transition duration-300 ease-out sm:rounded-3xl ${
+					tampil ? 'translate-y-0 scale-100 opacity-100' : 'translate-y-4 scale-[0.98] opacity-0'
+				}`}
+			>
+				<div className="px-6 pb-2 pt-7 text-center">
+					<div className="relative mx-auto flex h-20 w-20 items-center justify-center">
+						{/* Cincin hitung mundur: berkurang searah jarum jam. */}
+						<svg viewBox="0 0 100 100" className="absolute h-full w-full -rotate-90" aria-hidden="true">
+							<circle cx="50" cy="50" r="46" fill="none" stroke="#f1f5f9" strokeWidth="6" />
+							<circle
+								cx="50" cy="50" r="46" fill="none"
+								stroke="#0f172a" strokeWidth="6" strokeLinecap="round"
+								strokeDasharray={2 * Math.PI * 46}
+								strokeDashoffset={2 * Math.PI * 46 * (1 - sisaDetik / HITUNG_MUNDUR)}
+								className="transition-[stroke-dashoffset] duration-1000 ease-linear"
+							/>
+						</svg>
+						<span className="relative flex h-14 w-14 items-center justify-center rounded-full bg-slate-100 text-slate-700">
+							<Mic className="h-6 w-6" />
+						</span>
+					</div>
+
+					<h2 id="judul-diam-gema" className="mt-5 text-lg font-semibold tracking-tight text-slate-900">
+						Mikrofon masih menyala
+					</h2>
+					<p className="mt-2 text-sm leading-relaxed text-slate-600">
+						Gema sudah satu menit tidak mendengar apa pun. Kalau kamu sedang tidak
+						memakainya, sebaiknya dimatikan supaya tidak mengganggu orang lain di
+						ruangan.
+					</p>
+					<p className="mt-3 text-sm font-medium text-slate-900">
+						Dimatikan otomatis dalam {sisaDetik} detik
+					</p>
+				</div>
+
+				<div className="mt-5 flex gap-3 border-t border-slate-200 p-5">
+					<button
+						type="button"
+						onClick={onTetap}
+						className="flex-1 rounded-xl border border-slate-200 py-2.5 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-50"
+					>
+						Tetap nyalakan
+					</button>
+					<button
+						type="button"
+						onClick={onMatikan}
+						className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-slate-900 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-slate-800"
+					>
+						<MicOff className="h-4 w-4" />
+						Matikan
+					</button>
+				</div>
+			</div>
+		</div>
+	);
+};
+
 /* ------------------------------------------------------------------ utama -- */
 
 const JUDUL_FASE = {
@@ -354,6 +452,8 @@ const GemaPage = () => {
 	const [modeKetik, setModeKetik] = useState(false);
 	const [mintaIzin, setMintaIzin] = useState(false);
 	const [sedangMeminta, setSedangMeminta] = useState(false);
+	const [popupDiam, setPopupDiam] = useState(false);
+	const [sisaDetik, setSisaDetik] = useState(HITUNG_MUNDUR);
 	const [ketikan, setKetikan] = useState('');
 	const [riwayat, setRiwayat] = useState([]);
 
@@ -376,6 +476,11 @@ const GemaPage = () => {
 	const heningSejakRef = useRef(0);      // kapan hening mulai
 	const abaikanFinalRef = useRef(false); // sudah ditangani lewat hening
 	const jedaPerintahRef = useRef(0);     // penjaga waktu fase perintah
+
+	// Pengingat mikrofon menganggur.
+	const aktivitasRef = useRef(Date.now());     // kapan terakhir ada suara/perintah
+	const ambangDiamRef = useRef(DIAM_TANYA);    // memanjang setelah "tetap nyalakan"
+	const popupDiamRef = useRef(false);
 
 	const didukung = useMemo(() => Boolean(AmbilPengenalSuara()), []);
 
@@ -442,6 +547,7 @@ const GemaPage = () => {
 				if (!jedaRef.current && menunggu) {
 					const kini = performance.now();
 					if (rms >= RMS_BICARA) {
+						aktivitasRef.current = Date.now();
 						pernahBicaraRef.current = true;
 						heningSejakRef.current = 0;
 						abaikanFinalRef.current = false;
@@ -476,6 +582,7 @@ const GemaPage = () => {
 		if (!bersih) return;
 
 		setTranskrip('');
+		aktivitasRef.current = Date.now();
 		setRiwayat((r) => [{ peran: 'orang', teks: bersih, waktu: Date.now() }, ...r].slice(0, 8));
 		setFasa('berpikir');
 		setGalat(null);
@@ -655,6 +762,10 @@ const GemaPage = () => {
 
 		if (!pengenalRef.current) pengenalRef.current = pasangPengenal();
 		siagaRef.current = true;
+		// Menyalakan ulang berarti mulai dari nol: ambang tegur kembali satu menit,
+		// bukan lima menit warisan pilihan "tetap nyalakan" sebelumnya.
+		ambangDiamRef.current = DIAM_TANYA;
+		aktivitasRef.current = Date.now();
 		try { localStorage.setItem(KUNCI_SIAGA, '1'); } catch { /* abaikan */ }
 
 		setFasa('siaga');
@@ -663,6 +774,10 @@ const GemaPage = () => {
 
 	const matikanSiaga = useCallback(() => {
 		siagaRef.current = false;
+		// Popup diam tidak boleh tertinggal di layar kalau mikrofonnya dimatikan
+		// lewat jalur lain — tombol di bawah lingkaran, misalnya.
+		popupDiamRef.current = false;
+		setPopupDiam(false);
 		try { localStorage.removeItem(KUNCI_SIAGA); } catch { /* abaikan */ }
 		try { pengenalRef.current?.stop(); } catch { /* sudah berhenti */ }
 		window.speechSynthesis?.cancel();
@@ -744,6 +859,67 @@ const GemaPage = () => {
 		}
 	};
 
+	/* ------------------------------------------------- pengingat diam -- */
+
+	const tandaiAktif = useCallback(() => {
+		aktivitasRef.current = Date.now();
+		if (popupDiamRef.current) {
+			popupDiamRef.current = false;
+			setPopupDiam(false);
+		}
+	}, []);
+
+	// Pengawas: tiap detik memeriksa apakah sudah cukup lama tidak ada suara.
+	// Sekali dipasang, hidup selama halaman terbuka; kerjanya ringan.
+	useEffect(() => {
+		const jam = setInterval(() => {
+			if (!siagaRef.current) return;
+			// Selama Gema sibuk atau bicara, jelas sedang dipakai.
+			if (jedaRef.current || faseRef.current === 'berpikir') {
+				aktivitasRef.current = Date.now();
+				return;
+			}
+			if (popupDiamRef.current) return;
+			if (Date.now() - aktivitasRef.current < ambangDiamRef.current) return;
+
+			popupDiamRef.current = true;
+			setSisaDetik(HITUNG_MUNDUR);
+			setPopupDiam(true);
+		}, 1000);
+		return () => clearInterval(jam);
+	}, []);
+
+	// Hitung mundur popup. Habis waktunya = tidak ada orang di depan layar,
+	// jadi mikrofon dimatikan.
+	useEffect(() => {
+		if (!popupDiam) return undefined;
+		const jam = setInterval(() => {
+			setSisaDetik((d) => {
+				if (d <= 1) {
+					clearInterval(jam);
+					popupDiamRef.current = false;
+					setPopupDiam(false);
+					matikanSiaga();
+					return 0;
+				}
+				return d - 1;
+			});
+		}, 1000);
+		return () => clearInterval(jam);
+	}, [popupDiam, matikanSiaga]);
+
+	const matikanDariPopup = () => {
+		popupDiamRef.current = false;
+		setPopupDiam(false);
+		matikanSiaga();
+	};
+
+	const tetapNyalakan = () => {
+		// Jangan menegur tiap menit setelah dijawab sekali.
+		ambangDiamRef.current = DIAM_TANYA_LAGI;
+		tandaiAktif();
+	};
+
 	const izinkanMik = async () => {
 		setSedangMeminta(true);
 		// Klik tombol ini yang menjadi tindakan pengguna di mata peramban;
@@ -770,6 +946,14 @@ const GemaPage = () => {
 					onIzinkan={izinkanMik}
 					onNanti={tundaIzin}
 					sedangMeminta={sedangMeminta}
+				/>
+			)}
+
+			{popupDiam && (
+				<PopupDiam
+					sisaDetik={sisaDetik}
+					onMatikan={matikanDariPopup}
+					onTetap={tetapNyalakan}
 				/>
 			)}
 
