@@ -32,7 +32,7 @@
 // Jawabannya SELALU dari basis data lewat /api/gema/tanya. Gema tidak pernah
 // mengarang: di luar cakupan, ia bilang tidak tahu.
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Mic, MicOff, Keyboard, Sparkles, AlertCircle, Volume2, Loader2, Send, Ear } from 'lucide-react';
+import { Mic, MicOff, Keyboard, Sparkles, AlertCircle, Volume2, Loader2, Send, Ear, Check } from 'lucide-react';
 import api from '../../api';
 
 /* ----------------------------------------------------------------- utilitas -- */
@@ -170,6 +170,101 @@ const LingkaranGema = React.forwardRef(({ fase, onKlik, bisaDiketuk }, ref) => {
 });
 LingkaranGema.displayName = 'LingkaranGema';
 
+/* ------------------------------------------------------------ popup izin -- */
+
+/**
+ * Popup izin mikrofon.
+ *
+ * Peramban TIDAK mengizinkan permintaan izin mikrofon muncul tanpa satu ketukan
+ * pengguna. Yang bisa diatur adalah ketukan itu jatuh di mana. Kalau jatuh di
+ * lingkaran mikrofon, orang menekan sesuatu yang belum menjelaskan apa-apa, lalu
+ * kaget didatangi permintaan izin peramban. Di sini ketukan itu dipindahkan ke
+ * tombol yang alasannya sudah dibaca lebih dulu — pola yang sama dipakai aplikasi
+ * sebelum meminta izin lokasi.
+ *
+ * Karena itu popup ini muncul SENDIRI saat halaman dibuka, bukan setelah ditekan.
+ */
+const PopupIzinMik = ({ onIzinkan, onNanti, sedangMeminta }) => {
+	// Animasi masuknya memakai state + kelas transition, BUKAN `animate-in`.
+	// Kelas itu milik tailwindcss-animate, dan plugin tersebut tidak terpasang di
+	// proyek ini — dipakai di beberapa berkas lain tapi tidak pernah berefek.
+	const [tampil, setTampil] = useState(false);
+	useEffect(() => {
+		const t = requestAnimationFrame(() => setTampil(true));
+		return () => cancelAnimationFrame(t);
+	}, []);
+
+	return (
+		// z-[60]+: bilah navigasi bawah PegawaiLayout memakai z-50 dan akan menelan
+		// klik pada lapisan yang berada di bawahnya.
+		<div
+			className={`fixed inset-0 z-[60] flex items-end justify-center bg-slate-900/50 p-0 backdrop-blur-sm transition-opacity duration-200 sm:items-center sm:p-4 ${
+				tampil ? 'opacity-100' : 'opacity-0'
+			}`}
+		>
+			<div
+				role="dialog"
+				aria-modal="true"
+				aria-labelledby="judul-izin-gema"
+				className={`w-full max-w-md overflow-hidden rounded-t-3xl bg-white shadow-2xl transition duration-300 ease-out sm:rounded-3xl ${
+					tampil ? 'translate-y-0 scale-100 opacity-100' : 'translate-y-4 scale-[0.98] opacity-0'
+				}`}
+			>
+			<div className="px-6 pb-2 pt-7 text-center">
+				<div className="relative mx-auto flex h-20 w-20 items-center justify-center">
+					<span aria-hidden="true" className="absolute h-full w-full rounded-full bg-slate-900/[0.06]" />
+					<span aria-hidden="true" className="absolute h-[72%] w-[72%] rounded-full bg-slate-900/[0.09]" />
+					<span className="relative flex h-14 w-14 items-center justify-center rounded-full bg-slate-900 text-white">
+						<Mic className="h-7 w-7" />
+					</span>
+				</div>
+
+				<h2 id="judul-izin-gema" className="mt-5 text-lg font-semibold tracking-tight text-slate-900">
+					Izinkan Gema mendengar
+				</h2>
+				<p className="mt-2 text-sm leading-relaxed text-slate-600">
+					Gema perlu akses mikrofon supaya bisa siaga menunggu ucapan
+					<span className="font-semibold text-slate-900"> “Halo Gema”</span> — tanpa
+					perlu menekan tombol apa pun setiap kali.
+				</p>
+
+				<ul className="mt-4 space-y-2 text-left">
+					{[
+						'Hanya aktif selama halaman ini terbuka',
+						'Berhenti sendiri saat tab berpindah',
+						'Bisa dimatikan kapan saja lewat tombol di bawah lingkaran',
+					].map((t) => (
+						<li key={t} className="flex items-start gap-2.5 text-xs text-slate-600">
+							<Check className="mt-0.5 h-3.5 w-3.5 flex-shrink-0 text-emerald-600" />
+							{t}
+						</li>
+					))}
+				</ul>
+			</div>
+
+				<div className="mt-5 flex gap-3 border-t border-slate-200 p-5">
+					<button
+						type="button"
+						onClick={onNanti}
+						className="flex-1 rounded-xl border border-slate-200 py-2.5 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-50"
+					>
+						Nanti saja
+					</button>
+					<button
+						type="button"
+						onClick={onIzinkan}
+						disabled={sedangMeminta}
+						className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-slate-900 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-slate-800 disabled:opacity-60"
+					>
+						{sedangMeminta && <Loader2 className="h-4 w-4 animate-spin" />}
+						Izinkan
+					</button>
+				</div>
+			</div>
+		</div>
+	);
+};
+
 /* ------------------------------------------------------------------ utama -- */
 
 const JUDUL_FASE = {
@@ -195,6 +290,8 @@ const GemaPage = () => {
 	const [galat, setGalat] = useState(null);
 	const [saran, setSaran] = useState([]);
 	const [modeKetik, setModeKetik] = useState(false);
+	const [mintaIzin, setMintaIzin] = useState(false);
+	const [sedangMeminta, setSedangMeminta] = useState(false);
 	const [ketikan, setKetikan] = useState('');
 	const [riwayat, setRiwayat] = useState([]);
 
@@ -415,25 +512,38 @@ const GemaPage = () => {
 		setFasa('mati');
 	}, [hentikanAudio, setFasa]);
 
-	// Kunjungan berikutnya: kalau izin mikrofonnya sudah diberikan dan siaga
-	// pernah dinyalakan, Gema hidup sendiri tanpa ketukan apa pun.
+	// Saat halaman dibuka, jalurnya ditentukan oleh keadaan izin mikrofon:
+	//
+	//   granted → Gema langsung siaga, tanpa apa pun yang perlu diketuk.
+	//   prompt  → popup izin dimunculkan sendiri. Popup INILAH tindakan
+	//             penggunanya; peramban tidak mengizinkan permintaan izin
+	//             mikrofon muncul tanpa satu ketukan, jadi ketukan itu
+	//             dipindahkan ke tombol "Izinkan" yang sudah menjelaskan
+	//             alasannya — bukan ke lingkaran mikrofon yang tidak
+	//             menjelaskan apa-apa.
+	//   denied  → tidak ada gunanya bertanya lagi; peramban akan menolak diam-
+	//             diam. Yang ditampilkan cara menyalakannya kembali.
 	useEffect(() => {
 		let batal = false;
 		(async () => {
 			if (!didukung) return;
-			let pernah = false;
-			try { pernah = localStorage.getItem(KUNCI_SIAGA) === '1'; } catch { /* abaikan */ }
-			if (!pernah) return;
 
-			// Hanya menyalakan sendiri bila izinnya memang sudah 'granted';
-			// kalau belum, memanggil getUserMedia di sini cuma memunculkan
-			// permintaan izin yang tidak diminta pengguna.
+			let keadaanIzin = null;
 			try {
 				const izin = await navigator.permissions?.query({ name: 'microphone' });
-				if (izin && izin.state !== 'granted') return;
-			} catch { /* peramban tanpa Permissions API — coba saja */ }
+				keadaanIzin = izin?.state || null;
+			} catch { /* peramban tanpa Permissions API untuk microphone */ }
+			if (batal) return;
 
-			if (!batal) nyalakanSiaga();
+			if (keadaanIzin === 'granted') { nyalakanSiaga(); return; }
+
+			if (keadaanIzin === 'denied') {
+				setGalat('Akses mikrofon diblokir peramban. Buka ikon gembok di bilah alamat, izinkan Mikrofon, lalu muat ulang halaman.');
+				return;
+			}
+
+			// 'prompt' atau tidak diketahui — tawarkan lewat popup.
+			setMintaIzin(true);
 		})();
 		return () => { batal = true; };
 	}, [didukung, nyalakanSiaga]);
@@ -467,7 +577,7 @@ const GemaPage = () => {
 	}, [hentikanAudio]);
 
 	const ketukLingkaran = () => {
-		if (fase === 'mati') nyalakanSiaga();
+		if (fase === 'mati') setMintaIzin(true);
 		else if (fase === 'menjawab') {
 			window.speechSynthesis?.cancel();
 			jedaRef.current = false;
@@ -475,10 +585,35 @@ const GemaPage = () => {
 		}
 	};
 
+	const izinkanMik = async () => {
+		setSedangMeminta(true);
+		// Klik tombol ini yang menjadi tindakan pengguna di mata peramban;
+		// getUserMedia di dalam nyalakanSiaga baru boleh memunculkan permintaan
+		// izin karena dipanggil dari sini.
+		await nyalakanSiaga();
+		setSedangMeminta(false);
+		setMintaIzin(false);
+	};
+
+	const tundaIzin = () => {
+		setMintaIzin(false);
+		// Tanpa mikrofon, kotak ketik langsung dibuka supaya halamannya tetap
+		// berguna — bukan layar mati yang menunggu izin.
+		setModeKetik(true);
+	};
+
 	/* ------------------------------------------------------------ render -- */
 
 	return (
 		<div className="min-h-screen bg-slate-50 p-4 pt-20 sm:p-6 lg:p-8 lg:pt-8">
+			{mintaIzin && (
+				<PopupIzinMik
+					onIzinkan={izinkanMik}
+					onNanti={tundaIzin}
+					sedangMeminta={sedangMeminta}
+				/>
+			)}
+
 			<div className="mx-auto max-w-5xl">
 				<section className="relative overflow-hidden rounded-3xl border border-slate-200 bg-white">
 					<div className="flex flex-col items-center px-5 py-10 sm:py-14">
