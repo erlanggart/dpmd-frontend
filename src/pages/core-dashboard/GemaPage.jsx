@@ -449,6 +449,7 @@ const GemaPage = () => {
 	const [jawaban, setJawaban] = useState(null);
 	const [galat, setGalat] = useState(null);
 	const [saran, setSaran] = useState([]);
+	const [modelAktif, setModelAktif] = useState(false);
 	const [modeKetik, setModeKetik] = useState(false);
 	const [mintaIzin, setMintaIzin] = useState(false);
 	const [sedangMeminta, setSedangMeminta] = useState(false);
@@ -488,7 +489,10 @@ const GemaPage = () => {
 
 	useEffect(() => {
 		api.get('/gema/kemampuan')
-			.then((r) => setSaran((r.data?.data || []).map((k) => k.contoh)))
+			.then((r) => {
+				setSaran((r.data?.data || []).map((k) => k.contoh));
+				setModelAktif(Boolean(r.data?.model_aktif));
+			})
 			.catch(() => setSaran([]));
 		window.speechSynthesis?.getVoices();
 	}, []);
@@ -963,6 +967,9 @@ const GemaPage = () => {
 						<div className="inline-flex items-center gap-2 rounded-full bg-slate-100 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500">
 							<Sparkles className="h-3.5 w-3.5" />
 							Gema · Purwarupa
+							{modelAktif && (
+								<span className="ml-1 text-slate-400">· paham kalimat bebas</span>
+							)}
 							{fase !== 'mati' && (
 								<span className="ml-1 flex items-center gap-1 text-emerald-600">
 									<span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
@@ -1052,7 +1059,7 @@ const GemaPage = () => {
 				{saran.length > 0 && !jawaban && (
 					<div className="mt-5 rounded-2xl border border-slate-200 bg-white p-5">
 						<p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-							Yang sudah bisa ditanyakan
+							{modelAktif ? 'Coba tanyakan apa saja, misalnya' : 'Yang sudah bisa ditanyakan'}
 						</p>
 						<div className="mt-3 flex flex-wrap gap-2">
 							{saran.map((s) => (
@@ -1085,6 +1092,15 @@ const GemaPage = () => {
 									<p className="text-base font-semibold leading-snug text-slate-900">
 										{jawaban.kalimat}
 									</p>
+									{/* Pengguna berhak tahu siapa yang menyusun kalimatnya.
+									    'mesin-cadangan' artinya model gagal dipanggil dan
+									    Gema jatuh ke pencarian deterministik — jawabannya
+									    tetap benar, pemahamannya saja yang lebih kaku. */}
+									{jawaban.ditenagai === 'mesin-cadangan' && (
+										<p className="mt-1 text-xs text-amber-700">
+											Model bahasa tidak bisa dihubungi — dijawab pencarian langsung.
+										</p>
+									)}
 									{jawaban.total > 0 && (
 										<p className="mt-1 text-xs text-slate-500">
 											{jawaban.baris.length < jawaban.total
