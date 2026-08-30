@@ -1077,6 +1077,11 @@ const GemaPage = () => {
 									<Sparkles className="h-4 w-4" />
 								</span>
 								<div className="min-w-0">
+									{jawaban.judul && (
+										<p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500">
+											{jawaban.judul}
+										</p>
+									)}
 									<p className="text-base font-semibold leading-snug text-slate-900">
 										{jawaban.kalimat}
 									</p>
@@ -1090,7 +1095,22 @@ const GemaPage = () => {
 								</div>
 							</div>
 
-							{jawaban.saran?.length > 0 && (
+							{/* Jawaban tentang SATU hal — rapor desa atau kecamatan — digambar
+						    sebagai daftar rincian, bukan tabel satu baris. */}
+						{jawaban.rincian?.length > 0 && (
+							<dl className="mt-4 grid grid-cols-1 gap-x-6 gap-y-3 border-t border-slate-100 pt-4 sm:grid-cols-2 lg:grid-cols-3">
+								{jawaban.rincian.map((r) => (
+									<div key={r.label}>
+										<dt className="text-[11px] font-medium uppercase tracking-wide text-slate-500">
+											{r.label}
+										</dt>
+										<dd className="mt-0.5 text-sm font-medium text-slate-900">{r.nilai}</dd>
+									</div>
+								))}
+							</dl>
+						)}
+
+						{jawaban.saran?.length > 0 && (
 								<div className="mt-4 flex flex-wrap gap-2 border-t border-slate-100 pt-4">
 									{jawaban.saran.map((s) => (
 										<button
