@@ -32,7 +32,7 @@
 // Jawabannya SELALU dari basis data lewat /api/gema/tanya. Gema tidak pernah
 // mengarang: di luar cakupan, ia bilang tidak tahu.
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Mic, MicOff, Keyboard, Sparkles, AlertCircle, Volume2, Loader2, Send, Ear, Check } from 'lucide-react';
+import { Mic, MicOff, Keyboard, Sparkles, AlertCircle, Volume2, Loader2, Send, Ear, Check, ShieldAlert, KeyRound } from 'lucide-react';
 import api from '../../api';
 
 /* ----------------------------------------------------------------- utilitas -- */
@@ -457,6 +457,9 @@ const GemaPage = () => {
 	const [fase, setFase] = useState('mati');
 	const [transkrip, setTranskrip] = useState('');
 	const [jawaban, setJawaban] = useState(null);
+	// Tindakan yang mengubah data (sejauh ini: setel ulang sandi akun pegawai)
+	// tidak pernah jalan dari ucapan — ia menunggu tombol ini ditekan.
+	const [konfirmasiJalan, setKonfirmasiJalan] = useState(false);
 	const [galat, setGalat] = useState(null);
 	const [saran, setSaran] = useState([]);
 	const [modelAktif, setModelAktif] = useState(false);
@@ -644,6 +647,44 @@ const GemaPage = () => {
 			setFasa(siagaRef.current ? 'perintah' : 'mati');
 		});
 	}, [setFasa]);
+
+	/**
+	 * Langkah kedua tindakan yang mengubah data. Sengaja lewat tombol, bukan
+	 * lewat ucapan "ya": salah dengar pada langkah ini tidak bisa dibatalkan.
+	 */
+	const jalankanKonfirmasi = useCallback(async () => {
+		const tiket = jawaban?.konfirmasi;
+		if (!tiket || konfirmasiJalan) return;
+
+		setKonfirmasiJalan(true);
+		jedaRef.current = true;
+		setFasa('berpikir');
+
+		const selesaiBicara = () => {
+			jedaRef.current = false;
+			setFasa(siagaRef.current ? 'perintah' : 'mati');
+		};
+
+		try {
+			const r = await api.post('/gema/konfirmasi', { token: tiket.token, aksi: tiket.aksi });
+			const d = r.data?.data;
+			setJawaban(d);
+			setRiwayat((h) => [{ peran: 'gema', teks: d?.kalimat, waktu: Date.now() }, ...h].slice(0, 8));
+			setFasa('menjawab');
+			ucapkan(d?.kalimat, selesaiBicara);
+		} catch (e) {
+			const pesan = e.response?.data?.message || 'Gema gagal menjalankan tindakannya';
+			setGalat(pesan);
+			setFasa('menjawab');
+			ucapkan(pesan, selesaiBicara);
+		} finally {
+			setKonfirmasiJalan(false);
+		}
+	}, [jawaban, konfirmasiJalan, setFasa]);
+
+	const batalkanKonfirmasi = useCallback(() => {
+		setJawaban((j) => (j ? { ...j, konfirmasi: null } : j));
+	}, []);
 
 	/* ------------------------------------------------------- pengenalan -- */
 
@@ -1129,7 +1170,52 @@ const GemaPage = () => {
 								</div>
 							</div>
 
-							{/* Jawaban tentang SATU hal — rapor desa atau kecamatan — digambar
+						{/* Tindakan yang mengubah data berhenti di sini sampai ditekan.
+						    Ditaruh di atas rincian supaya yang dibaca lebih dulu adalah
+						    APA yang akan terjadi, bukan profil orangnya. */}
+						{jawaban.konfirmasi && (
+							<div className="mt-4 rounded-xl border border-amber-200 bg-amber-50 p-4">
+								<div className="flex items-start gap-3">
+									<span className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg bg-amber-100 text-amber-700">
+										<ShieldAlert className="h-4 w-4" />
+									</span>
+									<div className="min-w-0">
+										<p className="text-sm font-semibold text-amber-900">Perlu konfirmasi Anda</p>
+										<p className="mt-1 text-sm leading-6 text-amber-800">
+											{jawaban.konfirmasi.peringatan}
+										</p>
+										{jawaban.konfirmasi.akun && (
+											<p className="mt-1 text-xs text-amber-700">
+												{jawaban.konfirmasi.akun.nama} · {jawaban.konfirmasi.akun.email}
+											</p>
+										)}
+									</div>
+								</div>
+								<div className="mt-3 flex flex-wrap gap-2">
+									<button
+										type="button"
+										onClick={jalankanKonfirmasi}
+										disabled={konfirmasiJalan}
+										className="inline-flex items-center gap-2 rounded-lg bg-amber-600 px-3.5 py-2 text-sm font-semibold text-white transition-colors hover:bg-amber-700 disabled:opacity-60"
+									>
+										{konfirmasiJalan
+											? <Loader2 className="h-4 w-4 animate-spin" />
+											: <KeyRound className="h-4 w-4" />}
+										{jawaban.konfirmasi.label || 'Ya, lanjutkan'}
+									</button>
+									<button
+										type="button"
+										onClick={batalkanKonfirmasi}
+										disabled={konfirmasiJalan}
+										className="rounded-lg border border-amber-200 bg-white px-3.5 py-2 text-sm font-semibold text-amber-800 transition-colors hover:bg-amber-100 disabled:opacity-60"
+									>
+										Batal
+									</button>
+								</div>
+							</div>
+						)}
+
+						{/* Jawaban tentang SATU hal — rapor desa atau kecamatan — digambar
 						    sebagai daftar rincian, bukan tabel satu baris. */}
 						{jawaban.rincian?.length > 0 && (
 							<dl className="mt-4 grid grid-cols-1 gap-x-6 gap-y-3 border-t border-slate-100 pt-4 sm:grid-cols-2 lg:grid-cols-3">
