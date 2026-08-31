@@ -18,6 +18,10 @@ import api from "../api";
  *    mengganti seluruh objek user, sehingga field yang tidak ada di response
  *    profil akan hilang dari sesi.
  */
+// Role yang datanya perlu dilengkapi dari /auth/profile.
+const ROLE_DINAS = ["dinas_terkait", "verifikator_dinas"];
+const ROLE_BUTUH_PROFIL = ["desa", "admin_desa", ...ROLE_DINAS];
+
 export const useUserProfile = () => {
 	const { user, updateUser } = useAuth();
 	// Cukup sekali per pemasangan komponen. Tanpa ini efeknya bisa berputar terus
@@ -27,8 +31,13 @@ export const useUserProfile = () => {
 
 	useEffect(() => {
 		if (!user || sudahDiambilRef.current) return;
-		if (user.role !== "desa" && user.role !== "admin_desa") return;
-		if (user.desa) return;
+		if (!ROLE_BUTUH_PROFIL.includes(user.role)) return;
+		// Akun desa butuh relasi desa; akun dinas butuh identitas dinas (dipakai
+		// antara lain untuk mengenali akun BPKAD yang berperan pelihat). Sesi di
+		// aplikasi ini tidak pernah kedaluwarsa, jadi akun lama hanya menerima
+		// data baru ini lewat /auth/profile, bukan lewat response login.
+		const relasiSudahAda = ROLE_DINAS.includes(user.role) ? !!user.dinas : !!user.desa;
+		if (relasiSudahAda) return;
 
 		sudahDiambilRef.current = true;
 

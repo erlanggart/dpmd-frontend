@@ -13,6 +13,7 @@ import { Toaster, toast } from "react-hot-toast";
 import { useAuth } from "./context/AuthContext";
 import { useThemeColor } from "./hooks/useThemeColor";
 import { useDesaPermissions } from "./hooks/useDesaPermissions";
+import { isDinasPelihat } from "./utils/dinasPelihat";
 import { DataCacheProvider } from "./context/DataCacheContext";
 import { EditModeProvider } from "./context/EditModeContext.jsx";
 import { AlertProvider } from "./components/AlertPopup";
@@ -353,6 +354,9 @@ const DinasBankeuPage = lazy(() => import("./pages/dinas/DinasBankeuPage"));
 const DinasBankeuPerubahanArsipPage = lazy(
   () => import("./pages/dinas/DinasBankeuPerubahanArsipPage"),
 );
+const DinasPelihatBankeuPerubahanPage = lazy(
+  () => import("./pages/dinas/pelihat/DinasPelihatBankeuPerubahanPage"),
+);
 const DinasVerificationPage = lazy(
   () => import("./pages/dinas/DinasVerificationPage"),
 );
@@ -566,6 +570,45 @@ const DesaPermissionRoute = ({ permission, children }) => {
 
   if (!hasPermission(permission)) {
     return <Navigate to="/forbidden" replace />;
+  }
+
+  return children || <Outlet />;
+};
+
+// Beranda /dinas: akun dinas pelihat (BPKAD/Inspektorat) langsung diarahkan ke
+// halaman Bantuan Keuangan Perubahan karena menu dinas lain tak berlaku untuknya.
+const DinasIndexRedirect = () => {
+  const { user } = useAuth();
+  return (
+    <Navigate
+      to={isDinasPelihat(user) ? "/dinas/pelihat/bankeu-perubahan" : "/dinas/dashboard"}
+      replace
+    />
+  );
+};
+
+// Kebalikan DinasPelihatRoute: halaman verifikasi/pengelolaan dinas bukan untuk
+// akun pelihat. Backend sudah menolak mereka di endpoint-endpoint itu; ini
+// supaya URL langsung pun tidak menampilkan halaman yang tak bisa dipakai.
+const NonPelihatRoute = ({ children }) => {
+  const { user } = useAuth();
+
+  if (isDinasPelihat(user)) {
+    return <Navigate to="/dinas/pelihat/bankeu-perubahan" replace />;
+  }
+
+  return children || <Outlet />;
+};
+
+// Halaman pelihat hanya untuk akun dinas pelihat (BPKAD/Inspektorat).
+// Selama identitas dinas belum termuat di sesi, halaman tetap dirender dan
+// backend yang jadi penjaga terakhir (endpoint /api/dinas-pelihat/* menolak
+// selain mereka) — jadi akun lain tidak bisa mengintip lewat URL.
+const DinasPelihatRoute = ({ children }) => {
+  const { user } = useAuth();
+
+  if (user?.dinas && !isDinasPelihat(user)) {
+    return <Navigate to="/dinas/dashboard" replace />;
   }
 
   return children || <Outlet />;
@@ -1536,25 +1579,35 @@ function App() {
                     </RoleProtectedRoute>
                   }
                 >
-                  <Route index element={<Navigate to="dashboard" replace />} />
-                  <Route path="dashboard" element={<DinasDashboardPage />} />
-                  <Route path="bankeu" element={<DinasBankeuPage />} />
-                  <Route
-                    path="bankeu-perubahan"
-                    element={<DinasBankeuPerubahanArsipPage />}
-                  />
-                  <Route
-                    path="bankeu/verifikasi/:proposalId"
-                    element={<DinasVerificationDetailPage />}
-                  />
-                  <Route path="konfigurasi" element={<DinasConfigPage />} />
-                  <Route
-                    path="verifikator"
-                    element={<DinasVerifikatorPage />}
-                  />
-                  <Route path="profil" element={<VerifikatorProfilePage />} />
+                  <Route index element={<DinasIndexRedirect />} />
+                  {/* Halaman dinas pelihat: Bantuan Keuangan Perubahan (lihat & unduh saja) */}
+                  <Route element={<DinasPelihatRoute />}>
+                    <Route
+                      path="pelihat/bankeu-perubahan"
+                      element={<DinasPelihatBankeuPerubahanPage />}
+                    />
+                  </Route>
+                  {/* Verifikasi & pengelolaan dinas — tertutup untuk akun pelihat */}
+                  <Route element={<NonPelihatRoute />}>
+                    <Route path="dashboard" element={<DinasDashboardPage />} />
+                    <Route path="bankeu" element={<DinasBankeuPage />} />
+                    <Route
+                      path="bankeu-perubahan"
+                      element={<DinasBankeuPerubahanArsipPage />}
+                    />
+                    <Route
+                      path="bankeu/verifikasi/:proposalId"
+                      element={<DinasVerificationDetailPage />}
+                    />
+                    <Route path="konfigurasi" element={<DinasConfigPage />} />
+                    <Route
+                      path="verifikator"
+                      element={<DinasVerifikatorPage />}
+                    />
+                    <Route path="profil" element={<VerifikatorProfilePage />} />
+                    <Route path="pesan" element={<MessagingPage />} />
+                  </Route>
                   <Route path="ganti-password" element={<DinasChangePasswordPage />} />
-                  <Route path="pesan" element={<MessagingPage />} />
                 </Route>
 
                 {/* Rute BPJS - Akses terbatas hanya ke RT/RW Comparison */}

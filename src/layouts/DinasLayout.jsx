@@ -24,6 +24,7 @@ import {
   LuPanelLeft,
 } from "react-icons/lu";
 import MessageLottieIcon from "../components/MessageLottieIcon";
+import { isDinasPelihat } from "../utils/dinasPelihat";
 
 // Menu items configuration for Dinas
 const menuItems = [
@@ -44,6 +45,14 @@ const menuItems = [
     label: "Arsip Bankeu Perubahan",
     path: "/dinas/bankeu-perubahan",
     icon: LuFolderArchive,
+  },
+  {
+    id: "bankeu-perubahan-pelihat",
+    label: "Bantuan Keuangan Perubahan",
+    path: "/dinas/pelihat/bankeu-perubahan",
+    icon: LuFolderArchive,
+    // Hanya untuk akun dinas pelihat (BPKAD/Inspektorat)
+    forPelihatOnly: true,
   },
   {
     id: "profil",
@@ -98,6 +107,9 @@ const DinasLayout = () => {
   // Roles yang bisa mengelola verifikator dan konfigurasi
   const managerRoles = ['dinas_terkait', 'superadmin', 'kepala_dinas', 'sekretaris_dinas'];
   const isVerifikator = user?.role === 'verifikator_dinas';
+  // Akun pelihat hanya berurusan dengan Bantuan Keuangan Perubahan (lihat & unduh).
+  const isPelihat = isDinasPelihat(user);
+  const PELIHAT_MENU_IDS = ['bankeu-perubahan-pelihat', 'ganti-password'];
 
   // Fetch dinas name for verifikator
   useEffect(() => {
@@ -121,6 +133,9 @@ const DinasLayout = () => {
 
   // Filter menu items based on user's role and dinas_id
   const filteredMenuItems = menuItems.filter(item => {
+    // Pelihat: sidebar dipangkas ke Bantuan Keuangan Perubahan + ganti password
+    if (isPelihat) return PELIHAT_MENU_IDS.includes(item.id);
+    if (item.forPelihatOnly) return false;
     // Profil Saya hanya untuk verifikator_dinas
     if (item.forVerifikatorOnly) {
       return isVerifikator;
