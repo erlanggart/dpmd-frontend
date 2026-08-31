@@ -49,6 +49,7 @@ const StatistikBumdes = lazy(() => import('../kepala-dinas/StatistikBumdes'));
 const BankeuDashboard = lazy(() => import('./spked/bankeu/BankeuDashboard'));
 const DpmdVerificationPage = lazy(() => import('./spked/bankeu/DpmdVerificationPage'));
 const BankeuLpjMonitoringPage = lazy(() => import('./spked/bankeu/BankeuLpjMonitoringPage'));
+const BankeuProposal2025MonitoringPage = lazy(() => import('./spked/bankeu/BankeuProposal2025MonitoringPage'));
 // Bankeu Perubahan 2026 (DPMD final verification)
 const DpmdBankeuPerubahanPage = lazy(() => import('./spked/bankeu-perubahan/DpmdBankeuPerubahanPage'));
 // Pengelolaan hari libur (tanggal merah) untuk blokir BA & Surat Pengantar
@@ -78,6 +79,7 @@ const TABS = [
 
 const SUB_BANKEU_2025 = [
 	{ id: 'penyaluran', label: 'Penyaluran T1 & T2' },
+	{ id: 'proposal', label: 'Proposal Bantuan Keuangan' },
 	{ id: 'lpj', label: 'LPJ Bantuan Keuangan' },
 ];
 
@@ -354,11 +356,9 @@ const SpkedPage = () => {
 									{bankeuYear === 2025 ? (
 										<>
 											<SubTabs items={SUB_BANKEU_2025} aktif={bankeu2025View} onPilih={setBankeu2025View} />
-											{bankeu2025View === 'penyaluran' ? (
-												<BankeuDashboard />
-											) : (
-												<BankeuLpjMonitoringPage tahun={2025} />
-											)}
+											{bankeu2025View === 'penyaluran' && <BankeuDashboard />}
+											{bankeu2025View === 'proposal' && <BankeuProposal2025MonitoringPage tahun={2025} />}
+											{bankeu2025View === 'lpj' && <BankeuLpjMonitoringPage tahun={2025} />}
 										</>
 									) : (
 										<DpmdVerificationPage tahunAnggaran={bankeuYear} />

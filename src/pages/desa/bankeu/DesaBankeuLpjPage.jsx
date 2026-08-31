@@ -16,6 +16,15 @@ const STATUS_CONFIG = {
   revision: { label: 'Perlu Revisi', color: 'orange', icon: LuPencil, bg: 'bg-amber-50', border: 'border-amber-200', text: 'text-amber-700', badge: 'bg-amber-100 text-amber-700' },
 };
 
+// Tampilan netral untuk modul tanpa verifikasi — tidak ada status yang perlu
+// diwarnai, jadi kartunya cukup abu-abu seperti berkas biasa.
+const KARTU_NETRAL = { bg: 'bg-slate-100', border: 'border-slate-200', text: 'text-slate-600', icon: LuFile };
+
+/**
+ * Formulir unggah berkas desa. Dipakai LPJ Bankeu, LPJ Bantuan Provinsi, dan
+ * Proposal Bankeu 2025 — yang terakhir memakai `pakaiVerifikasi={false}` karena
+ * berkasnya langsung masuk ke DPMD tanpa status persetujuan.
+ */
 const DesaBankeuLpjPage = ({
   tahun = 2025,
   programName = 'Bantuan Keuangan',
@@ -23,6 +32,13 @@ const DesaBankeuLpjPage = ({
   storageBase = '/storage/uploads/bankeu_lpj',
   referenceType = 'bankeu_lpj',
   chatTitle = 'Chat LPJ Bankeu',
+  // Sebutan dokumen di seluruh teks halaman: 'LPJ', 'Proposal', dst.
+  jenisDokumen = 'LPJ',
+  // false = alur sederhana: unggahan langsung diterima, tanpa status verifikasi.
+  pakaiVerifikasi = true,
+  judul,
+  deskripsi,
+  infoTambahan,
 }) => {
   const [lpjList, setLpjList] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -32,11 +48,27 @@ const DesaBankeuLpjPage = ({
   const [keterangan, setKeterangan] = useState('');
   const [selectedFiles, setSelectedFiles] = useState([]);
   const [chatLpjId, setChatLpjId] = useState(null);
+  // Berkas mana saja yang sudah punya percakapan dengan DPMD. Dipakai di mode
+  // tanpa verifikasi: desa tidak punya lawan bicara tetap, jadi tombol chat
+  // baru muncul setelah DPMD memulai percakapannya.
+  const [berkasBerchat, setBerkasBerchat] = useState(new Set());
   const fileInputRef = useRef(null);
 
   useEffect(() => {
     fetchLpj();
   }, [tahun]);
+
+  useEffect(() => {
+    if (pakaiVerifikasi) return;
+    let dibatalkan = false;
+    api.get('/messaging/conversations', { params: { reference_type: referenceType } })
+      .then((res) => {
+        if (dibatalkan || !res.data?.success) return;
+        setBerkasBerchat(new Set((res.data.data || []).map((c) => String(c.reference_id))));
+      })
+      .catch(() => { /* chat sekadar pelengkap, jangan ganggu halaman unggah */ });
+    return () => { dibatalkan = true; };
+  }, [pakaiVerifikasi, referenceType, tahun]);
 
   const fetchLpj = async () => {
     try {
@@ -47,7 +79,7 @@ const DesaBankeuLpjPage = ({
       }
     } catch (error) {
       console.error('Error fetching LPJ:', error);
-      toast.error('Gagal memuat data LPJ');
+      toast.error(`Gagal memuat data ${jenisDokumen}`);
     } finally {
       setLoading(false);
     }
@@ -122,7 +154,7 @@ const DesaBankeuLpjPage = ({
       return 'Upload gagal: Terlalu banyak file. Maksimal 10 file per upload.';
     }
     if (status === 403) {
-      return 'Upload gagal: Anda tidak memiliki akses untuk mengupload LPJ. Hubungi admin.';
+      return `Upload gagal: Anda tidak memiliki akses untuk mengupload ${jenisDokumen}. Hubungi admin.`;
     }
     if (status === 401) {
       return 'Upload gagal: Sesi login telah berakhir. Silakan login ulang.';
@@ -181,7 +213,7 @@ const DesaBankeuLpjPage = ({
     if (!lpj?.id) return;
 
     const result = await Swal.fire({
-      title: 'Hapus File LPJ?',
+      title: `Hapus File ${jenisDokumen}?`,
       html: `
         <div style="text-align:left; font-size:14px; color:#4B5563;">
           <p style="margin-bottom:8px;">File berikut akan dihapus secara permanen:</p>
@@ -195,7 +227,7 @@ const DesaBankeuLpjPage = ({
       showCancelButton: true,
       confirmButtonColor: '#DC2626',
       cancelButtonColor: '#6B7280',
-      confirmButtonText: '🗑️ Ya, Hapus LPJ',
+      confirmButtonText: `🗑️ Ya, Hapus ${jenisDokumen}`,
       cancelButtonText: 'Batal',
       reverseButtons: true
     });
@@ -206,12 +238,12 @@ const DesaBankeuLpjPage = ({
       setDeleting(lpj.id);
       const response = await api.delete(`${endpointBase}/${lpj.id}`);
       if (response.data.success) {
-        toast.success('LPJ berhasil dihapus');
+        toast.success(`${jenisDokumen} berhasil dihapus`);
         fetchLpj();
       }
     } catch (error) {
       console.error('Error deleting LPJ:', error);
-      toast.error(error.response?.data?.message || 'Gagal menghapus LPJ');
+      toast.error(error.response?.data?.message || `Gagal menghapus ${jenisDokumen}`);
     } finally {
       setDeleting(null);
     }
@@ -245,7 +277,7 @@ const DesaBankeuLpjPage = ({
       <div className="min-h-[400px] flex items-center justify-center">
         <div className="text-center">
           <LuLoader className="h-10 w-10 animate-spin text-slate-500 mx-auto" />
-          <p className="mt-3 text-slate-500">Memuat data LPJ...</p>
+          <p className="mt-3 text-slate-500">Memuat data {jenisDokumen}...</p>
         </div>
       </div>
     );
@@ -258,8 +290,8 @@ const DesaBankeuLpjPage = ({
         <DesaPageHeader
           icon={LuFileText}
           eyebrow="Bantuan Keuangan"
-          title={`LPJ ${programName} ${tahun}`}
-          description={`Unggah Laporan Pertanggungjawaban ${programName} Tahun ${tahun}.`}
+          title={judul || `LPJ ${programName} ${tahun}`}
+          description={deskripsi || `Unggah Laporan Pertanggungjawaban ${programName} Tahun ${tahun}.`}
         />
 
         {/* Uploaded Files List */}
@@ -267,12 +299,14 @@ const DesaBankeuLpjPage = ({
           <div className="space-y-4">
             <h3 className="flex items-center gap-2 text-sm font-semibold text-slate-900">
               <LuFileText className="h-4 w-4 text-slate-400" />
-              File LPJ terunggah ({lpjList.length} file)
+              File {jenisDokumen} terunggah ({lpjList.length} file)
             </h3>
             {lpjList.map((lpj) => {
-              const status = lpj.status || 'pending';
-              const cfg = STATUS_CONFIG[status];
+              // Tanpa verifikasi tidak ada status yang perlu ditampilkan.
+              const status = pakaiVerifikasi ? (lpj.status || 'pending') : null;
+              const cfg = status ? STATUS_CONFIG[status] : KARTU_NETRAL;
               const StatusIcon = cfg.icon;
+              const adaChat = berkasBerchat.has(String(lpj.id));
               return (
                 <div key={lpj.id} className={`rounded-xl border bg-white p-5 ${
                   status === 'rejected' ? 'border-rose-200' :
@@ -292,10 +326,12 @@ const DesaBankeuLpjPage = ({
                         </p>
                       </div>
                     </div>
-                    <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold ${cfg.badge}`}>
-                      <StatusIcon className="h-3 w-3" />
-                      {cfg.label}
-                    </span>
+                    {status && (
+                      <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold ${cfg.badge}`}>
+                        <StatusIcon className="h-3 w-3" />
+                        {cfg.label}
+                      </span>
+                    )}
                   </div>
 
                   {/* DPMD Catatan */}
@@ -348,6 +384,15 @@ const DesaBankeuLpjPage = ({
                       {deleting === lpj.id ? <LuLoader className="h-3.5 w-3.5 animate-spin" /> : <LuTrash2 className="h-3.5 w-3.5" />}
                       {deleting === lpj.id ? 'Menghapus...' : 'Hapus'}
                     </button>
+                    {!pakaiVerifikasi && adaChat && (
+                      <button
+                        onClick={() => setChatLpjId(lpj.id)}
+                        className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 px-3 py-2 text-xs font-medium text-slate-600 transition-colors hover:bg-slate-50"
+                      >
+                        <LuMessageSquare className="h-3.5 w-3.5" />
+                        Chat DPMD
+                      </button>
+                    )}
                   </div>
                 </div>
               );
@@ -360,8 +405,8 @@ const DesaBankeuLpjPage = ({
                 <LuCircleAlert className="h-5 w-5 text-amber-600" />
               </div>
               <div>
-                <h3 className="text-sm font-semibold text-amber-900">Belum ada LPJ</h3>
-                <p className="text-sm text-amber-700">Silakan unggah file LPJ pada formulir di bawah.</p>
+                <h3 className="text-sm font-semibold text-amber-900">Belum ada {jenisDokumen}</h3>
+                <p className="text-sm text-amber-700">Silakan unggah file {jenisDokumen} pada formulir di bawah.</p>
               </div>
             </div>
           </div>
@@ -371,13 +416,13 @@ const DesaBankeuLpjPage = ({
         <div className="rounded-xl border border-slate-200 bg-white p-5 sm:p-6">
           <h3 className="mb-4 flex items-center gap-2 text-base font-semibold text-slate-900">
             <LuUpload className="h-4 w-4 text-slate-400" />
-            Unggah LPJ
+            Unggah {jenisDokumen}
           </h3>
 
           {/* File Input */}
           <div className="mb-4">
             <label className="mb-2 block text-sm font-medium text-slate-700">
-              File LPJ <span className="text-rose-500">*</span>
+              File {jenisDokumen} <span className="text-rose-500">*</span>
               <span className="ml-1 font-normal text-slate-400">(bisa pilih beberapa file sekaligus)</span>
             </label>
             <div
@@ -429,7 +474,7 @@ const DesaBankeuLpjPage = ({
             <textarea
               value={keterangan}
               onChange={(e) => setKeterangan(e.target.value)}
-              placeholder="Catatan tambahan mengenai LPJ..."
+              placeholder={`Catatan tambahan mengenai ${jenisDokumen}...`}
               rows={3}
               className="w-full resize-none rounded-lg border border-slate-200 px-3.5 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 focus:border-slate-900 focus:outline-none focus:ring-1 focus:ring-slate-900"
             />
@@ -466,7 +511,7 @@ const DesaBankeuLpjPage = ({
             ) : (
               <>
                 <LuUpload className="h-5 w-5" />
-                Upload {selectedFiles.length > 0 ? `${selectedFiles.length} File LPJ` : 'LPJ'}
+                Upload {selectedFiles.length > 0 ? `${selectedFiles.length} File ${jenisDokumen}` : jenisDokumen}
               </>
             )}
           </button>
@@ -474,9 +519,14 @@ const DesaBankeuLpjPage = ({
           {/* Info */}
           <div className="mt-4 rounded-lg border border-slate-200 bg-slate-50 p-3">
             <p className="text-xs leading-5 text-slate-600">
-              <strong>Informasi:</strong> File LPJ {programName} yang diupload akan diverifikasi oleh DPMD.
-              Anda dapat mengupload beberapa file LPJ sekaligus (maks {MAX_FILES} file, 100 MB per file).
-              Setelah upload, DPMD akan memverifikasi LPJ Anda.
+              <strong>Informasi:</strong>{' '}
+              {infoTambahan || (
+                <>
+                  File LPJ {programName} yang diupload akan diverifikasi oleh DPMD.
+                  Anda dapat mengupload beberapa file LPJ sekaligus (maks {MAX_FILES} file, 100 MB per file).
+                  Setelah upload, DPMD akan memverifikasi LPJ Anda.
+                </>
+              )}
             </p>
           </div>
         </div>

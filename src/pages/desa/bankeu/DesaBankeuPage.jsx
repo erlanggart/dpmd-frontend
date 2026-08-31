@@ -3,11 +3,14 @@ import { LuDollarSign, LuFileText, LuRadar, LuArrowLeft, LuArrowRight, LuClipboa
 import BankeuProposalPage from './BankeuProposalPage';
 import BankeuTrackingTab from './BankeuTrackingTab';
 import DesaBankeuLpjPage from './DesaBankeuLpjPage';
+import DesaBankeuProposal2025Page from './DesaBankeuProposal2025Page';
 import DesaPageHeader from '../../../components/desa/DesaPageHeader';
 
 const DesaBankeuPage = () => {
   const [selectedYear, setSelectedYear] = useState(null);
   const [activeTab, setActiveTab] = useState('pengajuan');
+  // TA 2025 punya dua berkas yang berdiri sendiri: proposal dan LPJ.
+  const [tab2025, setTab2025] = useState('proposal');
 
   // Year Selection Screen
   if (!selectedYear) {
@@ -15,9 +18,9 @@ const DesaBankeuPage = () => {
       {
         tahun: 2025,
         icon: LuClipboardCheck,
-        label: "LPJ Bantuan Keuangan",
-        desc: "Laporan pertanggungjawaban penggunaan bantuan keuangan TA 2025.",
-        badge: "LPJ",
+        label: "Proposal & LPJ Bantuan Keuangan",
+        desc: "Unggah proposal dan laporan pertanggungjawaban bantuan keuangan TA 2025.",
+        badge: "Proposal & LPJ",
       },
       {
         tahun: 2026,
@@ -84,26 +87,49 @@ const DesaBankeuPage = () => {
     );
   }
 
-  // TA 2025: Show LPJ page directly
+  // TA 2025: proposal (unggah langsung ke DPMD) & LPJ, masing-masing satu tab
   if (selectedYear === 2025) {
+    const tabs2025 = [
+      { id: 'proposal', label: 'Proposal', icon: LuFileText },
+      { id: 'lpj', label: 'LPJ', icon: LuClipboardCheck },
+    ];
+
     return (
       <div className="space-y-5">
-        {/* Back button */}
-        <div className="flex h-14 items-center gap-3 rounded-xl border border-slate-200 bg-white px-4">
+        <div className="flex h-14 items-center gap-3 rounded-xl border border-slate-200 bg-white px-3 sm:px-4">
           <button
-            onClick={() => setSelectedYear(null)}
+            onClick={() => { setSelectedYear(null); setTab2025('proposal'); }}
             className="flex items-center gap-1.5 text-sm font-medium text-slate-500 transition-colors hover:text-slate-900"
           >
             <LuArrowLeft className="h-4 w-4" />
-            <span>Kembali</span>
+            <span className="hidden sm:inline">TA 2025</span>
           </button>
+
           <div className="h-5 w-px bg-slate-200" />
-          <div className="flex items-center gap-2 text-sm font-semibold text-slate-900">
-            <LuClipboardCheck className="h-4 w-4 text-slate-400" />
-            <span>LPJ Bantuan Keuangan TA 2025</span>
+
+          <div className="flex items-center gap-1">
+            {tabs2025.map(tab => (
+              <button
+                key={tab.id}
+                onClick={() => setTab2025(tab.id)}
+                className={`flex items-center gap-2 rounded-lg px-3.5 py-2 text-sm font-semibold transition-colors ${
+                  tab2025 === tab.id
+                    ? 'bg-slate-900 text-white'
+                    : 'text-slate-500 hover:bg-slate-100 hover:text-slate-900'
+                }`}
+              >
+                <tab.icon className="h-4 w-4" />
+                <span>{tab.label}</span>
+              </button>
+            ))}
           </div>
         </div>
-        <DesaBankeuLpjPage tahun={2025} />
+
+        {tab2025 === 'proposal' ? (
+          <DesaBankeuProposal2025Page tahun={2025} />
+        ) : (
+          <DesaBankeuLpjPage tahun={2025} />
+        )}
       </div>
     );
   }
