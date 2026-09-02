@@ -9,6 +9,7 @@ import {
   Outlet,
 } from "react-router-dom";
 import { Suspense, lazy, useEffect, useState } from "react";
+import { Minus, ShieldUser } from "lucide-react";
 import { Toaster, toast } from "react-hot-toast";
 import { useAuth } from "./context/AuthContext";
 import { useThemeColor } from "./hooks/useThemeColor";
@@ -816,6 +817,7 @@ const ThemeColorWrapper = ({ children }) => {
 const ImpersonationReturnBanner = () => {
   const [impersonatedUser, setImpersonatedUser] = useState(null);
   const [isRestoring, setIsRestoring] = useState(false);
+  const [isExpanded, setIsExpanded] = useState(false);
 
   useEffect(() => {
     if (localStorage.getItem("isImpersonating") !== "true") return;
@@ -869,26 +871,53 @@ const ImpersonationReturnBanner = () => {
 
   if (!impersonatedUser) return null;
 
+  const namaUser = impersonatedUser.name || "user lain";
+
+  // Melayang di pojok, bukan palang selebar layar di atas konten. Mobile
+  // ditaruh di kiri supaya tidak bertumpuk dengan gelembung chat di kanan;
+  // bilah navigasi bawah dilewati dengan bottom-24.
   return (
-    <div className="fixed left-1/2 top-3 z-[9999] w-[calc(100%-1.5rem)] max-w-xl -translate-x-1/2 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 shadow-lg shadow-amber-900/10 md:top-4 md:px-4">
-      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-        <div className="min-w-0">
-          <p className="text-xs font-semibold uppercase tracking-wide text-amber-700">
-            Mode superadmin
-          </p>
-          <p className="truncate text-sm font-medium text-amber-950">
-            Sedang masuk sebagai {impersonatedUser.name || "user lain"}
-          </p>
+    <div className="fixed bottom-24 left-4 z-[9999] lg:bottom-24 lg:left-auto lg:right-6">
+      {isExpanded ? (
+        <div className="w-[min(20rem,calc(100vw-2rem))] rounded-2xl border border-amber-200 bg-amber-50 p-3 shadow-lg shadow-amber-900/10">
+          <div className="flex items-start justify-between gap-2">
+            <div className="min-w-0">
+              <p className="text-xs font-semibold uppercase tracking-wide text-amber-700">
+                Mode superadmin
+              </p>
+              <p className="truncate text-sm font-medium text-amber-950">
+                Sedang masuk sebagai {namaUser}
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => setIsExpanded(false)}
+              aria-label="Kecilkan"
+              className="shrink-0 rounded-lg p-1.5 text-amber-700 transition hover:bg-amber-100"
+            >
+              <Minus className="h-4 w-4" />
+            </button>
+          </div>
+          <button
+            type="button"
+            onClick={handleReturn}
+            disabled={isRestoring}
+            className="mt-3 inline-flex w-full items-center justify-center rounded-lg bg-amber-700 px-3 py-2 text-sm font-semibold text-white transition hover:bg-amber-800 disabled:cursor-not-allowed disabled:opacity-70"
+          >
+            {isRestoring ? "Mengembalikan..." : "Kembali Superadmin"}
+          </button>
         </div>
+      ) : (
         <button
           type="button"
-          onClick={handleReturn}
-          disabled={isRestoring}
-          className="inline-flex shrink-0 items-center justify-center rounded-lg bg-amber-700 px-3 py-2 text-sm font-semibold text-white transition hover:bg-amber-800 disabled:cursor-not-allowed disabled:opacity-70"
+          onClick={() => setIsExpanded(true)}
+          title={`Mode superadmin — sedang masuk sebagai ${namaUser}`}
+          aria-label={`Mode superadmin, sedang masuk sebagai ${namaUser}`}
+          className="flex h-12 w-12 items-center justify-center rounded-full bg-amber-600 text-white shadow-lg shadow-amber-900/20 ring-4 ring-amber-100 transition hover:bg-amber-700"
         >
-          {isRestoring ? "Mengembalikan..." : "Kembali Superadmin"}
+          <ShieldUser className="h-5 w-5" />
         </button>
-      </div>
+      )}
     </div>
   );
 };

@@ -322,16 +322,52 @@ const StatusBadge = ({ status }) => {
 	);
 };
 
-/** Cap kecil "sudah diverifikasi bidang" — dipakai tabel, kartu, dan daftar wilayah. */
-const TandaVerifikasi = ({ pada }) =>
-	pada ? (
-		<BadgeCheck
-			className="h-4 w-4 shrink-0 text-emerald-600"
-			aria-label="Terverifikasi"
-		>
-			<title>{`Terverifikasi ${formatWaktu(pada)}`}</title>
-		</BadgeCheck>
-	) : null;
+// Tiga keadaan verifikasi: belum diperiksa (tanpa cap), disetujui, ditolak.
+// Dipakai bersama cap kecil di daftar dan panel besar di halaman detail.
+const RUPA_VERIFIKASI = {
+	terverifikasi: {
+		label: 'Terverifikasi Bidang Pemdes',
+		singkat: 'Terverifikasi',
+		icon: BadgeCheck,
+		warna: 'text-emerald-600',
+		panel: 'border-emerald-200 bg-emerald-50/60',
+		pill: 'bg-emerald-50 text-emerald-700',
+	},
+	ditolak: {
+		label: 'Verifikasi ditolak',
+		singkat: 'Ditolak',
+		icon: XCircle,
+		warna: 'text-rose-600',
+		panel: 'border-rose-200 bg-rose-50/60',
+		pill: 'bg-rose-50 text-rose-700',
+	},
+};
+
+const BELUM_VERIFIKASI = {
+	singkat: 'Belum diverifikasi',
+	icon: Clock,
+	pill: 'bg-slate-100 text-slate-600',
+};
+
+/** Badge status verifikasi sejajar badge jabatan & status di kartu profil. */
+const BadgeVerifikasi = ({ status }) => {
+	const rupa = RUPA_VERIFIKASI[status] || BELUM_VERIFIKASI;
+	const Icon = rupa.icon;
+	return (
+		<span className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold ${rupa.pill}`}>
+			<Icon className="h-3.5 w-3.5" />
+			{rupa.singkat}
+		</span>
+	);
+};
+
+/** Cap kecil status verifikasi — dipakai tabel, kartu, dan daftar wilayah. */
+const TandaVerifikasi = ({ status }) => {
+	const rupa = RUPA_VERIFIKASI[status];
+	if (!rupa) return null;
+	const Icon = rupa.icon;
+	return <Icon className={`h-4 w-4 shrink-0 ${rupa.warna}`} aria-label={rupa.singkat}><title>{rupa.singkat}</title></Icon>;
+};
 
 const JabatanBadge = ({ jabatan }) => (
 	<span
@@ -371,6 +407,182 @@ const Avatar = ({ person, className = 'h-10 w-10 text-sm' }) => {
 };
 
 // ============================================================
+// Kelengkapan data & riwayat (kolom kanan halaman detail)
+// ============================================================
+// Kolom yang dihitung sebagai "harus terisi". Tanggal/SK pemberhentian dan
+// keterangan sengaja tidak ikut: itu hanya relevan bagi yang sudah berhenti,
+// jadi menghitungnya akan membuat aparatur aktif selamanya tidak pernah 100%.
+const KOLOM_KELENGKAPAN = [
+	{ key: 'nama_lengkap', label: 'Nama lengkap' },
+	{ key: 'jabatan', label: 'Jabatan' },
+	{ key: 'nipd', label: 'NIPD' },
+	{ key: 'niap', label: 'NIAP' },
+	{ key: 'tempat_lahir', label: 'Tempat lahir' },
+	{ key: 'tanggal_lahir', label: 'Tanggal lahir' },
+	{ key: 'jenis_kelamin', label: 'Jenis kelamin' },
+	{ key: 'agama', label: 'Agama' },
+	{ key: 'pendidikan_terakhir', label: 'Pendidikan terakhir' },
+	{ key: 'pangkat_golongan', label: 'Pangkat / golongan' },
+	{ key: 'tanggal_pengangkatan', label: 'Tanggal pengangkatan' },
+	{ key: 'nomor_sk_pengangkatan', label: 'No. SK pengangkatan' },
+	{ key: 'produk_hukum_id', label: 'Dasar hukum' },
+	{ key: 'bpjs_kesehatan_nomor', label: 'No. BPJS Kesehatan' },
+	{ key: 'bpjs_ketenagakerjaan_nomor', label: 'No. BPJS Ketenagakerjaan' },
+	...BERKAS.map((berkas) => ({ key: berkas.kunci, label: `Berkas ${berkas.label}` })),
+];
+
+/** Berapa persen kolom yang sudah terisi, dan mana saja yang belum. */
+const KelengkapanData = ({ aparatur }) => {
+	const kosong = KOLOM_KELENGKAPAN.filter((kolom) => {
+		const nilai = aparatur[kolom.key];
+		return nilai === null || nilai === undefined || String(nilai).trim() === '';
+	});
+	const terisi = KOLOM_KELENGKAPAN.length - kosong.length;
+	const persen = Math.round((terisi / KOLOM_KELENGKAPAN.length) * 100);
+	const nada = persen === 100 ? 'bg-emerald-500' : persen >= 60 ? 'bg-amber-500' : 'bg-rose-500';
+
+	return (
+		<div className="rounded-2xl border border-slate-200 bg-white p-4">
+			<div className="flex items-baseline justify-between gap-2">
+				<h3 className="text-sm font-semibold text-slate-900">Kelengkapan Data</h3>
+				<span className="text-lg font-bold tabular-nums text-slate-900">{persen}%</span>
+			</div>
+			<p className="mt-0.5 text-xs text-slate-500">
+				{terisi} dari {KOLOM_KELENGKAPAN.length} kolom terisi
+			</p>
+			<div className="mt-2.5 h-1.5 overflow-hidden rounded-full bg-slate-100">
+				<div className={`h-full rounded-full ${nada}`} style={{ width: `${persen}%` }} />
+			</div>
+
+			{/* Yang ditampilkan cuma yang belum terisi — itulah pertanyaannya.
+			    Menampilkan semua kolom hanya memindahkan pekerjaan memeriksa. */}
+			{kosong.length === 0 ? (
+				<p className="mt-3 flex items-center gap-2 text-sm text-emerald-700">
+					<CheckCircle2 className="h-4 w-4" />
+					Semua kolom sudah terisi
+				</p>
+			) : (
+				<ul className="mt-3 space-y-1.5">
+					{kosong.map((kolom) => (
+						<li key={kolom.key} className="flex items-start gap-2 text-sm text-slate-600">
+							<XCircle className="mt-0.5 h-3.5 w-3.5 shrink-0 text-rose-400" />
+							{kolom.label}
+						</li>
+					))}
+				</ul>
+			)}
+		</div>
+	);
+};
+
+const RUPA_AKSI = {
+	dibuat: { label: 'Data dibuat', titik: 'bg-slate-400' },
+	diubah: { label: 'Data diperbarui', titik: 'bg-blue-500' },
+	terverifikasi: { label: 'Terverifikasi', titik: 'bg-emerald-500' },
+	ditolak: { label: 'Verifikasi ditolak', titik: 'bg-rose-500' },
+	verifikasi_dibatalkan: { label: 'Keputusan verifikasi dibatalkan', titik: 'bg-amber-500' },
+};
+
+/** Riwayat satu aparatur: dibuat, diubah, dan keputusan verifikasinya. */
+const RiwayatAparatur = ({ aparatur }) => {
+	const entri = [...(aparatur.riwayat || [])];
+
+	// Baris yang sudah ada sebelum riwayat mulai dicatat tidak punya entri
+	// "dibuat". Stempel waktu di barisnya sendiri dipakai sebagai gantinya,
+	// dan ditandai apa adanya supaya tidak terbaca seperti catatan asli.
+	if (!entri.some((item) => item.aksi === 'dibuat') && aparatur.created_at) {
+		entri.push({
+			id: 'awal',
+			aksi: 'dibuat',
+			created_at: aparatur.created_at,
+			keterangan: 'Sebelum riwayat mulai dicatat',
+		});
+	}
+	if (entri.length === 1 && aparatur.updated_at && aparatur.updated_at !== aparatur.created_at) {
+		entri.unshift({
+			id: 'awal-ubah',
+			aksi: 'diubah',
+			created_at: aparatur.updated_at,
+			keterangan: 'Sebelum riwayat mulai dicatat',
+		});
+	}
+
+	entri.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+
+	return (
+		<div className="rounded-2xl border border-slate-200 bg-white p-4">
+			<h3 className="flex items-center gap-2 text-sm font-semibold text-slate-900">
+				<Clock className="h-4 w-4 text-slate-400" />
+				Riwayat
+			</h3>
+
+			<ol className="mt-3 space-y-3">
+				{entri.map((item) => {
+					const rupa = RUPA_AKSI[item.aksi] || { label: item.aksi, titik: 'bg-slate-400' };
+					return (
+						<li key={item.id} className="relative pl-5">
+							<span className={`absolute left-0 top-1.5 h-2 w-2 rounded-full ${rupa.titik}`} />
+							<p className="text-sm font-medium text-slate-900">{rupa.label}</p>
+							<p className="text-xs text-slate-500">{formatWaktu(item.created_at)}</p>
+							{item.oleh_nama && (
+								<p className="text-xs text-slate-500">
+									oleh {item.oleh_nama}
+									{item.oleh_peran ? ` (${item.oleh_peran})` : ''}
+								</p>
+							)}
+							{item.keterangan && (
+								<p className="mt-1 rounded-lg bg-slate-50 px-2 py-1.5 text-xs text-slate-600">
+									{item.keterangan}
+								</p>
+							)}
+						</li>
+					);
+				})}
+			</ol>
+		</div>
+	);
+};
+
+/** Foto ukuran penuh. Satu gambar saja — tidak perlu galeri. */
+const LightboxFoto = ({ src, alt, onClose }) => {
+	useEffect(() => {
+		const onKey = (event) => {
+			if (event.key === 'Escape') onClose();
+		};
+		document.addEventListener('keydown', onKey);
+		const overflowSemula = document.body.style.overflow;
+		document.body.style.overflow = 'hidden';
+		return () => {
+			document.removeEventListener('keydown', onKey);
+			document.body.style.overflow = overflowSemula;
+		};
+	}, [onClose]);
+
+	return (
+		<div
+			className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/90 p-4"
+			onClick={onClose}
+			role="presentation"
+		>
+			<button
+				type="button"
+				onClick={onClose}
+				aria-label="Tutup"
+				className="absolute right-4 top-4 rounded-full bg-white/10 p-2 text-white transition-colors hover:bg-white/20"
+			>
+				<X className="h-5 w-5" />
+			</button>
+			<img
+				src={src}
+				alt={alt}
+				onClick={(event) => event.stopPropagation()}
+				className="max-h-[90vh] max-w-full rounded-xl object-contain shadow-2xl"
+			/>
+		</div>
+	);
+};
+
+// ============================================================
 // Penyuntingan oleh Bidang Pemerintahan Desa
 // ============================================================
 // Hanya akun ber-bidang Pemdes yang boleh menyunting & memverifikasi. Gerbang
@@ -401,12 +613,6 @@ const KOLOM_EDIT = [
 	{ key: 'nomor_sk_pengangkatan', label: 'No. SK Pengangkatan' },
 	{ key: 'tanggal_pemberhentian', label: 'Tgl. Pemberhentian', tipe: 'date' },
 	{ key: 'nomor_sk_pemberhentian', label: 'No. SK Pemberhentian' },
-	{
-		key: 'status',
-		label: 'Status',
-		tipe: 'pilihan',
-		opsi: [['Aktif', 'Aktif'], ['Tidak_Aktif', 'Tidak Aktif']],
-	},
 	{ key: 'keterangan', label: 'Keterangan', lebar: 'sm:col-span-2' },
 ];
 
@@ -448,59 +654,242 @@ const FormEdit = ({ form, onUbah }) => (
 	</div>
 );
 
-/** Panel verifikasi: keadaan sekarang + tombolnya kalau pengguna berwenang. */
-const PanelVerifikasi = ({ aparatur, bolehKelola, sibuk, onUbah }) => {
-	const [catatan, setCatatan] = useState(aparatur.catatan_verifikasi || '');
-	const terverifikasi = Boolean(aparatur.dpmd_verified_at);
+/** Ringkasan keputusan verifikasi. Tombolnya ada di bilah atas halaman. */
+const PanelVerifikasi = ({ aparatur }) => {
+	const rupa = RUPA_VERIFIKASI[aparatur.status_verifikasi];
+	const Icon = rupa?.icon || BadgeCheck;
+
+	return (
+		<div className={`rounded-2xl border p-4 ${rupa ? rupa.panel : 'border-slate-200 bg-slate-50'}`}>
+			<p className="flex items-center gap-2 text-sm font-semibold text-slate-900">
+				<Icon className={`h-4 w-4 ${rupa ? rupa.warna : 'text-slate-400'}`} />
+				{rupa ? rupa.label : 'Belum diverifikasi'}
+			</p>
+			{aparatur.dpmd_verified_at && (
+				<p className="mt-1 text-xs text-slate-500">
+					{aparatur.dpmd_verified_nama ? `Oleh ${aparatur.dpmd_verified_nama} · ` : ''}
+					{formatWaktu(aparatur.dpmd_verified_at)}
+				</p>
+			)}
+			{aparatur.catatan_verifikasi && (
+				<p className="mt-2 text-sm text-slate-700">{aparatur.catatan_verifikasi}</p>
+			)}
+		</div>
+	);
+};
+
+// Alasan penonaktifan yang lazim dipakai desa. Disediakan sebagai pilihan
+// supaya isinya seragam dan bisa dihitung, dengan jalan keluar "Lainnya"
+// untuk kasus yang tidak masuk daftar.
+const ALASAN_NONAKTIF = [
+	'Pensiun / Purna Tugas',
+	'Meninggal Dunia',
+	'Mengundurkan Diri',
+	'Habis Masa Jabatan',
+	'Mutasi / Pindah Tugas',
+	'Diberhentikan',
+];
+
+/**
+ * Ubah status kepegawaian. Dipisah dari mode edit karena ini keputusan
+ * tersendiri — dan menonaktifkan tanpa alasan membuat datanya tidak bisa
+ * dipertanggungjawabkan.
+ */
+const DialogStatus = ({ aparatur, sibuk, onSimpan, onTutup }) => {
+	const menonaktifkan = aparatur.status === 'Aktif';
+	const [alasan, setAlasan] = useState(ALASAN_NONAKTIF[0]);
+	const [alasanLain, setAlasanLain] = useState('');
+	const [tanggal, setTanggal] = useState(nilaiForm(aparatur.tanggal_pemberhentian, 'date'));
+
+	const alasanAkhir = alasan === 'Lainnya' ? alasanLain.trim() : alasan;
+	const belumLengkap = menonaktifkan && !alasanAkhir;
 
 	return (
 		<div
-			className={`rounded-2xl border p-4 ${
-				terverifikasi ? 'border-emerald-200 bg-emerald-50/60' : 'border-slate-200 bg-slate-50'
-			}`}
+			className="fixed inset-0 z-[90] flex items-end justify-center bg-slate-900/60 p-0 backdrop-blur-sm sm:items-center sm:p-4"
+			onClick={onTutup}
+			role="presentation"
 		>
-			<div className="flex flex-wrap items-start justify-between gap-3">
-				<div className="min-w-0">
-					<p className="flex items-center gap-2 text-sm font-semibold text-slate-900">
-						<BadgeCheck className={`h-4 w-4 ${terverifikasi ? 'text-emerald-600' : 'text-slate-400'}`} />
-						{terverifikasi ? 'Terverifikasi Bidang Pemdes' : 'Belum diverifikasi'}
-					</p>
-					{terverifikasi && (
-						<p className="mt-1 text-xs text-slate-500">
-							{aparatur.dpmd_verified_nama ? `Oleh ${aparatur.dpmd_verified_nama} · ` : ''}
-							{formatWaktu(aparatur.dpmd_verified_at)}
-						</p>
-					)}
-					{aparatur.catatan_verifikasi && !bolehKelola && (
-						<p className="mt-1.5 text-sm text-slate-600">{aparatur.catatan_verifikasi}</p>
-					)}
-				</div>
+			<div
+				className="w-full max-w-md rounded-t-3xl bg-white p-5 shadow-xl sm:rounded-2xl"
+				onClick={(event) => event.stopPropagation()}
+				role="dialog"
+				aria-modal="true"
+				aria-label="Ubah status kepegawaian"
+			>
+				<h3 className="text-base font-semibold text-slate-900">
+					{menonaktifkan ? 'Nonaktifkan aparatur' : 'Aktifkan kembali aparatur'}
+				</h3>
+				<p className="mt-1 text-sm text-slate-500">{aparatur.nama_lengkap}</p>
 
-				{bolehKelola && (
+				{menonaktifkan ? (
+					<>
+						<label className="mt-4 block">
+							<span className="mb-1 block text-xs font-medium text-slate-500">Alasan penonaktifan</span>
+							<select value={alasan} onChange={(event) => setAlasan(event.target.value)} className={KELAS_INPUT}>
+								{ALASAN_NONAKTIF.map((pilihan) => (
+									<option key={pilihan} value={pilihan}>
+										{pilihan}
+									</option>
+								))}
+								<option value="Lainnya">Lainnya…</option>
+							</select>
+						</label>
+
+						{alasan === 'Lainnya' && (
+							<input
+								value={alasanLain}
+								onChange={(event) => setAlasanLain(event.target.value)}
+								placeholder="Tulis alasannya"
+								className={`mt-2 ${KELAS_INPUT}`}
+							/>
+						)}
+
+						<label className="mt-3 block">
+							<span className="mb-1 block text-xs font-medium text-slate-500">
+								Tanggal pemberhentian (opsional)
+							</span>
+							<input
+								type="date"
+								value={tanggal}
+								onChange={(event) => setTanggal(event.target.value)}
+								className={KELAS_INPUT}
+							/>
+						</label>
+					</>
+				) : (
+					<p className="mt-4 rounded-xl bg-slate-50 p-3 text-sm text-slate-600">
+						Status kembali menjadi Aktif. Tanggal pemberhentian dan alasannya akan dikosongkan.
+					</p>
+				)}
+
+				<div className="mt-4 flex gap-2">
 					<button
 						type="button"
+						onClick={onTutup}
 						disabled={sibuk}
-						onClick={() => onUbah(!terverifikasi, catatan)}
-						className={`inline-flex shrink-0 items-center gap-2 rounded-xl px-3.5 py-2 text-sm font-medium transition-colors disabled:opacity-60 ${
-							terverifikasi
-								? 'border border-slate-200 bg-white text-slate-700 hover:bg-slate-50'
-								: 'bg-emerald-600 text-white hover:bg-emerald-700'
+						className="flex-1 rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-50 disabled:opacity-60"
+					>
+						Batal
+					</button>
+					<button
+						type="button"
+						disabled={sibuk || belumLengkap}
+						onClick={() =>
+							onSimpan(
+								menonaktifkan
+									? { status: 'Tidak_Aktif', keterangan: alasanAkhir, tanggal_pemberhentian: tanggal || '' }
+									: { status: 'Aktif', keterangan: '', tanggal_pemberhentian: '' }
+							)
+						}
+						className={`flex flex-1 items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-medium text-white transition-colors disabled:opacity-60 ${
+							menonaktifkan ? 'bg-rose-600 hover:bg-rose-700' : 'bg-emerald-600 hover:bg-emerald-700'
 						}`}
 					>
-						{sibuk ? <Loader2 className="h-4 w-4 animate-spin" /> : <BadgeCheck className="h-4 w-4" />}
-						{terverifikasi ? 'Batalkan verifikasi' : 'Verifikasi'}
+						{sibuk ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+						{menonaktifkan ? 'Nonaktifkan' : 'Aktifkan'}
+					</button>
+				</div>
+			</div>
+		</div>
+	);
+};
+
+/**
+ * Dialog keputusan verifikasi: pilih setujui atau tolak, lalu isi keterangan
+ * yang akan dibaca desa. Keterangan wajib untuk penolakan — tanpa itu desa
+ * tidak tahu apa yang harus dibetulkan.
+ */
+const DialogVerifikasi = ({ aparatur, sibuk, onSimpan, onTutup }) => {
+	const [pilihan, setPilihan] = useState(aparatur.status_verifikasi || 'terverifikasi');
+	const [catatan, setCatatan] = useState(aparatur.catatan_verifikasi || '');
+	const sudahDiputuskan = Boolean(aparatur.status_verifikasi);
+	const kurangKeterangan = pilihan === 'ditolak' && !catatan.trim();
+
+	return (
+		<div
+			className="fixed inset-0 z-[90] flex items-end justify-center bg-slate-900/60 p-0 backdrop-blur-sm sm:items-center sm:p-4"
+			onClick={onTutup}
+			role="presentation"
+		>
+			<div
+				className="w-full max-w-md rounded-t-3xl bg-white p-5 shadow-xl sm:rounded-2xl"
+				onClick={(event) => event.stopPropagation()}
+				role="dialog"
+				aria-modal="true"
+				aria-label="Keputusan verifikasi"
+			>
+				<h3 className="text-base font-semibold text-slate-900">Verifikasi data aparatur</h3>
+				<p className="mt-1 text-sm text-slate-500">{aparatur.nama_lengkap}</p>
+
+				<div className="mt-4 grid grid-cols-2 gap-2">
+					{[
+						['terverifikasi', 'Setujui', BadgeCheck, 'border-emerald-500 bg-emerald-50 text-emerald-700'],
+						['ditolak', 'Tolak', XCircle, 'border-rose-500 bg-rose-50 text-rose-700'],
+					].map(([nilai, teks, Icon, kelasAktif]) => (
+						<button
+							key={nilai}
+							type="button"
+							onClick={() => setPilihan(nilai)}
+							className={`flex items-center justify-center gap-2 rounded-xl border px-3 py-2.5 text-sm font-medium transition-colors ${
+								pilihan === nilai ? kelasAktif : 'border-slate-200 text-slate-600 hover:bg-slate-50'
+							}`}
+						>
+							<Icon className="h-4 w-4" />
+							{teks}
+						</button>
+					))}
+				</div>
+
+				<label className="mt-4 block">
+					<span className="mb-1 block text-xs font-medium text-slate-500">
+						Keterangan untuk desa {pilihan === 'ditolak' ? '(wajib)' : '(opsional)'}
+					</span>
+					<textarea
+						value={catatan}
+						onChange={(event) => setCatatan(event.target.value)}
+						rows={3}
+						placeholder={
+							pilihan === 'ditolak'
+								? 'Contoh: tanggal SK pengangkatan tidak sesuai berkas'
+								: 'Catatan tambahan bila perlu'
+						}
+						className={`${KELAS_INPUT} resize-y`}
+					/>
+				</label>
+
+				<div className="mt-4 flex gap-2">
+					<button
+						type="button"
+						onClick={onTutup}
+						disabled={sibuk}
+						className="flex-1 rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-50 disabled:opacity-60"
+					>
+						Batal
+					</button>
+					<button
+						type="button"
+						onClick={() => onSimpan(pilihan, catatan)}
+						disabled={sibuk || kurangKeterangan}
+						title={kurangKeterangan ? 'Keterangan wajib diisi saat menolak' : undefined}
+						className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-slate-900 px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-slate-800 disabled:opacity-60"
+					>
+						{sibuk ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+						Simpan
+					</button>
+				</div>
+
+				{sudahDiputuskan && (
+					<button
+						type="button"
+						onClick={() => onSimpan('batal', '')}
+						disabled={sibuk}
+						className="mt-2 w-full rounded-xl px-4 py-2 text-sm font-medium text-slate-500 transition-colors hover:bg-slate-50 disabled:opacity-60"
+					>
+						Batalkan keputusan
 					</button>
 				)}
 			</div>
-
-			{bolehKelola && (
-				<input
-					value={catatan}
-					onChange={(event) => setCatatan(event.target.value)}
-					placeholder="Catatan verifikasi (opsional)"
-					className={`mt-3 ${KELAS_INPUT} bg-white`}
-				/>
-			)}
 		</div>
 	);
 };
@@ -558,6 +947,9 @@ export const AparaturDesaDetailPage = ({ backPath }) => {
 	const [menyunting, setMenyunting] = useState(false);
 	const [form, setForm] = useState(null);
 	const [sibuk, setSibuk] = useState(false);
+	const [fotoBesar, setFotoBesar] = useState(false);
+	const [dialogVerifikasi, setDialogVerifikasi] = useState(false);
+	const [dialogStatus, setDialogStatus] = useState(false);
 
 	useEffect(() => {
 		let batal = false;
@@ -578,6 +970,18 @@ export const AparaturDesaDetailPage = ({ backPath }) => {
 	// ditimpakan ke data yang sudah ada, bukan menggantikannya.
 	const serap = (baru) => setA((sebelumnya) => ({ ...(sebelumnya || {}), ...baru }));
 
+	// Balasan simpan/verifikasi tidak membawa riwayat, jadi entri barunya
+	// diambil sendiri — gagal memuat riwayat tidak boleh menutupi keberhasilan
+	// menyimpan, karena itu kegagalannya didiamkan.
+	const muatRiwayat = async () => {
+		try {
+			const response = await api.get(`/pemdes/aparatur-desa/${id}`);
+			setA((sebelumnya) => ({ ...(sebelumnya || {}), riwayat: response.data?.data?.riwayat || [] }));
+		} catch (error) {
+			console.error('Failed to refresh riwayat:', error);
+		}
+	};
+
 	const mulaiSunting = () => {
 		setForm(Object.fromEntries(KOLOM_EDIT.map((kolom) => [kolom.key, nilaiForm(a[kolom.key], kolom.tipe)])));
 		setMenyunting(true);
@@ -590,6 +994,7 @@ export const AparaturDesaDetailPage = ({ backPath }) => {
 			serap(response.data?.data || {});
 			setMenyunting(false);
 			toast.success('Perubahan disimpan');
+			muatRiwayat();
 		} catch (error) {
 			toast.error(error.response?.data?.message || 'Gagal menyimpan perubahan');
 		} finally {
@@ -597,15 +1002,32 @@ export const AparaturDesaDetailPage = ({ backPath }) => {
 		}
 	};
 
-	const ubahVerifikasi = async (terverifikasi, catatan) => {
+	const ubahStatus = async (perubahan) => {
 		setSibuk(true);
 		try {
-			const response = await api.post(`/pemdes/aparatur-desa/${a.id}/verifikasi`, {
-				terverifikasi,
-				catatan: terverifikasi ? catatan : null,
+			const response = await api.put(`/pemdes/aparatur-desa/${a.id}`, perubahan);
+			serap(response.data?.data || {});
+			toast.success('Status kepegawaian diperbarui');
+			setDialogStatus(false);
+			muatRiwayat();
+		} catch (error) {
+			toast.error(error.response?.data?.message || 'Gagal memperbarui status');
+		} finally {
+			setSibuk(false);
+		}
+	};
+
+	const ubahVerifikasi = async (status, catatan) => {
+		setSibuk(true);
+		try {
+			const response = await api.post(`/pemdes/aparatur-desa/${a.id}/verifikasi`, { status, catatan });
+			serap({
+				...(response.data?.data || {}),
+				dpmd_verified_nama: status === 'batal' ? null : user?.name,
 			});
-			serap({ ...(response.data?.data || {}), dpmd_verified_nama: terverifikasi ? user?.name : null });
 			toast.success(response.data?.message || 'Status verifikasi diperbarui');
+			setDialogVerifikasi(false);
+			muatRiwayat();
 		} catch (error) {
 			toast.error(error.response?.data?.message || 'Gagal memperbarui verifikasi');
 		} finally {
@@ -639,10 +1061,11 @@ export const AparaturDesaDetailPage = ({ backPath }) => {
 	const usia = rentangSejak(a.tanggal_lahir);
 	const masaKerja = a.tanggal_pemberhentian ? null : rentangSejak(a.tanggal_pengangkatan);
 	const jumlahBerkas = BERKAS.filter((b) => a[b.kunci]).length;
+	const foto = pasFotoUrl(a);
 
 	return (
 		<div className="min-h-screen bg-slate-50 p-4 pt-20 sm:p-6 lg:pt-6">
-			<div className="mx-auto max-w-3xl">
+			<div>
 				<div className="mb-4 flex flex-wrap items-center justify-between gap-2">
 					<button
 						onClick={kembali}
@@ -673,18 +1096,39 @@ export const AparaturDesaDetailPage = ({ backPath }) => {
 							</>
 						) : (
 							bolehKelola && (
-								<button
-									onClick={mulaiSunting}
-									className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-50"
-								>
-									<Pencil className="h-4 w-4" />
-									Edit
-								</button>
+								<>
+									<button
+										onClick={mulaiSunting}
+										className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-50"
+									>
+										<Pencil className="h-4 w-4" />
+										Edit
+									</button>
+									<button
+										onClick={() => setDialogStatus(true)}
+										className={`flex items-center gap-2 rounded-xl border px-4 py-2 text-sm font-medium transition-colors ${
+											a.status === 'Aktif'
+												? 'border-rose-200 bg-white text-rose-700 hover:bg-rose-50'
+												: 'border-emerald-200 bg-white text-emerald-700 hover:bg-emerald-50'
+										}`}
+									>
+										{a.status === 'Aktif' ? <XCircle className="h-4 w-4" /> : <CheckCircle2 className="h-4 w-4" />}
+										{a.status === 'Aktif' ? 'Nonaktifkan' : 'Aktifkan'}
+									</button>
+									<button
+										onClick={() => setDialogVerifikasi(true)}
+										className="flex items-center gap-2 rounded-xl bg-emerald-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-emerald-700"
+									>
+										<BadgeCheck className="h-4 w-4" />
+										Verifikasi
+									</button>
+								</>
 							)
 						)}
 					</div>
 				</div>
 
+				<div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_22rem] lg:items-start">
 				<div className="overflow-hidden rounded-2xl bg-white shadow-sm ring-1 ring-slate-200/70">
 					{/* --- Kartu profil --- */}
 					<div className="relative">
@@ -704,10 +1148,22 @@ export const AparaturDesaDetailPage = ({ backPath }) => {
 						{/* relative z-10 wajib: wave & blob di banner itu absolute, tanpa ini
 						    mereka menimpa separuh atas foto (avatar static = layer bawah). */}
 						<div className="relative z-10 flex flex-col items-center px-6 pb-5 text-center">
-							<Avatar
-								person={a}
-								className="-mt-16 h-28 w-28 text-3xl ring-4 ring-white shadow-sm"
-							/>
+							{foto ? (
+								<button
+									type="button"
+									onClick={() => setFotoBesar(true)}
+									title="Perbesar foto"
+									aria-label="Perbesar foto"
+									className="-mt-16 cursor-zoom-in rounded-full transition-transform hover:scale-[1.03] focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900"
+								>
+									<Avatar person={a} className="h-28 w-28 text-3xl ring-4 ring-white shadow-sm" />
+								</button>
+							) : (
+								<Avatar
+									person={a}
+									className="-mt-16 h-28 w-28 text-3xl ring-4 ring-white shadow-sm"
+								/>
+							)}
 							<h2 className="mt-3 text-xl font-bold tracking-tight text-slate-900 sm:text-2xl">
 								{a.nama_lengkap}
 							</h2>
@@ -728,22 +1184,13 @@ export const AparaturDesaDetailPage = ({ backPath }) => {
 									{a.status === 'Aktif' ? <CheckCircle2 className="h-3.5 w-3.5" /> : <XCircle className="h-3.5 w-3.5" />}
 									{a.status === 'Aktif' ? 'Aktif' : 'Tidak Aktif'}
 								</span>
+								<BadgeVerifikasi status={a.status_verifikasi} />
 							</div>
 							<p className="mt-2.5 inline-flex items-center gap-1.5 text-sm text-slate-500">
 								<MapPin className="h-3.5 w-3.5 text-slate-400" />
 								{a.desas?.nama || '-'} &middot; Kec. {a.desas?.kecamatans?.nama || '-'}
 							</p>
 						</div>
-					</div>
-
-					<div className="px-5 pt-5 sm:px-6">
-						<PanelVerifikasi
-							key={String(a.dpmd_verified_at)}
-							aparatur={a}
-							bolehKelola={bolehKelola}
-							sibuk={sibuk}
-							onUbah={ubahVerifikasi}
-						/>
 					</div>
 
 					{/* --- Rincian --- */}
@@ -845,8 +1292,41 @@ export const AparaturDesaDetailPage = ({ backPath }) => {
 					</DetailSection>
 					</div>
 					)}
+
+					<div className="border-t border-slate-200 p-5 sm:p-6">
+						<PanelVerifikasi aparatur={a} />
+					</div>
+				</div>
+
+				{/* Kolom kanan: kelengkapan dulu, riwayat di bawahnya. */}
+				<aside className="space-y-4 lg:sticky lg:top-6">
+					<KelengkapanData aparatur={a} />
+					<RiwayatAparatur aparatur={a} />
+				</aside>
 				</div>
 			</div>
+
+			{fotoBesar && foto && (
+				<LightboxFoto src={foto} alt={a.nama_lengkap} onClose={() => setFotoBesar(false)} />
+			)}
+
+			{dialogStatus && (
+				<DialogStatus
+					aparatur={a}
+					sibuk={sibuk}
+					onSimpan={ubahStatus}
+					onTutup={() => setDialogStatus(false)}
+				/>
+			)}
+
+			{dialogVerifikasi && (
+				<DialogVerifikasi
+					aparatur={a}
+					sibuk={sibuk}
+					onSimpan={ubahVerifikasi}
+					onTutup={() => setDialogVerifikasi(false)}
+				/>
+			)}
 		</div>
 	);
 };
@@ -1429,6 +1909,9 @@ const DatabaseTab = ({ refreshKey = 0, jenis, detailBasePath, onLoadingChange, o
 											Aparatur
 										</th>
 										<th className="px-5 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-brand-600">
+											NIPD
+										</th>
+										<th className="px-5 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-brand-600">
 											Jabatan
 										</th>
 										<th className="px-5 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-brand-600">
@@ -1455,7 +1938,7 @@ const DatabaseTab = ({ refreshKey = 0, jenis, detailBasePath, onLoadingChange, o
 													<div className="min-w-0">
 														<p className="flex items-center gap-1.5 truncate font-medium text-slate-900">
 															<span className="truncate">{aparatur.nama_lengkap}</span>
-															<TandaVerifikasi pada={aparatur.dpmd_verified_at} />
+															<TandaVerifikasi status={aparatur.status_verifikasi} />
 														</p>
 														<p className="truncate text-xs text-slate-500">
 															{aparatur.jenis_kelamin === 'Laki_laki' ? 'Laki-laki' : 'Perempuan'}
@@ -1463,6 +1946,9 @@ const DatabaseTab = ({ refreshKey = 0, jenis, detailBasePath, onLoadingChange, o
 														</p>
 													</div>
 												</div>
+											</td>
+											<td className="px-5 py-3.5">
+												<span className="text-sm tabular-nums text-slate-700">{aparatur.nipd || '-'}</span>
 											</td>
 											<td className="max-w-[220px] px-5 py-3.5">
 												<JabatanBadge jabatan={aparatur.jabatan} />
@@ -1509,7 +1995,7 @@ const DatabaseTab = ({ refreshKey = 0, jenis, detailBasePath, onLoadingChange, o
 										<div className="flex items-start justify-between gap-2">
 											<h3 className="flex min-w-0 items-center gap-1.5 font-semibold text-slate-900">
 												<span className="truncate">{aparatur.nama_lengkap}</span>
-												<TandaVerifikasi pada={aparatur.dpmd_verified_at} />
+												<TandaVerifikasi status={aparatur.status_verifikasi} />
 											</h3>
 											<StatusBadge status={aparatur.status} />
 										</div>
@@ -1600,9 +2086,20 @@ const BarisAparatur = ({ person, nomor, onClick }) => (
 		<span className="min-w-0 flex-1">
 			<span className="flex items-center gap-1.5 text-sm font-semibold text-slate-900">
 				<span className="truncate">{person.nama_lengkap}</span>
-				<TandaVerifikasi pada={person.dpmd_verified_at} />
+				{/* Cap ikon untuk layar sempit; badge bertulisan muncul di kanan mulai sm. */}
+				<span className="sm:hidden">
+					<TandaVerifikasi status={person.status_verifikasi} />
+				</span>
 			</span>
-			<span className="mt-0.5 block truncate text-xs text-slate-500">{person.jabatan}</span>
+			<span className="mt-0.5 flex flex-wrap items-center gap-x-2 text-xs text-slate-500">
+				<span className="truncate">{person.jabatan}</span>
+				<span className="shrink-0 text-slate-400">
+					NIPD <span className="tabular-nums text-slate-600">{person.nipd || '-'}</span>
+				</span>
+			</span>
+		</span>
+		<span className="hidden shrink-0 sm:inline-flex">
+			<BadgeVerifikasi status={person.status_verifikasi} />
 		</span>
 		<StatusBadge status={person.status} />
 	</button>
@@ -1778,6 +2275,209 @@ const WilayahTab = ({ refreshKey = 0, jenis, detailBasePath, onLoadingChange, on
 };
 
 // ============================================================
+// Notifikasi & aktivitas (kolom kanan halaman daftar)
+// ============================================================
+/** Satu butir notifikasi: angka, lalu beberapa contoh nama yang bisa dibuka. */
+const ButirNotifikasi = ({ icon: Icon, nada, judul, total, contoh, onBuka, keterangan }) => (
+	<div className="rounded-xl border border-slate-200 p-3">
+		<div className="flex items-start gap-2.5">
+			<span className={`mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg ${nada}`}>
+				<Icon className="h-4 w-4" />
+			</span>
+			<div className="min-w-0 flex-1">
+				<p className="text-sm font-semibold text-slate-900">{judul}</p>
+				<p className="text-xs text-slate-500">{keterangan}</p>
+			</div>
+			<span className="shrink-0 text-lg font-bold tabular-nums text-slate-900">{fmt(total)}</span>
+		</div>
+
+		{contoh.length > 0 && (
+			<ul className="mt-2 space-y-1 border-t border-slate-100 pt-2">
+				{contoh.map((orang) => (
+					<li key={orang.id}>
+						<button
+							type="button"
+							onClick={() => onBuka(orang.id)}
+							className="block w-full truncate text-left text-xs text-slate-600 hover:text-slate-900 hover:underline"
+						>
+							{orang.nama_lengkap}
+							<span className="text-slate-400">
+								{' · '}
+								{[orang.jabatan, orang.desa && `Ds. ${orang.desa}`].filter(Boolean).join(' · ')}
+							</span>
+						</button>
+					</li>
+				))}
+				{total > contoh.length && (
+					<li className="text-xs text-slate-400">+{fmt(total - contoh.length)} lainnya</li>
+				)}
+			</ul>
+		)}
+	</div>
+);
+
+const PanelNotifikasi = ({ jenis, detailBasePath }) => {
+	const navigate = useNavigate();
+	const [data, setData] = useState(null);
+
+	useEffect(() => {
+		let batal = false;
+		api.get(`/pemdes/aparatur-desa/notifikasi${jenis ? `?jenis=${jenis}` : ''}`)
+			.then((response) => { if (!batal) setData(response.data?.data || null); })
+			.catch((error) => console.error('Failed to fetch notifikasi aparatur:', error));
+		return () => { batal = true; };
+	}, [jenis]);
+
+	if (!data) return null;
+
+	const buka = (id) => navigate(`${detailBasePath}/${id}`);
+	const kosong = data.usia_lanjut.total === 0 && data.menunggu_verifikasi.total === 0;
+
+	return (
+		<div className="rounded-2xl border border-slate-200 bg-white p-4">
+			<div className="flex items-center gap-2">
+				<Info className="h-4 w-4 text-slate-400" />
+				<h3 className="text-sm font-bold text-slate-900">Perlu Perhatian</h3>
+			</div>
+			<p className="mt-0.5 text-xs text-slate-500">Hanya menghitung yang berstatus aktif.</p>
+
+			{kosong ? (
+				<p className="mt-3 flex items-center gap-2 text-sm text-emerald-700">
+					<CheckCircle2 className="h-4 w-4" />
+					Tidak ada yang perlu ditindaklanjuti
+				</p>
+			) : (
+				<div className="mt-3 space-y-2.5">
+					<ButirNotifikasi
+						icon={CalendarDays}
+						nada="bg-amber-50 text-amber-600"
+						judul={`Usia di atas ${data.batas_usia} tahun`}
+						keterangan="Diurutkan dari yang tertua"
+						total={data.usia_lanjut.total}
+						contoh={data.usia_lanjut.contoh}
+						onBuka={buka}
+					/>
+					<ButirNotifikasi
+						icon={Clock}
+						nada="bg-slate-100 text-slate-600"
+						judul="Menunggu verifikasi"
+						keterangan="Belum diputus setujui atau tolak"
+						total={data.menunggu_verifikasi.total}
+						contoh={data.menunggu_verifikasi.contoh}
+						onBuka={buka}
+					/>
+				</div>
+			)}
+		</div>
+	);
+};
+
+// ============================================================
+// Aktivitas (kolom kanan halaman daftar)
+// ============================================================
+// Riwayat aparatur disimpan di tabelnya sendiri, bukan `activity_logs`, jadi
+// panel ini tidak bisa digantikan TimelineAktivitas milik halaman bidang.
+const AktivitasAparatur = ({ jenis, detailBasePath }) => {
+	const navigate = useNavigate();
+	const [riwayat, setRiwayat] = useState([]);
+	const [memuat, setMemuat] = useState(true);
+	const [cursor, setCursor] = useState(null);
+	const [adaLagi, setAdaLagi] = useState(false);
+
+	// Halaman berikutnya diminta lewat penunjuk baris terakhir, jadi server
+	// tidak pernah menelusuri ulang catatan yang sudah dikirim.
+	const muat = useCallback(
+		async (penunjuk = null) => {
+			setMemuat(true);
+			try {
+				const parameter = new URLSearchParams({ limit: '20' });
+				if (jenis) parameter.append('jenis', jenis);
+				if (penunjuk) parameter.append('cursor', penunjuk);
+
+				const response = await api.get(`/pemdes/aparatur-desa/riwayat-terbaru?${parameter.toString()}`);
+				const baru = response.data?.data || [];
+				setRiwayat((sebelumnya) => (penunjuk ? [...sebelumnya, ...baru] : baru));
+				setCursor(response.data?.meta?.nextCursor || null);
+				setAdaLagi(Boolean(response.data?.meta?.hasMore));
+			} catch (error) {
+				console.error('Failed to fetch riwayat aparatur:', error);
+			} finally {
+				setMemuat(false);
+			}
+		},
+		[jenis]
+	);
+
+	useEffect(() => {
+		muat();
+	}, [muat]);
+
+	return (
+		<div className="rounded-2xl border border-slate-200 bg-white p-4">
+			<div className="flex items-center gap-2">
+				<Clock className="h-4 w-4 text-slate-400" />
+				<h3 className="text-sm font-bold text-slate-900">Aktivitas Terbaru</h3>
+			</div>
+			<p className="mt-0.5 text-xs text-slate-500">Perubahan data dan keputusan verifikasi.</p>
+
+			{memuat && riwayat.length === 0 ? (
+				<div className="mt-3 space-y-2">
+					{Array.from({ length: 4 }).map((_, index) => (
+						<div key={index} className="h-14 animate-pulse rounded-xl bg-slate-100" />
+					))}
+				</div>
+			) : riwayat.length === 0 ? (
+				<p className="mt-4 text-sm text-slate-400">Belum ada aktivitas tercatat.</p>
+			) : (
+				<ol className="mt-3 space-y-3">
+					{riwayat.map((item) => {
+						const rupa = RUPA_AKSI[item.aksi] || { label: item.aksi, titik: 'bg-slate-400' };
+						return (
+							<li key={item.id} className="relative pl-5">
+								<span className={`absolute left-0 top-1.5 h-2 w-2 rounded-full ${rupa.titik}`} />
+								<button
+									type="button"
+									onClick={() => navigate(`${detailBasePath}/${item.aparatur_id}`)}
+									className="block w-full text-left"
+								>
+									<p className="truncate text-sm font-semibold text-slate-900 hover:underline">
+										{item.nama_lengkap || 'Data sudah dihapus'}
+									</p>
+									<p className="truncate text-xs text-slate-500">
+										{[item.jabatan, item.desa && `Ds. ${item.desa}`].filter(Boolean).join(' · ') || '—'}
+									</p>
+									<p className="mt-0.5 text-xs text-slate-500">
+										{rupa.label} · {formatWaktu(item.created_at)}
+										{item.oleh_nama ? ` · ${item.oleh_nama}` : ''}
+									</p>
+									{item.keterangan && (
+										<p className="mt-1 truncate rounded-lg bg-slate-50 px-2 py-1 text-xs text-slate-600">
+											{item.keterangan}
+										</p>
+									)}
+								</button>
+							</li>
+						);
+					})}
+				</ol>
+			)}
+
+			{adaLagi && (
+				<button
+					type="button"
+					onClick={() => muat(cursor)}
+					disabled={memuat}
+					className="mt-3 flex w-full items-center justify-center gap-2 rounded-xl border border-slate-200 px-3 py-2 text-sm font-medium text-slate-600 transition-colors hover:bg-slate-50 disabled:opacity-60"
+				>
+					{memuat ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
+					{memuat ? 'Memuat…' : 'Muat lebih banyak'}
+				</button>
+			)}
+		</div>
+	);
+};
+
+// ============================================================
 // Halaman utama
 // ============================================================
 const PAGE_VARIANTS = {
@@ -1920,13 +2620,22 @@ const AparaturDesaPage = ({
 				)}
 			</header>
 
-			{activeTab === 'wilayah' && (
-				<WilayahTab refreshKey={refreshKey} jenis={jenis} detailBasePath={detailBasePath} onLoadingChange={handleLoading} onUpdated={handleUpdated} />
-			)}
+			<div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_20rem] lg:items-start">
+				<div className="min-w-0">
+					{activeTab === 'wilayah' && (
+						<WilayahTab refreshKey={refreshKey} jenis={jenis} detailBasePath={detailBasePath} onLoadingChange={handleLoading} onUpdated={handleUpdated} />
+					)}
 
-			{activeTab === 'database' && (
-				<DatabaseTab refreshKey={refreshKey} jenis={jenis} detailBasePath={detailBasePath} onLoadingChange={handleLoading} onUpdated={handleUpdated} />
-			)}
+					{activeTab === 'database' && (
+						<DatabaseTab refreshKey={refreshKey} jenis={jenis} detailBasePath={detailBasePath} onLoadingChange={handleLoading} onUpdated={handleUpdated} />
+					)}
+				</div>
+
+				<aside className="space-y-4 lg:sticky lg:top-6">
+					<PanelNotifikasi jenis={jenis} detailBasePath={detailBasePath} />
+					<AktivitasAparatur jenis={jenis} detailBasePath={detailBasePath} />
+				</aside>
+			</div>
 		</div>
 	);
 };

@@ -14,6 +14,23 @@ const getPasFotoUrl = (person) => {
 	return null;
 };
 
+// Hasil pemeriksaan Bidang Pemdes, supaya desa langsung melihat baris mana
+// yang ditolak tanpa membuka detailnya satu per satu.
+const CapVerifikasi = ({ status }) => {
+	if (!status) return null;
+	const ditolak = status === "ditolak";
+	return (
+		<span
+			title={ditolak ? "Verifikasi ditolak Bidang Pemdes" : "Terverifikasi Bidang Pemdes"}
+			className={`inline-flex shrink-0 items-center rounded-full px-1.5 py-0.5 text-[10px] font-bold uppercase ${
+				ditolak ? "bg-rose-100 text-rose-700" : "bg-emerald-100 text-emerald-700"
+			}`}
+		>
+			{ditolak ? "Ditolak" : "Terverifikasi"}
+		</span>
+	);
+};
+
 const AparaturDesaList = ({ aparatur = [] }) => {
 	const nav = useNavigate();
 	const [tab, setTab] = useState("pemdes");
@@ -148,8 +165,9 @@ const AparaturDesaList = ({ aparatur = [] }) => {
 												<div className={`h-9 w-9 bg-gradient-to-br from-slate-100 to-slate-200 rounded-full flex items-center justify-center ring-2 ring-slate-100 ${foto ? 'hidden' : ''}`}>
 													<UserCircle className="h-5 w-5 text-slate-600" />
 												</div>
-												<span className="font-medium text-slate-900 group-hover:text-slate-700 transition-colors">
+												<span className="flex items-center gap-1.5 font-medium text-slate-900 group-hover:text-slate-700 transition-colors">
 													{item.nama_lengkap}
+													<CapVerifikasi status={item.status_verifikasi} />
 												</span>
 											</Link>
 										</td>
@@ -227,9 +245,12 @@ const AparaturDesaList = ({ aparatur = [] }) => {
 										<UserCircle className="h-6 w-6 text-slate-600" />
 									</div>
 									<div className="flex-1 min-w-0">
-										<Link to={`/desa/aparatur-desa/${item.id}`} className="font-semibold text-slate-900 text-sm hover:text-slate-700">
-											{item.nama_lengkap}
-										</Link>
+										<div className="flex items-center gap-1.5">
+											<Link to={`/desa/aparatur-desa/${item.id}`} className="font-semibold text-slate-900 text-sm hover:text-slate-700">
+												{item.nama_lengkap}
+											</Link>
+											<CapVerifikasi status={item.status_verifikasi} />
+										</div>
 										<div className="flex items-center gap-2 mt-1 flex-wrap">
 											<span className="inline-flex px-2 py-0.5 rounded text-xs font-medium bg-slate-100 text-slate-700">{item.jabatan || "-"}</span>
 											<span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold ${

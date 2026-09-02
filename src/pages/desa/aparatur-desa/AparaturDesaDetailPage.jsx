@@ -252,6 +252,31 @@ const AparaturDesaDetailPage = () => {
 			
 
 			<div className="space-y-5">
+				{/* Hasil pemeriksaan Bidang Pemdes. Keterangannya yang memberi tahu
+				    desa apa yang perlu dibetulkan saat data ditolak. */}
+				{data.status_verifikasi && (
+					<div
+						className={`rounded-xl border p-4 ${
+							data.status_verifikasi === "ditolak"
+								? "border-rose-200 bg-rose-50"
+								: "border-emerald-200 bg-emerald-50"
+						}`}
+					>
+						<p
+							className={`text-sm font-semibold ${
+								data.status_verifikasi === "ditolak" ? "text-rose-800" : "text-emerald-800"
+							}`}
+						>
+							{data.status_verifikasi === "ditolak"
+								? "Verifikasi ditolak Bidang Pemdes"
+								: "Data terverifikasi Bidang Pemdes"}
+						</p>
+						{data.catatan_verifikasi && (
+							<p className="mt-1 text-sm text-slate-700">{data.catatan_verifikasi}</p>
+						)}
+					</div>
+				)}
+
 				{/* Profile Card */}
 				<div className="overflow-hidden rounded-xl border border-slate-200 bg-white">
 					<div className="border-b border-slate-100 bg-slate-50 p-6 sm:p-8">
