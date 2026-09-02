@@ -19,6 +19,8 @@ import {
 	Upload,
 	MapPin,
 	Building2,
+	List,
+	LayoutGrid,
 } from 'lucide-react';
 import {
 	PieChart, Pie, Cell, ResponsiveContainer,
@@ -31,7 +33,6 @@ import toast from 'react-hot-toast';
 import { useAuth } from '../../../context/AuthContext';
 
 const JENIS_COLORS = ['#3b82f6', '#f59e0b', '#22c55e'];
-const STATUS_COLORS = ['#22c55e', '#ef4444'];
 const TAHUN_COLORS = ['#6366f1', '#8b5cf6', '#a78bfa', '#c4b5fd', '#818cf8', '#6366f1', '#4f46e5', '#4338ca', '#3730a3', '#312e81'];
 const LS_KEY = 'admin_ph_selected_desa';
 
@@ -349,6 +350,144 @@ const TambahModal = ({ open, onClose, onSuccess, kecamatanList }) => {
 // `tersemat` dipakai saat halaman ini menjadi salah satu tab di Core Dashboard
 // "Produk Hukum": kepala halaman gelapnya dilepas supaya tidak ada dua judul
 // bertumpuk, dan tombol Tambah pindah ke baris tindakan yang ringkas.
+// Rekap jumlah per desa, dikelompokkan per kecamatan. Angka desa dan totalnya
+// datang dari server dalam satu panggilan — hitungan per baris di klien akan
+// meleset begitu penyaring dipakai.
+const TabWilayah = ({ filters, onPilih }) => {
+	const [data, setData] = useState([]);
+	const [meta, setMeta] = useState(null);
+	const [memuat, setMemuat] = useState(true);
+	const [terbuka, setTerbuka] = useState(() => new Set());
+
+	useEffect(() => {
+		let batal = false;
+		setMemuat(true);
+		const parameter = new URLSearchParams();
+		Object.entries(filters).forEach(([kunci, nilai]) => {
+			if (nilai) parameter.append(kunci, nilai);
+		});
+		api.get(`/pemdes/produk-hukum/grouped?${parameter.toString()}`)
+			.then((response) => {
+				if (batal) return;
+				setData(response.data?.data || []);
+				setMeta(response.data?.meta || null);
+			})
+			.catch((error) => {
+				console.error('Failed to fetch rekap wilayah:', error);
+				if (!batal) toast.error('Gagal memuat rekap per wilayah');
+			})
+			.finally(() => { if (!batal) setMemuat(false); });
+		return () => { batal = true; };
+	}, [filters]);
+
+	const toggle = (id) =>
+		setTerbuka((sebelumnya) => {
+			const berikutnya = new Set(sebelumnya);
+			if (berikutnya.has(id)) berikutnya.delete(id);
+			else berikutnya.add(id);
+			return berikutnya;
+		});
+
+	if (memuat) {
+		return (
+			<div className="space-y-2">
+				{Array.from({ length: 6 }).map((_, index) => (
+					<div key={index} className="h-14 animate-pulse rounded-xl bg-slate-100" />
+				))}
+			</div>
+		);
+	}
+
+	return (
+		<div className="space-y-3">
+			{meta && (
+				<div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+					{[
+						['Total Produk Hukum', meta.totalItems],
+						['Kecamatan', meta.totalKecamatan],
+						['Desa', meta.totalDesa],
+						['Desa Belum Punya', meta.desaKosong],
+					].map(([label, nilai], index) => (
+						<div key={label} className="rounded-xl border border-slate-200 bg-white p-3">
+							<p className="text-xs text-slate-500">{label}</p>
+							<p className={`text-xl font-bold tabular-nums ${index === 3 && nilai > 0 ? 'text-amber-600' : 'text-slate-900'}`}>
+								{Number(nilai).toLocaleString('id-ID')}
+							</p>
+						</div>
+					))}
+				</div>
+			)}
+
+			<div className="space-y-2">
+				{data.map((kecamatan) => {
+					const buka = terbuka.has(kecamatan.id);
+					const kosong = kecamatan.desa.filter((desa) => desa.total === 0).length;
+					return (
+						<div key={kecamatan.id} className="overflow-hidden rounded-xl border border-slate-200 bg-white">
+							{/* Membuka rincian dan membuka daftarnya adalah dua maksud
+							    berbeda, jadi keduanya berdiri sendiri dalam satu baris
+							    flex — bukan tombol yang ditempel di atas tombol. */}
+							<div className="flex items-center gap-2 px-4 py-3 transition-colors hover:bg-slate-50">
+								<button
+									type="button"
+									onClick={() => toggle(kecamatan.id)}
+									className="flex min-w-0 flex-1 items-center gap-3 text-left"
+								>
+									<ChevronDown className={`h-4 w-4 shrink-0 text-slate-400 transition-transform ${buka ? '' : '-rotate-90'}`} />
+									<MapPin className="h-4 w-4 shrink-0 text-slate-400" />
+									<span className="min-w-0 truncate text-sm font-semibold text-slate-900">
+										Kecamatan {kecamatan.nama}
+									</span>
+									<span className="hidden shrink-0 text-xs text-slate-500 md:inline">
+										{kecamatan.desa.length} desa
+										{kosong > 0 ? ` · ${kosong} belum punya` : ''}
+									</span>
+								</button>
+
+								<button
+									type="button"
+									onClick={() => onPilih({ kecamatan_id: kecamatan.id })}
+									className="shrink-0 rounded-lg border border-slate-200 px-2.5 py-1 text-xs font-medium text-slate-600 transition-colors hover:bg-slate-100 hover:text-slate-900"
+								>
+									Lihat daftar
+								</button>
+
+								<span className="w-14 shrink-0 text-right text-sm font-bold tabular-nums text-slate-900">
+									{kecamatan.total.toLocaleString('id-ID')}
+								</span>
+							</div>
+
+							{buka && (
+								<div className="divide-y divide-slate-100 border-t border-slate-100 bg-slate-50/70">
+									{kecamatan.desa.map((desa) => (
+										<button
+											key={desa.id}
+											type="button"
+											disabled={desa.total === 0}
+											onClick={() => onPilih({ kecamatan_id: kecamatan.id, desa_id: desa.id })}
+											className="flex w-full items-center gap-3 px-4 py-2 pl-11 text-left transition-colors enabled:hover:bg-white disabled:cursor-default"
+										>
+											<Building2 className="h-3.5 w-3.5 shrink-0 text-slate-400" />
+											<span className="min-w-0 flex-1 truncate text-sm text-slate-700">{desa.nama}</span>
+											<span
+												className={`w-16 shrink-0 text-right text-sm tabular-nums ${
+													desa.total === 0 ? 'text-slate-300' : 'font-semibold text-slate-900'
+												}`}
+											>
+												{desa.total.toLocaleString('id-ID')}
+											</span>
+										</button>
+									))}
+								</div>
+							)}
+						</div>
+					);
+				})}
+			</div>
+		</div>
+	);
+};
+
 const ProdukHukumPage = ({ detailBasePath = '/pemdes/produk-hukum', tersemat = false }) => {
 	const navigate = useNavigate();
 	const { isSuperAdmin, isAdminBidangPMD, user } = useAuth();
@@ -366,6 +505,16 @@ const ProdukHukumPage = ({ detailBasePath = '/pemdes/produk-hukum', tersemat = f
 	const [kecamatanList, setKecamatanList] = useState([]);
 	const [desaList, setDesaList] = useState([]);
 	const [showFilters, setShowFilters] = useState(false);
+	const [tab, setTab] = useState('daftar');
+	const [tampilan, setTampilan] = useState('list');
+
+	// Dari rekap wilayah langsung ke daftarnya: penyaring diisi, halaman
+	// dikembalikan ke awal, lalu pindah tab.
+	const pilihWilayah = ({ kecamatan_id = '', desa_id = '' }) => {
+		setFilters((sebelumnya) => ({ ...sebelumnya, kecamatan_id, desa_id }));
+		setPagination((p) => ({ ...p, page: 1 }));
+		setTab('daftar');
+	};
 	const [showTambah, setShowTambah] = useState(false);
 
 	useEffect(() => {
@@ -496,7 +645,7 @@ const ProdukHukumPage = ({ detailBasePath = '/pemdes/produk-hukum', tersemat = f
 					</div>
 
 					{/* Charts */}
-					<div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+					<div className="grid grid-cols-1 gap-6 mb-6 md:grid-cols-3">
 						<div className="bg-white rounded-xl border border-slate-200 p-4">
 							<h3 className="text-sm font-semibold text-slate-700 mb-3">Distribusi Jenis Produk Hukum</h3>
 							{stats.jenis?.length > 0 ? (
@@ -512,31 +661,18 @@ const ProdukHukumPage = ({ detailBasePath = '/pemdes/produk-hukum', tersemat = f
 							) : <p className="text-slate-400 text-sm text-center py-10">Tidak ada data</p>}
 						</div>
 
-						<div className="bg-white rounded-xl border border-slate-200 p-4">
-							<h3 className="text-sm font-semibold text-slate-700 mb-3">Status Peraturan</h3>
-							{stats.status?.length > 0 ? (
-								<ResponsiveContainer width="100%" height={250}>
-									<PieChart>
-										<Pie data={stats.status} cx="50%" cy="50%" innerRadius={50} outerRadius={90} dataKey="value" nameKey="name" labelLine={false} label={renderCustomLabel}>
-											{stats.status.map((_, i) => <Cell key={i} fill={STATUS_COLORS[i % STATUS_COLORS.length]} />)}
-										</Pie>
-										<RechartsTooltip />
-										<RechartsLegend wrapperStyle={{ fontSize: '12px' }} />
-									</PieChart>
-								</ResponsiveContainer>
-							) : <p className="text-slate-400 text-sm text-center py-10">Tidak ada data</p>}
-						</div>
-
-						<div className="bg-white rounded-xl border border-slate-200 p-4">
+						<div className="bg-white rounded-xl border border-slate-200 p-4 md:col-span-2">
 							<h3 className="text-sm font-semibold text-slate-700 mb-3">Produk Hukum per Tahun</h3>
 							{stats.tahun?.length > 0 ? (
 								<ResponsiveContainer width="100%" height={250}>
-									<BarChart data={stats.tahun} layout="vertical">
-										<CartesianGrid strokeDasharray="3 3" />
-										<XAxis type="number" allowDecimals={false} />
-										<YAxis type="category" dataKey="name" width={50} tick={{ fontSize: 11 }} />
+									{/* Batang tegak: tahun adalah deret waktu, jadi sumbu
+									    mendatarnya harus tahun, bukan jumlahnya. */}
+									<BarChart data={stats.tahun} margin={{ top: 8, right: 8, bottom: 0, left: 0 }}>
+										<CartesianGrid strokeDasharray="3 3" vertical={false} />
+										<XAxis dataKey="name" tick={{ fontSize: 11 }} />
+										<YAxis allowDecimals={false} width={40} tick={{ fontSize: 11 }} />
 										<RechartsTooltip />
-										<Bar dataKey="value" name="Jumlah" radius={[0, 4, 4, 0]}>
+										<Bar dataKey="value" name="Jumlah" radius={[4, 4, 0, 0]}>
 											{stats.tahun.map((_, i) => <Cell key={i} fill={TAHUN_COLORS[i % TAHUN_COLORS.length]} />)}
 										</Bar>
 									</BarChart>
@@ -546,6 +682,27 @@ const ProdukHukumPage = ({ detailBasePath = '/pemdes/produk-hukum', tersemat = f
 					</div>
 				</>
 			)}
+
+			{/* Bilah mode. Penyaring di bawahnya sengaja tetap terlihat di kedua
+			    mode: tahun dan jenis sama pentingnya untuk rekap per wilayah. */}
+			<div className="mb-4 inline-flex rounded-xl border border-slate-200 bg-white p-1">
+				{[
+					['daftar', 'Daftar', FileText],
+					['wilayah', 'Per Wilayah', MapPin],
+				].map(([nilai, teks, Icon]) => (
+					<button
+						key={nilai}
+						type="button"
+						onClick={() => setTab(nilai)}
+						className={`flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition-colors ${
+							tab === nilai ? 'bg-slate-900 text-white' : 'text-slate-600 hover:bg-slate-50'
+						}`}
+					>
+						<Icon className="h-4 w-4" />
+						{teks}
+					</button>
+				))}
+			</div>
 
 			{/* Search & Filters */}
 			<div className="bg-white rounded-xl border border-slate-200 p-4 mb-6">
@@ -623,11 +780,34 @@ const ProdukHukumPage = ({ detailBasePath = '/pemdes/produk-hukum', tersemat = f
 			</div>
 
 			{/* Data Table */}
+			{tab === 'wilayah' && <TabWilayah filters={filters} onPilih={pilihWilayah} />}
+
+			{tab === 'daftar' && (
 			<div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
-				<div className="px-4 py-3 border-b border-slate-200 flex items-center justify-between">
+				<div className="px-4 py-3 border-b border-slate-200 flex items-center justify-between gap-3">
 					<p className="text-sm text-slate-600">
 						Menampilkan <span className="font-semibold">{data.length}</span> dari <span className="font-semibold">{pagination.totalItems}</span> produk hukum
 					</p>
+					<div className="flex shrink-0 rounded-lg border border-slate-200 p-0.5">
+						{[
+							['list', 'Tampilan daftar', List],
+							['grid', 'Tampilan kartu', LayoutGrid],
+						].map(([nilai, judul, Icon]) => (
+							<button
+								key={nilai}
+								type="button"
+								onClick={() => setTampilan(nilai)}
+								title={judul}
+								aria-label={judul}
+								aria-pressed={tampilan === nilai}
+								className={`rounded-md p-1.5 transition-colors ${
+									tampilan === nilai ? 'bg-slate-900 text-white' : 'text-slate-500 hover:bg-slate-50'
+								}`}
+							>
+								<Icon className="h-4 w-4" />
+							</button>
+						))}
+					</div>
 				</div>
 
 				{loading ? (
@@ -639,6 +819,38 @@ const ProdukHukumPage = ({ detailBasePath = '/pemdes/produk-hukum', tersemat = f
 					<div className="flex flex-col items-center justify-center py-20">
 						<AlertCircle className="h-12 w-12 text-slate-300 mb-3" />
 						<p className="text-slate-500">Tidak ada data produk hukum</p>
+					</div>
+				) : tampilan === 'grid' ? (
+					<div className="grid gap-3 p-4 sm:grid-cols-2 xl:grid-cols-3">
+						{data.map((item) => (
+							<button
+								key={item.id}
+								type="button"
+								onClick={() => navigate(`${detailBasePath}/${item.id}`)}
+								className="flex flex-col rounded-xl border border-slate-200 p-4 text-left transition-all hover:-translate-y-0.5 hover:border-slate-300 hover:shadow-sm"
+							>
+								<div className="flex items-center gap-2">
+									<span className={`inline-flex rounded-full px-2 py-1 text-xs font-medium ${getJenisBadgeColor(item.singkatan_jenis)}`}>
+										{item.singkatan_jenis}
+									</span>
+									<span className={`inline-flex rounded-full px-2 py-1 text-xs font-medium ${item.status_peraturan === 'berlaku' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
+										{item.status_peraturan === 'berlaku' ? 'Berlaku' : 'Dicabut'}
+									</span>
+									<span className="ml-auto text-xs tabular-nums text-slate-400">{item.tahun}</span>
+								</div>
+
+								<p className="mt-2.5 line-clamp-2 text-sm font-semibold leading-snug text-slate-900">{item.judul}</p>
+								<p className="mt-1 truncate text-xs text-slate-500">Nomor {item.nomor || '-'}</p>
+
+								<p className="mt-3 flex items-center gap-1.5 border-t border-slate-100 pt-2.5 text-xs text-slate-500">
+									<Building2 className="h-3.5 w-3.5 shrink-0 text-slate-400" />
+									<span className="truncate">
+										{item.desa?.nama || '-'}
+										{item.desa?.kecamatan?.nama ? ` · Kec. ${item.desa.kecamatan.nama}` : ''}
+									</span>
+								</p>
+							</button>
+						))}
 					</div>
 				) : (
 					<div className="overflow-x-auto">
@@ -700,6 +912,7 @@ const ProdukHukumPage = ({ detailBasePath = '/pemdes/produk-hukum', tersemat = f
 					</div>
 				)}
 			</div>
+			)}
 
 			{/* Modal Tambah */}
 			<TambahModal

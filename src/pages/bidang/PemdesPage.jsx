@@ -233,7 +233,7 @@ const PemdesPage = () => {
 
 	return (
 		<div className="min-h-screen bg-slate-50">
-			<div className="mx-auto max-w-7xl space-y-6 px-4 py-6 sm:px-6 lg:px-8">
+			<div className="space-y-6 px-4 py-6 sm:px-6 lg:px-8">
 				<BidangHeader
 					slug="pemdes"
 					icon={Landmark}
@@ -286,6 +286,32 @@ const PemdesPage = () => {
 						caption="Program Pemdes"
 						accent="#1baf7a"
 					/>
+				</div>
+
+				{/* Akses cepat memakai daftar modul yang sama dengan bento di bawah,
+				    jadi keduanya mustahil berbeda isi saat menu bertambah. */}
+				<div className="grid grid-cols-3 gap-3 sm:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8">
+					{modul.map((item) => {
+						const Icon = item.icon;
+						return (
+							<button
+								key={`pintas-${item.id}`}
+								onClick={() => navigate(item.route)}
+								title={item.judul}
+								className="group flex aspect-square flex-col items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white p-2 shadow-sm transition-all hover:-translate-y-0.5 hover:border-slate-300 hover:shadow-md"
+							>
+								<span
+									className="flex h-10 w-10 items-center justify-center rounded-xl transition-transform duration-300 group-hover:scale-105"
+									style={{ backgroundColor: `${item.accent}1a`, color: item.accent }}
+								>
+									<Icon className="h-5 w-5" strokeWidth={1.75} />
+								</span>
+								<span className="line-clamp-2 px-1 text-center text-[11px] font-medium leading-tight text-slate-700">
+									{item.judul}
+								</span>
+							</button>
+						);
+					})}
 				</div>
 
 				<div className="flex flex-col gap-6 lg:flex-row">

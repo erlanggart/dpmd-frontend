@@ -45,6 +45,7 @@ import toast from 'react-hot-toast';
 const GENDER_COLORS = ['#2a78d6', '#eb6834'];
 const AGE_RAMP = ['#86b6ef', '#5598e7', '#2a78d6', '#1c5cab', '#104281'];
 const EDU_COLOR = '#1baf7a';
+const AKSEN_JABATAN = '#4a3aa7'; // aksen bidang Pemdes
 const DONUT_SIZE = 192; // px — harus sama dengan h-48/w-48 pada wrapper donut
 
 const fmt = (n) => Number(n ?? 0).toLocaleString('id-ID');
@@ -232,6 +233,73 @@ const BarList = ({
 					</div>
 				);
 			})}
+		</div>
+	);
+};
+
+/** Batang tegak — cocok untuk deret yang berurut seperti rentang usia. */
+const BarVertikal = ({ items = [], ramp = AGE_RAMP }) => {
+	if (!items.length) return <EmptyChart />;
+
+	const max = Math.max(1, ...items.map((item) => Number(item.value ?? 0)));
+	const jumlah = items.reduce((total, item) => total + Number(item.value ?? 0), 0);
+
+	return (
+		<div>
+			{/* Dua baris flex sejajar: batang di atas, keterangan di bawah. Label
+			    dikeluarkan dari kotak setinggi tetap supaya tinggi batang tetap
+			    sebanding dan tidak ikut terpotong teks. */}
+			<div className="flex h-44 items-end gap-2 sm:gap-3">
+				{items.map((item, index) => {
+					const nilai = Number(item.value ?? 0);
+					return (
+						<div key={item.name} className="flex h-full flex-1 flex-col justify-end gap-1.5">
+							<span className="text-center text-xs font-semibold tabular-nums text-slate-700">{fmt(nilai)}</span>
+							<div
+								title={`${item.name}: ${fmt(nilai)} orang (${pct(nilai, jumlah)}%)`}
+								className="rounded-t-lg transition-[height] duration-500"
+								style={{
+									height: `${Math.max((nilai / max) * 100, nilai > 0 ? 2 : 0)}%`,
+									backgroundColor: ramp[index % ramp.length],
+								}}
+							/>
+						</div>
+					);
+				})}
+			</div>
+
+			<div className="mt-2 flex gap-2 border-t border-slate-100 pt-2 sm:gap-3">
+				{items.map((item) => (
+					<div key={item.name} className="flex-1 text-center">
+						<p className="truncate text-[11px] font-medium text-slate-600">{item.name}</p>
+						<p className="text-[10px] tabular-nums text-slate-400">{pct(item.value, jumlah)}%</p>
+					</div>
+				))}
+			</div>
+		</div>
+	);
+};
+
+/** Rekap jabatan sebagai kartu — angkanya yang dibaca, bukan perbandingannya. */
+const KomposisiJabatan = ({ items = [] }) => {
+	if (!items.length) return <EmptyChart />;
+
+	const jumlah = items.reduce((total, item) => total + Number(item.value ?? 0), 0);
+
+	return (
+		<div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 xl:grid-cols-4">
+			{items.map((item) => (
+				<div
+					key={item.name}
+					className="rounded-xl border border-slate-200 p-3 transition-colors hover:border-slate-300 hover:bg-slate-50"
+				>
+					<p className="text-xl font-bold leading-none tabular-nums text-slate-900">{fmt(item.value)}</p>
+					<p className="mt-1.5 text-[11px] font-medium leading-snug text-slate-600" title={item.name}>
+						{item.name}
+					</p>
+					<p className="mt-1 text-[10px] tabular-nums text-slate-400">{pct(item.value, jumlah)}% dari total</p>
+				</div>
+			))}
 		</div>
 	);
 };
@@ -1358,33 +1426,159 @@ const jenjangKey = (raw) => {
 
 const EMPTY_FILTERS = { search: '', kecamatan_id: '', desa_id: '', jabatan: '', jenis_kelamin: '', status: '', pendidikan: '' };
 
-const DatabaseTab = ({ refreshKey = 0, jenis, detailBasePath, onLoadingChange, onUpdated }) => {
+// ============================================================
+// Ringkasan kabupaten
+// ============================================================
+// Berdiri di luar tab: angka se-kabupaten tidak berubah oleh mode yang sedang
+// dibuka, jadi menyembunyikannya saat pindah ke mode per wilayah cuma memaksa
+// orang bolak-balik untuk melihat angka yang sama.
+const RingkasanAparatur = ({ jenis, stats, statsLoading }) => {
+	const [showSummary, setShowSummary] = useState(true);
+
+	// Ejaan jenjang dari dua sumber data disatukan jadi satu label sebelum
+	// digambar, kalau tidak "S1" dan "STRATA I" jadi dua batang berbeda.
+	const pendidikanChart = useMemo(() => {
+		const peta = new Map();
+		for (const item of stats?.pendidikan || []) {
+			const { label, order } = jenjangKey(item.name);
+			const sebelumnya = peta.get(label) || { name: label, value: 0, order };
+			sebelumnya.value += Number(item.value ?? 0);
+			peta.set(label, sebelumnya);
+		}
+		return [...peta.values()].sort((a, b) => b.order - a.order);
+	}, [stats]);
+
+	const total = Number(stats?.total ?? 0);
+
+	return (
+		<section>
+			<div className="mb-3 flex items-center justify-between gap-3">
+				<div>
+					<h2 className="text-base font-semibold text-slate-900">Ringkasan Kabupaten</h2>
+					<p className="text-xs text-slate-500">Statistik seluruh aparatur terdata &mdash; tidak terpengaruh filter tabel.</p>
+				</div>
+				<button
+					type="button"
+					onClick={() => setShowSummary((prev) => !prev)}
+					className="inline-flex shrink-0 items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-600 transition-colors hover:bg-slate-50"
+				>
+					{showSummary ? 'Sembunyikan' : 'Tampilkan'}
+					<ChevronDown className={`h-3.5 w-3.5 transition-transform ${showSummary ? 'rotate-180' : ''}`} />
+				</button>
+			</div>
+
+			{showSummary && (
+				<>
+					{statsLoading && !stats ? (
+						<div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+							{Array.from({ length: 4 }).map((_, index) => (
+								<div key={index} className="h-32 animate-pulse rounded-2xl border border-slate-200 bg-white" />
+							))}
+						</div>
+					) : (
+						stats && (
+							<>
+								{/* Halaman yang sudah tersaring (Perangkat Desa / BPD) tidak
+								    memajang pecahan Pemdes vs BPD: salah satunya pasti nol. */}
+								<div className={`grid grid-cols-2 gap-4 ${jenis ? 'lg:grid-cols-2' : 'lg:grid-cols-4'}`}>
+									<StatCard
+										label="Total Aparatur"
+										value={fmt(stats.total)}
+										hint={stats.desa_count ? `Tersebar di ${fmt(stats.desa_count)} desa` : null}
+										icon={Users}
+										iconClass="bg-slate-100 text-brand-600"
+									/>
+									{!jenis && (
+										<>
+											<StatCard
+												label="Perangkat Desa"
+												value={fmt(stats.total_pemdes)}
+												icon={Building2}
+												iconClass="bg-slate-100 text-slate-600"
+												share={pct(stats.total_pemdes, total)}
+												barClass="bg-slate-1000"
+											/>
+											<StatCard
+												label="BPD"
+												value={fmt(stats.total_bpd)}
+												icon={Shield}
+												iconClass="bg-slate-100 text-brand-600"
+												share={pct(stats.total_bpd, total)}
+												barClass="bg-slate-800"
+											/>
+										</>
+									)}
+									<StatCard
+										label="Aparatur Aktif"
+										value={fmt(stats.aktif)}
+										hint={`${fmt(stats.tidak_aktif)} tidak aktif`}
+										icon={CheckCircle2}
+										iconClass="bg-emerald-50 text-emerald-600"
+										share={pct(stats.aktif, total)}
+										barClass="bg-emerald-500"
+									/>
+								</div>
+
+								{/* 5 kolom: donut butuh ruang persegi, bar butuh ruang lebar */}
+								<div className="mt-4 grid gap-4 lg:grid-cols-5">
+									<ChartCard
+										title="Jenis Kelamin"
+										subtitle="Komposisi laki-laki dan perempuan"
+										className="lg:col-span-2"
+									>
+										<GenderDonut lakiLaki={stats.laki_laki} perempuan={stats.perempuan} />
+									</ChartCard>
+
+									<ChartCard
+										title="Rentang Usia"
+										subtitle="Sebaran umur aparatur saat ini"
+										className="lg:col-span-3"
+									>
+										<BarVertikal items={stats.rentang_usia || []} />
+									</ChartCard>
+
+									<ChartCard
+										title="Komposisi Jabatan"
+										subtitle="Urut susunan jabatan, ejaan disatukan"
+										className="lg:col-span-5"
+									>
+										<KomposisiJabatan items={stats.jabatan || []} />
+									</ChartCard>
+
+									<ChartCard
+										title="Pendidikan Terakhir"
+										subtitle="Dikelompokkan per jenjang"
+										className="lg:col-span-5"
+									>
+										<BarList
+											items={pendidikanChart}
+											color={EDU_COLOR}
+											maxRows={9}
+											labelClass="w-32 sm:w-52 lg:w-64"
+										/>
+									</ChartCard>
+								</div>
+							</>
+						)
+					)}
+				</>
+			)}
+		</section>
+	);
+};
+
+const DatabaseTab = ({ refreshKey = 0, jenis, stats, detailBasePath, onLoadingChange, onUpdated }) => {
 	const navigate = useNavigate();
 	const bukaDetail = (idAparatur) => navigate(`${detailBasePath}/${idAparatur}`);
 	const [loading, setLoading] = useState(true);
 	const [data, setData] = useState([]);
-	const [stats, setStats] = useState(null);
-	const [statsLoading, setStatsLoading] = useState(true);
 	const [pagination, setPagination] = useState({ page: 1, limit: 20, totalPages: 1, totalItems: 0 });
 	const [filters, setFilters] = useState(EMPTY_FILTERS);
 	const [searchInput, setSearchInput] = useState('');
 	const [kecamatanList, setKecamatanList] = useState([]);
 	const [desaList, setDesaList] = useState([]);
 	const [showFilters, setShowFilters] = useState(false);
-	const [showSummary, setShowSummary] = useState(true);
 	const isFirstRefresh = useRef(true);
-
-	const fetchStats = useCallback(async () => {
-		try {
-			setStatsLoading(true);
-			const response = await api.get(`/pemdes/aparatur-desa/stats${jenis ? `?jenis=${jenis}` : ''}`);
-			if (response.data.success) setStats(response.data.data);
-		} catch (error) {
-			console.error('Failed to fetch stats:', error);
-		} finally {
-			setStatsLoading(false);
-		}
-	}, [jenis]);
 
 	const fetchData = useCallback(async () => {
 		try {
@@ -1427,16 +1621,15 @@ const DatabaseTab = ({ refreshKey = 0, jenis, detailBasePath, onLoadingChange, o
 			}
 		};
 		fetchKecamatanList();
-		fetchStats();
-	}, [fetchStats]);
+	}, []);
 
 	useEffect(() => {
 		fetchData();
 	}, [fetchData]);
 
 	useEffect(() => {
-		onLoadingChange?.(loading || statsLoading);
-	}, [loading, statsLoading, onLoadingChange]);
+		onLoadingChange?.(loading);
+	}, [loading, onLoadingChange]);
 
 	// Refresh dari header halaman
 	useEffect(() => {
@@ -1444,7 +1637,6 @@ const DatabaseTab = ({ refreshKey = 0, jenis, detailBasePath, onLoadingChange, o
 			isFirstRefresh.current = false;
 			return;
 		}
-		fetchStats();
 		fetchData();
 		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, [refreshKey]);
@@ -1507,15 +1699,6 @@ const DatabaseTab = ({ refreshKey = 0, jenis, detailBasePath, onLoadingChange, o
 		return [...buckets.values()].sort((a, b) => a.order - b.order || a.label.localeCompare(b.label, 'id'));
 	}, [stats]);
 
-	// Grafik: jenjang yang sama, diurutkan dari yang terbanyak.
-	const pendidikanChart = useMemo(
-		() =>
-			[...pendidikanOptions]
-				.map((item) => ({ name: item.label, value: item.total }))
-				.sort((a, b) => b.value - a.value),
-		[pendidikanOptions]
-	);
-
 	// Filter: "Tidak Diketahui" bukan jenjang, jadi tidak ditawarkan sebagai pilihan.
 	const pendidikanFilterOptions = useMemo(
 		() => pendidikanOptions.filter((item) => item.label !== 'Tidak Diketahui'),
@@ -1562,7 +1745,6 @@ const DatabaseTab = ({ refreshKey = 0, jenis, detailBasePath, onLoadingChange, o
 		handleFilterChange(key, '');
 	};
 
-	const total = Number(stats?.total ?? 0);
 	const pageNumbers = useMemo(() => {
 		const totalPages = pagination.totalPages || 1;
 		const current = pagination.page;
@@ -1576,113 +1758,6 @@ const DatabaseTab = ({ refreshKey = 0, jenis, detailBasePath, onLoadingChange, o
 
 	return (
 		<div className="space-y-5">
-			{/* ---------- Ringkasan ---------- */}
-			<section>
-				<div className="mb-3 flex items-center justify-between gap-3">
-					<div>
-						<h2 className="text-base font-semibold text-slate-900">Ringkasan Kabupaten</h2>
-						<p className="text-xs text-slate-500">Statistik seluruh aparatur terdata &mdash; tidak terpengaruh filter tabel.</p>
-					</div>
-					<button
-						type="button"
-						onClick={() => setShowSummary((prev) => !prev)}
-						className="inline-flex shrink-0 items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-600 transition-colors hover:bg-slate-50"
-					>
-						{showSummary ? 'Sembunyikan' : 'Tampilkan'}
-						<ChevronDown className={`h-3.5 w-3.5 transition-transform ${showSummary ? 'rotate-180' : ''}`} />
-					</button>
-				</div>
-
-				{showSummary && (
-					<>
-						{statsLoading && !stats ? (
-							<div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-								{Array.from({ length: 4 }).map((_, index) => (
-									<div key={index} className="h-32 animate-pulse rounded-2xl border border-slate-200 bg-white" />
-								))}
-							</div>
-						) : (
-							stats && (
-								<>
-									{/* Halaman yang sudah tersaring (Perangkat Desa / BPD) tidak
-									    memajang pecahan Pemdes vs BPD: salah satunya pasti nol. */}
-									<div className={`grid grid-cols-2 gap-4 ${jenis ? 'lg:grid-cols-2' : 'lg:grid-cols-4'}`}>
-										<StatCard
-											label="Total Aparatur"
-											value={fmt(stats.total)}
-											hint={stats.desa_count ? `Tersebar di ${fmt(stats.desa_count)} desa` : null}
-											icon={Users}
-											iconClass="bg-slate-100 text-brand-600"
-										/>
-										{!jenis && (
-											<>
-												<StatCard
-													label="Perangkat Desa"
-													value={fmt(stats.total_pemdes)}
-													icon={Building2}
-													iconClass="bg-slate-100 text-slate-600"
-													share={pct(stats.total_pemdes, total)}
-													barClass="bg-slate-1000"
-												/>
-												<StatCard
-													label="BPD"
-													value={fmt(stats.total_bpd)}
-													icon={Shield}
-													iconClass="bg-slate-100 text-brand-600"
-													share={pct(stats.total_bpd, total)}
-													barClass="bg-slate-800"
-												/>
-											</>
-										)}
-										<StatCard
-											label="Aparatur Aktif"
-											value={fmt(stats.aktif)}
-											hint={`${fmt(stats.tidak_aktif)} tidak aktif`}
-											icon={CheckCircle2}
-											iconClass="bg-emerald-50 text-emerald-600"
-											share={pct(stats.aktif, total)}
-											barClass="bg-emerald-500"
-										/>
-									</div>
-
-									{/* 5 kolom: donut butuh ruang persegi, bar butuh ruang lebar */}
-									<div className="mt-4 grid gap-4 lg:grid-cols-5">
-										<ChartCard
-											title="Jenis Kelamin"
-											subtitle="Komposisi laki-laki dan perempuan"
-											className="lg:col-span-2"
-										>
-											<GenderDonut lakiLaki={stats.laki_laki} perempuan={stats.perempuan} />
-										</ChartCard>
-
-										<ChartCard
-											title="Rentang Usia"
-											subtitle="Sebaran umur aparatur saat ini"
-											className="lg:col-span-3"
-										>
-											<BarList items={stats.rentang_usia || []} ramp={AGE_RAMP} maxRows={6} />
-										</ChartCard>
-
-										<ChartCard
-											title="Pendidikan Terakhir"
-											subtitle="Dikelompokkan per jenjang"
-											className="lg:col-span-5"
-										>
-											<BarList
-												items={pendidikanChart}
-												color={EDU_COLOR}
-												maxRows={9}
-												labelClass="w-32 sm:w-52 lg:w-64"
-											/>
-										</ChartCard>
-									</div>
-								</>
-							)
-						)}
-					</>
-				)}
-			</section>
-
 			{/* ---------- Toolbar ---------- */}
 			<section className="sticky top-2 z-20 rounded-2xl border border-slate-200 bg-white/95 p-3 shadow-sm backdrop-blur">
 				<div className="flex flex-col gap-3 lg:flex-row lg:items-center">
@@ -2549,6 +2624,22 @@ const AparaturDesaPage = ({
 		if (!hasActiveTab) setActiveTab(fallbackTab);
 	}, [fallbackTab, hasActiveTab]);
 
+	// Statistik diambil di sini, bukan di dalam tab: ringkasannya berdiri di
+	// luar tab, sementara pilihan filter pendidikan di mode tabel memakai
+	// daftar yang sama. Satu panggilan untuk dua pemakai.
+	const [stats, setStats] = useState(null);
+	const [statsLoading, setStatsLoading] = useState(true);
+
+	useEffect(() => {
+		let batal = false;
+		setStatsLoading(true);
+		api.get(`/pemdes/aparatur-desa/stats${jenis ? `?jenis=${jenis}` : ''}`)
+			.then((response) => { if (!batal && response.data.success) setStats(response.data.data); })
+			.catch((error) => console.error('Failed to fetch stats:', error))
+			.finally(() => { if (!batal) setStatsLoading(false); });
+		return () => { batal = true; };
+	}, [jenis, refreshKey]);
+
 	const handleUpdated = useCallback((date) => setLastUpdated(date), []);
 	const handleLoading = useCallback((value) => setBusy(value), []);
 
@@ -2620,14 +2711,16 @@ const AparaturDesaPage = ({
 				)}
 			</header>
 
-			<div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_20rem] lg:items-start">
+			<RingkasanAparatur jenis={jenis} stats={stats} statsLoading={statsLoading} />
+
+			<div className="mt-4 grid gap-4 lg:grid-cols-[minmax(0,1fr)_20rem] lg:items-start">
 				<div className="min-w-0">
 					{activeTab === 'wilayah' && (
 						<WilayahTab refreshKey={refreshKey} jenis={jenis} detailBasePath={detailBasePath} onLoadingChange={handleLoading} onUpdated={handleUpdated} />
 					)}
 
 					{activeTab === 'database' && (
-						<DatabaseTab refreshKey={refreshKey} jenis={jenis} detailBasePath={detailBasePath} onLoadingChange={handleLoading} onUpdated={handleUpdated} />
+						<DatabaseTab refreshKey={refreshKey} jenis={jenis} stats={stats} detailBasePath={detailBasePath} onLoadingChange={handleLoading} onUpdated={handleUpdated} />
 					)}
 				</div>
 
