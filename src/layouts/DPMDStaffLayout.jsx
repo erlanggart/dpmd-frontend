@@ -184,7 +184,7 @@ export const BIDANG_ROUTES = {
 	3: { name: 'SPKED', path: '/bidang/spked', icon: 'landmark', gradient: 'from-cyan-500 to-teal-600', color: 'text-cyan-600' },
 	4: { name: 'KKD', path: '/bidang/kkd', icon: 'dollar', gradient: 'from-emerald-500 to-teal-600', color: 'text-emerald-600' },
 	5: { name: 'PMD', path: '/bidang/pmd', icon: 'users', gradient: 'from-purple-500 to-indigo-600', color: 'text-purple-600' },
-	6: { name: 'Pemdes', path: '/bidang/pemdes', icon: 'briefcase', gradient: 'from-amber-500 to-orange-600', color: 'text-amber-600' }
+	6: { name: 'Dapur Desa', path: '/bidang/pemdes', icon: 'briefcase', gradient: 'from-amber-500 to-orange-600', color: 'text-amber-600' }
 };
 
 // Bidang submenu configuration
@@ -205,7 +205,8 @@ const BIDANG_SUBMENUS = {
 		{ label: 'Persandingan RT/RW', path: '/bidang/pmd/kelembagaan/rtrw-comparison', icon: 'file' },
 	],
 	6: [
-		{ label: 'Aparatur Desa', path: '/bidang/pemdes/aparatur-desa', icon: 'users' },
+		{ label: 'Perangkat Desa', path: '/bidang/pemdes/perangkat-desa', icon: 'users' },
+		{ label: 'BPD', path: '/bidang/pemdes/bpd', icon: 'users' },
 		{ label: 'Produk Hukum', path: '/bidang/pemdes/produk-hukum', icon: 'file' },
 	],
 };
@@ -1010,7 +1011,7 @@ const DPMDStaffLayout = () => {
 												<AnimatedIcon type={userBidang.icon} isActive={location.pathname.startsWith(userBidang.path)} className="w-5 h-5" />
 											</div>
 											<div className="min-w-0 flex-1">
-												<p className="truncate text-sm font-semibold">Bidang {userBidang.name}</p>
+												<p className="truncate text-sm font-semibold">{userBidang.name}</p>
 											</div>
 											<FiChevronRight className={`h-4 w-4 ${
 												location.pathname.startsWith(userBidang.path) ? 'text-white/80' : 'text-slate-300'

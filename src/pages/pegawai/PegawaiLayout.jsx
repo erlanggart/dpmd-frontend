@@ -293,7 +293,7 @@ const PegawaiLayout = () => {
 										3: { name: 'SPKED', path: '/bidang/spked', icon: Landmark },
 										4: { name: 'KKD', path: '/bidang/kkd', icon: FiDollarSign },
 										5: { name: 'PMD', path: '/bidang/pmd', icon: FiUsers },
-										6: { name: 'Pemdes', path: '/bidang/pemdes', icon: FiBriefcase }
+										6: { name: 'Dapur Desa', path: '/bidang/pemdes', icon: FiBriefcase }
 									};
 
 									const bidangNav = bidangRoutes[user.bidang_id];
@@ -310,7 +310,7 @@ const PegawaiLayout = () => {
 												<bidangNav.icon className="h-6 w-6 text-white" />
 											</div>
 											<div>
-												<h4 className="font-semibold text-gray-800">Bidang {bidangNav.name}</h4>
+												<h4 className="font-semibold text-gray-800">{bidangNav.name}</h4>
 												<p className="text-sm text-gray-500">Kelola data bidang</p>
 											</div>
 										</button>

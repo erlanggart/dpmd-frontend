@@ -245,6 +245,9 @@ const KKDPage = lazy(() => import("./pages/bidang/KKDPage"));
 const PMDPage = lazy(() => import("./pages/bidang/PMDPage"));
 const PemdesPage = lazy(() => import("./pages/bidang/PemdesPage"));
 const PemdesAparaturDesaPage = lazy(() => import("./pages/bidang/pemdes/AparaturDesaPage"));
+const PemdesAparaturDetailPage = lazy(() =>
+  import("./pages/bidang/pemdes/AparaturDesaPage").then((m) => ({ default: m.AparaturDesaDetailPage }))
+);
 const PemdesProfilDesaPage = lazy(() => import("./pages/bidang/pemdes/ProfilDesaDashboardPage"));
 const PemdesProfilDesaDetailPage = lazy(() => import("./pages/bidang/pemdes/ProfilDesaDetailPage"));
 const ProdukHukumPemdesPage = lazy(() => import("./pages/bidang/pemdes/ProdukHukumPage"));
@@ -1194,6 +1197,9 @@ function App() {
                   <Route path="pemdes/profil-desa" element={<PemdesProfilDesaPage />} />
                   <Route path="pemdes/profil-desa/:desaId" element={<PemdesProfilDesaDetailPage />} />
                   <Route path="pemdes/aparatur-desa" element={<PemdesAparaturDesaPage />} />
+                  <Route path="pemdes/perangkat-desa" element={<PemdesAparaturDesaPage jenis="perangkat" />} />
+                  <Route path="pemdes/bpd" element={<PemdesAparaturDesaPage jenis="bpd" />} />
+                  <Route path="pemdes/aparatur/:id" element={<PemdesAparaturDetailPage />} />
                   <Route path="pemdes/produk-hukum" element={<ProdukHukumPemdesPage detailBasePath="/bidang/pemdes/produk-hukum" />} />
                   <Route path="pemdes/produk-hukum/:id" element={<ProdukHukumDetailPemdesPage backPath="/bidang/pemdes/produk-hukum" />} />
 
@@ -1306,7 +1312,10 @@ function App() {
                 >
                   <Route path="profil-desa" element={<PemdesProfilDesaPage />} />
                   <Route path="profil-desa/:desaId" element={<PemdesProfilDesaDetailPage />} />
-                  <Route path="aparatur-desa" element={<PemdesAparaturDesaPage />} />
+                  <Route path="aparatur-desa" element={<PemdesAparaturDesaPage detailBasePath="/pemdes/aparatur" />} />
+                  <Route path="perangkat-desa" element={<PemdesAparaturDesaPage jenis="perangkat" detailBasePath="/pemdes/aparatur" />} />
+                  <Route path="bpd" element={<PemdesAparaturDesaPage jenis="bpd" detailBasePath="/pemdes/aparatur" />} />
+                  <Route path="aparatur/:id" element={<PemdesAparaturDetailPage />} />
                   <Route path="produk-hukum" element={<ProdukHukumPemdesPage />} />
                   <Route path="produk-hukum/:id" element={<ProdukHukumDetailPemdesPage />} />
                   <Route path="drive" element={<DrivePage bidangId={6} />} />
@@ -1520,6 +1529,9 @@ function App() {
                   <Route path="bidang/pemdes/profil-desa" element={<PemdesProfilDesaPage />} />
                   <Route path="bidang/pemdes/profil-desa/:desaId" element={<PemdesProfilDesaDetailPage />} />
                   <Route path="bidang/pemdes/aparatur-desa" element={<PemdesAparaturDesaPage />} />
+                  <Route path="bidang/pemdes/perangkat-desa" element={<PemdesAparaturDesaPage jenis="perangkat" />} />
+                  <Route path="bidang/pemdes/bpd" element={<PemdesAparaturDesaPage jenis="bpd" />} />
+                  <Route path="bidang/pemdes/aparatur/:id" element={<PemdesAparaturDetailPage />} />
                   <Route path="bidang/pemdes/produk-hukum" element={<ProdukHukumPemdesPage />} />
                   <Route path="bidang/pemdes/produk-hukum/:id" element={<ProdukHukumDetailPemdesPage />} />
                   <Route path="pesan" element={<MessagingPage />} />
@@ -1699,6 +1711,15 @@ function App() {
                     element={
                       <PemdesAparaturDesaPage
                         mode="core-dashboard"
+                        detailBasePath="/core-dashboard/aparatur"
+                      />
+                    }
+                  />
+                  <Route
+                    path="aparatur/:id"
+                    element={
+                      <PemdesAparaturDetailPage
+                        backPath="/core-dashboard/statistik-aparatur-desa"
                       />
                     }
                   />

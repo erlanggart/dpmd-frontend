@@ -143,14 +143,23 @@ const PemdesPage = () => {
 	const modul = useMemo(
 		() => [
 			{
-				id: 'aparatur-desa',
+				id: 'perangkat-desa',
 				besar: true,
 				accent: AKSEN,
-				judul: 'Aparatur Desa',
-				deskripsi: 'Kelola data perangkat dan aparatur desa seluruh kecamatan se-Kabupaten Bogor.',
+				judul: 'Perangkat Desa',
+				deskripsi: 'Kelola data perangkat desa seluruh kecamatan se-Kabupaten Bogor.',
 				icon: Users,
-				route: getPath('/pemdes/aparatur-desa'),
-				angka: { nilai: angkaAtau(stats.total_aparatur), label: 'aparatur terdaftar' },
+				route: getPath('/pemdes/perangkat-desa'),
+				angka: { nilai: angkaAtau(stats.total_perangkat), label: 'perangkat terdaftar' },
+			},
+			{
+				id: 'bpd',
+				accent: '#4a3aa7',
+				judul: 'BPD',
+				deskripsi: 'Data Badan Permusyawaratan Desa se-Kabupaten Bogor',
+				icon: Users,
+				route: getPath('/pemdes/bpd'),
+				angka: { nilai: angkaAtau(stats.total_bpd), label: 'anggota terdaftar' },
 			},
 			{
 				id: 'profil-desa',
@@ -255,7 +264,7 @@ const PemdesPage = () => {
 					<StatTile
 						icon={Users}
 						label="Perangkat Desa"
-						value={angkaAtau(stats.total_aparatur)}
+						value={angkaAtau(stats.total_perangkat)}
 						caption="kepala desa & staf"
 						accent="#2a78d6"
 					/>
