@@ -334,10 +334,12 @@ const ProfilePage = () => {
           <div className="relative z-0">
             <button
               onClick={() => avatarUrl && setShowPhotoReview(true)}
-              className="w-36 h-36 rounded-[28px] overflow-hidden shadow-2xl shadow-black/30 cursor-pointer transition-all"
+              className="w-36 h-36 rounded-[28px] overflow-hidden bg-slate-900/40 shadow-2xl shadow-black/30 cursor-pointer transition-all"
             >
+              {/* object-contain, bukan cover: foto pegawai umumnya potret, dan
+                  dipaksa mengisi kotak membuat kepala atau bahu terpotong. */}
               {avatarUrl ? (
-                <img src={avatarUrl} alt={user.name} className="w-full h-full object-cover" onError={(e) => { e.target.style.display = 'none'; e.target.nextSibling.style.display = 'flex'; }} />
+                <img src={avatarUrl} alt={user.name} className="w-full h-full object-contain" onError={(e) => { e.target.style.display = 'none'; e.target.nextSibling.style.display = 'flex'; }} />
               ) : null}
               <div className={`w-full h-full bg-gradient-to-br ${gradient} flex items-center justify-center ${avatarUrl ? 'hidden' : ''}`} style={{ display: avatarUrl ? 'none' : 'flex' }}>
                 <span className="text-white font-bold text-5xl">{user.name?.charAt(0).toUpperCase() || 'U'}</span>
@@ -640,7 +642,7 @@ const ProfilePage = () => {
               <img
                 src={avatarUrl}
                 alt={user.name}
-                className="w-full aspect-square object-cover rounded-3xl shadow-2xl"
+                className="w-full max-h-[70vh] object-contain rounded-3xl shadow-2xl"
               />
               <div className="flex justify-center gap-3 mt-4">
                 <button

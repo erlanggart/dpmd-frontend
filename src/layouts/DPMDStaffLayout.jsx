@@ -936,23 +936,10 @@ const DPMDStaffLayout = () => {
 
 							{/* User Header */}
 							<div className={"border-b border-slate-100 bg-slate-50 px-6 py-5"}>
+								{/* Tanpa foto: pop up ini dibuka dari perangkat pemilik akun
+								    sendiri, jadi nama dan peran sudah cukup. Fotonya dulu ikut
+								    tampil di sini dan hanya membuat header sesak. */}
 								<div className="flex items-start gap-4">
-									{user.avatar ? (
-										<img
-											src={getAvatarUrl(user.avatar)}
-											alt={user.name}
-											className="h-14 w-14 rounded-2xl object-cover shadow-md"
-											onError={(e) => {
-												e.target.style.display = 'none';
-												e.target.nextElementSibling.style.display = 'flex';
-											}}
-										/>
-									) : null}
-									<div className={`h-14 w-14 bg-gradient-to-br ${theme.gradientFrom} ${theme.gradientTo} rounded-2xl flex items-center justify-center shadow-md ${user.avatar ? 'hidden' : ''}`}>
-										<span className="text-white font-bold text-xl">
-											{user.name?.charAt(0) || "U"}
-										</span>
-									</div>
 									<div className="min-w-0 flex-1">
 										<p className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-400 mb-0.5">Aksi Cepat</p>
 										<h3 className="truncate text-lg font-bold text-slate-900">{user.name || getDisplayName()}</h3>
