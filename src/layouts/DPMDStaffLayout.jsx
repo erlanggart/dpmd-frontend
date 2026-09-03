@@ -484,7 +484,7 @@ const DPMDStaffLayout = () => {
 	// Navigation items
 	const navItems = [
 		{ path: "/dpmd/dashboard", label: "Dashboard", icon: 'dashboard' },
-		{ path: "/core-dashboard/dashboard", label: "Statistik", icon: 'chart' },
+		{ path: "/core-dashboard/dashboard", label: "Core Dashboard", icon: 'chart' },
 		{ path: "/dpmd/jadwal-kegiatan", label: "Kegiatan", icon: 'schedule' },
 		{ path: "/dpmd/perjadin", label: "Perjadin", icon: 'briefcase' },
 		{ path: "/dpmd/disposisi", label: "Disposisi", icon: 'contact' },

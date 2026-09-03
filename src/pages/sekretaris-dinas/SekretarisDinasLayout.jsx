@@ -187,7 +187,7 @@ const SekretarisDinasLayout = () => {
 
 	const bottomNavItems = [
 		{ path: "/sekretaris-dinas/dashboard", label: "Dashboard", icon: FiHome },
-		{ path: "/core-dashboard/dashboard", label: "Statistik", icon: FiBarChart2 },
+		{ path: "/core-dashboard/dashboard", label: "Core Dashboard", icon: FiBarChart2 },
 		{ path: "/sekretaris-dinas/jadwal-kegiatan", label: "Kegiatan", icon: ScheduleLottieIcon },
 		{ path: "/sekretaris-dinas/disposisi", label: "Disposisi", icon: ContactLottieIcon },
 		{ path: "/sekretaris-dinas/menu", label: "Menu", icon: FiMenu, action: () => setShowMenu(true) },

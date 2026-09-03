@@ -197,7 +197,7 @@ const KetuaTimLayout = () => {
 
 	const bottomNavItems = [
 		{ path: "/ketua-tim/dashboard", label: "Dashboard", icon: FiHome },
-		{ path: "/core-dashboard/dashboard", label: "Statistik", icon: FiBarChart2 },
+		{ path: "/core-dashboard/dashboard", label: "Core Dashboard", icon: FiBarChart2 },
 		{ path: "/ketua-tim/jadwal-kegiatan", label: "Kegiatan", icon: ScheduleLottieIcon },
 		{ path: "/ketua-tim/disposisi", label: "Disposisi", icon: ContactLottieIcon },
 		{ path: "/ketua-tim/menu", label: "Menu", icon: FiMenu, action: () => setShowMenu(true) },
