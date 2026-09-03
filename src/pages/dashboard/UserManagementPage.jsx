@@ -272,16 +272,38 @@ const UserManagementPage = () => {
 		{ id: "bpjs", label: "BPJS", role: "bpjs", icon: LuShieldCheck },
 	], []);
 
-	// Fetch users
+	// Fetch users — ambil SEMUA akun, halaman demi halaman.
+	//
+	// Sebelumnya halaman ini memanggil /users sekali saja dengan limit 1000,
+	// sementara pencarian dan filter di bawah bekerja atas data yang sudah
+	// terambil. Begitu jumlah akun melewati 1000, sisanya tidak pernah sampai ke
+	// browser: akunnya utuh di database dan pemiliknya tetap bisa login, tapi di
+	// halaman ini lenyap dan dicari pun tidak ketemu. Akun lama paling rawan —
+	// created_at-nya kosong, dan MySQL menaruh NULL di ekor urutan created_at
+	// DESC, jadi merekalah yang pertama terpotong.
 	const fetchUsers = useCallback(async () => {
 		setLoading(true);
 		try {
-			const response = await api.get("/users", {
-				params: {
-					limit: 1000,
-				},
-			});
-			setUsers(response.data.data || []);
+			const PER_PERMINTAAN = 500;
+			let halaman = 1;
+			let totalHalaman = 1;
+			let semua = [];
+
+			do {
+				const response = await api.get("/users", {
+					params: { limit: PER_PERMINTAAN, page: halaman },
+				});
+				const batch = response.data.data || [];
+				semua = semua.concat(batch);
+				totalHalaman = response.data.pagination?.totalPages || 1;
+				halaman += 1;
+				// Jaga-jaga bila server mengabaikan paging: berhenti saat batch
+				// terakhir tidak penuh, jangan berputar tanpa akhir.
+				if (batch.length < PER_PERMINTAAN) break;
+			} while (halaman <= totalHalaman);
+
+			setUsers(semua);
+			setError(null);
 		} catch (err) {
 			setError("Gagal mengambil data user.");
 			console.error("Error fetching users:", err);
@@ -606,10 +628,15 @@ const UserManagementPage = () => {
 				user.kecamatan?.nama?.toLowerCase().includes(searchLower) ||
 				user.bidang?.nama?.toLowerCase().includes(searchLower);
 
+			// Bidang akun pegawai sekarang ikut data pegawai; users.bidang_id sudah
+			// usang dan banyak yang kosong. Kalau dicocokkan ke kolom usang itu saja,
+			// akun yang bidangnya datang dari relasi pegawai ikut hilang begitu
+			// filter bidang dipakai — padahal kartunya menampilkan bidang tersebut.
+			const bidangUser = user.bidang?.id ?? user.bidang_id;
 			const matchBidang =
 				activeTab !== "pegawai" ||
 				filterBidang === "all" ||
-				user.bidang_id === parseInt(filterBidang);
+				String(bidangUser ?? "") === String(filterBidang);
 
 			const matchDinas =
 				activeTab !== "dinas_terkait" ||
