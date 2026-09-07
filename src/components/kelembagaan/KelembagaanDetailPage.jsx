@@ -381,6 +381,10 @@ export default function KelembagaanDetailPage({
 				html: `
 					<div class="text-left space-y-3">
 						<p class="text-sm text-gray-600">Jelaskan mengapa kelembagaan ini dinonaktifkan.</p>
+						<p class="text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded-lg p-2.5">
+							Seluruh pengurus yang masih aktif di kelembagaan ini ikut dinonaktifkan.
+							Mengaktifkan kembali kelembagaan tidak memulihkan mereka secara otomatis.
+						</p>
 						<div>
 							<label class="block text-sm font-medium text-gray-700 mb-1">Alasan Penonaktifan <span class="text-red-500">*</span></label>
 							<select id="swal-alasan" class="w-full border border-gray-300 rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-red-500 focus:border-red-500">
@@ -417,7 +421,7 @@ export default function KelembagaanDetailPage({
 
 			try {
 				showLoadingAlert("Menonaktifkan Kelembagaan...", "Mohon tunggu sebentar");
-				await toggleKelembagaanStatus(type, kelembagaanId, newStatus, formValues);
+				const respons = await toggleKelembagaanStatus(type, kelembagaanId, newStatus, formValues);
 
 				setDetail((prevDetail) => ({
 					...prevDetail,
@@ -426,7 +430,14 @@ export default function KelembagaanDetailPage({
 					keterangan_nonaktif: formValues.keterangan,
 				}));
 
-				showSuccessAlert("Berhasil!", "Kelembagaan berhasil dinonaktifkan");
+				// Backend mengembalikan jumlah pengurus yang ikut dinonaktifkan.
+				const jumlahPengurus = respons?.data?.pengurus_dinonaktifkan || 0;
+				showSuccessAlert(
+					"Berhasil!",
+					jumlahPengurus > 0
+						? `Kelembagaan berhasil dinonaktifkan, beserta ${jumlahPengurus} pengurus di bawahnya.`
+						: "Kelembagaan berhasil dinonaktifkan",
+				);
 				setTimeout(() => {
 					if (aktivitasLogRef.current) aktivitasLogRef.current.refresh();
 				}, 500);
@@ -438,7 +449,7 @@ export default function KelembagaanDetailPage({
 			// Activating: simple confirmation
 			const result = await showConfirmAlert(
 				"Konfirmasi Pengaktifan",
-				"Apakah Anda yakin ingin mengaktifkan kembali kelembagaan ini? Alasan dan keterangan penonaktifan sebelumnya akan dihapus.",
+				"Apakah Anda yakin ingin mengaktifkan kembali kelembagaan ini? Alasan dan keterangan penonaktifan sebelumnya akan dihapus. Pengurus yang nonaktif tidak ikut diaktifkan dan perlu diaktifkan satu per satu.",
 				"warning",
 			);
 
