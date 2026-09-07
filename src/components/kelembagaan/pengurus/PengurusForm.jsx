@@ -119,19 +119,6 @@ const pengurusSchema = z.object({
 		message: "Tanggal akhir harus setelah tanggal mulai jabatan",
 		path: ["tanggal_akhir_jabatan"],
 	}
-).refine(
-	(data) => {
-		// Nomor buku nikah wajib diisi untuk Ketua RT/RW yang menikah
-		const isKetuaRtRw = data.jabatan === "KETUA RT" || data.jabatan === "KETUA RW";
-		if (isKetuaRtRw && data.status_perkawinan === "MENIKAH") {
-			return !!data.nomor_buku_nikah;
-		}
-		return true;
-	},
-	{
-		message: "Nomor buku nikah wajib diisi untuk Ketua RT/RW yang sudah menikah",
-		path: ["nomor_buku_nikah"],
-	}
 );
 
 export default function PengurusForm({
@@ -1255,7 +1242,8 @@ export default function PengurusForm({
 								</div>
 								<div>
 									<label className="block text-sm font-semibold text-gray-800 mb-1.5">
-										Nomor Buku Nikah <span className="text-red-500">*</span>
+										Nomor Buku Nikah{" "}
+										<span className="font-normal text-gray-500">(opsional)</span>
 									</label>
 									<div className="input-group">
 										<input
@@ -1273,7 +1261,7 @@ export default function PengurusForm({
 										</p>
 									)}
 									<p className="text-xs text-pink-600 mt-1 font-medium">
-										Wajib diisi untuk jabatan Ketua RT/RW dengan status menikah
+										Boleh dikosongkan bila dokumen belum tersedia.
 									</p>
 								</div>
 							</div>

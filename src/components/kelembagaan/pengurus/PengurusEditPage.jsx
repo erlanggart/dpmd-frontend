@@ -388,19 +388,6 @@ const PengurusEditPage = () => {
 			return;
 		}
 
-		if (
-			(formData.jabatan === "KETUA RT" || formData.jabatan === "KETUA RW") &&
-			formData.status_perkawinan === "Menikah" &&
-			!formData.nomor_buku_nikah?.trim()
-		) {
-			Swal.fire({
-				icon: "error",
-				title: "Error",
-				text: "Nomor buku nikah wajib diisi untuk Ketua RT/RW yang berstatus menikah",
-			});
-			return;
-		}
-
 		setSaving(true);
 		try {
 			console.log("📝 Starting form submission...");
@@ -852,12 +839,13 @@ const PengurusEditPage = () => {
 								</select>
 							</div>
 
-							{/* Nomor Buku Nikah - conditionally required for Ketua RW/RT yang menikah */}
+							{/* Nomor Buku Nikah - opsional, hanya ditampilkan untuk Ketua RT/RW yang menikah */}
 							{formData.status_perkawinan === "Menikah" &&
 								(formData.jabatan === "KETUA RT" || formData.jabatan === "KETUA RW") && (
 								<div>
 									<label className="block text-sm font-semibold text-gray-800 mb-1.5">
-										Nomor Buku Nikah <span className="text-red-500">*</span>
+										Nomor Buku Nikah{" "}
+										<span className="font-normal text-gray-500">(opsional)</span>
 									</label>
 									<input
 										type="text"
