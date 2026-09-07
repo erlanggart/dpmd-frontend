@@ -76,6 +76,23 @@ const unitKerja = (user) => {
 	return null;
 };
 
+/** Kecamatan induk akun desa; sebagai cadangan dipakai kolom kecamatan user. */
+const idKecamatanUser = (user) => {
+	const id =
+		user.desa?.kecamatan_id ??
+		user.desa?.kecamatan?.id ??
+		user.kecamatan_id ??
+		user.kecamatan?.id;
+	return id === null || id === undefined ? "" : String(id);
+};
+
+const namaKecamatanUser = (user) => user.desa?.kecamatan?.nama || user.kecamatan?.nama || "";
+
+const idDesaUser = (user) => {
+	const id = user.desa?.id ?? user.desa_id;
+	return id === null || id === undefined ? "" : String(id);
+};
+
 const BarisPengguna = ({ user, terpilih, onPilih }) => {
 	const avatarUrl = getAvatarUrl(user.avatar);
 	const peran = getRoleInfo(user.role);
@@ -236,6 +253,9 @@ const UserManagementPage = () => {
 	const [searchTerm, setSearchTerm] = useState("");
 	const [filterBidang, setFilterBidang] = useState("all");
 	const [filterDinas, setFilterDinas] = useState("all");
+	// Filter wilayah untuk tab Akun Desa; desa menyesuaikan kecamatan terpilih.
+	const [filterKecamatan, setFilterKecamatan] = useState("all");
+	const [filterDesa, setFilterDesa] = useState("all");
 	const [activeTab, setActiveTab] = useState("superadmin");
 	const [bidangList, setBidangList] = useState([]);
 	const [dinasList, setDinasList] = useState([]);
@@ -608,6 +628,45 @@ const UserManagementPage = () => {
 		}
 	};
 
+	// Akun yang masuk tab Akun Desa — dasar opsi filter wilayah, supaya pilihan
+	// yang tampil hanya kecamatan/desa yang benar-benar punya akun.
+	const akunDesa = useMemo(() => {
+		const konfig = tabs.find((t) => t.id === "desa");
+		return users.filter((user) => konfig?.roles?.includes(user.role));
+	}, [users, tabs]);
+
+	const opsiKecamatan = useMemo(() => {
+		const peta = new Map();
+		akunDesa.forEach((user) => {
+			const id = idKecamatanUser(user);
+			if (!id) return;
+			if (!peta.has(id)) peta.set(id, namaKecamatanUser(user) || `Kecamatan ${id}`);
+		});
+		return Array.from(peta, ([id, nama]) => ({ id, nama })).sort((a, b) =>
+			a.nama.localeCompare(b.nama)
+		);
+	}, [akunDesa]);
+
+	// Daftar desa mengikuti kecamatan yang sedang dipilih.
+	const opsiDesa = useMemo(() => {
+		const peta = new Map();
+		akunDesa.forEach((user) => {
+			if (filterKecamatan !== "all" && idKecamatanUser(user) !== filterKecamatan) return;
+			const id = idDesaUser(user);
+			if (!id) return;
+			if (!peta.has(id)) peta.set(id, user.desa?.nama || `Desa ${id}`);
+		});
+		return Array.from(peta, ([id, nama]) => ({ id, nama })).sort((a, b) =>
+			a.nama.localeCompare(b.nama)
+		);
+	}, [akunDesa, filterKecamatan]);
+
+	// Ganti kecamatan mengosongkan desa, yang boleh jadi bukan bagian kecamatan baru.
+	const gantiKecamatan = (nilai) => {
+		setFilterKecamatan(nilai);
+		setFilterDesa("all");
+	};
+
 	// Filter users
 	const filteredUsers = useMemo(() => {
 		return users.filter((user) => {
@@ -625,7 +684,8 @@ const UserManagementPage = () => {
 				user.name?.toLowerCase().includes(searchLower) ||
 				user.email?.toLowerCase().includes(searchLower) ||
 				user.desa?.nama?.toLowerCase().includes(searchLower) ||
-				user.kecamatan?.nama?.toLowerCase().includes(searchLower) ||
+				// Kecamatan akun desa ada di relasi desa, bukan kolom kecamatan user.
+				namaKecamatanUser(user).toLowerCase().includes(searchLower) ||
 				user.bidang?.nama?.toLowerCase().includes(searchLower);
 
 			// Bidang akun pegawai sekarang ikut data pegawai; users.bidang_id sudah
@@ -643,9 +703,20 @@ const UserManagementPage = () => {
 				filterDinas === "all" ||
 				user.dinas_id === parseInt(filterDinas);
 
-			return matchTab && matchSearch && matchBidang && matchDinas;
+			// Wilayah hanya menyaring tab Akun Desa.
+			const matchKecamatan =
+				activeTab !== "desa" ||
+				filterKecamatan === "all" ||
+				idKecamatanUser(user) === filterKecamatan;
+
+			const matchDesa =
+				activeTab !== "desa" ||
+				filterDesa === "all" ||
+				idDesaUser(user) === filterDesa;
+
+			return matchTab && matchSearch && matchBidang && matchDinas && matchKecamatan && matchDesa;
 		});
-	}, [users, searchTerm, activeTab, filterBidang, filterDinas, tabs]);
+	}, [users, searchTerm, activeTab, filterBidang, filterDinas, filterKecamatan, filterDesa, tabs]);
 
 	const totalPages = Math.max(Math.ceil(filteredUsers.length / itemsPerPage), 1);
 	const startIndex = (currentPage - 1) * itemsPerPage;
@@ -653,7 +724,7 @@ const UserManagementPage = () => {
 
 	useEffect(() => {
 		setCurrentPage(1);
-	}, [searchTerm, activeTab, filterBidang, filterDinas, itemsPerPage]);
+	}, [searchTerm, activeTab, filterBidang, filterDinas, filterKecamatan, filterDesa, itemsPerPage]);
 
 	// Export users to Excel
 	const handleExportUsers = (exportType = 'current') => {
@@ -781,7 +852,12 @@ const UserManagementPage = () => {
 			? jumlahPerRole[tab.role] || 0
 			: tab.roles?.reduce((total, role) => total + (jumlahPerRole[role] || 0), 0) || 0;
 
-	const adaFilter = Boolean(searchTerm) || filterBidang !== 'all' || filterDinas !== 'all';
+	const adaFilter =
+		Boolean(searchTerm) ||
+		filterBidang !== 'all' ||
+		filterDinas !== 'all' ||
+		filterKecamatan !== 'all' ||
+		filterDesa !== 'all';
 	const nonaktif = users.filter((user) => !user.is_active).length;
 	const belumLengkap = users.filter((user) => user.profile_incomplete).length;
 
@@ -951,6 +1027,36 @@ const UserManagementPage = () => {
 								</option>
 							))}
 						</select>
+					)}
+
+					{activeTab === 'desa' && (
+						<>
+							<select
+								value={filterKecamatan}
+								onChange={(e) => gantiKecamatan(e.target.value)}
+								className="min-w-0 flex-1 rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-50 focus:border-slate-900 focus:outline-none sm:flex-none"
+							>
+								<option value="all">Semua Kecamatan ({opsiKecamatan.length})</option>
+								{opsiKecamatan.map((kecamatan) => (
+									<option key={kecamatan.id} value={kecamatan.id}>
+										{kecamatan.nama}
+									</option>
+								))}
+							</select>
+
+							<select
+								value={filterDesa}
+								onChange={(e) => setFilterDesa(e.target.value)}
+								className="min-w-0 flex-1 rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-50 focus:border-slate-900 focus:outline-none sm:flex-none"
+							>
+								<option value="all">Semua Desa ({opsiDesa.length})</option>
+								{opsiDesa.map((desa) => (
+									<option key={desa.id} value={desa.id}>
+										{desa.nama}
+									</option>
+								))}
+							</select>
+						</>
 					)}
 
 					{activeTab === 'dinas_terkait' && (
