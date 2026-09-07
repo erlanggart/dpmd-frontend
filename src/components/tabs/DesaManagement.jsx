@@ -1,5 +1,5 @@
 // src/components/tabs/DesaManagement.jsx
-import React, { useEffect, useState, useCallback } from "react";
+import React, { useEffect, useMemo, useState, useCallback } from "react";
 import {
 	LuMapPin,
 	LuUser,
@@ -11,6 +11,8 @@ import {
 	LuTrash2,
 	LuShield,
 	LuSearch,
+	LuFilter,
+	LuX,
 } from "react-icons/lu";
 import api from "../../api";
 import AddUserModal from "../AddUserModal";
@@ -29,6 +31,9 @@ const DesaManagement = () => {
 	const [selectedUser, setSelectedUser] = useState(null);
 	const [isResettingPassword, setIsResettingPassword] = useState(false);
 	const [searchTerm, setSearchTerm] = useState("");
+	// Filter wilayah: kecamatan induk desa & desa itu sendiri (desa mengikuti kecamatan).
+	const [kecamatanFilter, setKecamatanFilter] = useState("");
+	const [desaFilter, setDesaFilter] = useState("");
 
 	const { user: currentUser } = useAuth();
 	const canManage =
@@ -157,6 +162,80 @@ const DesaManagement = () => {
 		}
 	};
 
+	// Kecamatan induk & desa diambil dari relasi user; fallback ke kolom
+	// kecamatan_id/kecamatan user bila relasi desa tidak lengkap.
+	const getKecamatanId = (user) => {
+		const id =
+			user.desa?.kecamatan_id ??
+			user.desa?.kecamatan?.id ??
+			user.kecamatan_id ??
+			user.kecamatan?.id;
+		return id === null || id === undefined ? "" : String(id);
+	};
+	const getKecamatanNama = (user) =>
+		user.desa?.kecamatan?.nama || user.kecamatan?.nama || "";
+	const getDesaId = (user) => {
+		const id = user.desa?.id ?? user.desa_id;
+		return id === null || id === undefined ? "" : String(id);
+	};
+
+	// Opsi kecamatan: hanya kecamatan yang punya akun desa.
+	const kecamatanOptions = useMemo(() => {
+		const map = new Map();
+		users.forEach((user) => {
+			const id = getKecamatanId(user);
+			if (!id) return;
+			if (!map.has(id)) map.set(id, getKecamatanNama(user) || `Kecamatan ${id}`);
+		});
+		return Array.from(map, ([id, nama]) => ({ id, nama })).sort((a, b) =>
+			a.nama.localeCompare(b.nama)
+		);
+	}, [users]);
+
+	// Opsi desa mengikuti kecamatan yang sedang dipilih.
+	const desaOptions = useMemo(() => {
+		const map = new Map();
+		users.forEach((user) => {
+			if (kecamatanFilter && getKecamatanId(user) !== kecamatanFilter) return;
+			const id = getDesaId(user);
+			if (!id) return;
+			if (!map.has(id)) map.set(id, user.desa?.nama || `Desa ${id}`);
+		});
+		return Array.from(map, ([id, nama]) => ({ id, nama })).sort((a, b) =>
+			a.nama.localeCompare(b.nama)
+		);
+	}, [users, kecamatanFilter]);
+
+	// Ganti kecamatan otomatis mengosongkan desa yang tidak lagi relevan.
+	const handleKecamatanChange = (value) => {
+		setKecamatanFilter(value);
+		setDesaFilter("");
+	};
+
+	const resetFilters = () => {
+		setSearchTerm("");
+		setKecamatanFilter("");
+		setDesaFilter("");
+	};
+
+	const hasActiveFilter = Boolean(searchTerm || kecamatanFilter || desaFilter);
+
+	// Filter gabungan: pencarian teks + kecamatan + desa.
+	const filteredUsers = useMemo(() => {
+		const searchLower = searchTerm.toLowerCase();
+		return users.filter((user) => {
+			if (kecamatanFilter && getKecamatanId(user) !== kecamatanFilter) return false;
+			if (desaFilter && getDesaId(user) !== desaFilter) return false;
+			if (!searchLower) return true;
+			return (
+				user.name?.toLowerCase().includes(searchLower) ||
+				user.email?.toLowerCase().includes(searchLower) ||
+				user.desa?.nama?.toLowerCase().includes(searchLower) ||
+				getKecamatanNama(user).toLowerCase().includes(searchLower)
+			);
+		});
+	}, [users, searchTerm, kecamatanFilter, desaFilter]);
+
 	if (loading)
 		return (
 			<div className="flex justify-center items-center p-12">
@@ -173,16 +252,6 @@ const DesaManagement = () => {
 				<p className="text-red-600 font-medium">{error}</p>
 			</div>
 		);
-
-	// Filter users based on search
-	const filteredUsers = users.filter((user) => {
-		const searchLower = searchTerm.toLowerCase();
-		return (
-			user.name?.toLowerCase().includes(searchLower) ||
-			user.email?.toLowerCase().includes(searchLower) ||
-			user.desa?.nama?.toLowerCase().includes(searchLower)
-		);
-	});
 
 	return (
 		<div className="space-y-6">
@@ -208,16 +277,67 @@ const DesaManagement = () => {
 				</button>
 			</div>
 
-			{/* Search Bar */}
-			<div className="relative">
-				<LuSearch className="absolute left-4 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
-				<input
-					type="text"
-					placeholder="Cari user berdasarkan nama, email, atau desa..."
-					value={searchTerm}
-					onChange={(e) => setSearchTerm(e.target.value)}
-					className="w-full pl-12 pr-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all"
-				/>
+			{/* Search Bar & Filter Wilayah */}
+			<div className="space-y-3">
+				<div className="relative">
+					<LuSearch className="absolute left-4 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
+					<input
+						type="text"
+						placeholder="Cari user berdasarkan nama, email, desa, atau kecamatan..."
+						value={searchTerm}
+						onChange={(e) => setSearchTerm(e.target.value)}
+						className="w-full pl-12 pr-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all"
+					/>
+				</div>
+
+				<div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+					<div className="relative">
+						<LuFilter className="absolute left-4 top-1/2 transform -translate-y-1/2 h-4 w-4 text-emerald-500 pointer-events-none" />
+						<select
+							value={kecamatanFilter}
+							onChange={(e) => handleKecamatanChange(e.target.value)}
+							className="w-full pl-11 pr-4 py-3 border border-gray-200 rounded-xl bg-white text-sm text-gray-700 focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all"
+						>
+							<option value="">Semua Kecamatan ({kecamatanOptions.length})</option>
+							{kecamatanOptions.map((kec) => (
+								<option key={kec.id} value={kec.id}>
+									{kec.nama}
+								</option>
+							))}
+						</select>
+					</div>
+
+					<div className="relative">
+						<LuHouse className="absolute left-4 top-1/2 transform -translate-y-1/2 h-4 w-4 text-emerald-500 pointer-events-none" />
+						<select
+							value={desaFilter}
+							onChange={(e) => setDesaFilter(e.target.value)}
+							className="w-full pl-11 pr-4 py-3 border border-gray-200 rounded-xl bg-white text-sm text-gray-700 focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all"
+						>
+							<option value="">
+								{kecamatanFilter
+									? `Semua Desa di kecamatan ini (${desaOptions.length})`
+									: `Semua Desa (${desaOptions.length})`}
+							</option>
+							{desaOptions.map((desa) => (
+								<option key={desa.id} value={desa.id}>
+									{desa.nama}
+								</option>
+							))}
+						</select>
+					</div>
+				</div>
+
+				{hasActiveFilter && (
+					<button
+						type="button"
+						onClick={resetFilters}
+						className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-600 bg-gray-100 rounded-xl hover:bg-gray-200 transition-all"
+					>
+						<LuX className="h-4 w-4" />
+						Reset Filter
+					</button>
+				)}
 			</div>
 
 			{/* Users Grid */}
@@ -229,11 +349,11 @@ const DesaManagement = () => {
 						</div>
 						<div>
 							<p className="text-emerald-700 font-semibold text-lg mb-1">
-								{searchTerm ? "Tidak ada hasil" : "Belum ada user Desa"}
+								{hasActiveFilter ? "Tidak ada hasil" : "Belum ada user Desa"}
 							</p>
 							<p className="text-sm text-emerald-500">
-								{searchTerm
-									? "Coba kata kunci pencarian yang lain"
+								{hasActiveFilter
+									? "Coba ubah kata kunci atau filter kecamatan/desa"
 									: 'Klik tombol "Tambah User" untuk menambahkan user baru'}
 							</p>
 						</div>
@@ -277,6 +397,12 @@ const DesaManagement = () => {
 											</div>
 											<span className="text-sm truncate flex-1">
 												{user.desa.nama}
+												{getKecamatanNama(user) && (
+													<span className="text-gray-400">
+														{" "}
+														&middot; Kec. {getKecamatanNama(user)}
+													</span>
+												)}
 											</span>
 										</div>
 									)}
