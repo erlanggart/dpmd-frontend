@@ -133,7 +133,6 @@ const ProfilCard = ({
 
 	// SK Pembentukan
 	const sk = produkHukumList.find((ph) => ph.id === profil?.produk_hukum_id);
-	const skPenonaktifan = produkHukumList.find((ph) => ph.id === profil?.produk_hukum_penonaktifan_id);
 
 	// Total jabatan
 	const totalJabatan = getJabatanList(type).length;
@@ -364,25 +363,30 @@ const ProfilCard = ({
 			</div>
 
 			{/* ── Extra sections ── */}
-			{/* SK Penonaktifan */}
-			{profil?.status_kelembagaan === "nonaktif" && skPenonaktifan && (
+			{/* Alasan Dinonaktifkan */}
+			{profil?.status_kelembagaan === "nonaktif" && profil?.alasan_nonaktif && (
 				<div className="mx-4 my-3 p-3 rounded-lg bg-red-50 border border-red-100">
-					<div className="flex items-center justify-between">
-						<div className="flex items-center gap-2">
-							<LuPowerOff className="w-4 h-4 text-red-500 flex-shrink-0" />
-							<div>
-								<p className="text-xs font-semibold text-red-700">SK Penonaktifan</p>
-								<p className="text-xs text-red-600 mt-0.5">
-									No. {skPenonaktifan.nomor} Tahun {skPenonaktifan.tahun} — {skPenonaktifan.judul}
+					<div className="flex items-start gap-2">
+						<LuPowerOff className="w-4 h-4 text-red-500 flex-shrink-0 mt-0.5" />
+						<div className="min-w-0">
+							<p className="text-xs font-semibold text-red-700">
+								Dinonaktifkan — {profil.alasan_nonaktif}
+							</p>
+							{profil?.keterangan_nonaktif && (
+								<p className="text-xs text-red-600 mt-0.5 whitespace-pre-line break-words">
+									{profil.keterangan_nonaktif}
 								</p>
-							</div>
+							)}
+							{profil?.nonaktif_at && (
+								<p className="text-[11px] text-red-400 mt-1">
+									{new Date(profil.nonaktif_at).toLocaleDateString("id-ID", {
+										day: "numeric",
+										month: "long",
+										year: "numeric",
+									})}
+								</p>
+							)}
 						</div>
-						<button
-							onClick={() => navigate(getProdukHukumUrl(profil.produk_hukum_penonaktifan_id))}
-							className="p-1 text-red-400 hover:text-red-600 transition-colors"
-						>
-							<LuChevronRight className="w-4 h-4" />
-						</button>
 					</div>
 				</div>
 			)}

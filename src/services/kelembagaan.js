@@ -83,11 +83,16 @@ export const getKelembagaanDetailedSummary = () =>
 	api.get("/desa/kelembagaan/detailed-summary");
 
 // Toggle Status Functions - menggunakan endpoint yang sesuai dengan role
-export const toggleKelembagaanStatus = (type, id, status, produk_hukum_penonaktifan_id = null) => {
+// Menonaktifkan lembaga wajib menyertakan alasan (kategori) + keterangan
+// (penjelasan). Keduanya divalidasi ulang di server.
+export const toggleKelembagaanStatus = (type, id, status, { alasan, keterangan } = {}) => {
 	const endpoint = `/kelembagaan/${type}/${id}/toggle-status`;
 	const params = getAdminParams();
 	const body = { status_kelembagaan: status };
-	if (produk_hukum_penonaktifan_id) body.produk_hukum_penonaktifan_id = produk_hukum_penonaktifan_id;
+	if (status === "nonaktif") {
+		body.alasan_nonaktif = alasan;
+		body.keterangan_nonaktif = keterangan;
+	}
 	return api.put(endpoint, body, { params });
 };
 

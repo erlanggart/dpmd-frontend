@@ -40,6 +40,7 @@ import {
 	LuShieldCheck,
 	LuSearch,
 	LuLandmark,
+	LuPowerOff,
 } from "react-icons/lu";
 import DesaPageHeader from "../../../components/desa/DesaPageHeader";
 
@@ -179,6 +180,10 @@ export default function KelembagaanDesaPage() {
 		lpm_formed: false,
 		satlinmas_formed: false,
 		pkk_formed: false,
+		karang_taruna_status: null,
+		lpm_status: null,
+		satlinmas_status: null,
+		pkk_status: null,
 		total: 0,
 		desa_nama: null,
 		status_pemerintahan: 'desa',
@@ -298,6 +303,10 @@ A			pakah Anda yakin ingin membentuk Karang Taruna ${wilayahLabel} ${desaName}?`
 					lpm_formed: data.has_lpm || false,
 					satlinmas_formed: data.has_satlinmas || false,
 					pkk_formed: data.has_pkk || false,
+					karang_taruna_status: data.karang_taruna_status || null,
+					lpm_status: data.lpm_status || null,
+					satlinmas_status: data.satlinmas_status || null,
+					pkk_status: data.pkk_status || null,
 					total: data.total || 0,
 					desa_nama: data.desa_nama || null,
 					status_pemerintahan: data.status_pemerintahan || 'desa',
@@ -359,6 +368,13 @@ A			pakah Anda yakin ingin membentuk Karang Taruna ${wilayahLabel} ${desaName}?`
 	const lpmFormed = summary.lpm_formed;
 	const satlinmasFormed = summary.satlinmas_formed;
 	const pkkFormed = summary.pkk_formed;
+	// Sudah dibentuk tapi dinonaktifkan — tidak dihitung, tapi tetap ditampilkan.
+	const ktNonaktif = summary.karang_taruna_status === 'nonaktif';
+	const lpmNonaktif = summary.lpm_status === 'nonaktif';
+	const satlinmasNonaktif = summary.satlinmas_status === 'nonaktif';
+	const pkkNonaktif = summary.pkk_status === 'nonaktif';
+	const labelSingleton = (formed, nonaktif) =>
+		!formed ? 'Belum terbentuk' : nonaktif ? 'Terbentuk, sedang nonaktif' : 'Sudah terbentuk';
 	const modalRequiresProdukHukum = requiresProdukHukum(modalConfig.type);
 	const selectedProdukHukum = produkHukumOptions.find((item) => item.id === selectedProdukHukumId) || null;
 	const filteredProdukHukumOptions = produkHukumOptions.filter((item) => {
@@ -551,6 +567,10 @@ A			pakah Anda yakin ingin membentuk Karang Taruna ${wilayahLabel} ${desaName}?`
 				lpm_formed: data.has_lpm || false,
 				satlinmas_formed: data.has_satlinmas || false,
 				pkk_formed: data.has_pkk || false,
+				karang_taruna_status: data.karang_taruna_status || null,
+				lpm_status: data.lpm_status || null,
+				satlinmas_status: data.satlinmas_status || null,
+				pkk_status: data.pkk_status || null,
 				total: data.total || 0,
 				desa_nama: data.desa_nama || null,
 				status_pemerintahan: data.status_pemerintahan || 'desa',
@@ -607,7 +627,16 @@ A			pakah Anda yakin ingin membentuk Karang Taruna ${wilayahLabel} ${desaName}?`
 	};
 
 	// Helper: verification badge for singleton types (KT, LPM, PKK, Satlinmas)
-	const renderSingletonVerifBadge = (verifData, formed) => {
+	const renderSingletonVerifBadge = (verifData, formed, statusKelembagaan) => {
+		// Lembaga nonaktif tidak ikut dihitung di ringkasan, jadi kartunya diberi
+		// label sendiri supaya tidak terlihat seolah datanya hilang begitu saja.
+		if (formed && statusKelembagaan === 'nonaktif') {
+			return (
+				<span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-slate-100 text-slate-600 border border-slate-200">
+					<LuPowerOff className="w-3 h-3" /> Nonaktif
+				</span>
+			);
+		}
 		if (!verifData || !formed) return null;
 		if (verifData.status_verifikasi === 'verified') {
 			return (
@@ -869,14 +898,14 @@ A			pakah Anda yakin ingin membentuk Karang Taruna ${wilayahLabel} ${desaName}?`
 							<div>
 								<h4 className="font-semibold text-slate-900">Karang Taruna</h4>
 								<p className={`text-sm ${ktFormed ? 'text-slate-500' : 'text-amber-600'}`}>
-									{ktFormed ? 'Sudah terbentuk' : 'Belum terbentuk'}
+									{labelSingleton(ktFormed, ktNonaktif)}
 								</p>
 							</div>
 						</div>
 						<div className="flex items-center gap-3">
 							{ktFormed ? (
 								<>
-									{renderSingletonVerifBadge(summary.verifikasi?.karang_taruna, ktFormed)}
+									{renderSingletonVerifBadge(summary.verifikasi?.karang_taruna, ktFormed, summary.karang_taruna_status)}
 									<LuArrowRight className="w-4 h-4 text-slate-400" />
 								</>
 							) : (
@@ -904,14 +933,14 @@ A			pakah Anda yakin ingin membentuk Karang Taruna ${wilayahLabel} ${desaName}?`
 							<div>
 								<h4 className="font-semibold text-slate-900">LPM</h4>
 								<p className={`text-sm ${lpmFormed ? 'text-slate-500' : 'text-amber-600'}`}>
-									{lpmFormed ? 'Sudah terbentuk' : 'Belum terbentuk'}
+									{labelSingleton(lpmFormed, lpmNonaktif)}
 								</p>
 							</div>
 						</div>
 						<div className="flex items-center gap-3">
 							{lpmFormed ? (
 								<>
-									{renderSingletonVerifBadge(summary.verifikasi?.lpm, lpmFormed)}
+									{renderSingletonVerifBadge(summary.verifikasi?.lpm, lpmFormed, summary.lpm_status)}
 									<LuArrowRight className="w-4 h-4 text-slate-400" />
 								</>
 							) : (
@@ -939,14 +968,14 @@ A			pakah Anda yakin ingin membentuk Karang Taruna ${wilayahLabel} ${desaName}?`
 							<div>
 								<h4 className="font-semibold text-slate-900">PKK</h4>
 								<p className={`text-sm ${pkkFormed ? 'text-slate-500' : 'text-amber-600'}`}>
-									{pkkFormed ? 'Sudah terbentuk' : 'Belum terbentuk'}
+									{labelSingleton(pkkFormed, pkkNonaktif)}
 								</p>
 							</div>
 						</div>
 						<div className="flex items-center gap-3">
 							{pkkFormed ? (
 								<>
-									{renderSingletonVerifBadge(summary.verifikasi?.pkk, pkkFormed)}
+									{renderSingletonVerifBadge(summary.verifikasi?.pkk, pkkFormed, summary.pkk_status)}
 									<LuArrowRight className="w-4 h-4 text-slate-400" />
 								</>
 							) : (
@@ -1000,14 +1029,14 @@ A			pakah Anda yakin ingin membentuk Karang Taruna ${wilayahLabel} ${desaName}?`
 							<div>
 								<h4 className="font-semibold text-slate-900">Satlinmas</h4>
 								<p className={`text-sm ${satlinmasFormed ? 'text-slate-500' : 'text-amber-600'}`}>
-									{satlinmasFormed ? 'Sudah terbentuk' : 'Belum terbentuk'}
+									{labelSingleton(satlinmasFormed, satlinmasNonaktif)}
 								</p>
 							</div>
 						</div>
 						<div className="flex items-center gap-3">
 							{satlinmasFormed ? (
 								<>
-									{renderSingletonVerifBadge(summary.verifikasi?.satlinmas, satlinmasFormed)}
+									{renderSingletonVerifBadge(summary.verifikasi?.satlinmas, satlinmasFormed, summary.satlinmas_status)}
 									<LuArrowRight className="w-4 h-4 text-slate-400" />
 								</>
 							) : (
@@ -1040,6 +1069,13 @@ A			pakah Anda yakin ingin membentuk Karang Taruna ${wilayahLabel} ${desaName}?`
 								</div>
 							</div>
 							<div className="flex items-center gap-3">
+								{/* Item nonaktif tidak ikut dihitung, jadi diberi label agar
+								    daftarnya tidak terbaca bertentangan dengan angkanya. */}
+								{item.status_kelembagaan === "nonaktif" && (
+									<span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-slate-100 text-slate-600 border border-slate-200">
+										<LuPowerOff className="w-3 h-3" /> Nonaktif
+									</span>
+								)}
 								<LuArrowRight className="w-4 h-4 text-slate-400" />
 							</div>
 						</div>

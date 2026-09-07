@@ -41,6 +41,19 @@ import {
 } from "../../utils/sweetAlert";
 import Swal from "sweetalert2";
 
+// Alasan penonaktifan lembaga. Daftar tertutup supaya isiannya seragam dan bisa
+// dihitung per kategori. Harus sama dengan ALASAN_NONAKTIF_LEMBAGA di
+// dpmd-fahri-express/src/controllers/kelembagaan/base.controller.js — server
+// menolak nilai di luar daftar itu.
+const ALASAN_NONAKTIF = [
+	"Penggabungan Wilayah",
+	"Pemekaran Wilayah",
+	"Tidak Aktif / Vakum",
+	"Habis Masa Bakti",
+	"Duplikat Data",
+	"Lainnya",
+];
+
 // Helper function to get display name for kelembagaan type
 const getDisplayName = (type) => {
 	const mapping = {
@@ -357,22 +370,27 @@ export default function KelembagaanDetailPage({
 		const newStatus = currentStatus === "aktif" ? "nonaktif" : "aktif";
 
 		if (newStatus === "nonaktif") {
-			// Deactivating: require Produk Hukum Penonaktifan selection
-			const optionsHtml = produkHukumList
-				.map((ph) => `<option value="${ph.id}">Nomor ${ph.nomor} Tahun ${ph.tahun} - ${ph.judul}</option>`)
-				.join("");
+			// Menonaktifkan wajib disertai alasan (kategori) + keterangan (penjelasan)
+			// supaya keputusannya bisa dipertanggungjawabkan dan bisa diagregasi.
+			const optionsHtml = ALASAN_NONAKTIF.map(
+				(alasan) => `<option value="${alasan}">${alasan}</option>`,
+			).join("");
 
-			const { value: selectedProdukHukumId } = await Swal.fire({
+			const { value: formValues } = await Swal.fire({
 				title: "Nonaktifkan Kelembagaan",
 				html: `
 					<div class="text-left space-y-3">
-						<p class="text-sm text-gray-600">Pilih Produk Hukum yang menjadi dasar penonaktifan kelembagaan ini.</p>
+						<p class="text-sm text-gray-600">Jelaskan mengapa kelembagaan ini dinonaktifkan.</p>
 						<div>
-							<label class="block text-sm font-medium text-gray-700 mb-1">SK Penonaktifan Lembaga <span class="text-red-500">*</span></label>
-							<select id="swal-produk-hukum" class="w-full border border-gray-300 rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-red-500 focus:border-red-500">
-								<option value="">-- Pilih Produk Hukum --</option>
+							<label class="block text-sm font-medium text-gray-700 mb-1">Alasan Penonaktifan <span class="text-red-500">*</span></label>
+							<select id="swal-alasan" class="w-full border border-gray-300 rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-red-500 focus:border-red-500">
+								<option value="">-- Pilih Alasan --</option>
 								${optionsHtml}
 							</select>
+						</div>
+						<div>
+							<label class="block text-sm font-medium text-gray-700 mb-1">Keterangan <span class="text-red-500">*</span></label>
+							<textarea id="swal-keterangan" rows="3" maxlength="500" placeholder="Tuliskan penjelasan singkat penonaktifan lembaga ini" class="w-full border border-gray-300 rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-red-500 focus:border-red-500"></textarea>
 						</div>
 					</div>`,
 				showCancelButton: true,
@@ -381,25 +399,31 @@ export default function KelembagaanDetailPage({
 				confirmButtonColor: "#ef4444",
 				focusConfirm: false,
 				preConfirm: () => {
-					const val = document.getElementById("swal-produk-hukum").value;
-					if (!val) {
-						Swal.showValidationMessage("Pilih Produk Hukum terlebih dahulu");
+					const alasan = document.getElementById("swal-alasan").value;
+					const keterangan = document.getElementById("swal-keterangan").value.trim();
+					if (!alasan) {
+						Swal.showValidationMessage("Pilih alasan penonaktifan terlebih dahulu");
 						return false;
 					}
-					return val;
+					if (!keterangan) {
+						Swal.showValidationMessage("Keterangan penonaktifan harus diisi");
+						return false;
+					}
+					return { alasan, keterangan };
 				},
 			});
 
-			if (!selectedProdukHukumId) return;
+			if (!formValues) return;
 
 			try {
 				showLoadingAlert("Menonaktifkan Kelembagaan...", "Mohon tunggu sebentar");
-				await toggleKelembagaanStatus(type, kelembagaanId, newStatus, selectedProdukHukumId);
+				await toggleKelembagaanStatus(type, kelembagaanId, newStatus, formValues);
 
 				setDetail((prevDetail) => ({
 					...prevDetail,
 					status_kelembagaan: newStatus,
-					produk_hukum_penonaktifan_id: selectedProdukHukumId,
+					alasan_nonaktif: formValues.alasan,
+					keterangan_nonaktif: formValues.keterangan,
 				}));
 
 				showSuccessAlert("Berhasil!", "Kelembagaan berhasil dinonaktifkan");
@@ -414,7 +438,7 @@ export default function KelembagaanDetailPage({
 			// Activating: simple confirmation
 			const result = await showConfirmAlert(
 				"Konfirmasi Pengaktifan",
-				"Apakah Anda yakin ingin mengaktifkan kembali kelembagaan ini?",
+				"Apakah Anda yakin ingin mengaktifkan kembali kelembagaan ini? Alasan dan keterangan penonaktifan sebelumnya akan dihapus.",
 				"warning",
 			);
 
@@ -427,7 +451,8 @@ export default function KelembagaanDetailPage({
 				setDetail((prevDetail) => ({
 					...prevDetail,
 					status_kelembagaan: newStatus,
-					produk_hukum_penonaktifan_id: null,
+					alasan_nonaktif: null,
+					keterangan_nonaktif: null,
 				}));
 
 				showSuccessAlert("Berhasil!", "Kelembagaan berhasil diaktifkan kembali");
