@@ -129,6 +129,27 @@ export default defineConfig({
 						handler: 'NetworkOnly'
 					},
 					{
+						// Unduhan cadangan sistem TIDAK BOLEH disentuh service worker.
+						//
+						// Aturan /api/ umum di bawah memakai NetworkFirst, dan itu merusak
+						// unduhan ini dengan tiga cara sekaligus:
+						//   1. Responsnya dibaca sampai habis untuk dipertimbangkan masuk
+						//      cache — padahal cadangan bisa bergiga-giga, dan seluruhnya
+						//      akan ditahan di memori peramban, meniadakan alasan kita
+						//      mengalirkannya dari server.
+						//   2. Galat server (mis. mysqldump tidak ada di server) berstatus
+						//      500, tidak lolos cacheableResponse, sehingga NetworkFirst
+						//      jatuh ke cache yang kosong dan melempar "no-response". Pesan
+						//      galat aslinya hilang dan yang terlihat pengguna hanyalah
+						//      kegagalan tak berketerangan.
+						//   3. Isi cadangan ikut mengendap di cache peramban.
+						//
+						// Harus berada SEBELUM aturan /api/ umum: Workbox memakai rute
+						// pertama yang cocok (pola yang sama dipakai /api/auth/ di atas).
+						urlPattern: /\/api\/superadmin\/backup\//i,
+						handler: 'NetworkOnly'
+					},
+					{
 						// Tanpa domain agar tetap cocok setelah pindah ke dpmd.bogorkab.go.id.
 						// JANGAN diberi jangkar ^: Workbox mencocokkan regex ini ke URL
 						// lengkap (href), sehingga ^\/api\/ tidak akan pernah cocok. Tanpa

@@ -205,10 +205,14 @@ const BackupPage = () => {
 					<FiAlertTriangle className="h-4 w-4 text-red-600 mt-0.5 shrink-0" />
 					<div>
 						<p className="text-sm font-bold text-red-900">
-							Basis data tidak dapat dibaca
+							Cadangan basis data belum siap
 						</p>
 						<p className="text-[12.5px] text-red-800 mt-0.5">
-							{ringkasan.database.catatan} — backup database dan backup semua akan gagal.
+							{ringkasan.database.catatan}
+						</p>
+						<p className="text-[12.5px] text-red-800 mt-1">
+							Backup <b>File</b> dan <b>Foto</b> tetap bisa dijalankan; hanya bagian basis
+							data yang terpengaruh.
 						</p>
 					</div>
 				</div>
@@ -247,11 +251,26 @@ const BackupPage = () => {
 								{memuat ? (
 									<p className="text-[12.5px] text-slate-400">Menghitung...</p>
 								) : iniDatabase ? (
-									<p className="text-[12.5px] text-slate-600">
-										{ringkasan?.database?.tersedia
-											? `Basis data ${ringkasan.database.nama} di ${ringkasan.database.host}`
-											: "Tidak tersedia"}
-									</p>
+									<div className="text-[12.5px] text-slate-600">
+										{ringkasan?.database?.tersedia ? (
+											<>
+												<p>
+													Basis data <b>{ringkasan.database.nama}</b> di{" "}
+													{ringkasan.database.host}
+												</p>
+												{ringkasan.database.mysqldump && (
+													<p
+														className="mt-0.5 text-[11px] text-slate-400 truncate"
+														title={ringkasan.database.mysqldump}
+													>
+														{ringkasan.database.mysqldump}
+													</p>
+												)}
+											</>
+										) : (
+											<p className="text-red-600">Tidak siap — lihat peringatan di atas</p>
+										)}
+									</div>
 								) : info ? (
 									<p className="text-[12.5px] text-slate-600">
 										<b>{info.jumlah.toLocaleString("id-ID")}</b> berkas ·{" "}
