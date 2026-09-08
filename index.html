@@ -22,6 +22,41 @@
 	</head>
 	<body>
 		<div id="root"></div>
-		<script type="module" src="/src/main.jsx"></script>
+		<script>
+			// Jaring pengaman kalau /src/main.jsx (atau bundle produksinya) gagal
+			// dimuat — biasanya karena service worker menyajikan index.html lama
+			// dari precache yang merujuk berkas JS ber-hash yang sudah dihapus
+			// server setelah deploy baru. Kegagalan ini terjadi SEBELUM React
+			// mulai, jadi ErrorBoundary React (lihat App.jsx/ErrorBoundary.jsx)
+			// tidak pernah sempat menyala — yang tersisa cuma layar putih
+			// selamanya. Paling sering ketahuan tepat setelah logout, karena
+			// logout satu-satunya alur yang memuat ulang halaman secara penuh
+			// (bukan navigasi client-side React Router).
+			window.__dpmdBootError = function () {
+				var KEY = "dpmd_boot_recover_at";
+				var WINDOW_MS = 30000;
+				try {
+					var last = Number(sessionStorage.getItem(KEY)) || 0;
+					if (Date.now() - last < WINDOW_MS) return; // sudah dicoba, jangan berputar terus
+					sessionStorage.setItem(KEY, String(Date.now()));
+				} catch (e) {}
+
+				var cleanup = Promise.resolve();
+				if ("serviceWorker" in navigator) {
+					cleanup = navigator.serviceWorker.getRegistrations()
+						.then(function (regs) { return Promise.all(regs.map(function (r) { return r.unregister(); })); })
+						.catch(function () {});
+				}
+				if ("caches" in window) {
+					cleanup = cleanup.then(function () {
+						return caches.keys().then(function (keys) {
+							return Promise.all(keys.map(function (k) { return caches.delete(k); }));
+						});
+					}).catch(function () {});
+				}
+				cleanup.then(function () { window.location.reload(); });
+			};
+		</script>
+		<script type="module" src="/src/main.jsx" onerror="window.__dpmdBootError()"></script>
 	</body>
 </html>
