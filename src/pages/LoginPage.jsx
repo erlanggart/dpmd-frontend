@@ -6,6 +6,16 @@ import { FiEye, FiEyeOff, FiLoader, FiAlertCircle, FiLock, FiClock, FiMapPin } f
 import LoginImageSlider from "../components/login/LoginImageSlider";
 import { useAuth } from "../context/AuthContext";
 import toast from "react-hot-toast";
+import { isPWA } from "../utils/pwaDetection";
+
+// "Ingat saya" hanya berguna di browser biasa: cuma mengisi ulang kolom email,
+// TIDAK menyimpan password (localStorage bukan tempat aman untuk itu — bisa
+// dibaca skrip apa pun kalau ada celah XSS). Password tetap diisi otomatis
+// lewat password manager bawaan browser, yang bekerja begitu field-nya diberi
+// autoComplete yang benar. Di PWA yang sudah terpasang, sesi memang permanen
+// (lihat AuthContext/sessionPersistence) sampai user menekan keluar sendiri —
+// tidak perlu isi ulang form sama sekali, jadi checkbox ini disembunyikan.
+const REMEMBERED_EMAIL_KEY = "dpmd_remembered_email";
 
 // Ambil posisi GPS sebagai Promise (lokasi WAJIB saat login).
 const getCurrentPosition = (options = {}) =>
@@ -49,6 +59,23 @@ const LoginPage = () => {
 	const [coords, setCoords] = useState(null);
 	const [locationStatus, setLocationStatus] = useState('unknown'); // unknown | granted | denied | error
 	const [gettingLocation, setGettingLocation] = useState(false);
+	// Dihitung sekali: mode tampilan (browser/PWA) tidak berubah selama app dibuka.
+	const [tampilkanIngatSaya] = useState(() => !isPWA());
+	const [ingatSaya, setIngatSaya] = useState(false);
+
+	// Isi ulang email yang diingat (kalau ada) begitu halaman login dibuka di browser biasa.
+	useEffect(() => {
+		if (!tampilkanIngatSaya) return;
+		try {
+			const emailTersimpan = localStorage.getItem(REMEMBERED_EMAIL_KEY);
+			if (emailTersimpan) {
+				setEmail(emailTersimpan);
+				setIngatSaya(true);
+			}
+		} catch {
+			// localStorage bisa diblokir (mode privat); abaikan saja.
+		}
+	}, [tampilkanIngatSaya]);
 
 	useEffect(() => {
 		// Cek status izin lokasi (jika browser mendukung Permissions API).
@@ -159,6 +186,19 @@ const LoginPage = () => {
 			// Reset lockout on successful login
 			setLockoutUntil(null);
 			setLockoutRemaining(0);
+
+			// Simpan/hapus email yang diingat sesuai centang "Ingat saya" (browser biasa saja).
+			if (tampilkanIngatSaya) {
+				try {
+					if (ingatSaya) {
+						localStorage.setItem(REMEMBERED_EMAIL_KEY, email);
+					} else {
+						localStorage.removeItem(REMEMBERED_EMAIL_KEY);
+					}
+				} catch {
+					// localStorage bisa diblokir (mode privat); tidak fatal untuk login.
+				}
+			}
 
 			// Save token and user using context
 			login(newUser, null, expressToken);
@@ -297,6 +337,8 @@ const LoginPage = () => {
 							<input
 								type="email"
 								id="email"
+								name="email"
+								autoComplete="username"
 								placeholder="nama@domain.go.id"
 								className={`w-full rounded-2xl border bg-white px-4 py-3.5 text-slate-900 outline-none transition placeholder:text-slate-400 focus:ring-4 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:opacity-60 ${emailError ? 'border-red-300 focus:border-red-500 focus:ring-red-100' : 'border-slate-200 focus:border-[rgb(var(--color-primary))] focus:ring-slate-200'}`}
 								value={email}
@@ -318,6 +360,8 @@ const LoginPage = () => {
 								<input
 									type={showPassword ? "text" : "password"}
 									id="password"
+									name="password"
+									autoComplete="current-password"
 									placeholder="Masukkan password"
 									className={`w-full rounded-2xl border bg-white px-4 py-3.5 pr-12 text-slate-900 outline-none transition placeholder:text-slate-400 focus:ring-4 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:opacity-60 ${passwordError ? 'border-red-300 focus:border-red-500 focus:ring-red-100' : 'border-slate-200 focus:border-[rgb(var(--color-primary))] focus:ring-slate-200'}`}
 									value={password}
@@ -340,6 +384,18 @@ const LoginPage = () => {
 								</p>
 							)}
 						</div>
+						{tampilkanIngatSaya && (
+							<label htmlFor="ingat-saya" className="flex cursor-pointer select-none items-center gap-2.5 text-sm text-slate-600">
+								<input
+									type="checkbox"
+									id="ingat-saya"
+									checked={ingatSaya}
+									onChange={(e) => setIngatSaya(e.target.checked)}
+									className="h-4 w-4 rounded border-slate-300 text-[rgb(var(--color-primary))] focus:ring-2 focus:ring-slate-200"
+								/>
+								Ingat saya
+							</label>
+						)}
 						<button
 							type="submit"
 							disabled={loading || isLockedOut || locationStatus !== 'granted'}
