@@ -8,6 +8,7 @@ import {
 	FiBriefcase,
 	FiChevronLeft,
 	FiChevronRight,
+	FiDownloadCloud,
 	FiFileText,
 	FiGrid,
 	FiHome,
@@ -70,6 +71,7 @@ const MENU_GROUPS = [
 		title: "Sistem",
 		items: [
 			{ path: "/superadmin/activity-logs", label: "Activity Logs", icon: FiActivity },
+			{ path: "/superadmin/backup", label: "Backup Sistem", icon: FiDownloadCloud },
 			{ path: "/superadmin/pesan", label: "Pesan", icon: MessageLottieIcon },
 			{ path: "/superadmin/settings", label: "Settings", icon: FiSettings },
 		],

@@ -244,6 +244,9 @@ const SekretariatPage = lazy(() => import("./pages/bidang/SekretariatPage"));
 const SpkedPage = lazy(() => import("./pages/bidang/SpkedPage"));
 const KKDPage = lazy(() => import("./pages/bidang/KKDPage"));
 const PMDPage = lazy(() => import("./pages/bidang/PMDPage"));
+// Satu halaman untuk semua bidang: katalog hak aksesnya ditentukan server dari
+// bidang_id akun yang login, bukan dari rute yang dibuka.
+const ManajemenAkunDesaPage = lazy(() => import("./pages/bidang/ManajemenAkunDesaPage"));
 const PemdesPage = lazy(() => import("./pages/bidang/PemdesPage"));
 const PemdesAparaturDesaPage = lazy(() => import("./pages/bidang/pemdes/AparaturDesaPage"));
 const PemdesAparaturDetailPage = lazy(() =>
@@ -310,6 +313,7 @@ const SuperadminLayout = lazy(
 const SuperadminDashboard = lazy(
   () => import("./pages/superadmin/SuperadminDashboard"),
 );
+const BackupPage = lazy(() => import("./pages/superadmin/BackupPage"));
 const KepegawaianPage = lazy(
   () => import("./pages/superadmin/KepegawaianPage"),
 );
@@ -1240,6 +1244,16 @@ function App() {
                   <Route path="kkd/produk-hukum-kabupaten" element={<ProdukHukumBidangPage bidangId={4} />} />
                   <Route path="pemdes/produk-hukum-kabupaten" element={<ProdukHukumBidangPage bidangId={6} />} />
 
+                  {/* Akun operator desa — satu komponen untuk semua bidang; server
+                      yang menentukan fitur apa saja yang boleh diberikan. Bidang PMD
+                      punya rutenya sendiri karena memakai blok layout terpisah. */}
+                  {/* KKD sengaja tidak punya rute ini: modulnya (ADD, DD, BHPRD,
+                      penyaluran) semuanya pencatatan sisi DPMD, tidak ada fitur
+                      halaman desa yang menjadi wewenangnya. Lihat
+                      backend/src/config/bidangDesaPermissions.js */}
+                  <Route path="spked/akun-desa" element={<ManajemenAkunDesaPage />} />
+                  <Route path="pemdes/akun-desa" element={<ManajemenAkunDesaPage />} />
+
                   {/* Detail Disposisi - Accessible dari semua bidang */}
                   <Route path="disposisi/:id" element={<DisposisiDetail />} />
                 </Route>
@@ -1286,6 +1300,7 @@ function App() {
                     element={<KelembagaanDetailPage />}
                   />
                   <Route path="produk-hukum-kabupaten" element={<ProdukHukumBidangPage bidangId={5} />} />
+                  <Route path="akun-desa" element={<ManajemenAkunDesaPage />} />
                   <Route path="pengurus" element={<PengurusDashboardPage />} />
                   <Route path="pengurus/import" element={<PengurusImportPage />} />
                   <Route path="pengurus/:id" element={<PengurusDetailPage />} />
@@ -1460,6 +1475,7 @@ function App() {
                     path="hero-gallery"
                     element={<HeroGalleryManagement />}
                   />
+                  <Route path="backup" element={<BackupPage />} />
                   <Route path="settings" element={<SettingsPage />} />
                   <Route path="profile" element={<ProfilePage />} />
 
@@ -1547,6 +1563,9 @@ function App() {
                   <Route path="bidang/pmd/kelembagaan/admin/:desaId/:type" element={<KelembagaanList />} />
                   <Route path="bidang/pmd/kelembagaan/:type" element={<KelembagaanList />} />
                   <Route path="bidang/pmd/kelembagaan/:type/:id" element={<KelembagaanDetailPage />} />
+                  <Route path="bidang/pmd/akun-desa" element={<ManajemenAkunDesaPage />} />
+                  <Route path="bidang/spked/akun-desa" element={<ManajemenAkunDesaPage />} />
+                  <Route path="bidang/pemdes/akun-desa" element={<ManajemenAkunDesaPage />} />
                   <Route path="bidang/pmd/pengurus" element={<PengurusDashboardPage />} />
                   <Route path="bidang/pmd/pengurus/import" element={<PengurusImportPage />} />
                   <Route path="bidang/pmd/pengurus/:id" element={<PengurusDetailPage />} />

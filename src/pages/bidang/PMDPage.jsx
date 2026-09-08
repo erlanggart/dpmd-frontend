@@ -5,7 +5,7 @@ import { useAuth } from '../../context/AuthContext';
 import {
   Users, Activity, Clock, HardDrive, ClipboardList, UserCheck, Scale,
   Building2, ChevronRight, ArrowUpRight, BarChart3, GitMerge, RotateCcw,
-	Gavel,
+	Gavel, UserPlus,
 } from 'lucide-react';
 import api from '../../api';
 import toast from 'react-hot-toast';
@@ -293,6 +293,14 @@ const PMDPage = () => {
       icon: Scale,
       route: getPath('/bidang/pmd/produk-hukum'),
       stat: { value: '346', label: 'dokumen' },
+    },
+    {
+      id: 'akun-desa', tone: 'violet',
+      title: 'Akun Operator Desa', short: 'Akun Desa',
+      desc: 'Buatkan akun petugas desa untuk mengelola kelembagaan',
+      icon: UserPlus,
+      route: getPath('/bidang/pmd/akun-desa'),
+      stat: { value: 'Kelembagaan', label: 'hak akses bidang ini' },
     },
     {
       id: 'produk-hukum-kabupaten', tone: 'slate',
