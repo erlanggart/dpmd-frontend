@@ -669,7 +669,7 @@ const UserManagementPage = () => {
 
 	// Filter users
 	const filteredUsers = useMemo(() => {
-		return users.filter((user) => {
+		const hasil = users.filter((user) => {
 			const activeTabConfig = tabs.find(t => t.id === activeTab);
 			let matchTab = false;
 
@@ -716,6 +716,27 @@ const UserManagementPage = () => {
 
 			return matchTab && matchSearch && matchBidang && matchDinas && matchKecamatan && matchDesa;
 		});
+
+		// Tab Akun Desa diurutkan per wilayah, bukan menurut created_at seperti
+		// tab lain. Satu desa bisa punya dua akun (Admin Desa + Operator Desa);
+		// dengan urutan bawaan keduanya terpencar dan desa yang sama muncul
+		// selang-seling di beberapa halaman. Dikelompokkan kecamatan lalu desa,
+		// baris satu desa selalu berdampingan.
+		if (activeTab === "desa") {
+			const bandingkan = (a, b) =>
+				(a || "").localeCompare(b || "", "id", { numeric: true, sensitivity: "base" });
+
+			return [...hasil].sort(
+				(a, b) =>
+					bandingkan(namaKecamatanUser(a), namaKecamatanUser(b)) ||
+					bandingkan(a.desa?.nama, b.desa?.nama) ||
+					// Admin Desa (pengelola akun) di atas operator yang dibuatnya.
+					(a.role === b.role ? 0 : a.role === "admin_desa" ? -1 : 1) ||
+					bandingkan(a.name, b.name)
+			);
+		}
+
+		return hasil;
 	}, [users, searchTerm, activeTab, filterBidang, filterDinas, filterKecamatan, filterDesa, tabs]);
 
 	const totalPages = Math.max(Math.ceil(filteredUsers.length / itemsPerPage), 1);
