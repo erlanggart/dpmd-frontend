@@ -8,6 +8,7 @@ export const fotoUrl = (path) => (path ? `${STORAGE_BASE}/${path}` : null);
 
 export const KONDISI = {
   baik: { label: 'Baik', chip: 'bg-emerald-100 text-emerald-700 border-emerald-200', dot: 'bg-emerald-500' },
+  kurang_baik: { label: 'Kurang Baik', chip: 'bg-yellow-100 text-yellow-700 border-yellow-200', dot: 'bg-yellow-500' },
   rusak_ringan: { label: 'Rusak Ringan', chip: 'bg-amber-100 text-amber-700 border-amber-200', dot: 'bg-amber-500' },
   rusak_berat: { label: 'Rusak Berat', chip: 'bg-red-100 text-red-700 border-red-200', dot: 'bg-red-500' }
 };

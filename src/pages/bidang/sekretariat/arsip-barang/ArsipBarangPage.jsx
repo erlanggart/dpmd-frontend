@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useBidangPath } from '../../../../hooks/useBidangPath';
 import {
   ArrowLeft, Plus, Search, Package, QrCode, ScanLine, MapPin, ChevronLeft, ChevronRight,
-  CheckCircle2, AlertTriangle, XCircle, Archive, ImageOff, Filter, X
+  CheckCircle2, AlertCircle, AlertTriangle, XCircle, Archive, ImageOff, Filter, X
 } from 'lucide-react';
 import api from '../../../../api';
 import toast from 'react-hot-toast';
@@ -91,6 +91,7 @@ const ArsipBarangPage = () => {
   const kartuStat = [
     { label: 'Total Barang', nilai: stats?.total ?? 0, Icon: Package, warna: 'from-purple-500 to-purple-600' },
     { label: 'Kondisi Baik', nilai: stats?.kondisi?.baik ?? 0, Icon: CheckCircle2, warna: 'from-emerald-500 to-emerald-600' },
+    { label: 'Kurang Baik', nilai: stats?.kondisi?.kurang_baik ?? 0, Icon: AlertCircle, warna: 'from-yellow-500 to-yellow-600' },
     { label: 'Rusak Ringan', nilai: stats?.kondisi?.rusak_ringan ?? 0, Icon: AlertTriangle, warna: 'from-amber-500 to-amber-600' },
     { label: 'Rusak Berat', nilai: stats?.kondisi?.rusak_berat ?? 0, Icon: XCircle, warna: 'from-red-500 to-red-600' },
     { label: 'Total Scan', nilai: stats?.total_scan ?? 0, Icon: ScanLine, warna: 'from-blue-500 to-blue-600' }
@@ -133,7 +134,7 @@ const ArsipBarangPage = () => {
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
         {/* Statistik */}
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
           {kartuStat.map(({ label, nilai, Icon, warna }) => (
             <div key={label} className="bg-white rounded-2xl shadow-sm border border-gray-100 p-5">
               <div className={`h-11 w-11 rounded-xl bg-gradient-to-br ${warna} flex items-center justify-center mb-3 shadow-md`}>
