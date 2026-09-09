@@ -1,7 +1,7 @@
 // Reusable penyaluran dashboard for KKD funds (ADD/DD/BHPRD/BANKEU/BP).
 // Data is live from SIPANDA (see useSipanda); each page passes a config.
 // Design mirrors KKDPage.jsx: clean white cards, thin borders, subtle accent.
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Search, RotateCcw, Download, ChevronRight, MapPin, ArrowLeft,
@@ -21,14 +21,25 @@ import { persen, fmtPersen } from '../../../utils/persen';
 
 ChartJS.register(LineElement, PointElement, CategoryScale, LinearScale, Tooltip, Filler);
 
-// ─── Aksen brand DPMD (merah bata). Prop `accent` dipertahankan supaya pemanggil
-// tidak perlu diubah, tapi semua varian kini memakai satu tone yang sama supaya
-// ADD/DD/BHPRD tampil sebagai satu keluarga. ─────────────────────────────────
+// ─── Satu sistem warna untuk seluruh dana ────────────────────────────────────
+//
+// Prop `accent` dipertahankan supaya pemanggil tidak perlu diubah, tapi semua
+// varian memakai tone yang sama — ADD/DD/BHPRD/BANKEU/BP tampil sebagai satu
+// keluarga, bukan lima halaman berbeda warna.
+//
+// WARNANYA PUNYA ARTI, bukan hiasan. Tiga keadaan saja, dan halaman ini sudah
+// memakainya di bagan tahap: HIJAU sudah cair/selesai, KUNING sedang berjalan,
+// ABU belum mulai. Yang belum konsisten justru bilah realisasinya — dulu abu
+// tua, sementara status "Dana Telah Dicairkan" di kartu sebelahnya hijau. Satu
+// arti digambar dua warna di layar yang sama. Sekarang semuanya hijau.
+//
+// `bar` dan `hex` karena itu berarti SUDAH CAIR: bilah realisasi, titik
+// legenda, tahap yang selesai, dan kurva kumulatif.
 const BRAND_ACCENT = {
-  hex: '#b91c1c',
+  hex: '#10b981',                  // kurva realisasi kumulatif (chart.js butuh hex)
   tile: 'bg-slate-900 text-white',
-  kicker: 'text-brand-700',
-  bar: 'bg-slate-900',
+  kicker: 'text-brand-700',        // eyebrow identitas bidang, satu-satunya sisa merah
+  bar: 'bg-emerald-500',
   chip: 'bg-slate-900 text-white',
   soft: 'bg-slate-100 text-slate-700 ring-slate-200',
 };
@@ -59,13 +70,7 @@ const fmtRp = (n) =>
 const fmtRpFull = (n) => new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(n || 0);
 const fmtDate = (d) => (d ? new Date(d.replace(' ', 'T')).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' }) : '—');
 
-const StatCell = ({ label, value, sub, subTone = 'text-slate-500' }) => (
-  <div className="bg-white px-3 sm:px-4 py-3 sm:py-3.5">
-    <div className="text-[10px] sm:text-[10.5px] font-bold tracking-[0.12em] uppercase text-brand-600">{label}</div>
-    <div className="mt-1 text-[18px] sm:text-[20px] font-extrabold tracking-tight text-slate-900 truncate" title={typeof value === 'string' ? value : undefined}>{value}</div>
-    {sub && <div className={`mt-0.5 text-[10.5px] sm:text-[11px] font-medium ${subTone}`}>{sub}</div>}
-  </div>
-);
+// (StatCell dihapus bersama strip empat kartu statistik yang memakainya.)
 
 const ChartCard = ({ icon: Icon, title, subtitle, children }) => (
   <div className="bg-white border border-slate-200/80 rounded-2xl p-4 sm:p-5">
@@ -74,8 +79,8 @@ const ChartCard = ({ icon: Icon, title, subtitle, children }) => (
         <Icon className="h-4 w-4" />
       </div>
       <div className="min-w-0">
-        <h3 className="text-[13.5px] font-bold text-slate-900 leading-tight truncate">{title}</h3>
-        {subtitle && <p className="text-[11px] text-slate-500 leading-tight">{subtitle}</p>}
+        <h3 className="text-[15px] font-bold text-slate-900 leading-tight truncate">{title}</h3>
+        {subtitle && <p className="mt-0.5 text-[12.5px] text-slate-500 leading-tight truncate" title={subtitle}>{subtitle}</p>}
       </div>
     </div>
     {children}
@@ -111,6 +116,23 @@ export default function PenyaluranDashboard({
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
   const [openKec, setOpenKec] = useState({});
+
+  // Tabel rekap ada jauh di bawah lipatan layar. Tanpa ini, mengklik kartu
+  // status terasa seperti tidak terjadi apa-apa: penyaringnya bekerja, tapi
+  // hasilnya di luar pandangan. Halaman dibawa ke tabelnya begitu satu status
+  // dipilih — dan TIDAK dibawa ke mana-mana saat penyaringnya dilepas, karena
+  // saat itu pembaca justru sedang melihat kartunya.
+  const tabelRef = useRef(null);
+
+  const pilihStatus = (s) => {
+    const lepas = statusFilter === s;
+    setStatusFilter(lepas ? '' : s);
+    if (lepas) return;
+    // Ditunda satu putaran supaya tabelnya sudah tergambar ulang lebih dulu.
+    requestAnimationFrame(() => {
+      tabelRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+  };
 
   const fundRows = useMemo(
     () => rows.filter((r) => (cocokSumber ? cocokSumber(r.sumber_dana || '') : r.sumber_dana === sumberDana)),
@@ -179,18 +201,20 @@ export default function PenyaluranDashboard({
       kec: new Set(entries.map((e) => e.kecamatan)).size,
       total,
       cairAmt,
+      belum: total - cairAmt,
       cairCount: cair.length,
       count: entries.length,
       pct: persen(cair.length, entries.length),
+      // Porsi berdasarkan RUPIAH, bukan jumlah baris. Keduanya berbeda ketika
+      // nilai tiap penyaluran tidak sama, dan yang ditanyakan pimpinan selalu
+      // "berapa uangnya", bukan "berapa barisnya".
+      pctAmt: persen(cairAmt, total),
     };
   }, [entries]);
 
-  // Status distribution (for chips), over current selection.
-  const statusDist = useMemo(() => {
-    const m = {};
-    entries.forEach((e) => { m[e.status] = (m[e.status] || 0) + 1; });
-    return Object.entries(m).sort((a, b) => b[1] - a[1]);
-  }, [entries]);
+  // (statusDist dihapus bersama grid kartu status yang memakainya — sebaran
+  // status kini dibaca dari statusAll di grafik "Status Pencairan", yang sudah
+  // bisa diklik untuk menyaring.)
 
   // ─────────────────────────────────────────────────────────────────────────────
   // INFOGRAPHIC AGGREGATES — module-wide (independent of the selector above).
@@ -377,7 +401,9 @@ export default function PenyaluranDashboard({
 
   // Phase → visual language shared by every progress bar/pill.
   const PHASE = {
-    done:    { label: 'Selesai',  bar: A.bar,          text: A.kicker,        Icon: CheckCircle2, dot: A.bar },
+    // Angka persennya ikut hijau, bukan merah bata: "100%" yang ditulis merah
+    // terbaca seperti peringatan, padahal artinya justru sudah beres.
+    done:    { label: 'Selesai',  bar: A.bar,          text: 'text-emerald-600', Icon: CheckCircle2, dot: A.bar },
     active:  { label: 'Berjalan', bar: 'bg-amber-500', text: 'text-amber-600', Icon: Clock,       dot: 'bg-amber-500' },
     pending: { label: 'Belum',    bar: 'bg-slate-200', text: 'text-slate-400', Icon: CircleDashed, dot: 'bg-slate-300' },
   };
@@ -426,23 +452,23 @@ export default function PenyaluranDashboard({
             mengikuti pilihan di sini. */}
         <div className="mt-5">
           <div className="flex items-center justify-between gap-3 mb-2">
-            <span className="flex flex-wrap items-center gap-x-2 gap-y-1">
-              <span className="text-[10.5px] font-bold tracking-[0.12em] uppercase text-brand-600">
+            <span className="flex flex-wrap items-center gap-x-2.5 gap-y-1">
+              <span className="text-[13px] font-semibold text-slate-500">
                 {dimLabel}
               </span>
               {/* Hanya untuk sumber dana yang namanya berganti tiap tahun:
                   pembaca berhak tahu angka di bawah ini diambil dari pos
                   bernama apa di SIPANDA tahun ini. */}
               {cocokSumber && namaSumberAsli.length > 0 && (
-                <span className="text-[10.5px] font-medium tracking-wide text-slate-400">
-                  SIPANDA: {namaSumberAsli.join(' · ')}
+                <span className="text-[12px] text-slate-400">
+                  {namaSumberAsli.join(' · ')}
                 </span>
               )}
             </span>
             {sel !== 'Semua' && (
               <button
                 onClick={() => setSel('Semua')}
-                className="inline-flex items-center gap-1 text-[11.5px] font-semibold text-slate-500 hover:text-slate-900"
+                className="inline-flex items-center gap-1 text-[13px] font-semibold text-slate-500 hover:text-slate-900"
               >
                 <X className="h-3.5 w-3.5" /> Tampilkan semua
               </button>
@@ -475,80 +501,101 @@ export default function PenyaluranDashboard({
           </div>
         </div>
 
-        {/* Stats strip */}
-        <div className="mt-4 grid grid-cols-2 lg:grid-cols-4 gap-px bg-slate-200/80 rounded-xl overflow-hidden border border-slate-200/80">
-          <StatCell label="Total Desa" value={fmtInt(stats.desa)} sub={`${stats.kec} kecamatan`} />
-          <StatCell label="Total Anggaran" value={fmtRp(stats.total)} sub={`${fmtInt(stats.count)} penyaluran`} />
-          <StatCell label="Sudah Cair" value={fmtPersen(stats.pct)} sub={`${fmtInt(stats.cairCount)} dari ${fmtInt(stats.count)}`} subTone="text-emerald-600" />
-          <StatCell label="Nilai Cair" value={fmtRp(stats.cairAmt)} sub="sudah tersalur" subTone="text-emerald-600" />
-        </div>
-
-        {/* Progress bar */}
-        <div className="mt-3 flex items-center gap-3">
-          <div className="flex-1 h-2 rounded-full bg-slate-200 overflow-hidden">
-            <div className={`h-full rounded-full transition-all duration-500 ${A.bar}`} style={{ width: `${stats.pct}%` }} />
-          </div>
-          <span className="text-[11px] font-semibold text-slate-500 shrink-0">{fmtPersen(stats.pct)} pencairan</span>
-        </div>
+        {/* Strip empat kartu statistik dan bilah progres yang dulu ada di sini
+            SENGAJA DIHAPUS. Isinya sama persis dengan hero di bawah selama
+            pilihannya "Semua": pagu, nilai cair, dan persentase yang sama
+            tergambar dua kali, lengkap dengan dua bilah progres berdampingan.
+            Pembaca yang melihat satu angka muncul dua kali akan berhenti untuk
+            memastikan keduanya memang sama — dan itu justru memperlambat, bukan
+            memperjelas. Hero kini mengikuti pilihan bulan/tahap, jadi tidak ada
+            informasi yang hilang. */}
       </div>
 
       {/* ── Infografik ─────────────────────────────────────────────────────────── */}
       <div className="px-4 sm:px-6 pb-2">
-        <div className="flex items-end justify-between gap-3 mb-3">
-          <div>
-            <div className="text-[10.5px] font-bold tracking-[0.14em] uppercase text-brand-600">Ringkasan Realisasi</div>
-            <h2 className="mt-0.5 text-[15px] sm:text-[16px] font-extrabold tracking-tight text-slate-900">
-              {isMonthly ? `Progres Bulanan ${short}` : `Progres per Tahap ${short}`}
-            </h2>
-          </div>
-          <span className="hidden sm:inline text-[11px] text-slate-400">se-Kabupaten · 2026</span>
+        {/* Judul bagian: satu baris, bukan kicker merah mungil di atas judul.
+            Dua label bertumpuk untuk satu bagian membuat halaman terasa penuh
+            padahal isinya cuma satu kalimat. */}
+        <div className="flex items-baseline justify-between gap-3 mb-3.5">
+          <h2 className="text-[17px] font-bold tracking-tight text-slate-900">
+            {isMonthly ? `Progres Bulanan ${short}` : `Progres per Tahap ${short}`}
+          </h2>
+          <span className="hidden sm:inline text-[13px] text-slate-400">se-Kabupaten · 2026</span>
         </div>
 
         {/* Hero — realisasi anggaran (money, one honest number) + cadence-aware chips */}
         <div className="bg-white border border-slate-200/80 rounded-2xl p-4 sm:p-5 mb-3 sm:mb-4">
           <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1.1fr)_auto] gap-5 lg:gap-6 items-center">
+            {/* Angka utama MENGIKUTI pilihan bulan/tahap di atas. Dulu ia
+                selalu se-tahun sementara strip di atasnya mengikuti pilihan,
+                jadi memilih satu bulan mengubah satu blok tapi tidak yang lain
+                — dua angka berbeda di layar yang sama tanpa penjelasan. */}
             <div>
-              <div className="flex items-baseline gap-2.5 flex-wrap">
-                <span className="text-[10.5px] font-bold tracking-[0.12em] uppercase text-brand-600">Realisasi Anggaran</span>
-                <span className={`text-[11px] font-bold ${A.kicker}`}>{fmtPersen(moduleAgg.pctAmt)} tersalur</span>
+              <div className="flex items-baseline gap-2">
+                <span className="text-[13px] font-semibold text-slate-500">Realisasi Anggaran</span>
+                {sel !== 'Semua' && (
+                  <span className="text-[13px] font-semibold text-slate-900">· {sel}</span>
+                )}
               </div>
-              <div className="mt-1.5 flex items-end gap-2 flex-wrap">
-                <span className="text-[26px] sm:text-[30px] font-extrabold tracking-tight text-slate-900 leading-none" title={fmtRpFull(moduleAgg.cair)}>{fmtRp(moduleAgg.cair)}</span>
-                <span className="text-[12.5px] font-medium text-slate-400 pb-0.5">dari {fmtRp(moduleAgg.total)} pagu</span>
-              </div>
-              <div className="mt-3 h-2.5 w-full rounded-full bg-slate-100 overflow-hidden">
-                <div className={`h-full ${A.bar} transition-all duration-700`} style={{ width: `${moduleAgg.pctAmt}%` }} />
-              </div>
-              <div className="mt-2 flex items-center gap-4 text-[11px]">
-                <span className="inline-flex items-center gap-1.5 font-medium text-slate-600">
-                  <span className={`h-2.5 w-2.5 rounded-sm ${A.bar}`} /> Cair {fmtRp(moduleAgg.cair)}
+
+              {/* Dua angka besar berdampingan: rupiah yang cair, dan porsinya.
+                  Persen dibuat sebesar rupiahnya karena pertanyaan pertama
+                  pimpinan hampir selalu "sudah berapa persen", bukan nominal. */}
+              <div className="mt-2 flex flex-wrap items-baseline gap-x-4 gap-y-1">
+                <span className="text-[34px] sm:text-[42px] font-extrabold tracking-tight text-slate-900 leading-none" title={fmtRpFull(stats.cairAmt)}>
+                  {fmtRp(stats.cairAmt)}
                 </span>
-                <span className="inline-flex items-center gap-1.5 font-medium text-slate-500">
-                  <span className="h-2.5 w-2.5 rounded-sm bg-slate-200" /> Belum {fmtRp(moduleAgg.belum)}
+                <span className="text-[22px] sm:text-[26px] font-bold tracking-tight text-slate-400 leading-none">
+                  {fmtPersen(stats.pctAmt)}
                 </span>
+              </div>
+
+              <div className="mt-4 h-3 w-full rounded-full bg-slate-100 overflow-hidden">
+                <div className={`h-full rounded-full ${A.bar} transition-all duration-700`} style={{ width: `${stats.pctAmt}%` }} />
+              </div>
+
+              {/* Dua keterangan saja. Baris panjang berisi cakupan desa,
+                  kecamatan, dan jumlah penyaluran dihapus dari sini: angkanya
+                  sudah ada di kartu Cakupan di sebelah, dan menumpuk enam
+                  angka dalam satu baris kecil justru tidak terbaca. */}
+              <div className="mt-3 flex flex-wrap items-center gap-x-6 gap-y-1.5 text-[13px]">
+                <span className="inline-flex items-center gap-2 font-medium text-slate-700">
+                  <span className={`h-2.5 w-2.5 rounded-full ${A.bar}`} />
+                  Cair {fmtRp(stats.cairAmt)}
+                </span>
+                <span className="inline-flex items-center gap-2 font-medium text-slate-400">
+                  <span className="h-2.5 w-2.5 rounded-full bg-slate-200" />
+                  Belum {fmtRp(stats.belum)}
+                </span>
+                <span className="text-slate-400">dari {fmtRp(stats.total)} pagu</span>
               </div>
             </div>
-            {/* Cadence-aware context chips */}
-            <div className="grid grid-cols-3 gap-2 sm:gap-3">
+            {/* Tiga keterangan konteks. Dulu tiap kartu memuat kotak ikon
+                berwarna, angka, label merah huruf besar 10px, DAN baris
+                keterangan 10,5px — empat lapis untuk menyampaikan satu fakta.
+                Sekarang dua lapis: angkanya, dan satu label yang menjelaskan
+                angka itu apa. Keterangan ketiga digabung ke labelnya. */}
+            <div className="grid grid-cols-3 gap-2.5 sm:gap-3">
               {(isMonthly
                 ? [
-                    { Icon: CheckCircle2, label: 'Bulan Tersalur', value: `${moduleAgg.doneCount}/${moduleAgg.totalDims}`, sub: 'bulan penuh cair', tone: A.tile },
-                    { Icon: CalendarRange, label: 'Terakhir Cair', value: moduleAgg.lastDone?.label || '—', sub: moduleAgg.pendingCount ? `${moduleAgg.pendingCount} bulan menunggu` : 'lunas', tone: 'bg-amber-50 text-amber-600 ring-amber-200/60' },
-                    { Icon: MapPin, label: 'Cakupan', value: fmtInt(moduleAgg.desa), sub: `${fmtInt(moduleAgg.kec)} kecamatan`, tone: 'bg-slate-100 text-slate-500 ring-slate-200/60' },
+                    { Icon: CheckCircle2, label: 'Bulan tersalur penuh', value: `${moduleAgg.doneCount}/${moduleAgg.totalDims}` },
+                    { Icon: CalendarRange, label: moduleAgg.pendingCount ? `Terakhir cair · ${moduleAgg.pendingCount} bulan menunggu` : 'Terakhir cair · lunas', value: moduleAgg.lastDone?.label || '—' },
+                    { Icon: MapPin, label: `Desa · ${fmtInt(moduleAgg.kec)} kecamatan`, value: fmtInt(moduleAgg.desa) },
                   ]
                 : [
-                    { Icon: CheckCircle2, label: 'Tahap Selesai', value: `${moduleAgg.doneCount}/${moduleAgg.totalDims}`, sub: 'tahap penuh cair', tone: A.tile },
-                    { Icon: Clock, label: 'Tahap Berjalan', value: moduleAgg.active ? moduleAgg.active.label : (moduleAgg.pendingCount ? 'Belum mulai' : 'Selesai'), sub: moduleAgg.active ? `${fmtPersen(moduleAgg.active.pctDesa)} desa cair` : '—', tone: 'bg-amber-50 text-amber-600 ring-amber-200/60' },
-                    { Icon: MapPin, label: 'Cakupan', value: fmtInt(moduleAgg.desa), sub: `${fmtInt(moduleAgg.kec)} kecamatan`, tone: 'bg-slate-100 text-slate-500 ring-slate-200/60' },
+                    { Icon: CheckCircle2, label: 'Tahap selesai penuh', value: `${moduleAgg.doneCount}/${moduleAgg.totalDims}` },
+                    { Icon: Clock, label: moduleAgg.active ? `Tahap berjalan · ${fmtPersen(moduleAgg.active.pctDesa)} desa cair` : 'Tahap berjalan', value: moduleAgg.active ? moduleAgg.active.label : (moduleAgg.pendingCount ? 'Belum mulai' : 'Selesai') },
+                    { Icon: MapPin, label: `Desa · ${fmtInt(moduleAgg.kec)} kecamatan`, value: fmtInt(moduleAgg.desa) },
                   ]
-              ).map(({ Icon, label, value, sub, tone }) => (
-                <div key={label} className="rounded-xl border border-slate-200/70 px-3 py-3 min-w-[92px]">
-                  <div className={`h-7 w-7 rounded-lg ring-1 flex items-center justify-center mb-2 ${tone}`}>
-                    <Icon className="h-3.5 w-3.5" strokeWidth={2} />
+              ).map(({ Icon, label, value }) => (
+                <div key={label} className="rounded-xl bg-slate-50 px-3.5 py-3.5 min-w-[108px]">
+                  <div className="text-[21px] font-bold tracking-tight text-slate-900 leading-none truncate" title={String(value)}>
+                    {value}
                   </div>
-                  <div className="text-[18px] font-extrabold tracking-tight text-slate-900 leading-none truncate" title={String(value)}>{value}</div>
-                  <div className="mt-1 text-[10px] font-bold tracking-wide uppercase text-brand-600 truncate" title={label}>{label}</div>
-                  <div className="text-[10.5px] text-slate-500 leading-tight truncate">{sub}</div>
+                  <div className="mt-2 flex items-start gap-1.5 text-[12px] leading-snug text-slate-500">
+                    <Icon className="h-3.5 w-3.5 mt-px shrink-0 text-slate-400" strokeWidth={2} />
+                    <span className="line-clamp-2" title={label}>{label}</span>
+                  </div>
                 </div>
               ))}
             </div>
@@ -565,7 +612,12 @@ export default function PenyaluranDashboard({
             </div>
           </ChartCard>
         ) : (
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 sm:gap-4">
+          // items-start: tiap kartu setinggi isinya sendiri. Tanpa itu kedua
+          // kartu dipaksa sama tinggi, dan untuk dana bertahap dua saja (DD,
+          // BANKEU, BP) kartu kiri yang cuma berisi dua baris ikut merenggang
+          // mengikuti delapan kartu status di kanan — kotak putih separuh
+          // kosong yang terbaca seperti ada yang gagal dimuat.
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 sm:gap-4 items-start">
             {/* Progres per tranche — the centerpiece; reads the same for 2 or 12 rows */}
             <ChartCard
               icon={isMonthly ? CalendarRange : Layers}
@@ -592,14 +644,14 @@ export default function PenyaluranDashboard({
                     >
                       <div className="w-16 sm:w-24 shrink-0 flex items-center gap-1.5 min-w-0">
                         <span className={`h-1.5 w-1.5 rounded-full shrink-0 ${p.dot}`} />
-                        <span className={`text-[11.5px] truncate ${isSel ? 'font-bold text-slate-900' : 'font-semibold text-slate-700'}`} title={d.label}>{d.label}</span>
+                        <span className={`text-[13px] truncate ${isSel ? 'font-bold text-slate-900' : 'font-semibold text-slate-700'}`} title={d.label}>{d.label}</span>
                       </div>
                       <div className="flex-1 h-6 rounded-lg bg-slate-100 overflow-hidden min-w-0">
                         <div className={`h-full ${p.bar} transition-all duration-700`} style={{ width: `${d.pctDesa}%` }} />
                       </div>
                       <div className="w-[70px] sm:w-24 shrink-0 text-right" title={`${fmtInt(d.desaCair)}/${fmtInt(d.desaTotal)} desa cair`}>
                         <div className={`text-[12px] font-bold tabular-nums ${p.text}`}>{fmtPersen(d.pctDesa)}</div>
-                        <div className="text-[10px] text-slate-400 leading-tight">{d.cair > 0 ? fmtRp(d.cair) : '—'}</div>
+                        <div className="text-[11.5px] text-slate-400 leading-tight">{d.cair > 0 ? fmtRp(d.cair) : '—'}</div>
                       </div>
                     </button>
                   );
@@ -607,25 +659,87 @@ export default function PenyaluranDashboard({
               </div>
             </ChartCard>
 
-            {/* Status pipeline — ranked native bars (no more hard-to-read donut) */}
-            <ChartCard icon={Activity} title="Status Pencairan" subtitle={`${fmtInt(fundRows.length)} penyaluran · ${statusAll.length} status`}>
-              <div className="space-y-2.5">
+            {/* Status pencairan sebagai KARTU, bukan baris bilah tipis.
+                Dua alasan, keduanya soal keterbacaan:
+
+                1. LABELNYA HARUS UTUH. Sebagai baris, nama status dijepit
+                   kolom selebar 176px dan dipotong: "Dikembalikan ke D…" dan
+                   "Dikembalikan ke K…" tampil nyaris sama padahal yang satu
+                   berhenti di desa dan yang satu di kecamatan — dua tindak
+                   lanjut yang sama sekali berbeda. Di kartu, namanya boleh
+                   turun ke baris kedua dan terbaca penuh.
+
+                2. HARUS TERLIHAT BISA DIKLIK. Baris tipis tanpa batas tidak
+                   mengundang disentuh; kartu berbingkai jelas mengundang, dan
+                   area kliknya jauh lebih besar — penting di layar sentuh dan
+                   untuk yang tidak terbiasa mengklik elemen kecil.
+
+                Mengklik satu kartu menyaring tabel rekap di bawah. */}
+            <ChartCard
+              icon={Activity}
+              title="Status Pencairan"
+              subtitle={
+                statusFilter
+                  ? `Disaring: ${statusFilter}`
+                  : `${fmtInt(fundRows.length)} penyaluran · klik kartu untuk menyaring`
+              }
+            >
+              {statusFilter && (
+                <button
+                  type="button"
+                  onClick={() => setStatusFilter('')}
+                  className="mb-3 inline-flex items-center gap-1.5 rounded-lg border border-slate-200 px-3 py-1.5 text-[12.5px] font-semibold text-slate-600 transition-colors hover:bg-slate-50 hover:text-slate-900"
+                >
+                  <X className="h-3.5 w-3.5" /> Tampilkan semua status
+                </button>
+              )}
+
+              <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2">
                 {statusAll.map(([s, n]) => {
                   const t = statusTone(s);
                   const pct = persen(n, fundRows.length);
+                  const aktif = statusFilter === s;
                   return (
-                    <div key={s} className="flex items-center gap-2.5">
-                      <span className="w-28 sm:w-44 shrink-0 flex items-center gap-1.5 min-w-0">
-                        <span className="h-2 w-2 rounded-full shrink-0" style={{ backgroundColor: t.hex }} />
-                        <span className="text-[11px] font-medium text-slate-600 truncate" title={s}>{s}</span>
+                    <button
+                      type="button"
+                      key={s}
+                      onClick={() => pilihStatus(s)}
+                      aria-pressed={aktif}
+                      title={s}
+                      className={`flex min-w-0 flex-col rounded-xl border p-3.5 text-left transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900/20 ${
+                        aktif
+                          ? 'border-slate-900 bg-slate-50 ring-1 ring-slate-900'
+                          : 'border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50'
+                      }`}
+                    >
+                      <span className="flex items-start gap-2">
+                        <span
+                          className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-md"
+                          style={{ backgroundColor: `${t.hex}1f`, color: t.hex }}
+                        >
+                          <t.Icon className="h-3.5 w-3.5" strokeWidth={2.25} />
+                        </span>
+                        {/* Tanpa truncate: nama status boleh turun ke baris
+                            kedua. Inilah bedanya dengan versi baris. */}
+                        <span className={`min-w-0 flex-1 text-[13px] leading-snug ${aktif ? 'font-bold text-slate-900' : 'font-semibold text-slate-700'}`}>
+                          {s}
+                        </span>
                       </span>
-                      <div className="flex-1 h-3 rounded-full bg-slate-100 overflow-hidden min-w-0">
-                        <div className="h-full rounded-full" style={{ width: `${Math.max(pct, 1.5)}%`, backgroundColor: t.hex }} />
-                      </div>
-                      <span className="w-16 shrink-0 text-right text-[11px] font-bold text-slate-700 tabular-nums">
-                        {fmtInt(n)}<span className="text-slate-400 font-medium"> · {fmtPersen(pct)}</span>
+
+                      <span className="mt-3 flex items-baseline gap-1.5">
+                        <span className="text-[24px] font-bold leading-none tabular-nums text-slate-900">
+                          {fmtInt(n)}
+                        </span>
+                        <span className="text-[13px] font-medium text-slate-400">{fmtPersen(pct)}</span>
                       </span>
-                    </div>
+
+                      <span className="mt-2.5 block h-1.5 w-full overflow-hidden rounded-full bg-slate-100">
+                        <span
+                          className="block h-full rounded-full"
+                          style={{ width: `${Math.max(pct, 2)}%`, backgroundColor: t.hex }}
+                        />
+                      </span>
+                    </button>
                   );
                 })}
               </div>
@@ -648,12 +762,12 @@ export default function PenyaluranDashboard({
                   <div className="grid sm:grid-cols-2 gap-x-6 gap-y-2.5">
                     {laggingKec.map((k) => (
                       <div key={k.kec} className="flex items-center gap-2.5">
-                        <span className="w-24 sm:w-32 shrink-0 text-[11.5px] font-medium text-slate-600 truncate" title={k.kec}>{k.kec}</span>
+                        <span className="w-24 sm:w-32 shrink-0 text-[13px] font-medium text-slate-600 truncate" title={k.kec}>{k.kec}</span>
                         <div className="flex-1 h-3.5 rounded-full bg-slate-100 overflow-hidden min-w-0">
                           <div className={`h-full rounded-full ${k.pct >= 100 ? A.bar : k.pct > 0 ? 'bg-amber-500' : 'bg-rose-400'}`} style={{ width: `${Math.max(k.pct, 2)}%` }} />
                         </div>
-                        <span className="w-12 shrink-0 text-right text-[11px] font-bold text-slate-700 tabular-nums">{fmtPersen(k.pct)}</span>
-                        <span className="w-10 shrink-0 text-right text-[10px] text-slate-400">{k.c}/{k.n}</span>
+                        <span className="w-12 shrink-0 text-right text-[13px] font-bold text-slate-700 tabular-nums">{fmtPersen(k.pct)}</span>
+                        <span className="w-10 shrink-0 text-right text-[11.5px] text-slate-400">{k.c}/{k.n}</span>
                       </div>
                     ))}
                   </div>
@@ -664,10 +778,11 @@ export default function PenyaluranDashboard({
         )}
       </div>
 
-      {/* Controls */}
+      {/* Controls — pencarian desa/kecamatan dan penyaring status. Grid kartu
+          status yang dulu menyusul di sini sudah dihapus; penyaringan status
+          kini dilakukan langsung dari grafik "Status Pencairan" di atas. */}
       <div className="px-4 sm:px-6 pt-4">
-        {/* Search + status */}
-        <div className="grid grid-cols-1 sm:grid-cols-[1fr_auto] gap-2 mb-3">
+        <div className="grid grid-cols-1 sm:grid-cols-[1fr_auto] gap-2">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
             <input
@@ -693,59 +808,37 @@ export default function PenyaluranDashboard({
             ]}
           />
         </div>
-
-        {/* Distribusi status — grid rata, label tidak dipotong.
-            Kartu dibuat putih; warna status hanya dipakai pada titik penanda,
-            ikon, dan bilah proporsi supaya barisnya tidak jadi pelangi. */}
-        {statusDist.length > 0 && (
-          <div className="mb-4 grid grid-cols-2 gap-2 sm:grid-cols-3 xl:grid-cols-4">
-            {statusDist.map(([s, n]) => {
-              const t = statusTone(s);
-              const active = statusFilter === s;
-              const pct = persen(n, stats.count);
-              return (
-                <button
-                  key={s}
-                  onClick={() => setStatusFilter(active ? '' : s)}
-                  title={s}
-                  className={`flex min-w-0 flex-col rounded-xl border bg-white p-3 text-left transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900/20 ${
-                    active
-                      ? 'border-slate-900 ring-1 ring-slate-900'
-                      : 'border-slate-200 hover:border-slate-300 hover:bg-slate-50'
-                  }`}
-                >
-                  <div className="flex items-start gap-2">
-                    <span className={`mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-md ${t.chip}`}>
-                      <t.Icon className="h-3.5 w-3.5" />
-                    </span>
-                    <span className="min-w-0 flex-1 text-[11.5px] font-semibold leading-snug text-slate-700 line-clamp-2">
-                      {s}
-                    </span>
-                  </div>
-
-                  <div className="mt-2 flex items-baseline gap-1.5">
-                    <span className="text-[19px] font-bold leading-none tabular-nums text-slate-900">
-                      {fmtInt(n)}
-                    </span>
-                    <span className="text-[10.5px] font-medium text-slate-400">desa · {fmtPersen(pct)}</span>
-                  </div>
-
-                  <div className="mt-2 h-1 w-full overflow-hidden rounded-full bg-slate-100">
-                    <div className={`h-full rounded-full ${t.dot}`} style={{ width: `${Math.max(pct, 2)}%` }} />
-                  </div>
-                </button>
-              );
-            })}
-          </div>
-        )}
       </div>
 
-      {/* Table grouped by kecamatan */}
-      <div className="px-4 sm:px-6 pb-10">
+      {/* Table grouped by kecamatan. scroll-mt menyisakan ruang di atas saat
+          halaman melompat ke sini dari kartu status — tanpa itu, judulnya
+          menempel persis di tepi atas layar dan terasa terpotong. */}
+      <div ref={tabelRef} className="px-4 sm:px-6 pb-10 scroll-mt-6">
         <div className="bg-white border border-slate-200/80 rounded-2xl overflow-hidden">
-          <div className="px-4 py-3 border-b border-slate-200/80 flex items-center justify-between">
-            <h2 className="text-[13px] font-bold text-slate-900">Rekap per Kecamatan</h2>
-            <span className="text-[11px] text-slate-500">{grouped.length} kecamatan · {fmtInt(filtered.length)} baris</span>
+          <div className="px-4 py-3.5 border-b border-slate-200/80 flex flex-wrap items-center justify-between gap-2">
+            <h2 className="text-[15px] font-bold text-slate-900">
+              Rekap per Kecamatan
+              {/* Status yang sedang disaring ditulis DI SINI juga. Setelah
+                  halaman melompat turun, kartu yang tadi diklik sudah tidak
+                  terlihat — tanpa penanda ini, tabel yang tiba-tiba menyusut
+                  tidak punya penjelasan apa pun di dekatnya. */}
+              {statusFilter && (
+                <span className="ml-2 inline-flex items-center gap-1.5 rounded-full bg-slate-100 px-2.5 py-1 text-[12.5px] font-semibold text-slate-700 align-middle">
+                  {statusFilter}
+                  <span
+                    role="button"
+                    tabIndex={0}
+                    onClick={() => setStatusFilter('')}
+                    onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setStatusFilter(''); } }}
+                    className="cursor-pointer text-slate-400 hover:text-slate-900"
+                    aria-label="Hapus penyaring status"
+                  >
+                    <X className="h-3.5 w-3.5" />
+                  </span>
+                </span>
+              )}
+            </h2>
+            <span className="text-[13px] text-slate-500">{grouped.length} kecamatan · {fmtInt(filtered.length)} baris</span>
           </div>
 
           {grouped.length === 0 ? (
@@ -765,17 +858,17 @@ export default function PenyaluranDashboard({
                     >
                       <ChevronRight className={`h-4 w-4 text-slate-400 shrink-0 transition-transform ${open ? 'rotate-90' : ''}`} />
                       <MapPin className="h-4 w-4 text-slate-400 shrink-0" />
-                      <span className="font-semibold text-[13.5px] text-slate-900 flex-1 min-w-0 truncate">{kec}</span>
-                      <span className="text-[11px] text-slate-500 hidden sm:inline">{desaCount} desa</span>
-                      <span className={`text-[10.5px] font-bold px-2 h-5 inline-flex items-center rounded-full ring-1 ${A.soft}`}>{cairCount}/{items.length} cair</span>
-                      <span className="text-[12.5px] font-bold text-slate-900 w-24 sm:w-28 text-right shrink-0" title={fmtRpFull(total)}>{fmtRp(total)}</span>
+                      <span className="font-semibold text-[14px] text-slate-900 flex-1 min-w-0 truncate">{kec}</span>
+                      <span className="text-[13px] text-slate-500 hidden sm:inline">{desaCount} desa</span>
+                      <span className={`text-[12px] font-bold px-2 h-5 inline-flex items-center rounded-full ring-1 ${A.soft}`}>{cairCount}/{items.length} cair</span>
+                      <span className="text-[14px] font-bold text-slate-900 w-24 sm:w-28 text-right shrink-0" title={fmtRpFull(total)}>{fmtRp(total)}</span>
                     </button>
 
                     {open && (
                       <div className="overflow-x-auto bg-slate-50/50">
                         <table className="w-full text-[12.5px]">
                           <thead>
-                            <tr className="text-brand-600 text-[10.5px] font-bold uppercase tracking-wide">
+                            <tr className="text-brand-600 text-[11.5px] font-bold uppercase tracking-wide">
                               <th className="text-left font-bold px-4 py-2 w-8">#</th>
                               <th className="text-left font-bold px-2 py-2">Desa</th>
                               {showDim && <th className="text-left font-bold px-2 py-2">{dimLabel}</th>}
@@ -793,7 +886,7 @@ export default function PenyaluranDashboard({
                                   <td className="px-2 py-2 font-medium text-slate-800">{e.desa}</td>
                                   {showDim && <td className="px-2 py-2 text-slate-500">{e.dim}</td>}
                                   <td className="px-2 py-2">
-                                    <span className={`inline-flex items-center gap-1 h-5 px-1.5 rounded-full text-[10.5px] font-semibold ring-1 ${t.chip}`}>
+                                    <span className={`inline-flex items-center gap-1 h-5 px-1.5 rounded-full text-[12px] font-semibold ring-1 ${t.chip}`}>
                                       <t.Icon className="h-3 w-3" /> {e.status}
                                     </span>
                                   </td>
@@ -813,7 +906,7 @@ export default function PenyaluranDashboard({
           )}
         </div>
 
-        <p className="mt-3 text-[11px] text-slate-400 text-center">
+        <p className="mt-3 text-[12.5px] text-slate-400 text-center">
           Sumber data: SIPANDA Kabupaten Bogor · diperbarui otomatis
         </p>
       </div>
