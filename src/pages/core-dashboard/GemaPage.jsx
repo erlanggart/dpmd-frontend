@@ -2,40 +2,67 @@
 //
 // Gema — asisten suara Core Dashboard. Purwarupa.
 //
-// CARA KERJANYA SEPERTI SIRI: tidak ada tombol yang harus ditekan. Begitu izin
-// mikrofon diberikan, Gema siaga terus dan menunggu kata bangun "Halo Gema".
-// Sekali diizinkan, kunjungan berikutnya langsung siaga sendiri.
+// DUA CARA PAKAI, DIPILIH SENDIRI MENURUT PERANGKATNYA:
 //
-// SATU BATAS YANG TIDAK BISA DILEWATI: peramban wajib meminta izin mikrofon
-// sekali, dan izin itu hanya bisa diminta lewat tindakan pengguna. Jadi ada satu
-// ketukan di kunjungan pertama saja — sesudah itu tidak pernah lagi.
+//   SIAGA (komputer meja/laptop) — seperti Siri: tidak ada tombol yang harus
+//   ditekan. Sekali izin mikrofon diberikan, Gema siaga terus menunggu kata
+//   bangun "Halo Gema".
 //
-// EMPAT HAL YANG DIPILIH SEJAK AWAL, karena sulit diubah belakangan:
+//   KETUK (HP dan tablet) — ketuk lingkaran, bicara, selesai. Tanpa kata
+//   bangun, tanpa mikrofon yang menyala terus.
+//
+// KENAPA HP DAN TABLET TIDAK BOLEH MEMAKAI JALUR SIAGA. Bukan pilihan gaya;
+// jalur siaga MEMANG TIDAK BEKERJA di sana, dan itu persis keluhan yang
+// membuat berkas ini ditulis ulang. Tiga sebabnya, semuanya di luar kendali
+// kita:
+//
+//   1. MIKROFONNYA DIREBUT. Jalur siaga membuka getUserMedia untuk mengukur
+//      amplitudo suara, sementara SpeechRecognition juga butuh mikrofon. Di
+//      komputer keduanya bisa berbagi. Di Android tidak: yang belakangan
+//      meminta akan gagal diam-diam — tanpa galat, tanpa hasil, mikrofon
+//      menyala tapi tidak ada satu kata pun yang pernah dikenali. Jadi di HP
+//      analisis amplitudo TIDAK DINYALAKAN SAMA SEKALI, dan cincinnya
+//      digerakkan denyut buatan.
+//
+//   2. `continuous` TIDAK ADA DI SAFARI iOS. Pengenalan berhenti sendiri
+//      sesudah satu ucapan, dan menyalakannya lagi dari onend butuh tindakan
+//      pengguna. Kata bangun yang menunggu selamanya mustahil di sana.
+//
+//   3. MENYALAKAN ULANG TERUS-MENERUS ITU MAHAL DI BATERAI, dan di Android
+//      tiap kali mulai ada nada "tut" dari sistem. Halaman yang berbunyi tiap
+//      lima detik tidak akan pernah dipakai orang.
+//
+// SATU SEBAB LAGI YANG PALING SERING TERJADI SAAT UJI COBA: HALAMANNYA DIBUKA
+// LEWAT http:// DI ALAMAT IP. Peramban hanya memberi mikrofon kepada
+// "secure context" — https, atau localhost. Di laptop, alamatnya localhost,
+// jadi jalan. Di HP yang membuka http://192.168.x.x, `navigator.mediaDevices`
+// bahkan TIDAK ADA, dan pengenalan suara ditolak sebelum sempat mulai. Itu
+// sebabnya "cuma jalan di laptop". Keadaan ini sekarang dikenali dan
+// dijelaskan apa adanya, bukan dibiarkan tampak seperti kerusakan.
+//
+// EMPAT HAL LAIN YANG DIPILIH SEJAK AWAL:
 //
 // 1. SUARANYA MEMAKAI KEMAMPUAN BAWAAN PERAMBAN — SpeechRecognition untuk
 //    mendengar, speechSynthesis untuk menjawab. Tanpa pustaka, tanpa kunci API.
-//    Konsekuensinya jujur: pengenalan suara baru ada di Chrome dan Edge, dan di
-//    Chrome audionya diproses di server Google. Peramban lain TIDAK
-//    ditinggalkan — kotak ketik menempuh jalur yang sama persis.
+//    Peramban tanpa pengenalan suara TIDAK ditinggalkan — kotak ketik menempuh
+//    jalur yang sama persis.
 //
 // 2. GEMA BERHENTI MENDENGAR SAAT DIRINYA BICARA. Tanpa itu ia menangkap
-//    suaranya sendiri, mengira ada perintah baru, lalu menjawab lagi — berputar
-//    tanpa henti.
+//    suaranya sendiri, mengira ada perintah baru, lalu menjawab lagi.
 //
-// 3. AMPLITUDO DITULIS KE CSS VARIABLE, BUKAN KE STATE REACT. Siaga berarti
-//    gelung ini hidup terus; enam puluh render per detik akan membuat halaman
-//    yang dibuka seharian jadi berat. Nilainya masuk lewat ref, nol render.
+// 3. AMPLITUDO DITULIS KE CSS VARIABLE, BUKAN KE STATE REACT. Enam puluh
+//    render per detik akan membuat halaman yang dibuka seharian jadi berat.
 //
-// 4. SIAGA BERHENTI SAAT TAB TIDAK TERLIHAT. Mikrofon dan gelung animasi tidak
-//    boleh jalan di latar belakang; keduanya hidup lagi begitu tabnya dibuka.
+// 4. SIAGA BERHENTI SAAT TAB TIDAK TERLIHAT.
 //
 // Jawabannya SELALU dari basis data lewat /api/gema/tanya. Gema tidak pernah
 // mengarang: di luar cakupan, ia bilang tidak tahu.
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Mic, MicOff, Keyboard, Sparkles, AlertCircle, Volume2, Loader2, Send, Ear, Check, ShieldAlert, KeyRound } from 'lucide-react';
+import {
+	Mic, MicOff, Keyboard, Sparkles, AlertCircle, Volume2, Loader2, Send, Ear,
+	Check, ShieldAlert, KeyRound, RotateCcw, Lock, Hand,
+} from 'lucide-react';
 import api from '../../api';
-
-/* ----------------------------------------------------------------- utilitas -- */
 
 const AmbilPengenalSuara = () =>
 	(typeof window !== 'undefined'
@@ -51,7 +78,7 @@ const KATA_BANGUN = /\b(h?a?l+o+|hai|hei|hey|oke|ok)\s*,?\s*(gema|gemma|gima|jem
 const KUNCI_SIAGA = 'gema-siaga';
 
 /**
- * Ambang deteksi selesai bicara.
+ * Ambang deteksi selesai bicara (khusus jalur siaga).
  *
  * Menunggu SpeechRecognition menyatakan hasilnya final terasa lambat — Chrome
  * kadang menahannya satu sampai dua detik setelah orangnya berhenti. Padahal
@@ -61,32 +88,52 @@ const KUNCI_SIAGA = 'gema-siaga';
  */
 const RMS_BICARA = 0.022;      // di atas ini dianggap ada suara orang
 const HENING_SELESAI = 850;    // ms hening berturut-turut = ucapan selesai
+
 /**
  * Berapa lama Gema tetap menunggu perintah lanjutan setelah menjawab.
  *
  * Dihitung dari HENING TERAKHIR, bukan dari saat fase dimulai — dan itu
  * pembedaan yang menentukan. Versi pertama memasang penjaga waktu sekali
  * saat fase dimulai dan tidak pernah menyetelnya ulang, sehingga penjaga itu
- * meletus di tengah kalimat orang yang sedang bertanya: fase turun ke siaga,
- * ucapannya selesai tanpa kata bangun, lalu dibuang diam-diam. Akibatnya
- * setiap pertanyaan lanjutan harus diawali "Halo Gema" lagi.
+ * meletus di tengah kalimat orang yang sedang bertanya.
  */
 const JEDA_PERINTAH = 15000;   // ms HENING di fase perintah = kembali siaga
 
 /**
- * Pengingat mikrofon menganggur.
+ * Batas jalur KETUK.
+ *
+ * Di HP tidak ada pengukur amplitudo yang bisa memberi tahu kapan orangnya
+ * berhenti bicara (lihat catatan mikrofon direbut di kepala berkas), jadi
+ * akhirnya ditentukan dua penjaga waktu: sekian lama tanpa kata baru berarti
+ * selesai, dan ada batas keras supaya mikrofon tidak pernah tertinggal menyala.
+ */
+const KETUK_HENING = 1600;     // ms tanpa kata baru = ucapan selesai
+const KETUK_MAKS = 15000;      // ms batas keras satu sesi dengar
+// Jeda sebelum kata PERTAMA harus lebih longgar daripada jeda antar kata:
+// orang biasanya mengangkat HP dulu, atau berpikir sebentar, sebelum mulai
+// bicara. Memakai KETUK_HENING di sini membuat sesinya mati sebelum sempat
+// dipakai — ketuk, diam sedetik setengah, tertutup.
+const KETUK_MULAI = 6000;      // ms menunggu kata pertama
+
+/**
+ * Pengingat mikrofon menganggur (hanya jalur siaga).
  *
  * Halaman ini bisa ditinggal terbuka di komputer meja sementara orangnya rapat
- * di ruangan yang sama. Mikrofon yang menyala tanpa disadari itu mengganggu —
- * dan lampu mikrofon di bilah alamat peramban terlalu kecil untuk disadari.
- *
- * Setelah diam, Gema bertanya. Kalau pertanyaannya pun tidak dijawab, mikrofon
- * dimatikan sendiri: tidak ada yang di depan layar, dan membiarkannya menyala
- * adalah pilihan yang lebih buruk daripada mematikannya.
+ * di ruangan yang sama. Mikrofon yang menyala tanpa disadari itu mengganggu.
+ * Di jalur ketuk pengingat ini tidak ada gunanya — mikrofonnya memang tidak
+ * pernah menyala lama.
  */
 const DIAM_TANYA = 60000;       // ms tanpa suara = munculkan pengingat
 const DIAM_TANYA_LAGI = 300000; // ms, setelah pengguna memilih tetap menyalakan
 const HITUNG_MUNDUR = 30;       // detik sebelum mikrofon dimatikan sendiri
+
+/**
+ * Model bahasa boleh berpikir lama; batas 30 detik bawaan klien api terlalu
+ * pendek untuk pertanyaan yang butuh beberapa pencarian sekaligus, dan
+ * putusnya terbaca pengguna sebagai "Gema rusak" padahal jawabannya sedang
+ * disusun.
+ */
+const SABAR_MS = 90000;
 
 const BALASAN_SAPAAN = [
 	'Ya, saya dengar. Mau cari data apa?',
@@ -94,13 +141,69 @@ const BALASAN_SAPAAN = [
 	'Siap. Data apa yang dicari?',
 ];
 
+/* --------------------------------------------------------- lingkungan -- */
+
+/**
+ * Periksa apa yang benar-benar bisa dilakukan peramban INI, di alamat INI.
+ *
+ * Dipisah jadi fungsi sendiri karena hasilnya menentukan hampir semua perilaku
+ * halaman — dan karena tiap pemeriksaannya menjawab satu keluhan nyata.
+ */
+const periksaLingkungan = () => {
+	if (typeof window === 'undefined') {
+		return { mode: 'ketik', alasan: 'tak-didukung', seluler: false, iOS: false };
+	}
+
+	const ua = navigator.userAgent || '';
+	// iPadOS 13+ menyamar sebagai Mac. Satu-satunya pembedanya layar sentuh.
+	const iOS = /iPad|iPhone|iPod/.test(ua)
+		|| (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+	const android = /Android/i.test(ua);
+	// Sentuh + layar sempit = perangkat genggam. Laptop layar sentuh tidak ikut
+	// tertangkap karena lebarnya lolos batas.
+	const sentuh = window.matchMedia?.('(pointer: coarse)')?.matches === true;
+	const seluler = iOS || android || (sentuh && window.innerWidth < 1024);
+
+	const konteksAman = window.isSecureContext === true;
+	const adaPengenal = Boolean(AmbilPengenalSuara());
+	const adaMik = Boolean(navigator.mediaDevices?.getUserMedia);
+
+	// Urutan pemeriksaan ini penting: konteks tidak aman harus dilaporkan LEBIH
+	// DULU, karena di situ semua kemampuan lain ikut hilang dan pesan "peramban
+	// tidak mendukung" akan menyesatkan — perambannya mendukung, alamatnyalah
+	// yang salah.
+	if (!konteksAman) return { mode: 'ketik', alasan: 'tak-aman', seluler, iOS };
+	if (!adaPengenal) return { mode: 'ketik', alasan: 'tak-didukung', seluler, iOS };
+	if (seluler || !adaMik) return { mode: 'ketuk', alasan: null, seluler, iOS };
+	return { mode: 'siaga', alasan: null, seluler, iOS };
+};
+
+/** Terjemahkan kode galat SpeechRecognition jadi kalimat yang bisa ditindaki. */
+const jelaskanGalat = (kode) => {
+	switch (kode) {
+		case 'not-allowed':
+		case 'service-not-allowed':
+			return 'Akses mikrofon ditolak peramban. Izinkan di setelan situs, lalu coba lagi.';
+		case 'audio-capture':
+			return 'Mikrofon tidak terbaca. Pastikan tidak sedang dipakai aplikasi lain.';
+		case 'network':
+			return 'Pengenalan suara butuh internet dan sedang tidak bisa dihubungi. '
+				+ 'Coba lagi, atau pakai kotak ketik di bawah.';
+		case 'language-not-supported':
+			return 'Peramban ini belum punya pengenalan suara bahasa Indonesia. Pakai kotak ketik ya.';
+		default:
+			return null; // 'no-speech' dan 'aborted' wajar, tidak perlu ditampilkan
+	}
+};
+
+/* ------------------------------------------------------------- suara -- */
+
 /**
  * Pilih suara terbaik yang tersedia untuk bahasa Indonesia.
  *
  * Daftar suara peramban terisi ASINKRON: pemanggilan pertama sering
- * mengembalikan array kosong, dan itulah sebabnya kalimat pertama kerap terdengar
- * memakai suara Inggris. Karena itu daftarnya dibaca ulang tiap kali, bukan
- * disimpan sekali di awal.
+ * mengembalikan array kosong, dan itulah sebabnya kalimat pertama kerap
+ * terdengar memakai suara Inggris. Karena itu daftarnya dibaca ulang tiap kali.
  */
 const pilihSuara = () => {
 	const daftar = window.speechSynthesis?.getVoices?.() || [];
@@ -114,23 +217,50 @@ const pilihSuara = () => {
 };
 
 /**
+ * Buka kunci pengucapan.
+ *
+ * INI PERBAIKAN HP YANG PALING MUDAH TERLEWAT. Android dan iOS menolak
+ * speechSynthesis.speak() yang tidak berasal dari sentuhan pengguna — tanpa
+ * galat apa pun, jawabannya cuma bisu. Karena Gema baru bicara SETELAH
+ * menunggu balasan server, saat itu sentuhannya sudah lama lewat dan
+ * pengucapannya diblokir.
+ *
+ * Penawarnya: pada sentuhan pertama, ucapkan sepotong kosong tanpa volume.
+ * Sesudah itu peramban menganggap halaman ini sudah berhak bersuara, dan
+ * jawaban berikutnya terdengar.
+ */
+const bukaKunciSuara = (sudah) => {
+	if (sudah.current) return;
+	const mesin = window.speechSynthesis;
+	if (!mesin) return;
+	try {
+		const kosong = new SpeechSynthesisUtterance(' ');
+		kosong.volume = 0;
+		kosong.lang = 'id-ID';
+		mesin.speak(kosong);
+		sudah.current = true;
+	} catch { /* peramban yang tidak mengizinkan pun tidak apa-apa */ }
+};
+
+/**
  * Ucapkan teks.
  *
- * Dua penyakit speechSynthesis yang ditangani di sini:
+ * Tiga penyakit speechSynthesis yang ditangani di sini:
  *
  *  1. Kalimat panjang terpotong di tengah. Chrome menghentikan pengucapan
- *     sekitar lima belas detik; penawarnya memanggil resume() berkala selama
- *     masih berbicara.
+ *     sekitar lima belas detik; penawarnya memanggil resume() berkala.
  *  2. onend kadang tidak pernah datang bila pengucapan gagal diam-diam. Ada
- *     penjaga waktu yang menutup jalur itu supaya Gema tidak tersangkut selamanya
- *     di fase "menjawab" dan berhenti mendengar.
+ *     penjaga waktu yang menutup jalur itu supaya Gema tidak tersangkut.
+ *  3. Di iOS, cancel() yang langsung disusul speak() kadang membuat keduanya
+ *     hilang. Karena itu speak() ditunda satu putaran.
  */
 const ucapkan = (teks, saatSelesai) => {
 	if (typeof window === 'undefined' || !window.speechSynthesis || !teks) {
 		saatSelesai?.();
 		return;
 	}
-	window.speechSynthesis.cancel();
+	const mesin = window.speechSynthesis;
+	mesin.cancel();
 
 	const suara = new SpeechSynthesisUtterance(teks);
 	suara.lang = 'id-ID';
@@ -141,6 +271,10 @@ const ucapkan = (teks, saatSelesai) => {
 	if (terpilih) suara.voice = terpilih;
 
 	let selesai = false;
+	// Ditandai true begitu speak() benar-benar dipanggil. Penjaga jeda tidak
+	// boleh menyimpulkan "sudah selesai" dari mesin yang belum mulai bicara.
+	let mulai = false;
+
 	const tutup = () => {
 		if (selesai) return;
 		selesai = true;
@@ -150,8 +284,8 @@ const ucapkan = (teks, saatSelesai) => {
 	};
 
 	const penjagaJeda = setInterval(() => {
-		if (window.speechSynthesis.speaking) window.speechSynthesis.resume();
-		else tutup();
+		if (mesin.speaking) mesin.resume();
+		else if (mulai) tutup();
 	}, 4000);
 
 	// Perkiraan kasar: ~13 huruf per detik, ditambah margin lebar.
@@ -160,7 +294,9 @@ const ucapkan = (teks, saatSelesai) => {
 
 	suara.onend = tutup;
 	suara.onerror = tutup;
-	window.speechSynthesis.speak(suara);
+
+	// Ditunda satu putaran: lihat penyakit nomor tiga di atas.
+	setTimeout(() => { mulai = true; try { mesin.speak(suara); } catch { tutup(); } }, 60);
 };
 
 /* -------------------------------------------------------------- lingkaran -- */
@@ -170,7 +306,7 @@ const ucapkan = (teks, saatSelesai) => {
  * ditulis langsung ke DOM dari gelung amplitudo — bukan lewat state, supaya
  * siaga panjang tidak berarti render tanpa henti.
  */
-const LingkaranGema = React.forwardRef(({ fase, onKlik, bisaDiketuk }, ref) => {
+const LingkaranGema = React.forwardRef(({ fase, onKlik, bisaDiketuk, modeKetuk }, ref) => {
 	const mendengar = fase === 'siaga' || fase === 'perintah';
 	const menunggu = fase === 'perintah';
 	const sibuk = fase === 'berpikir';
@@ -179,7 +315,7 @@ const LingkaranGema = React.forwardRef(({ fase, onKlik, bisaDiketuk }, ref) => {
 	return (
 		<div
 			ref={ref}
-			className="relative flex h-64 w-64 items-center justify-center sm:h-72 sm:w-72"
+			className="relative flex h-56 w-56 items-center justify-center sm:h-72 sm:w-72"
 			style={{ '--tenaga': 0 }}
 		>
 			{/* Dua cincin amplitudo. Skalanya dihitung di CSS dari --tenaga. */}
@@ -237,20 +373,25 @@ const LingkaranGema = React.forwardRef(({ fase, onKlik, bisaDiketuk }, ref) => {
 				onClick={onKlik}
 				disabled={!bisaDiketuk}
 				aria-label={
-					fase === 'mati' ? 'Aktifkan Gema' : menunggu ? 'Gema menunggu perintah' : 'Gema siaga'
-				}
-				className={`relative flex h-32 w-32 items-center justify-center rounded-full text-white shadow-xl outline-none transition-[background-color,box-shadow,transform] duration-300 focus-visible:ring-4 focus-visible:ring-slate-900/20 sm:h-36 sm:w-36 ${
 					fase === 'mati'
-						? 'bg-slate-400 hover:-translate-y-0.5 hover:bg-slate-500'
+						? (modeKetuk ? 'Ketuk untuk bicara' : 'Aktifkan Gema')
+						: menunggu ? 'Gema mendengarkan' : 'Gema siaga'
+				}
+				// touch-manipulation membuang tunda 300 ms peramban seluler, dan
+				// select-none mencegah teks ikut tersorot saat diketuk cepat.
+				className={`relative flex h-28 w-28 touch-manipulation select-none items-center justify-center rounded-full text-white shadow-xl outline-none transition-[background-color,box-shadow,transform] duration-300 focus-visible:ring-4 focus-visible:ring-slate-900/20 sm:h-36 sm:w-36 ${
+					fase === 'mati'
+						? 'bg-slate-400 hover:bg-slate-500 active:scale-95'
 						: 'bg-slate-900 shadow-slate-900/25'
-				} ${bisaDiketuk ? 'cursor-pointer' : 'cursor-default'}`}
+				} ${bisaDiketuk ? 'cursor-pointer active:scale-95' : 'cursor-default'}`}
 				style={{ transform: mendengar ? 'scale(calc(1 + var(--tenaga) * 0.05))' : undefined }}
 			>
-				{sibuk ? <Loader2 className="h-11 w-11 animate-spin" />
-					: bicara ? <Volume2 className="h-11 w-11" />
-					: menunggu ? <Ear className="h-11 w-11" />
-					: fase === 'mati' ? <MicOff className="h-11 w-11" />
-					: <Mic className="h-12 w-12" />}
+				{sibuk ? <Loader2 className="h-10 w-10 animate-spin sm:h-11 sm:w-11" />
+					: bicara ? <Volume2 className="h-10 w-10 sm:h-11 sm:w-11" />
+					: menunggu ? <Ear className="h-10 w-10 sm:h-11 sm:w-11" />
+					: fase === 'mati' && modeKetuk ? <Mic className="h-11 w-11 sm:h-12 sm:w-12" />
+					: fase === 'mati' ? <MicOff className="h-10 w-10 sm:h-11 sm:w-11" />
+					: <Mic className="h-11 w-11 sm:h-12 sm:w-12" />}
 			</button>
 		</div>
 	);
@@ -266,10 +407,7 @@ LingkaranGema.displayName = 'LingkaranGema';
  * pengguna. Yang bisa diatur adalah ketukan itu jatuh di mana. Kalau jatuh di
  * lingkaran mikrofon, orang menekan sesuatu yang belum menjelaskan apa-apa, lalu
  * kaget didatangi permintaan izin peramban. Di sini ketukan itu dipindahkan ke
- * tombol yang alasannya sudah dibaca lebih dulu — pola yang sama dipakai aplikasi
- * sebelum meminta izin lokasi.
- *
- * Karena itu popup ini muncul SENDIRI saat halaman dibuka, bukan setelah ditekan.
+ * tombol yang alasannya sudah dibaca lebih dulu.
  */
 const PopupIzinMik = ({ onIzinkan, onNanti, sedangMeminta }) => {
 	// Animasi masuknya memakai state + kelas transition, BUKAN `animate-in`.
@@ -282,7 +420,7 @@ const PopupIzinMik = ({ onIzinkan, onNanti, sedangMeminta }) => {
 	}, []);
 
 	return (
-		// z-[60]+: bilah navigasi bawah PegawaiLayout memakai z-50 dan akan menelan
+		// z-[60]+: laci navigasi CoreDashboardLayout memakai z-50 dan akan menelan
 		// klik pada lapisan yang berada di bawahnya.
 		<div
 			className={`fixed inset-0 z-[60] flex items-end justify-center bg-slate-900/50 p-0 backdrop-blur-sm transition-opacity duration-200 sm:items-center sm:p-4 ${
@@ -293,7 +431,9 @@ const PopupIzinMik = ({ onIzinkan, onNanti, sedangMeminta }) => {
 				role="dialog"
 				aria-modal="true"
 				aria-labelledby="judul-izin-gema"
-				className={`w-full max-w-md overflow-hidden rounded-t-3xl bg-white shadow-2xl transition duration-300 ease-out sm:rounded-3xl ${
+				// pb-[env(safe-area-inset-bottom)]: di iPhone, batang beranda
+				// menutupi tombol yang menempel di dasar layar.
+				className={`w-full max-w-md overflow-hidden rounded-t-3xl bg-white pb-[env(safe-area-inset-bottom)] shadow-2xl transition duration-300 ease-out sm:rounded-3xl sm:pb-0 ${
 					tampil ? 'translate-y-0 scale-100 opacity-100' : 'translate-y-4 scale-[0.98] opacity-0'
 				}`}
 			>
@@ -333,7 +473,7 @@ const PopupIzinMik = ({ onIzinkan, onNanti, sedangMeminta }) => {
 					<button
 						type="button"
 						onClick={onNanti}
-						className="flex-1 rounded-xl border border-slate-200 py-2.5 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-50"
+						className="flex-1 rounded-xl border border-slate-200 py-3 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-50"
 					>
 						Nanti saja
 					</button>
@@ -341,7 +481,7 @@ const PopupIzinMik = ({ onIzinkan, onNanti, sedangMeminta }) => {
 						type="button"
 						onClick={onIzinkan}
 						disabled={sedangMeminta}
-						className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-slate-900 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-slate-800 disabled:opacity-60"
+						className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-slate-900 py-3 text-sm font-semibold text-white transition-colors hover:bg-slate-800 disabled:opacity-60"
 					>
 						{sedangMeminta && <Loader2 className="h-4 w-4 animate-spin" />}
 						Izinkan
@@ -358,8 +498,7 @@ const PopupIzinMik = ({ onIzinkan, onNanti, sedangMeminta }) => {
  * Pengingat bahwa mikrofon masih menyala padahal sudah lama tidak dipakai.
  *
  * Hitung mundurnya bukan tekanan, melainkan jawaban untuk keadaan yang paling
- * mungkin: tidak ada orang di depan layar. Kalau memang ada, satu ketukan
- * membatalkannya dan Gema tidak bertanya lagi selama lima menit.
+ * mungkin: tidak ada orang di depan layar.
  */
 const PopupDiam = ({ sisaDetik, onMatikan, onTetap }) => {
 	const [tampil, setTampil] = useState(false);
@@ -378,7 +517,7 @@ const PopupDiam = ({ sisaDetik, onMatikan, onTetap }) => {
 				role="alertdialog"
 				aria-modal="true"
 				aria-labelledby="judul-diam-gema"
-				className={`w-full max-w-md overflow-hidden rounded-t-3xl bg-white shadow-2xl transition duration-300 ease-out sm:rounded-3xl ${
+				className={`w-full max-w-md overflow-hidden rounded-t-3xl bg-white pb-[env(safe-area-inset-bottom)] shadow-2xl transition duration-300 ease-out sm:rounded-3xl sm:pb-0 ${
 					tampil ? 'translate-y-0 scale-100 opacity-100' : 'translate-y-4 scale-[0.98] opacity-0'
 				}`}
 			>
@@ -417,14 +556,14 @@ const PopupDiam = ({ sisaDetik, onMatikan, onTetap }) => {
 					<button
 						type="button"
 						onClick={onTetap}
-						className="flex-1 rounded-xl border border-slate-200 py-2.5 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-50"
+						className="flex-1 rounded-xl border border-slate-200 py-3 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-50"
 					>
 						Tetap nyalakan
 					</button>
 					<button
 						type="button"
 						onClick={onMatikan}
-						className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-slate-900 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-slate-800"
+						className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-slate-900 py-3 text-sm font-semibold text-white transition-colors hover:bg-slate-800"
 					>
 						<MicOff className="h-4 w-4" />
 						Matikan
@@ -445,11 +584,24 @@ const JUDUL_FASE = {
 	menjawab: 'Gema menjawab',
 };
 
+const JUDUL_FASE_KETUK = {
+	...JUDUL_FASE,
+	mati: 'Ketuk lingkaran, lalu bicara',
+	perintah: 'Silakan bicara…',
+};
+
 const CATATAN_FASE = {
 	mati: 'Sekali diizinkan, Gema langsung siaga sendiri di kunjungan berikutnya.',
 	siaga: 'Gema siaga. Tidak perlu menekan apa pun.',
 	perintah: 'Berhenti bicara sebentar, Gema langsung mencari. Mis. “cari data desa berstatus mandiri”.',
 	berpikir: 'Sedang membaca data sistem…',
+	menjawab: 'Ketuk lingkaran untuk menghentikan suara.',
+};
+
+const CATATAN_FASE_KETUK = {
+	...CATATAN_FASE,
+	mati: 'Di HP dan tablet, mikrofon hanya menyala saat diketuk — jadi tidak boros baterai.',
+	perintah: 'Berhenti bicara sebentar, Gema langsung mencari. Ketuk lagi untuk berhenti.',
 	menjawab: 'Ketuk lingkaran untuk menghentikan suara.',
 };
 
@@ -470,12 +622,33 @@ const GemaPage = () => {
 	const [sisaDetik, setSisaDetik] = useState(HITUNG_MUNDUR);
 	const [ketikan, setKetikan] = useState('');
 	const [riwayat, setRiwayat] = useState([]);
+	// Berapa giliran yang sudah diingat server untuk sesi ini. Dipakai untuk
+	// memberi tahu pengguna bahwa Gema masih memegang konteks percakapan.
+	const [giliran, setGiliran] = useState(0);
 
 	const lingkaranRef = useRef(null);
 	const pengenalRef = useRef(null);
 	const streamRef = useRef(null);
 	const audioRef = useRef(null);
 	const rafRef = useRef(0);
+	const suaraDibukaRef = useRef(false);
+
+	/**
+	 * Id percakapan. Dibuat sekali per kunjungan halaman dan dikirim di tiap
+	 * pertanyaan; server memakainya untuk mengingat giliran sebelumnya, sehingga
+	 * "kalau yang maju berapa?" punya rujukan.
+	 */
+	const sesiRef = useRef(
+		(typeof crypto !== 'undefined' && crypto.randomUUID)
+			? crypto.randomUUID()
+			: `gema-${Date.now()}-${Math.random().toString(36).slice(2)}`
+	);
+
+	// Kemampuan perangkat diperiksa SEKALI. Hasilnya menentukan seluruh perilaku
+	// halaman, jadi ia tidak boleh berubah-ubah di tengah pemakaian.
+	const lingkungan = useMemo(periksaLingkungan, []);
+	const modeKetuk = lingkungan.mode === 'ketuk';
+	const bisaSuara = lingkungan.mode !== 'ketik';
 
 	// Penangan SpeechRecognition dipasang sekali dan hidup lama, jadi tidak boleh
 	// membaca state langsung — nilainya akan terkunci di render pertama.
@@ -483,19 +656,21 @@ const GemaPage = () => {
 	const siagaRef = useRef(false);
 	const jedaRef = useRef(false); // true selama Gema bicara
 
-	// Dipakai deteksi selesai bicara. Semuanya ref karena dibaca di dalam gelung
-	// requestAnimationFrame yang tidak pernah dipasang ulang.
+	// Dipakai deteksi selesai bicara pada jalur siaga.
 	const transkripRef = useRef('');       // ucapan terbaru, termasuk yang belum final
 	const pernahBicaraRef = useRef(false); // sudah ada suara di ucapan ini?
 	const heningSejakRef = useRef(0);      // kapan hening mulai
 	const abaikanFinalRef = useRef(false); // sudah ditangani lewat hening
 
+	// Jalur ketuk: dua penjaga waktu pengganti pengukur amplitudo.
+	const ketukHeningRef = useRef(0);
+	const ketukMaksRef = useRef(0);
+	const dengarKetukRef = useRef(false);
+
 	// Pengingat mikrofon menganggur.
 	const aktivitasRef = useRef(Date.now());     // kapan terakhir ada suara/perintah
 	const ambangDiamRef = useRef(DIAM_TANYA);    // memanjang setelah "tetap nyalakan"
 	const popupDiamRef = useRef(false);
-
-	const didukung = useMemo(() => Boolean(AmbilPengenalSuara()), []);
 
 	const setFasa = useCallback((f) => { faseRef.current = f; setFase(f); }, []);
 
@@ -508,6 +683,23 @@ const GemaPage = () => {
 			.catch(() => setSaran([]));
 		window.speechSynthesis?.getVoices();
 	}, []);
+
+	// Peramban tanpa suara langsung dibukakan kotak ketiknya. Halaman yang cuma
+	// menampilkan lingkaran mati dan pesan galat itu jalan buntu; kotak ketik
+	// menempuh jalur yang sama persis dan tetap berguna.
+	useEffect(() => {
+		if (lingkungan.mode !== 'ketik') return;
+		setModeKetik(true);
+		setGalat(
+			lingkungan.alasan === 'tak-aman'
+				? 'Halaman ini dibuka lewat koneksi yang tidak aman (http). Peramban hanya '
+					+ 'memberikan akses mikrofon di alamat https atau localhost — itulah sebabnya '
+					+ 'suara jalan di komputer tapi tidak di HP. Buka lewat alamat https-nya, atau '
+					+ 'pakai kotak ketik di bawah; jawabannya sama persis.'
+				: 'Peramban ini belum mendukung pengenalan suara. Kotak ketik di bawah menempuh '
+					+ 'jalur yang sama persis.'
+		);
+	}, [lingkungan]);
 
 	/* ------------------------------------------------------- amplitudo -- */
 
@@ -525,8 +717,35 @@ const GemaPage = () => {
 		audioRef.current = null;
 	}, []);
 
+	/**
+	 * Denyut buatan untuk jalur ketuk.
+	 *
+	 * Di HP kita sengaja TIDAK membuka mikrofon untuk mengukur amplitudo — itu
+	 * yang merebut mikrofon dari pengenalan suara. Tapi lingkaran yang diam
+	 * membuat orang ragu apakah Gema benar-benar mendengar, jadi cincinnya
+	 * digerakkan gelombang halus. Ia jujur menandakan "sedang mendengar", bukan
+	 * berpura-pura mengukur suara.
+	 */
+	const mulaiDenyut = useCallback(() => {
+		cancelAnimationFrame(rafRef.current);
+		const awal = performance.now();
+		const langkah = (kini) => {
+			const t = (kini - awal) / 1000;
+			tulisTenaga(0.25 + 0.2 * (0.5 + 0.5 * Math.sin(t * 3.2)));
+			rafRef.current = requestAnimationFrame(langkah);
+		};
+		rafRef.current = requestAnimationFrame(langkah);
+	}, []);
+
+	const hentikanDenyut = useCallback(() => {
+		cancelAnimationFrame(rafRef.current);
+		rafRef.current = 0;
+		tulisTenaga(0);
+	}, []);
+
 	const mulaiAmplitudo = useCallback(async () => {
 		if (audioRef.current) return true;
+		if (!navigator.mediaDevices?.getUserMedia) return false;
 		try {
 			const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
 			streamRef.current = stream;
@@ -534,6 +753,10 @@ const GemaPage = () => {
 			const Konteks = window.AudioContext || window.webkitAudioContext;
 			const konteks = new Konteks();
 			audioRef.current = konteks;
+			// Konteks audio yang dibuat di luar sentuhan pengguna lahir dalam
+			// keadaan 'suspended'; tanpa resume() gelung di bawah membaca nol
+			// terus dan deteksi selesai bicara tidak pernah menyala.
+			if (konteks.state === 'suspended') await konteks.resume().catch(() => {});
 
 			const penganalisis = konteks.createAnalyser();
 			penganalisis.fftSize = 512;
@@ -608,31 +831,44 @@ const GemaPage = () => {
 
 		const selesaiBicara = () => {
 			jedaRef.current = false;
+			if (modeKetuk) {
+				// Di jalur ketuk mikrofonnya memang tidak menyala; kembali menunggu
+				// ketukan berikutnya. Menyalakan sendiri di sini akan membuat HP
+				// mendengarkan tanpa diminta.
+				setFasa('mati');
+				return;
+			}
 			// Kembali MENUNGGU PERINTAH, bukan ke kata bangun: pertanyaan lanjutan
-			// ("kalau yang maju berapa?") jadi wajar tanpa menyapa ulang. Tidak
-			// menggantung — penjaga waktu JEDA_PERINTAH mengembalikannya ke siaga.
+			// ("kalau yang maju berapa?") jadi wajar tanpa menyapa ulang.
 			setFasa(siagaRef.current ? 'perintah' : 'mati');
 		};
 
 		try {
-			const r = await api.post('/gema/tanya', { teks: bersih });
+			const r = await api.post(
+				'/gema/tanya',
+				{ teks: bersih, sesi: sesiRef.current },
+				{ timeout: SABAR_MS },
+			);
 			const d = r.data?.data;
 			setJawaban(d);
+			if (typeof d?.giliran === 'number') setGiliran(d.giliran);
 			setRiwayat((h) => [{ peran: 'gema', teks: d?.kalimat, waktu: Date.now() }, ...h].slice(0, 8));
 			setFasa('menjawab');
 			ucapkan(d?.kalimat, selesaiBicara);
 		} catch (e) {
-			const pesan = e.response?.data?.message || 'Gema gagal mengambil datanya';
+			const pesan = e.code === 'ECONNABORTED'
+				? 'Gema kelamaan mencarinya. Coba pertanyaan yang lebih sempit ya.'
+				: (e.response?.data?.message || 'Gema gagal mengambil datanya');
 			setGalat(pesan);
 			setFasa('menjawab');
 			ucapkan(pesan, selesaiBicara);
 		}
-	}, [setFasa]);
+	}, [modeKetuk, setFasa]);
 
 	/**
-	 * Satu-satunya pintu masuk ucapan, dipakai dua jalur sekaligus: deteksi
-	 * hening dan hasil final dari peramban. Mana pun yang datang lebih dulu
-	 * menang; yang belakangan diabaikan lewat `abaikanFinalRef`.
+	 * Satu-satunya pintu masuk ucapan, dipakai beberapa jalur sekaligus: deteksi
+	 * hening, penjaga waktu ketuk, dan hasil final dari peramban. Mana pun yang
+	 * datang lebih dulu menang; yang belakangan diabaikan lewat `abaikanFinalRef`.
 	 */
 	const prosesUcapanRef = useRef(() => {});
 
@@ -662,7 +898,7 @@ const GemaPage = () => {
 
 		const selesaiBicara = () => {
 			jedaRef.current = false;
-			setFasa(siagaRef.current ? 'perintah' : 'mati');
+			setFasa(modeKetuk ? 'mati' : (siagaRef.current ? 'perintah' : 'mati'));
 		};
 
 		try {
@@ -680,7 +916,7 @@ const GemaPage = () => {
 		} finally {
 			setKonfirmasiJalan(false);
 		}
-	}, [jawaban, konfirmasiJalan, setFasa]);
+	}, [jawaban, konfirmasiJalan, modeKetuk, setFasa]);
 
 	const batalkanKonfirmasi = useCallback(() => {
 		setJawaban((j) => (j ? { ...j, konfirmasi: null } : j));
@@ -696,9 +932,18 @@ const GemaPage = () => {
 			const ucapan = String(teks || '').trim();
 			if (!ucapan || jedaRef.current) return;
 
-			// Ada ucapan = jendela perintah diperpanjang. Pengawas satu detik
-			// membaca penanda yang sama, jadi cukup disetel di sini.
+			// Ada ucapan = jendela perintah diperpanjang.
 			aktivitasRef.current = Date.now();
+
+			// Jalur ketuk: mikrofon dibuka justru KARENA orangnya menekan tombol,
+			// jadi tidak ada kata bangun yang perlu diperiksa. Apa pun yang
+			// terdengar memang ditujukan kepada Gema.
+			if (modeKetuk) {
+				const sisa = ucapan.replace(KATA_BANGUN, '').replace(/^[\s,.]+/, '').trim();
+				if (sisa.length >= 2) tanyakan(sisa);
+				else setTranskrip('');
+				return;
+			}
 
 			if (faseRef.current === 'siaga') {
 				// Bukan untuk Gema — halaman ini akan terbuka di ruangan berisi
@@ -719,23 +964,53 @@ const GemaPage = () => {
 				setTranskrip('');
 			}
 		};
-	}, [sapaBalik, tanyakan]);
+	}, [modeKetuk, sapaBalik, tanyakan]);
 
 	// Penanda deteksi hening dinolkan tiap pergantian fase; tanpa ini sisa
 	// ucapan lama bisa langsung memicu pencarian begitu fase berganti.
-	//
-	// Penjaga waktu fase perintah TIDAK dipasang di sini. Sebelumnya iya, dan
-	// itulah sumber bug "harus bilang Halo Gema lagi": penjaga waktu sekali
-	// pasang meletus di tengah kalimat penanya. Sekarang batas waktunya diperiksa
-	// pengawas satu detik sekali terhadap HENING TERAKHIR, jadi selama orangnya
-	// masih bicara jendelanya tidak pernah tertutup.
 	useEffect(() => {
 		pernahBicaraRef.current = false;
 		heningSejakRef.current = 0;
 		transkripRef.current = '';
-		// Masuk fase perintah = titik nol hitungan hening.
 		if (fase === 'perintah') aktivitasRef.current = Date.now();
 	}, [fase]);
+
+	/* ---------------------------------------------------------- ketuk -- */
+
+	/**
+	 * Tutup satu sesi dengar di jalur ketuk, lalu kirim apa yang tertangkap.
+	 *
+	 * Dipanggil dari tiga arah: penjaga waktu hening, batas keras, dan ketukan
+	 * kedua pengguna. Ketiganya boleh datang bersamaan, jadi penjaga
+	 * `dengarKetukRef` memastikan isinya hanya dikirim sekali.
+	 */
+	const tutupDengarKetuk = useCallback((kirim = true) => {
+		if (!dengarKetukRef.current) return;
+		dengarKetukRef.current = false;
+		clearTimeout(ketukHeningRef.current);
+		clearTimeout(ketukMaksRef.current);
+		hentikanDenyut();
+
+		try { pengenalRef.current?.stop(); } catch { /* sudah berhenti */ }
+
+		const ucapan = transkripRef.current.trim();
+		transkripRef.current = '';
+
+		if (kirim && ucapan) {
+			abaikanFinalRef.current = true;
+			prosesUcapanRef.current(ucapan);
+		} else if (faseRef.current === 'perintah') {
+			setTranskrip('');
+			setFasa('mati');
+		}
+	}, [hentikanDenyut, setFasa]);
+
+	const tundaHeningKetuk = useCallback((jeda = KETUK_HENING) => {
+		clearTimeout(ketukHeningRef.current);
+		ketukHeningRef.current = setTimeout(() => tutupDengarKetuk(true), jeda);
+	}, [tutupDengarKetuk]);
+
+	/* ------------------------------------------------- pasang pengenal -- */
 
 	const pasangPengenal = useCallback(() => {
 		const Pengenal = AmbilPengenalSuara();
@@ -743,7 +1018,10 @@ const GemaPage = () => {
 
 		const pengenal = new Pengenal();
 		pengenal.lang = 'id-ID';
-		pengenal.continuous = true;
+		// `continuous` TIDAK dinyalakan di jalur ketuk. Di Safari iOS ia memang
+		// tidak didukung, dan di jalur ketuk pun tidak ada gunanya: satu ketukan
+		// berarti satu ucapan.
+		pengenal.continuous = !modeKetuk;
 		pengenal.interimResults = true;
 		pengenal.maxAlternatives = 1;
 
@@ -764,6 +1042,18 @@ const GemaPage = () => {
 			// rAF, dan hasil SEMENTARA sudah cukup untuk dicari.
 			if (tampak) transkripRef.current = tampak;
 
+			// Jalur ketuk: tiap kata baru menunda penutupan. Tanpa pengukur
+			// amplitudo, kedatangan kata inilah satu-satunya tanda orangnya
+			// masih bicara. Di luar sesi dengar yang terbuka, hasil apa pun
+			// diabaikan — termasuk hasil final yang menyusul setelah sesi
+			// ditutup, yang kalau diteruskan akan mengirim pertanyaan dua kali.
+			if (modeKetuk) {
+				if (!dengarKetukRef.current) return;
+				if (tampak) tundaHeningKetuk();
+				if (final.trim()) tutupDengarKetuk(true);
+				return;
+			}
+
 			if (!final) return;
 
 			// Sudah ditangani deteksi hening lebih dulu — jangan dikerjakan dua kali.
@@ -776,21 +1066,50 @@ const GemaPage = () => {
 		};
 
 		pengenal.onerror = (ev) => {
+			const pesan = jelaskanGalat(ev.error);
+
 			if (ev.error === 'not-allowed' || ev.error === 'service-not-allowed') {
 				siagaRef.current = false;
+				dengarKetukRef.current = false;
 				try { localStorage.removeItem(KUNCI_SIAGA); } catch { /* abaikan */ }
 				hentikanAudio();
+				hentikanDenyut();
 				setFasa('mati');
-				setGalat('Akses mikrofon ditolak peramban. Izinkan di setelan situs, lalu aktifkan lagi.');
+				setGalat(pesan);
+				return;
 			}
+
+			// Galat yang tidak bisa diperbaiki dengan mencoba lagi: hentikan, dan
+			// tawarkan kotak ketik. Menyalakan ulang terus-menerus di sini hanya
+			// menghasilkan lingkaran yang berkedip tanpa pernah mendengar apa pun
+			// — persis yang terjadi di HP dengan jaringan buruk.
+			if (ev.error === 'network' || ev.error === 'language-not-supported' || ev.error === 'audio-capture') {
+				dengarKetukRef.current = false;
+				clearTimeout(ketukHeningRef.current);
+				clearTimeout(ketukMaksRef.current);
+				hentikanDenyut();
+				if (modeKetuk) setFasa('mati');
+				setGalat(pesan);
+				setModeKetik(true);
+				return;
+			}
+
 			// 'no-speech' dan 'aborted' wajar terjadi saat siaga panjang —
 			// onend yang akan menyalakannya kembali.
 		};
 
-		// Chrome menghentikan pengenalan sendiri setelah sunyi cukup lama. Selama
-		// siaga masih menyala, dinyalakan lagi — inilah yang membuatnya terasa
-		// "selalu mendengar".
+		// Chrome menghentikan pengenalan sendiri setelah sunyi cukup lama. Di
+		// jalur siaga ia dinyalakan lagi — inilah yang membuatnya terasa "selalu
+		// mendengar". Di jalur ketuk TIDAK: berhenti memang akhir yang benar,
+		// dan menyalakan ulang di HP berarti nada "tut" berulang dan baterai
+		// terkuras.
 		pengenal.onend = () => {
+			if (modeKetuk) {
+				// Peramban seluler kerap menutup sendiri begitu orangnya berhenti,
+				// sebelum penjaga waktu kita sempat jalan. Kirim yang sudah ada.
+				if (dengarKetukRef.current) tutupDengarKetuk(true);
+				return;
+			}
 			if (!siagaRef.current) return;
 			setTimeout(() => {
 				if (!siagaRef.current) return;
@@ -799,12 +1118,12 @@ const GemaPage = () => {
 		};
 
 		return pengenal;
-		// sapaBalik dan tanyakan tidak lagi disebut di sini: keduanya dipanggil
-		// lewat prosesUcapanRef, yang selalu memegang versi terbaru.
-	}, [hentikanAudio, setFasa]);
+	}, [hentikanAudio, hentikanDenyut, modeKetuk, setFasa, tundaHeningKetuk, tutupDengarKetuk]);
+
+	/* -------------------------------------------------- nyala & matikan -- */
 
 	const nyalakanSiaga = useCallback(async () => {
-		if (!didukung) { setModeKetik(true); return; }
+		if (!bisaSuara) { setModeKetik(true); return; }
 		setGalat(null);
 
 		const dapatMik = await mulaiAmplitudo();
@@ -815,15 +1134,14 @@ const GemaPage = () => {
 
 		if (!pengenalRef.current) pengenalRef.current = pasangPengenal();
 		siagaRef.current = true;
-		// Menyalakan ulang berarti mulai dari nol: ambang tegur kembali satu menit,
-		// bukan lima menit warisan pilihan "tetap nyalakan" sebelumnya.
+		// Menyalakan ulang berarti mulai dari nol: ambang tegur kembali satu menit.
 		ambangDiamRef.current = DIAM_TANYA;
 		aktivitasRef.current = Date.now();
 		try { localStorage.setItem(KUNCI_SIAGA, '1'); } catch { /* abaikan */ }
 
 		setFasa('siaga');
 		try { pengenalRef.current?.start(); } catch { /* sudah jalan */ }
-	}, [didukung, mulaiAmplitudo, pasangPengenal, setFasa]);
+	}, [bisaSuara, mulaiAmplitudo, pasangPengenal, setFasa]);
 
 	const matikanSiaga = useCallback(() => {
 		siagaRef.current = false;
@@ -839,22 +1157,75 @@ const GemaPage = () => {
 		setFasa('mati');
 	}, [hentikanAudio, setFasa]);
 
-	// Saat halaman dibuka, jalurnya ditentukan oleh keadaan izin mikrofon:
+	/**
+	 * Mulai satu sesi dengar di jalur ketuk.
+	 *
+	 * Semua yang butuh "tindakan pengguna" di mata peramban dikerjakan DI SINI,
+	 * di dalam penangan sentuhan: membuka kunci pengucapan, dan memulai
+	 * pengenalan suara. Menundanya ke dalam await mana pun berarti kehilangan
+	 * status tindakan pengguna, dan di HP keduanya akan diblokir diam-diam.
+	 */
+	const mulaiDengarKetuk = useCallback(() => {
+		if (dengarKetukRef.current) { tutupDengarKetuk(true); return; }
+
+		bukaKunciSuara(suaraDibukaRef);
+		setGalat(null);
+		setTranskrip('');
+		transkripRef.current = '';
+
+		// PENGENAL BARU TIAP SESI, bukan satu yang dipakai ulang. Peramban
+		// seluler — Safari iOS paling parah — sering menolak start() pada objek
+		// yang baru saja berhenti, dan ketukan kedua pengguna berakhir tanpa
+		// apa-apa. Objek baru selalu bersedia.
+		//
+		// Penangan objek lama dilepas SEBELUM dibatalkan: abort() memicu onend,
+		// dan onend milik objek lama akan menutup sesi baru yang baru saja
+		// dibuka kalau ia masih terpasang.
+		const lama = pengenalRef.current;
+		if (lama) {
+			lama.onresult = null;
+			lama.onerror = null;
+			lama.onend = null;
+			try { lama.abort(); } catch { /* sudah berhenti */ }
+		}
+
+		pengenalRef.current = pasangPengenal();
+		if (!pengenalRef.current) { setModeKetik(true); return; }
+
+		dengarKetukRef.current = true;
+		aktivitasRef.current = Date.now();
+		setFasa('perintah');
+		mulaiDenyut();
+
+		try {
+			pengenalRef.current.start();
+		} catch {
+			// start() dua kali berturut-turut melempar; berarti sudah jalan.
+		}
+
+		tundaHeningKetuk(KETUK_MULAI);
+		clearTimeout(ketukMaksRef.current);
+		ketukMaksRef.current = setTimeout(() => tutupDengarKetuk(true), KETUK_MAKS);
+	}, [mulaiDenyut, pasangPengenal, setFasa, tundaHeningKetuk, tutupDengarKetuk]);
+
+	/* --------------------------------------------------- saat halaman buka -- */
+
+	// Jalur SIAGA saja. Keadaan izin mikrofon menentukan:
 	//
 	//   granted → Gema langsung siaga, tanpa apa pun yang perlu diketuk.
-	//   prompt  → popup izin dimunculkan sendiri. Popup INILAH tindakan
-	//             penggunanya; peramban tidak mengizinkan permintaan izin
-	//             mikrofon muncul tanpa satu ketukan, jadi ketukan itu
-	//             dipindahkan ke tombol "Izinkan" yang sudah menjelaskan
-	//             alasannya — bukan ke lingkaran mikrofon yang tidak
-	//             menjelaskan apa-apa.
-	//   denied  → tidak ada gunanya bertanya lagi; peramban akan menolak diam-
-	//             diam. Yang ditampilkan cara menyalakannya kembali.
+	//   prompt  → popup izin dimunculkan sendiri; ketukan "Izinkan" itulah
+	//             tindakan penggunanya.
+	//   denied  → tidak ada gunanya bertanya lagi; yang ditampilkan cara
+	//             menyalakannya kembali.
+	//
+	// Jalur KETUK sengaja tidak ikut: di HP, meminta izin mikrofon sebelum
+	// orangnya menyatakan mau bicara itu mengganggu, dan izinnya akan diminta
+	// peramban sendiri pada ketukan pertama.
 	useEffect(() => {
+		if (lingkungan.mode !== 'siaga') return undefined;
+
 		let batal = false;
 		(async () => {
-			if (!didukung) return;
-
 			let keadaanIzin = null;
 			try {
 				const izin = await navigator.permissions?.query({ name: 'microphone' });
@@ -873,19 +1244,22 @@ const GemaPage = () => {
 			setMintaIzin(true);
 		})();
 		return () => { batal = true; };
-	}, [didukung, nyalakanSiaga]);
+	}, [lingkungan, nyalakanSiaga]);
 
-	// Tab tersembunyi: mikrofon dan gelung animasi dihentikan, dinyalakan lagi
-	// saat kembali terlihat.
+	// Tab tersembunyi: mikrofon dan gelung animasi dihentikan. Di jalur ketuk,
+	// sesi dengar yang sedang jalan ditutup — HP yang dimasukkan saku tidak boleh
+	// meninggalkan mikrofon menyala.
 	useEffect(() => {
 		const saatBerubah = () => {
 			if (document.hidden) {
+				if (dengarKetukRef.current) tutupDengarKetuk(false);
 				if (siagaRef.current) {
 					try { pengenalRef.current?.stop(); } catch { /* abaikan */ }
 					cancelAnimationFrame(rafRef.current);
 					rafRef.current = 0;
 					tulisTenaga(0);
 				}
+				window.speechSynthesis?.cancel();
 			} else if (siagaRef.current && !rafRef.current) {
 				mulaiAmplitudo();
 				try { pengenalRef.current?.start(); } catch { /* sudah jalan */ }
@@ -893,22 +1267,37 @@ const GemaPage = () => {
 		};
 		document.addEventListener('visibilitychange', saatBerubah);
 		return () => document.removeEventListener('visibilitychange', saatBerubah);
-	}, [mulaiAmplitudo]);
+	}, [mulaiAmplitudo, tutupDengarKetuk]);
 
 	// Meninggalkan halaman: mikrofon dan suara tidak boleh terus hidup.
 	useEffect(() => () => {
 		siagaRef.current = false;
+		dengarKetukRef.current = false;
+		clearTimeout(ketukHeningRef.current);
+		clearTimeout(ketukMaksRef.current);
 		try { pengenalRef.current?.abort(); } catch { /* abaikan */ }
 		hentikanAudio();
 		window.speechSynthesis?.cancel();
 	}, [hentikanAudio]);
 
 	const ketukLingkaran = () => {
-		if (fase === 'mati') setMintaIzin(true);
-		else if (fase === 'menjawab') {
+		// Menghentikan suara selalu jadi arti ketukan saat Gema sedang bicara,
+		// di kedua jalur — orang menekan lingkaran justru untuk menyela.
+		if (fase === 'menjawab') {
 			window.speechSynthesis?.cancel();
 			jedaRef.current = false;
-			setFasa(siagaRef.current ? 'siaga' : 'mati');
+			setFasa(modeKetuk ? 'mati' : (siagaRef.current ? 'siaga' : 'mati'));
+			return;
+		}
+
+		if (modeKetuk) {
+			if (fase === 'mati' || fase === 'perintah') mulaiDengarKetuk();
+			return;
+		}
+
+		if (fase === 'mati') {
+			bukaKunciSuara(suaraDibukaRef);
+			setMintaIzin(true);
 		}
 	};
 
@@ -923,8 +1312,11 @@ const GemaPage = () => {
 	}, []);
 
 	// Pengawas: tiap detik memeriksa apakah sudah cukup lama tidak ada suara.
-	// Sekali dipasang, hidup selama halaman terbuka; kerjanya ringan.
+	// Hanya berlaku di jalur siaga — di jalur ketuk mikrofonnya tidak pernah
+	// tertinggal menyala, jadi tidak ada yang perlu ditegur.
 	useEffect(() => {
+		if (modeKetuk) return undefined;
+
 		const jam = setInterval(() => {
 			if (!siagaRef.current) return;
 			// Selama Gema sibuk atau bicara, jelas sedang dipakai.
@@ -950,7 +1342,7 @@ const GemaPage = () => {
 			setPopupDiam(true);
 		}, 1000);
 		return () => clearInterval(jam);
-	}, [setFasa]);
+	}, [modeKetuk, setFasa]);
 
 	// Hitung mundur popup. Habis waktunya = tidak ada orang di depan layar,
 	// jadi mikrofon dimatikan.
@@ -987,7 +1379,8 @@ const GemaPage = () => {
 		setSedangMeminta(true);
 		// Klik tombol ini yang menjadi tindakan pengguna di mata peramban;
 		// getUserMedia di dalam nyalakanSiaga baru boleh memunculkan permintaan
-		// izin karena dipanggil dari sini.
+		// izin karena dipanggil dari sini. Pengucapan pun dibuka di sini.
+		bukaKunciSuara(suaraDibukaRef);
 		await nyalakanSiaga();
 		setSedangMeminta(false);
 		setMintaIzin(false);
@@ -1000,10 +1393,35 @@ const GemaPage = () => {
 		setModeKetik(true);
 	};
 
+	/** Buang ingatan percakapan dan mulai dari awal. */
+	const mulaiPercakapanBaru = useCallback(async () => {
+		const lama = sesiRef.current;
+		// Id baru dipasang lebih dulu supaya pertanyaan yang dikirim tepat setelah
+		// tombol ini ditekan sudah masuk ke percakapan yang bersih, tidak menunggu
+		// balasan server.
+		sesiRef.current = (typeof crypto !== 'undefined' && crypto.randomUUID)
+			? crypto.randomUUID()
+			: `gema-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+
+		setRiwayat([]);
+		setJawaban(null);
+		setGalat(null);
+		setGiliran(0);
+
+		try { await api.post('/gema/lupakan', { sesi: lama }); }
+		catch { /* server yang lupa sendiri sesudah 30 menit pun tidak apa-apa */ }
+	}, []);
+
 	/* ------------------------------------------------------------ render -- */
 
+	const judulFase = modeKetuk ? JUDUL_FASE_KETUK : JUDUL_FASE;
+	const catatanFase = modeKetuk ? CATATAN_FASE_KETUK : CATATAN_FASE;
+	const sedangDengar = fase === 'siaga' || fase === 'perintah';
+
 	return (
-		<div className="min-h-screen bg-slate-50 p-4 pt-20 sm:p-6 lg:p-8 lg:pt-8">
+		// pt-20 di layar sempit menyisakan ruang untuk tombol menu melayang milik
+		// CoreDashboardLayout (fixed, kiri atas); tanpa itu ia menimpa judul.
+		<div className="min-h-screen bg-slate-50 px-3 pb-12 pt-20 sm:px-6 sm:pb-10 lg:px-8 lg:pt-8">
 			{mintaIzin && (
 				<PopupIzinMik
 					onIzinkan={izinkanMik}
@@ -1022,61 +1440,94 @@ const GemaPage = () => {
 
 			<div className="mx-auto max-w-5xl">
 				<section className="relative overflow-hidden rounded-3xl border border-slate-200 bg-white">
-					<div className="flex flex-col items-center px-5 py-10 sm:py-14">
-						<div className="inline-flex items-center gap-2 rounded-full bg-slate-100 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500">
-							<Sparkles className="h-3.5 w-3.5" />
-							Gema · Purwarupa
+					<div className="flex flex-col items-center px-4 py-8 sm:px-5 sm:py-14">
+						<div className="inline-flex flex-wrap items-center justify-center gap-x-2 gap-y-1 rounded-full bg-slate-100 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500">
+							<span className="inline-flex items-center gap-2">
+								<Sparkles className="h-3.5 w-3.5" />
+								Gema · Purwarupa
+							</span>
 							{modelAktif && (
-								<span className="ml-1 text-slate-400">· paham kalimat bebas</span>
+								<span className="text-slate-400">· paham kalimat bebas</span>
 							)}
-							{fase !== 'mati' && (
-								<span className="ml-1 flex items-center gap-1 text-emerald-600">
+							{sedangDengar && (
+								<span className="flex items-center gap-1 text-emerald-600">
 									<span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
-									Siaga
+									{modeKetuk ? 'Mendengar' : 'Siaga'}
 								</span>
 							)}
 						</div>
 
 						<p
 							aria-live="polite"
-							className={`mt-5 min-h-[3.5rem] max-w-2xl text-center text-xl font-semibold leading-snug tracking-tight sm:text-2xl ${
+							className={`mt-5 min-h-[3.5rem] max-w-2xl text-center text-lg font-semibold leading-snug tracking-tight sm:text-2xl ${
 								transkrip ? 'text-slate-900' : 'text-slate-400'
 							}`}
 						>
-							{transkrip || JUDUL_FASE[fase]}
+							{transkrip || judulFase[fase]}
 						</p>
 
 						<LingkaranGema
 							ref={lingkaranRef}
 							fase={fase}
 							onKlik={ketukLingkaran}
-							bisaDiketuk={fase === 'mati' || fase === 'menjawab'}
+							modeKetuk={modeKetuk}
+							bisaDiketuk={
+								bisaSuara
+								&& (fase === 'mati' || fase === 'menjawab' || (modeKetuk && fase === 'perintah'))
+							}
 						/>
 
 						<p className="mt-1 max-w-md text-center text-sm text-slate-500">
-							{CATATAN_FASE[fase]}
+							{catatanFase[fase]}
 						</p>
 
 						<div className="mt-5 flex flex-wrap items-center justify-center gap-2">
-							{fase !== 'mati' && (
+							{!modeKetuk && fase !== 'mati' && (
 								<button
 									type="button"
 									onClick={matikanSiaga}
-									className="inline-flex items-center gap-2 rounded-lg border border-slate-200 px-3.5 py-2 text-xs font-medium text-slate-600 transition-colors hover:bg-slate-50 hover:text-slate-900"
+									className="inline-flex items-center gap-2 rounded-lg border border-slate-200 px-3.5 py-2.5 text-xs font-medium text-slate-600 transition-colors hover:bg-slate-50 hover:text-slate-900"
 								>
 									<MicOff className="h-3.5 w-3.5" />
 									Matikan mikrofon
 								</button>
 							)}
+							{modeKetuk && fase === 'perintah' && (
+								<button
+									type="button"
+									onClick={() => tutupDengarKetuk(true)}
+									className="inline-flex items-center gap-2 rounded-lg border border-slate-200 px-3.5 py-2.5 text-xs font-medium text-slate-600 transition-colors hover:bg-slate-50 hover:text-slate-900"
+								>
+									<Hand className="h-3.5 w-3.5" />
+									Selesai bicara
+								</button>
+							)}
 							<button
 								type="button"
 								onClick={() => setModeKetik((v) => !v)}
-								className="inline-flex items-center gap-2 rounded-lg border border-slate-200 px-3.5 py-2 text-xs font-medium text-slate-600 transition-colors hover:bg-slate-50 hover:text-slate-900"
+								className="inline-flex items-center gap-2 rounded-lg border border-slate-200 px-3.5 py-2.5 text-xs font-medium text-slate-600 transition-colors hover:bg-slate-50 hover:text-slate-900"
 							>
 								<Keyboard className="h-3.5 w-3.5" />
 								{modeKetik ? 'Sembunyikan kotak ketik' : 'Ketik saja'}
 							</button>
+							{giliran > 0 && (
+								<button
+									type="button"
+									onClick={mulaiPercakapanBaru}
+									className="inline-flex items-center gap-2 rounded-lg border border-slate-200 px-3.5 py-2.5 text-xs font-medium text-slate-600 transition-colors hover:bg-slate-50 hover:text-slate-900"
+								>
+									<RotateCcw className="h-3.5 w-3.5" />
+									Percakapan baru
+								</button>
+							)}
 						</div>
+
+						{giliran > 0 && (
+							<p className="mt-3 text-center text-xs text-slate-400">
+								Gema masih ingat {giliran} pertanyaan sebelumnya — lanjutkan saja dengan
+								“kalau yang maju berapa?” atau “bandingkan dengan Jonggol”.
+							</p>
+						)}
 
 						{modeKetik && (
 							<form
@@ -1087,22 +1538,26 @@ const GemaPage = () => {
 									value={ketikan}
 									onChange={(e) => setKetikan(e.target.value)}
 									placeholder="mis. cari data desa berstatus mandiri"
-									className="min-w-0 flex-1 rounded-lg border border-slate-200 px-3.5 py-2.5 text-sm outline-none focus:border-slate-900"
+									// text-base (16px) bukan text-sm: Safari iOS memperbesar
+									// seluruh halaman sendiri kalau huruf kotak isian di bawah
+									// 16px, dan tata letaknya jadi berantakan.
+									className="min-w-0 flex-1 rounded-lg border border-slate-200 px-3.5 py-2.5 text-base outline-none focus:border-slate-900 sm:text-sm"
 								/>
 								<button
 									type="submit"
-									className="inline-flex items-center gap-2 rounded-lg bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-slate-800"
+									className="inline-flex flex-shrink-0 items-center gap-2 rounded-lg bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-slate-800"
 								>
 									<Send className="h-4 w-4" />
-									Tanya
+									<span className="hidden sm:inline">Tanya</span>
 								</button>
 							</form>
 						)}
 
-						{!didukung && (
+						{modeKetuk && (
 							<p className="mt-4 max-w-xl text-center text-xs leading-relaxed text-slate-500">
-								Peramban ini belum mendukung pengenalan suara — kemampuan itu baru ada di
-								Chrome dan Edge. Kotak ketik di atas menempuh jalur yang sama persis.
+								Di HP dan tablet, Gema memakai mode ketuk: kata bangun “Halo Gema” tidak
+								tersedia karena peramban seluler tidak mengizinkan mikrofon menyala terus.
+								Hasil jawabannya sama persis.
 							</p>
 						)}
 					</div>
@@ -1110,13 +1565,15 @@ const GemaPage = () => {
 
 				{galat && (
 					<div className="mt-5 flex items-start gap-3 rounded-xl border border-amber-200 bg-amber-50 p-4">
-						<AlertCircle className="mt-0.5 h-4 w-4 flex-shrink-0 text-amber-600" />
-						<p className="text-sm text-amber-800">{galat}</p>
+						{lingkungan.alasan === 'tak-aman'
+							? <Lock className="mt-0.5 h-4 w-4 flex-shrink-0 text-amber-600" />
+							: <AlertCircle className="mt-0.5 h-4 w-4 flex-shrink-0 text-amber-600" />}
+						<p className="text-sm leading-relaxed text-amber-800">{galat}</p>
 					</div>
 				)}
 
 				{saran.length > 0 && !jawaban && (
-					<div className="mt-5 rounded-2xl border border-slate-200 bg-white p-5">
+					<div className="mt-5 rounded-2xl border border-slate-200 bg-white p-4 sm:p-5">
 						<p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
 							{modelAktif ? 'Coba tanyakan apa saja, misalnya' : 'Yang sudah bisa ditanyakan'}
 						</p>
@@ -1125,8 +1582,8 @@ const GemaPage = () => {
 								<button
 									key={s}
 									type="button"
-									onClick={() => tanyakan(s)}
-									className="rounded-full border border-slate-200 px-3.5 py-1.5 text-sm text-slate-700 transition-colors hover:border-slate-300 hover:bg-slate-50"
+									onClick={() => { bukaKunciSuara(suaraDibukaRef); tanyakan(s); }}
+									className="rounded-full border border-slate-200 px-3.5 py-2 text-sm text-slate-700 transition-colors hover:border-slate-300 hover:bg-slate-50"
 								>
 									{s}
 								</button>
@@ -1137,7 +1594,7 @@ const GemaPage = () => {
 
 				{jawaban && (
 					<div className="mt-5 space-y-4">
-						<div className="rounded-2xl border border-slate-200 bg-white p-5">
+						<div className="rounded-2xl border border-slate-200 bg-white p-4 sm:p-5">
 							<div className="flex items-start gap-3">
 								<span className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg bg-slate-900 text-white">
 									<Sparkles className="h-4 w-4" />
@@ -1196,7 +1653,7 @@ const GemaPage = () => {
 										type="button"
 										onClick={jalankanKonfirmasi}
 										disabled={konfirmasiJalan}
-										className="inline-flex items-center gap-2 rounded-lg bg-amber-600 px-3.5 py-2 text-sm font-semibold text-white transition-colors hover:bg-amber-700 disabled:opacity-60"
+										className="inline-flex items-center gap-2 rounded-lg bg-amber-600 px-3.5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-amber-700 disabled:opacity-60"
 									>
 										{konfirmasiJalan
 											? <Loader2 className="h-4 w-4 animate-spin" />
@@ -1207,7 +1664,7 @@ const GemaPage = () => {
 										type="button"
 										onClick={batalkanKonfirmasi}
 										disabled={konfirmasiJalan}
-										className="rounded-lg border border-amber-200 bg-white px-3.5 py-2 text-sm font-semibold text-amber-800 transition-colors hover:bg-amber-100 disabled:opacity-60"
+										className="rounded-lg border border-amber-200 bg-white px-3.5 py-2.5 text-sm font-semibold text-amber-800 transition-colors hover:bg-amber-100 disabled:opacity-60"
 									>
 										Batal
 									</button>
@@ -1231,17 +1688,22 @@ const GemaPage = () => {
 						)}
 
 						{jawaban.saran?.length > 0 && (
-								<div className="mt-4 flex flex-wrap gap-2 border-t border-slate-100 pt-4">
-									{jawaban.saran.map((s) => (
-										<button
-											key={s}
-											type="button"
-											onClick={() => tanyakan(s)}
-											className="rounded-full border border-slate-200 px-3 py-1.5 text-xs text-slate-700 transition-colors hover:bg-slate-50"
-										>
-											{s}
-										</button>
-									))}
+								<div className="mt-4 border-t border-slate-100 pt-4">
+									<p className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">
+										Lanjutkan dengan
+									</p>
+									<div className="mt-2 flex flex-wrap gap-2">
+										{jawaban.saran.map((s) => (
+											<button
+												key={s}
+												type="button"
+												onClick={() => { bukaKunciSuara(suaraDibukaRef); tanyakan(s); }}
+												className="rounded-full border border-slate-200 px-3 py-1.5 text-xs text-slate-700 transition-colors hover:bg-slate-50"
+											>
+												{s}
+											</button>
+										))}
+									</div>
 								</div>
 							)}
 						</div>
@@ -1278,8 +1740,18 @@ const GemaPage = () => {
 				)}
 
 				{riwayat.length > 0 && (
-					<div className="mt-5 rounded-2xl border border-slate-200 bg-white p-5">
-						<p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Percakapan</p>
+					<div className="mt-5 rounded-2xl border border-slate-200 bg-white p-4 sm:p-5">
+						<div className="flex items-center justify-between gap-3">
+							<p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Percakapan</p>
+							<button
+								type="button"
+								onClick={mulaiPercakapanBaru}
+								className="inline-flex items-center gap-1.5 rounded-lg px-2 py-1 text-xs font-medium text-slate-500 transition-colors hover:bg-slate-50 hover:text-slate-900"
+							>
+								<RotateCcw className="h-3.5 w-3.5" />
+								Mulai baru
+							</button>
+						</div>
 						<ul className="mt-3 space-y-2.5">
 							{riwayat.map((r) => (
 								<li key={r.waktu + r.peran} className="flex gap-2.5 text-sm">
