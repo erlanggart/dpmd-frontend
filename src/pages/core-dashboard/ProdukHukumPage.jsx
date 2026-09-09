@@ -20,6 +20,7 @@ import {
 import api from '../../api';
 import API_CONFIG from '../../config/api';
 import ProdukHukumDesaPage from '../bidang/pemdes/ProdukHukumPage';
+import { LEBAR_CORE } from './lebarHalaman';
 
 const nf = new Intl.NumberFormat('id-ID');
 
@@ -293,7 +294,7 @@ const CoreProdukHukumPage = ({ detailBasePath = '/core-dashboard/statistik-produ
 
 	return (
 		<div className="min-h-screen bg-slate-50 p-4 pt-20 sm:p-6 lg:p-8 lg:pt-8">
-			<div className="mx-auto max-w-7xl">
+			<div className={`mx-auto ${LEBAR_CORE}`}>
 				<div className="mb-6 rounded-xl bg-slate-900 p-6 text-white">
 					<div className="flex items-center gap-3">
 						<Scale className="h-7 w-7" />

@@ -54,6 +54,7 @@ import {
 	Info,
 } from 'lucide-react';
 import api from '../../api';
+import { LEBAR_CORE } from '../core-dashboard/lebarHalaman';
 
 // ============================================================
 // Konstanta tampilan
@@ -803,7 +804,7 @@ const TrendsPage = () => {
 	if (loading && !data) {
 		return (
 			<div className="p-4 sm:p-6">
-				<div className="mx-auto max-w-7xl space-y-5">
+				<div className={`mx-auto space-y-5 ${LEBAR_CORE}`}>
 					<div className="h-44 animate-pulse rounded-2xl bg-slate-200/70" />
 					<div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
 						{[0, 1, 2, 3].map((key) => (
@@ -858,7 +859,7 @@ const TrendsPage = () => {
 				}
 			`}</style>
 
-			<div className="mx-auto max-w-7xl space-y-6">
+			<div className={`mx-auto space-y-6 ${LEBAR_CORE}`}>
 				{/* ---------- Header ---------- */}
 				<header className="trend-enter relative overflow-hidden rounded-2xl bg-slate-900 p-6 text-white shadow-sm sm:p-8">
 					<div className="trend-aurora pointer-events-none absolute -right-10 -top-24 h-64 w-64 rounded-full bg-slate-800/30 blur-3xl" />

@@ -20,6 +20,7 @@ import React, { useState, useMemo, lazy, Suspense } from 'react';
 import { Building2, DollarSign, Landmark, Sprout, TrendingUp, Wallet } from 'lucide-react';
 import PageHeader from '../../components/statistik/PageHeader';
 import { useSipanda } from '../../hooks/useSipanda';
+import { LEBAR_CORE } from './lebarHalaman';
 
 const AddDashboard = lazy(() => import('../bidang/kkd/add/AddDashboard'));
 const BhprdDashboard = lazy(() => import('../bidang/kkd/BhprdDashboard'));
@@ -128,10 +129,8 @@ const StatistikKKDDashboard = () => {
 
   return (
     <div className="min-h-screen bg-slate-50 p-4 pt-20 sm:p-6 lg:p-8 lg:pt-6">
-      {/* Lebih lebar dari max-w-7xl: di layar besar, lima kartu dana dan tabel
-          rekap per kecamatan sebelumnya terjepit di tengah sementara ruang di
-          kiri-kanan menganggur. */}
-      <div className="mx-auto max-w-[104rem] space-y-5">
+      {/* Lebarnya dari lebarHalaman.js — sama untuk seluruh Core Dashboard. */}
+      <div className={`mx-auto space-y-5 ${LEBAR_CORE}`}>
         <PageHeader
           icon={Wallet}
           title="Statistik Keuangan Desa"

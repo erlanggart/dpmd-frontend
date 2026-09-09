@@ -9,6 +9,7 @@ import { Store, AlertCircle, Plus, FolderOpen, Loader2, X } from 'lucide-react';
 import toast from 'react-hot-toast';
 import api from '../../api';
 import PageHeader from '../../components/statistik/PageHeader';
+import { LEBAR_CORE } from '../core-dashboard/lebarHalaman';
 import { useDataCache } from '../../context/DataCacheContext';
 import { isVpnUser } from '../../utils/vpnHelper';
 import BumdesFilterBar from './components/BumdesFilterBar';
@@ -166,7 +167,7 @@ const StatistikBumdes = ({ tersemat = false, bisaKelola = false }) => {
   return (
     <div className={tersemat ? '' : 'min-h-screen bg-slate-50 p-4 pt-20 sm:p-6 lg:p-8 lg:pt-8'}>
       {!tersemat && (
-        <div className="mx-auto max-w-7xl">
+        <div className={`mx-auto ${LEBAR_CORE}`}>
           {/* Angka di kepala halaman selalu se-kabupaten, tidak ikut filter. */}
           <PageHeader
             icon={Store}
@@ -225,7 +226,7 @@ const StatistikBumdes = ({ tersemat = false, bisaKelola = false }) => {
 
       {/* Saat data diambil ulang, isi lama ditahan dengan opasitas diturunkan. */}
       <div
-        className={`mx-auto mt-5 space-y-5 transition-opacity duration-300 ${tersemat ? '' : 'max-w-7xl'} ${
+        className={`mx-auto mt-5 space-y-5 transition-opacity duration-300 ${tersemat ? '' : LEBAR_CORE} ${
           loading ? 'opacity-50' : 'opacity-100'
         }`}
       >

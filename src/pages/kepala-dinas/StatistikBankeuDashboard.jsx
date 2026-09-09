@@ -21,6 +21,7 @@ import toast from 'react-hot-toast';
 import { useDataCache } from '../../context/DataCacheContext';
 import SelectBox from '../../components/ui/SelectBox';
 import { persen, fmtPersen } from '../../utils/persen';
+import { LEBAR_CORE } from '../core-dashboard/lebarHalaman';
 
 // ─── CONSTANTS ──────────────────────────────────────────────────────
 // Alur Bankeu Perubahan: Desa → Kecamatan → DPMD (TIDAK ada tahap Dinas).
@@ -106,7 +107,7 @@ const ExecutiveHero = ({ activeYear, setActiveYear, summary, totalAnggaran, tota
       </div>
       <div className="absolute inset-0 opacity-[0.03]" style={{ backgroundImage: 'radial-gradient(circle, #fff 1px, transparent 1px)', backgroundSize: '40px 40px' }} />
 
-      <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 pb-6">
+      <div className={`relative mx-auto px-4 sm:px-6 lg:px-8 pt-8 pb-6 ${LEBAR_CORE}`}>
         {/* Top Row */}
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mb-6">
           <div className="flex items-center gap-3">

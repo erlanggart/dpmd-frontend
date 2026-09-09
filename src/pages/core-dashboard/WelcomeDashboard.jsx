@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
+import { LEBAR_CORE } from './lebarHalaman';
 import './WelcomeDashboard.css';
 import {
   Sunrise,
@@ -74,7 +75,7 @@ const WelcomeDashboard = () => {
 
   return (
     <div className="min-h-screen bg-slate-50 px-4 pb-12 pt-20 sm:px-6 lg:px-10 lg:pb-16 lg:pt-12">
-      <div className="mx-auto w-full max-w-5xl space-y-6 sm:space-y-8">
+      <div className={`mx-auto w-full space-y-6 sm:space-y-8 ${LEBAR_CORE}`}>
         {/* Panel utama */}
         <section className="welcome-hero welcome-rise rounded-2xl px-6 py-8 shadow-xl shadow-slate-900/10 ring-1 ring-slate-900/10 sm:rounded-3xl sm:px-9 sm:py-11">
           <div className="flex items-center gap-2.5">

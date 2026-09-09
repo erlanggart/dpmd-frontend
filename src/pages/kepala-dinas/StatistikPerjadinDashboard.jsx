@@ -25,6 +25,7 @@ import * as XLSX from 'xlsx';
 import perjadinService from '../../services/perjadinService';
 import toast from 'react-hot-toast';
 import { useDataCache } from '../../context/DataCacheContext';
+import { LEBAR_CORE } from '../core-dashboard/lebarHalaman';
 
 // Register ChartJS modules
 ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend, Filler);
@@ -400,7 +401,7 @@ const StatistikPerjadinDashboard = () => {
 
   return (
     <div className="min-h-screen bg-slate-50 p-4 pt-20 sm:p-6 lg:pt-6">
-      <div className="max-w-7xl mx-auto">
+      <div className={`mx-auto ${LEBAR_CORE}`}>
         
         {/* Hero Header */}
         <motion.div 

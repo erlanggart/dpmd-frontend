@@ -63,6 +63,7 @@ import {
 	Check, ShieldAlert, KeyRound, RotateCcw, Lock, Hand,
 } from 'lucide-react';
 import api from '../../api';
+import { LEBAR_CORE, LEBAR_BACA } from './lebarHalaman';
 
 const AmbilPengenalSuara = () =>
 	(typeof window !== 'undefined'
@@ -1438,7 +1439,7 @@ const GemaPage = () => {
 				/>
 			)}
 
-			<div className="mx-auto max-w-5xl">
+			<div className={`mx-auto ${LEBAR_CORE}`}>
 				<section className="relative overflow-hidden rounded-3xl border border-slate-200 bg-white">
 					<div className="flex flex-col items-center px-4 py-8 sm:px-5 sm:py-14">
 						<div className="inline-flex flex-wrap items-center justify-center gap-x-2 gap-y-1 rounded-full bg-slate-100 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500">
@@ -1752,7 +1753,11 @@ const GemaPage = () => {
 								Mulai baru
 							</button>
 						</div>
-						<ul className="mt-3 space-y-2.5">
+						{/* Bingkai halamannya selebar halaman Core Dashboard yang lain,
+						    tapi percakapan adalah teks yang DIBACA sebagai kalimat.
+						    Baris sepanjang 1664px membuat mata kehilangan awal baris
+						    berikutnya, jadi kolom bacanya tetap dibatasi. */}
+						<ul className={`mt-3 space-y-2.5 ${LEBAR_BACA}`}>
 							{riwayat.map((r) => (
 								<li key={r.waktu + r.peran} className="flex gap-2.5 text-sm">
 									<span

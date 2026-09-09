@@ -5,6 +5,7 @@ import StatistikLKD from "../../components/kelembagaan/StatistikLKD";
 import kelembagaanApi from "../../api/kelembagaan";
 import PageHeader from "../../components/statistik/PageHeader";
 import { useDataCache } from "../../context/DataCacheContext";
+import { LEBAR_CORE } from "./lebarHalaman";
 
 const CACHE_KEY = "statistik-kelembagaan";
 
@@ -89,28 +90,30 @@ const StatistikKelembagaan = () => {
 	}
 
 	return (
-		<div className="min-h-screen space-y-6 bg-slate-50 p-4 pt-20 sm:p-6 lg:p-8 lg:pt-8">
-			{/* Header */}
-			<PageHeader
-				icon={LuUsers}
-				title="Statistik Kelembagaan Desa"
-				subtitle="Informasi lengkap kelembagaan di seluruh Kabupaten Bogor"
-				actions={
-					<button
-						onClick={handleRefresh}
-						className="inline-flex items-center gap-2 rounded-lg bg-white/10 px-4 py-2 text-sm font-semibold text-white ring-1 ring-white/15 transition-colors hover:bg-white/20"
-					>
-						<LuRefreshCw className="h-4 w-4" />
-						<span>Refresh</span>
-					</button>
-				}
-			/>
+		<div className="min-h-screen bg-slate-50 p-4 pt-20 sm:p-6 lg:p-8 lg:pt-8">
+			<div className={`mx-auto space-y-6 ${LEBAR_CORE}`}>
+				{/* Header */}
+				<PageHeader
+					icon={LuUsers}
+					title="Statistik Kelembagaan Desa"
+					subtitle="Informasi lengkap kelembagaan di seluruh Kabupaten Bogor"
+					actions={
+						<button
+							onClick={handleRefresh}
+							className="inline-flex items-center gap-2 rounded-lg bg-white/10 px-4 py-2 text-sm font-semibold text-white ring-1 ring-white/15 transition-colors hover:bg-white/20"
+						>
+							<LuRefreshCw className="h-4 w-4" />
+							<span>Refresh</span>
+						</button>
+					}
+				/>
 
-			{/* Statistik LKD */}
-			<StatistikLKD summaryData={summaryData} loading={loading} />
+				{/* Statistik LKD */}
+				<StatistikLKD summaryData={summaryData} loading={loading} />
 
-			{/* Statistik Tahunan */}
-			<StatistikTahunan />
+				{/* Statistik Tahunan */}
+				<StatistikTahunan />
+			</div>
 		</div>
 	);
 };
