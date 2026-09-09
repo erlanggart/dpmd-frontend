@@ -1,14 +1,22 @@
 // Statistik KKD (Kekayaan & Keuangan Desa) — dashboard gabungan.
-// Menyatukan ADD, BHPRD, dan DD dalam satu halaman bertab untuk Core Dashboard.
-// Setiap tab merender PenyaluranDashboard dalam mode `embedded` supaya judul
-// dan tombol kembali miliknya tidak tampil dua kali.
+// Menyatukan KELIMA sumber dana SIPANDA — ADD, BHPRD, DD, BANKEU, dan BP —
+// dalam satu halaman bertab untuk Core Dashboard. Setiap tab merender
+// PenyaluranDashboard dalam mode `embedded` supaya judul dan tombol kembali
+// miliknya tidak tampil dua kali.
+//
+// Daftar tab di bawah harus tetap sepadan dengan sumber dana yang benar-benar
+// dikembalikan SIPANDA. Per 2026 API-nya berisi: ADD, DD REGULER, BHPRD,
+// BANKEU AKSELERASI PEDESAAN, dan BP. Nama pos BANKEU berganti antar tahun,
+// jadi penyaringnya ada di BankeuDashboard, bukan di sini.
 import React, { useState, lazy, Suspense } from 'react';
-import { DollarSign, Landmark, TrendingUp, Wallet } from 'lucide-react';
+import { Building2, DollarSign, Landmark, Sprout, TrendingUp, Wallet } from 'lucide-react';
 import PageHeader from '../../components/statistik/PageHeader';
 
 const AddDashboard = lazy(() => import('../bidang/kkd/add/AddDashboard'));
 const BhprdDashboard = lazy(() => import('../bidang/kkd/BhprdDashboard'));
 const DdDashboard = lazy(() => import('../bidang/kkd/dd/DdDashboard'));
+const BankeuDashboard = lazy(() => import('../bidang/kkd/BankeuDashboard'));
+const BpDashboard = lazy(() => import('../bidang/kkd/BpDashboard'));
 
 const TABS = [
   {
@@ -35,6 +43,22 @@ const TABS = [
     icon: TrendingUp,
     Component: DdDashboard,
   },
+  {
+    key: 'bankeu',
+    label: 'BANKEU',
+    fullLabel: 'Bantuan Keuangan Desa',
+    desc: 'Akselerasi pedesaan, per tahap',
+    icon: Building2,
+    Component: BankeuDashboard,
+  },
+  {
+    key: 'bp',
+    label: 'BP',
+    fullLabel: 'Bantuan Provinsi',
+    desc: 'Bersumber APBD Provinsi, per tahap',
+    icon: Sprout,
+    Component: BpDashboard,
+  },
 ];
 
 const TabSpinner = () => (
@@ -56,7 +80,7 @@ const StatistikKKDDashboard = () => {
         <PageHeader
           icon={Wallet}
           title="Statistik Keuangan Desa"
-          subtitle="Penyaluran ADD, BHPRD, dan Dana Desa se-Kabupaten Bogor. Data langsung dari SIPANDA."
+          subtitle="Penyaluran ADD, BHPRD, Dana Desa, Bantuan Keuangan, dan Bantuan Provinsi se-Kabupaten Bogor. Seluruh sumber dana SIPANDA, langsung dari sumbernya."
         />
 
         {/* Tab — bisa digeser di layar sempit */}
@@ -99,7 +123,7 @@ const StatistikKKDDashboard = () => {
                     >
                       {tab.label}
                       <span
-                        className={`ml-1.5 hidden text-xs font-normal lg:inline ${
+                        className={`ml-1.5 hidden text-xs font-normal xl:inline ${
                           isActive ? 'text-slate-400' : 'text-slate-500'
                         }`}
                       >

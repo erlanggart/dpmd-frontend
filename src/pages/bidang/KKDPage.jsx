@@ -317,11 +317,14 @@ const KKDPage = () => {
     },
     {
       id: 'bankeu', tone: 'amber',
-      title: 'BANKEU Infra Desa', short: 'BANKEU',
-      desc: 'Bantuan Keuangan Infrastruktur Desa per tahap',
+      // Judulnya dibuat netral: pos ini berganti nama antar tahun anggaran di
+      // SIPANDA (2026: "BANKEU AKSELERASI PEDESAAN"), jadi menyebut satu
+      // peruntukan tertentu di kartu akan salah lagi tahun depan.
+      title: 'Bantuan Keuangan Desa', short: 'BANKEU',
+      desc: 'Penyaluran Bantuan Keuangan Desa per tahap',
       icon: Landmark,
       route: getPath('/kkd/bankeu'),
-      stat: { value: 'Tahap I–IV', label: 'per periode' },
+      stat: { value: 'Tahap I–II', label: 'per periode' },
     },
     {
       id: 'bp', tone: 'rose',

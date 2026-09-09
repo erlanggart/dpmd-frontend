@@ -84,6 +84,13 @@ const ChartCard = ({ icon: Icon, title, subtitle, children }) => (
 
 export default function PenyaluranDashboard({
   sumberDana,        // e.g. 'ADD' — matched against row.sumber_dana
+  // Sebagian sumber dana BERGANTI NAMA tiap tahun anggaran di SIPANDA. Bantuan
+  // keuangan pernah tertulis "BANKEU INFRAS DESA"; di 2026 namanya
+  // "BANKEU AKSELERASI PEDESAAN". Pencocokan persis membuat halamannya kosong
+  // tanpa satu pun pesan galat begitu namanya berganti — kegagalan yang paling
+  // sulit disadari, karena tampilannya tetap normal dan hanya angkanya nol.
+  // Pemanggil yang namanya tidak stabil menyerahkan penyaringnya sendiri.
+  cocokSumber,
   title,             // 'Alokasi Dana Desa'
   short,             // 'ADD'
   subtitle,
@@ -106,8 +113,16 @@ export default function PenyaluranDashboard({
   const [openKec, setOpenKec] = useState({});
 
   const fundRows = useMemo(
-    () => rows.filter((r) => r.sumber_dana === sumberDana),
-    [rows, sumberDana]
+    () => rows.filter((r) => (cocokSumber ? cocokSumber(r.sumber_dana || '') : r.sumber_dana === sumberDana)),
+    [rows, cocokSumber, sumberDana]
+  );
+
+  // Nama sumber dana APA ADANYA dari SIPANDA. Untuk pemanggil yang memakai
+  // penyaring longgar, inilah satu-satunya cara pembaca tahu tahun ini dananya
+  // tercatat sebagai apa — "BANKEU AKSELERASI PEDESAAN" atau nama lain.
+  const namaSumberAsli = useMemo(
+    () => [...new Set(fundRows.map((r) => r.sumber_dana).filter(Boolean))],
+    [fundRows]
   );
 
   // Dimension options (periode/tahap) in chronological order via id_periode.
@@ -411,8 +426,18 @@ export default function PenyaluranDashboard({
             mengikuti pilihan di sini. */}
         <div className="mt-5">
           <div className="flex items-center justify-between gap-3 mb-2">
-            <span className="text-[10.5px] font-bold tracking-[0.12em] uppercase text-brand-600">
-              {dimLabel}
+            <span className="flex flex-wrap items-center gap-x-2 gap-y-1">
+              <span className="text-[10.5px] font-bold tracking-[0.12em] uppercase text-brand-600">
+                {dimLabel}
+              </span>
+              {/* Hanya untuk sumber dana yang namanya berganti tiap tahun:
+                  pembaca berhak tahu angka di bawah ini diambil dari pos
+                  bernama apa di SIPANDA tahun ini. */}
+              {cocokSumber && namaSumberAsli.length > 0 && (
+                <span className="text-[10.5px] font-medium tracking-wide text-slate-400">
+                  SIPANDA: {namaSumberAsli.join(' · ')}
+                </span>
+              )}
             </span>
             {sel !== 'Semua' && (
               <button

@@ -2,9 +2,10 @@
 import { Landmark } from 'lucide-react';
 import PenyaluranDashboard from './PenyaluranDashboard';
 
-export default function BpDashboard() {
+export default function BpDashboard(props) {
   return (
     <PenyaluranDashboard
+      {...props}
       sumberDana="BP"
       title="Bantuan Provinsi"
       short="BP"

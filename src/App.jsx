@@ -1334,6 +1334,13 @@ function App() {
                   <Route path="add" element={<AddDashboard />} />
                   <Route path="bhprd" element={<BhprdDashboard />} />
                   <Route path="dd" element={<DdDashboard />} />
+                  {/* KKDPage sudah lama menampilkan kartu BANKEU dan BP yang
+                      menaut ke sini, tapi rutenya hanya terdaftar di blok
+                      superadmin — jadi bagi pegawai, kepala bidang, ketua tim,
+                      dan kepala dinas kedua kartu itu berakhir di halaman
+                      kosong. */}
+                  <Route path="bankeu" element={<KkdBankeuDashboard />} />
+                  <Route path="bp" element={<KkdBpDashboard />} />
                   <Route path="drive" element={<DrivePage bidangId={4} />} />
                   <Route path="formulir" element={<FormulirListPage bidangId={4} />} />
                 </Route>
