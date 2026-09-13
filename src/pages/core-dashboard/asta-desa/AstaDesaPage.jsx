@@ -5,18 +5,25 @@
  * lewat proxy backend kita di /api/asta-desa. Halaman ini murni baca — tidak ada
  * satu pun tombol di sini yang mengubah data di sana.
  *
- * MENGAPA BERTAB, BUKAN SATU HALAMAN PANJANG. Data ASTA DESA berisi empat hal
- * yang berbeda pembacanya: posisi pendataan (pimpinan), sebaran wilayah
- * (perencana), baris per keluarga (verifikator), dan demografi (perencana
- * program). Menumpuk semuanya dalam satu gulungan membuat siapa pun harus
- * melewati tiga bagian yang bukan urusannya. Tiap tab juga MENUNDA
- * pengambilannya sampai dibuka — agregat demografi menyusuri ribuan baris
- * anggota keluarga di sisi server, dan itu tidak boleh dibayar oleh pembaca yang
- * hanya ingin melihat angka ringkasan.
+ * MENGAPA BERTAB, BUKAN SATU HALAMAN PANJANG. Data ASTA DESA berisi beberapa hal
+ * yang berbeda pembacanya: posisi pendataan (pimpinan), baris per keluarga
+ * (verifikator), dan demografi (perencana program). Menumpuk semuanya dalam satu
+ * gulungan membuat siapa pun harus melewati bagian yang bukan urusannya. Tiap tab
+ * juga MENUNDA pengambilannya sampai dibuka — agregat demografi menyusuri ribuan
+ * baris anggota keluarga di sisi server, dan itu tidak boleh dibayar oleh pembaca
+ * yang hanya ingin melihat angka ringkasan.
+ *
+ * SEBARAN WILAYAH TIDAK ADA DI SINI. Dulu ada tab peta ringkas berisi gelembung
+ * agregat per kecamatan; tab itu dihapus dan entrinya kini menautkan langsung ke
+ * halaman Peta Sebaran penuh (`peta/PetaSebaranPage.jsx`). Dua peta untuk satu
+ * pertanyaan hanya memaksa pembaca menebak yang mana yang berwenang, dan yang
+ * ringkas selalu kalah begitu ada yang mengklik "buka peta penuh".
  */
 
 import React, { useMemo, useState } from 'react';
+import { Link } from 'react-router-dom';
 import {
+  ArrowUpRight,
   Building2,
   Layers,
   Map as MapIcon,
@@ -32,15 +39,23 @@ import { Galat, Memuat, Panel } from './ui';
 import { segarkanSemua, useAstaDesa } from './useAstaDesa';
 import { angka, persen } from './warna';
 import RingkasanTab from './RingkasanTab';
-import PetaTab from './PetaTab';
 import SensusTab from './SensusTab';
 import DemografiTab from './DemografiTab';
 import PenggunaTab from './PenggunaTab';
 import LayerPesanTab from './LayerPesanTab';
 
+/**
+ * Tab halaman.
+ *
+ * "Peta Sebaran" bukan tab, melainkan TAUTAN keluar (`rute`). Peta sebaran
+ * hanya ada satu di aplikasi ini — yang penuh — dan menaruhnya di dalam kotak
+ * tab berarti panel layernya saja sudah menutupi sepertiga peta. Entrinya tetap
+ * berdiri di deretan yang sama supaya tetap ditemukan di tempat yang sudah
+ * dikenal; yang berubah hanya ke mana ia membawa.
+ */
 const TAB = [
   { kunci: 'ringkasan', label: 'Ringkasan', ikon: Building2 },
-  { kunci: 'peta', label: 'Peta Sebaran', ikon: MapIcon },
+  { kunci: 'peta', label: 'Peta Sebaran', ikon: MapIcon, rute: '/core-dashboard/asta-desa/peta-sebaran' },
   { kunci: 'sensus', label: 'Data Sensus', ikon: Table2 },
   { kunci: 'demografi', label: 'Demografi', ikon: UsersRound },
   { kunci: 'pengguna', label: 'Petugas & Akun', ikon: Users },
@@ -94,7 +109,6 @@ const AstaDesaPage = () => {
   // daftar kecamatan dan tahap verifikasinya dipakai sebagai isi penyaring di
   // tab Data Sensus, dan angka petugasnya dipakai tab Petugas & Akun.
   const ringkasan = useAstaDesa('/ringkasan', {}, { aktif: Boolean(siap) });
-  const sebaran = useAstaDesa('/sebaran', {}, { aktif: Boolean(siap) && tab === 'peta' });
   const demografi = useAstaDesa('/demografi', {}, { aktif: Boolean(siap) && tab === 'demografi' });
 
   const muatUlang = async () => {
@@ -102,7 +116,6 @@ const AstaDesaPage = () => {
     await segarkanSemua();
     await Promise.all([
       ringkasan.ambil(true),
-      tab === 'peta' ? sebaran.ambil(true) : Promise.resolve(),
       tab === 'demografi' ? demografi.ambil(true) : Promise.resolve()
     ]);
     setMenyegarkan(false);
@@ -157,17 +170,28 @@ const AstaDesaPage = () => {
                 {TAB.map((t) => {
                   const Ikon = t.ikon;
                   const aktif = tab === t.kunci;
+                  const kelas = `inline-flex flex-shrink-0 items-center gap-2 rounded-lg px-3 py-2 text-xs font-semibold transition-colors ${
+                    aktif
+                      ? 'bg-slate-900 text-white shadow-sm shadow-slate-900/20'
+                      : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
+                  }`;
+
+                  // Entri ber-`rute` meninggalkan halaman ini, jadi harus berupa
+                  // <Link> sungguhan — bukan tombol ber-onClick. Dengan begitu
+                  // ia bisa dibuka di tab baru, disalin alamatnya, dan dibaca
+                  // pembaca layar sebagai tautan.
+                  if (t.rute) {
+                    return (
+                      <Link key={t.kunci} to={t.rute} className={kelas}>
+                        <Ikon className="h-3.5 w-3.5" strokeWidth={2} />
+                        {t.label}
+                        <ArrowUpRight className="h-3 w-3 opacity-60" />
+                      </Link>
+                    );
+                  }
+
                   return (
-                    <button
-                      key={t.kunci}
-                      type="button"
-                      onClick={() => setTab(t.kunci)}
-                      className={`inline-flex flex-shrink-0 items-center gap-2 rounded-lg px-3 py-2 text-xs font-semibold transition-colors ${
-                        aktif
-                          ? 'bg-slate-900 text-white shadow-sm shadow-slate-900/20'
-                          : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
-                      }`}
-                    >
+                    <button key={t.kunci} type="button" onClick={() => setTab(t.kunci)} className={kelas}>
                       <Ikon className="h-3.5 w-3.5" strokeWidth={aktif ? 2.3 : 2} />
                       {t.label}
                     </button>
@@ -183,9 +207,6 @@ const AstaDesaPage = () => {
                 galat={ringkasan.galat}
                 onUlang={ringkasan.ambil}
               />
-            )}
-            {tab === 'peta' && (
-              <PetaTab data={sebaran.data} memuat={sebaran.memuat} galat={sebaran.galat} onUlang={sebaran.ambil} />
             )}
             {tab === 'sensus' && <SensusTab ringkasan={ringkasan.data} />}
             {tab === 'demografi' && (

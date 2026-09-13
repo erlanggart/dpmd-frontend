@@ -979,25 +979,53 @@ const PetaSebaranPage = () => {
         {/* Kejujuran data: berapa baris yang tidak tergambar, dan berapa titik
             yang koordinatnya bukan koordinat rumah. Keduanya penjelasan atas
             selisih angka bila halaman ini disandingkan dengan panel super
-            admin — tanpa itu, selisihnya hanya bisa ditebak. */}
-        {rekapSebaran && (rekapSebaran.tanpa_koordinat > 0 || rekapSebaran.pakai_koordinat_lokasi > 0) && (
-          <div className="sembunyi-cetak absolute bottom-8 left-6 z-20 hidden max-w-md space-y-1 rounded-2xl border border-white bg-white/90 px-4 py-2.5 text-[10px] leading-relaxed text-slate-500 shadow-lg backdrop-blur xl:block">
-            {rekapSebaran.tanpa_koordinat > 0 && (
-              <p>
-                {rekapSebaran.tanpa_koordinat.toLocaleString('id-ID')} dari{' '}
-                {(rekapSebaran.total_baris || 0).toLocaleString('id-ID')} baris sensus belum punya koordinat
-                yang bisa dipetakan, jadi tidak tergambar di sini.
-              </p>
-            )}
-            {rekapSebaran.pakai_koordinat_lokasi > 0 && (
-              <p>
-                {rekapSebaran.pakai_koordinat_lokasi.toLocaleString('id-ID')} titik memakai koordinat lokasi
-                pendataan karena koordinat rumahnya kosong — posisinya bisa sedikit berbeda dari panel ASTA
-                DESA.
-              </p>
-            )}
-          </div>
-        )}
+            admin — tanpa itu, selisihnya hanya bisa ditebak.
+
+            Posisinya menghindari panel, bukan bersembunyi darinya. Saat panel
+            terbuka kartu ini bergeser ke kanan panel dan hanya muncul bila
+            layarnya cukup lebar; saat panel tertutup ia kembali ke sudut kiri
+            dan tampil di semua ukuran. Penanda kejujuran data tidak boleh jadi
+            sesuatu yang hanya terlihat di layar besar — dulu ia spanduk selebar
+            halaman di tab peta ringkas yang kini sudah dihapus. */}
+        {rekapSebaran &&
+          (rekapSebaran.tanpa_koordinat > 0 ||
+            rekapSebaran.di_luar_wilayah > 0 ||
+            rekapSebaran.pakai_koordinat_lokasi > 0) && (
+            <div
+              className={`sembunyi-cetak absolute bottom-8 z-20 max-w-md space-y-1.5 rounded-2xl border border-white bg-white/90 px-4 py-3 text-[10px] leading-relaxed text-slate-500 shadow-lg backdrop-blur ${
+                panelTerbuka ? 'hidden xl:left-[27rem] xl:block' : 'left-4 block lg:left-8'
+              }`}
+            >
+              {rekapSebaran.tanpa_koordinat > 0 && (
+                <p>
+                  <span className="font-semibold text-slate-700">
+                    {rekapSebaran.tanpa_koordinat.toLocaleString('id-ID')} dari{' '}
+                    {(rekapSebaran.total_baris || 0).toLocaleString('id-ID')} baris sensus
+                  </span>{' '}
+                  belum punya koordinat yang bisa dipetakan, jadi tidak muncul di peta ini. Angka pada tab
+                  Ringkasan tetap menghitungnya utuh — ini soal kelengkapan koordinat, bukan soal keluarganya
+                  belum terdata.
+                </p>
+              )}
+              {rekapSebaran.di_luar_wilayah > 0 && (
+                <p>
+                  <span className="font-semibold text-slate-700">
+                    {rekapSebaran.di_luar_wilayah.toLocaleString('id-ID')} baris berkoordinat di luar Kabupaten
+                    Bogor
+                  </span>{' '}
+                  tidak digambar — koordinatnya kemungkinan salah isi atau sisa data uji coba. Barisnya tetap
+                  muncul di tab Data Sensus, jadi masih bisa ditelusuri dan dibetulkan di ASTA DESA.
+                </p>
+              )}
+              {rekapSebaran.pakai_koordinat_lokasi > 0 && (
+                <p>
+                  {rekapSebaran.pakai_koordinat_lokasi.toLocaleString('id-ID')} titik memakai koordinat lokasi
+                  pendataan karena koordinat rumahnya kosong — posisinya bisa sedikit berbeda dari panel ASTA
+                  DESA.
+                </p>
+              )}
+            </div>
+          )}
 
         {/* Lembar keterangan cetak — tersembunyi di layar, muncul saat dicetak. */}
         <div id="kertas-cetak" className="hidden flex-col font-sans text-black">
