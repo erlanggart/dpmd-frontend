@@ -258,6 +258,7 @@ const ProdukHukumPemdesPage = lazy(() => import("./pages/bidang/pemdes/ProdukHuk
 const ProdukHukumBidangPage = lazy(() => import("./pages/bidang/ProdukHukumBidangPage"));
 const CoreProdukHukumPage = lazy(() => import("./pages/core-dashboard/ProdukHukumPage"));
 const GemaPage = lazy(() => import("./pages/core-dashboard/GemaPage"));
+const AstaDesaPage = lazy(() => import("./pages/core-dashboard/asta-desa/AstaDesaPage"));
 const ProdukHukumDetailPemdesPage = lazy(() => import("./pages/bidang/pemdes/ProdukHukumDetailPage"));
 
 const KelembagaanDesaPage = lazy(
@@ -1716,6 +1717,9 @@ function App() {
                   <Route path="dashboard" element={<WelcomeDashboard />} />
                   {/* Gema — asisten suara. Purwarupa, hanya membaca data. */}
                   <Route path="gema" element={<GemaPage />} />
+                  {/* Asta Desa — cermin data pendataan keluarga dari aplikasi
+                      ASTA DESA, dibaca lewat proxy /api/asta-desa. Read-only. */}
+                  <Route path="asta-desa" element={<AstaDesaPage />} />
                   <Route
                     path="statistik-bumdes"
                     element={<StatistikBumdes />}
