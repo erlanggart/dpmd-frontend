@@ -302,12 +302,18 @@ export const atributTitik = (titik, detail) => {
 };
 
 /**
- * Foto rumah pertama dari detail sensus.
+ * Foto rumah dari objek detail sensus — CADANGAN, dan biasanya null.
  *
- * Media Library ASTA DESA mengirim URL absolut, jadi gambarnya dimuat langsung
- * dari sana. Kolom `foto_rumah` bisa berupa array nama berkas (cast 'array' di
- * model) ATAU daftar URL, tergantung jalan mana datanya masuk — yang bukan URL
- * diabaikan daripada menampilkan gambar rusak.
+ * Sumber foto yang sebenarnya adalah `titik.foto`, yang sudah diikutkan backend
+ * pada `/sebaran-peta`. Fungsi ini tetap ada untuk berjaga-jaga, tetapi endpoint
+ * detail yang dipakai panel info (`/admin/sensuses/{id}`) membalas
+ * `$sensus->toArray()` TANPA memuat relasi media dan tanpa `foto_rumah_urls` —
+ * sehingga URL foto memang tidak pernah ada di sana. Itulah sebabnya foto pernah
+ * kosong di DPMD padahal ada di ASTA DESA.
+ *
+ * Kolom `foto_rumah` yang ikut di `toArray()` adalah kolom JSON, bukan tempat
+ * berkasnya; isinya bisa berupa nama berkas, bukan URL. Karena itu apa pun yang
+ * tidak berawalan http(s) diabaikan daripada menghasilkan gambar rusak.
  */
 export const fotoRumah = (detail) => {
   const kandidat = [detail?.foto_rumah_urls, detail?.rumah_foto, detail?.foto_rumah];

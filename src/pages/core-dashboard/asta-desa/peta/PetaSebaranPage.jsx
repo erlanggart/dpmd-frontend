@@ -397,7 +397,9 @@ const PetaSebaranPage = () => {
             namaLayer: k.namaLayer,
             id: k.data.id,
             atribut: atributTitik(k.data, null),
-            foto: null,
+            // Foto sudah ikut bersama titiknya (lihat fotoRumahPertama di
+            // backend), jadi ia tampil seketika — tidak menunggu detail.
+            foto: k.data.foto || null,
             memuat: true
           }
         : { namaLayer: k.namaLayer, atribut: k.atribut, foto: null, memuat: false }
@@ -416,7 +418,11 @@ const PetaSebaranPage = () => {
                   ? {
                       ...f,
                       atribut: atributTitik(k.data, sensus),
-                      foto: fotoRumah(sensus),
+                      // Foto dari titik dipertahankan bila detail tidak punya:
+                      // endpoint detail (/admin/sensuses/{id}) memang tidak
+                      // pernah membawa URL media, jadi `|| f.foto` di sini yang
+                      // mencegah foto yang sudah tampil hilang lagi.
+                      foto: fotoRumah(sensus) || f.foto,
                       memuat: false
                     }
                   : f
