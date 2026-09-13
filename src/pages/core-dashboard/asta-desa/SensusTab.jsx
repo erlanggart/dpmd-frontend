@@ -82,7 +82,7 @@ const usiaDari = (a) => {
  * daftar tulis-tangan akan diam-diam menyembunyikan kolom baru, dan pembaca
  * tidak punya cara tahu ada yang hilang.
  */
-const PanelDetail = ({ id, onTutup }) => {
+export const PanelDetail = ({ id, onTutup }) => {
   const { data, memuat, galat, ambil } = useAstaDesa(`/sensus/${id}`, {}, { aktif: Boolean(id) });
 
   // Backend meratakan detail menjadi `{ sensus, anggotas, petugas }` — lihat

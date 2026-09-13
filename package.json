@@ -32,6 +32,8 @@
     "lottie-react": "^2.4.1",
     "lucide-react": "^0.545.0",
     "mediasoup-client": "^3.18.7",
+    "ol": "^8.2.0",
+    "ol-ext": "^4.0.17",
     "pdfjs-dist": "^6.0.227",
     "qrcode": "^1.5.4",
     "react": "^19.1.1",

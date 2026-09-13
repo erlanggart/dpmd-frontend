@@ -259,6 +259,10 @@ const ProdukHukumBidangPage = lazy(() => import("./pages/bidang/ProdukHukumBidan
 const CoreProdukHukumPage = lazy(() => import("./pages/core-dashboard/ProdukHukumPage"));
 const GemaPage = lazy(() => import("./pages/core-dashboard/GemaPage"));
 const AstaDesaPage = lazy(() => import("./pages/core-dashboard/asta-desa/AstaDesaPage"));
+// Dimuat malas terpisah dari AstaDesaPage: OpenLayers + ol-ext berukuran ratusan
+// kilobyte, dan halaman Asta Desa biasa tidak boleh membayarnya hanya karena peta
+// penuhnya ada satu klik jauhnya.
+const AstaDesaPetaPage = lazy(() => import("./pages/core-dashboard/asta-desa/peta/PetaSebaranPage"));
 const ProdukHukumDetailPemdesPage = lazy(() => import("./pages/bidang/pemdes/ProdukHukumDetailPage"));
 
 const KelembagaanDesaPage = lazy(
@@ -1720,6 +1724,10 @@ function App() {
                   {/* Asta Desa — cermin data pendataan keluarga dari aplikasi
                       ASTA DESA, dibaca lewat proxy /api/asta-desa. Read-only. */}
                   <Route path="asta-desa" element={<AstaDesaPage />} />
+                  {/* Peta Sebaran layar penuh — replika panel super admin ASTA
+                      DESA (OpenLayers, panel layer, cetak A3). Halaman sendiri,
+                      bukan tab: panelnya saja selebar 384 px. */}
+                  <Route path="asta-desa/peta-sebaran" element={<AstaDesaPetaPage />} />
                   <Route
                     path="statistik-bumdes"
                     element={<StatistikBumdes />}

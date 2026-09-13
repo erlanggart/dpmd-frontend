@@ -13,9 +13,10 @@
  */
 
 import React, { useMemo, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { CircleMarker, MapContainer, Popup, TileLayer, Tooltip as TooltipPeta, useMap } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
-import { MapPinOff, Maximize2 } from 'lucide-react';
+import { ExternalLink, MapPinOff, Maximize2 } from 'lucide-react';
 import { Galat, Kosong, Legenda, Memuat, Panel } from './ui';
 import {
   SEBARAN,
@@ -194,24 +195,38 @@ const PetaTab = ({ data, memuat, galat, onUlang }) => {
         }
         padat
         aksi={
-          <div className="flex rounded-lg bg-slate-100 p-0.5">
-            {[
-              { k: 'kecamatan', l: 'Kecamatan' },
-              { k: 'desa', l: 'Desa' },
-              { k: 'titik', l: 'Titik' }
-            ].map((m) => (
-              <button
-                key={m.k}
-                type="button"
-                onClick={() => setMode(m.k)}
-                className={`rounded-md px-2.5 py-1 text-[11px] font-semibold transition-colors ${
-                  mode === m.k ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-800'
-                }`}
-              >
-                {m.l}
-              </button>
-            ))}
-          </div>
+          <>
+            <div className="flex rounded-lg bg-slate-100 p-0.5">
+              {[
+                { k: 'kecamatan', l: 'Kecamatan' },
+                { k: 'desa', l: 'Desa' },
+                { k: 'titik', l: 'Titik' }
+              ].map((m) => (
+                <button
+                  key={m.k}
+                  type="button"
+                  onClick={() => setMode(m.k)}
+                  className={`rounded-md px-2.5 py-1 text-[11px] font-semibold transition-colors ${
+                    mode === m.k ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-800'
+                  }`}
+                >
+                  {m.l}
+                </button>
+              ))}
+            </div>
+
+            {/* Pintu ke peta penuh. Tab ini menjawab "wilayah mana yang
+                tertinggal"; yang di balik tombol ini menjawab "apa isi titik
+                ini" — lengkap dengan layer WMS, legenda, dan cetakan A3, persis
+                seperti panel super admin ASTA DESA. */}
+            <Link
+              to="/core-dashboard/asta-desa/peta-sebaran"
+              className="inline-flex items-center gap-1.5 rounded-lg bg-slate-900 px-2.5 py-1.5 text-[11px] font-semibold text-white transition-colors hover:bg-slate-800"
+            >
+              <ExternalLink className="h-3 w-3" />
+              Buka peta penuh
+            </Link>
+          </>
         }
       >
         {/* Penyaring satu baris di atas peta — tidak tersebar di sisi-sisi. */}
