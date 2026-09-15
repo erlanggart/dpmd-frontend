@@ -129,14 +129,34 @@ const RingkasanTab = ({ data, memuat, galat, onUlang }) => {
 
   return (
     <div className="space-y-4">
+      {/*
+        Peringatan ini hanya menyebut RINCIAN di bawahnya — rekap kecamatan,
+        tren, produktivitas petugas — bukan angka "Keluarga Terdata" di atas.
+        Angka itu datang dari hitungan hidup server dan tetap utuh berapa pun
+        baris yang sempat terbaca.
+
+        Kalimatnya dipisah menurut sebab. Menuduh ASTADESA_MAX_ROWS untuk
+        keadaan yang bukan itu hanya mengirim pembaca membetulkan setelan yang
+        tidak salah.
+      */}
       {data.sebagian && (
         <div className="flex items-start gap-3 rounded-2xl border border-amber-200 bg-amber-50/70 px-4 py-3">
           <AlertTriangle className="mt-0.5 h-4 w-4 flex-shrink-0 text-amber-500" />
           <p className="text-xs leading-relaxed text-slate-700">
-            <span className="font-semibold text-slate-900">Angka di halaman ini sebagian.</span> Penyusuran data
-            berhenti di pagar batas baris (ASTADESA_MAX_ROWS) sebelum seluruh sensus terbaca. Naikkan batas itu di{' '}
-            <code className="rounded bg-white px-1 py-0.5 text-[11px]">backend/.env</code> bila seluruh baris memang
-            perlu dihitung.
+            <span className="font-semibold text-slate-900">Rincian di bawah ini sebagian.</span>{' '}
+            {data.kena_pagar ? (
+              <>
+                Penyusuran berhenti di pagar batas baris (ASTADESA_MAX_ROWS) sebelum seluruh sensus terbaca. Naikkan
+                batas itu di <code className="rounded bg-white px-1 py-0.5 text-[11px]">backend/.env</code> bila
+                seluruh baris memang perlu dihitung.
+              </>
+            ) : (
+              <>
+                {angka(data.kurang_terbaca)} baris tidak sempat terbaca saat penyusuran. Angka{' '}
+                <span className="font-semibold text-slate-900">Keluarga Terdata</span> di atas tetap utuh — yang
+                terpengaruh hanya rincian di bawahnya.
+              </>
+            )}
           </p>
         </div>
       )}

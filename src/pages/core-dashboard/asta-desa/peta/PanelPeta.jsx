@@ -219,10 +219,28 @@ const KartuFitur = ({ fitur, indeks, onBukaDetail }) => {
           {fitur.foto && (
             <div className="group relative mb-4 overflow-hidden rounded-xl border border-slate-100 bg-slate-100">
               <div className="aspect-[16/10]">
+                {/*
+                  referrerPolicy WAJIB ada, bukan kerapian.
+
+                  Berkas fotonya dilayani astadesa.rmlabs.id di belakang
+                  Cloudflare, dan di sana hotlink protection menyala: permintaan
+                  gambar yang membawa Referer dari domain lain dibalas 403.
+                  Karena halaman ini dpmd.bogorkab.go.id, setiap <img> biasa
+                  otomatis mengirim Referer itu dan SELALU gagal — gambarnya
+                  tampil sebagai ikon rusak meski berkasnya sehat. Diperiksa
+                  langsung: URL yang sama balas 200 tanpa Referer dan 403 dengan
+                  Referer dpmd.bogorkab.go.id.
+
+                  "no-referrer" membuat browser tidak mengirim header itu sama
+                  sekali, sehingga permintaannya lolos seperti akses langsung.
+                  Tidak ada yang hilang: berkas ini publik dan tidak pernah
+                  butuh Referer untuk apa pun.
+                */}
                 <img
                   src={fitur.foto}
                   alt="Foto rumah"
                   loading="lazy"
+                  referrerPolicy="no-referrer"
                   className="h-full w-full transform object-cover transition-transform duration-500 group-hover:scale-105"
                 />
               </div>

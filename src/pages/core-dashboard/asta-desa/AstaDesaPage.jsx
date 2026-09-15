@@ -108,7 +108,15 @@ const AstaDesaPage = () => {
   // Ringkasan diambil begitu integrasinya siap: selain mengisi tab pertama,
   // daftar kecamatan dan tahap verifikasinya dipakai sebagai isi penyaring di
   // tab Data Sensus, dan angka petugasnya dipakai tab Petugas & Akun.
-  const ringkasan = useAstaDesa('/ringkasan', {}, { aktif: Boolean(siap) });
+  // Diperbarui sendiri tiap menit, tanpa perlu ditekan apa pun.
+  //
+  // Satu menit dipilih karena itu umur cache angka pokok di server: lebih
+  // sering hanya akan mengambil jawaban yang sama. Yang mahal — penyusuran 21
+  // halaman untuk rekap kecamatan, tren, dan petugas — tetap dilayani dari
+  // cache 10 menit, jadi pembaruan ini ringan meski halamannya ditinggal
+  // terbuka seharian. Pembaruannya diam-diam: tidak ada kedipan kerangka
+  // pemuatan, dan kegagalan sesaat tidak mengosongkan angka yang sudah tampil.
+  const ringkasan = useAstaDesa('/ringkasan', {}, { aktif: Boolean(siap), segarkanTiapMs: 60 * 1000 });
   const demografi = useAstaDesa('/demografi', {}, { aktif: Boolean(siap) && tab === 'demografi' });
 
   const muatUlang = async () => {
@@ -227,9 +235,10 @@ const AstaDesaPage = () => {
             {tab === 'layer' && <LayerPesanTab />}
 
             <p className="px-1 pb-2 text-[11px] leading-relaxed text-slate-400">
-              Sumber: API super admin ASTA DESA ({status.data?.base_url}). Data disimpan sementara di server hingga{' '}
-              {Math.round((status.data?.ttl_ms || 0) / 60000)} menit; tekan <span className="font-semibold">Muat ulang</span>{' '}
-              untuk menarik data terbaru.
+              Sumber: API super admin ASTA DESA ({status.data?.base_url}). Angka keluarga terdata diperbarui otomatis
+              tiap menit selama halaman ini terbuka; rincian per kecamatan, tren, dan petugas menyusul hingga{' '}
+              {Math.round((status.data?.ttl_ms || 0) / 60000)} menit. Tekan{' '}
+              <span className="font-semibold">Muat ulang</span> bila perlu menarik semuanya sekarang juga.
               {r?.diambil_pada && (
                 <> Terakhir diambil {new Date(r.diambil_pada).toLocaleString('id-ID')}.</>
               )}
