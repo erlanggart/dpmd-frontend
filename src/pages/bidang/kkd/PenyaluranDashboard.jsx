@@ -280,12 +280,53 @@ export default function PenyaluranDashboard({
     });
   }, [dimBreakdown, moduleTotal]);
 
-  // Status pipeline over all penyaluran, ranked.
+  /**
+   * Sebaran status, diurutkan.
+   *
+   * Dihitung dari `entries`, BUKAN `fundRows`. Keduanya berbeda begitu ada
+   * tahap yang dipilih: `fundRows` seluruh baris sumber dana ini, `entries`
+   * hanya yang masuk pilihan tahap/periode.
+   *
+   * Memakai `fundRows` di sini membuat dua hal salah sekaligus. Pertama,
+   * menekan TAHAP I tidak mengubah kartu ini sama sekali — penyaring yang
+   * terlihat tetapi tidak bekerja. Kedua, dan lebih menyesatkan, angkanya
+   * tidak sepadan dengan tabel di bawahnya: mengklik satu kartu menyaring
+   * tabel lewat `entries`, sehingga kartu bertuliskan 489 bisa menghasilkan
+   * tabel berisi 73 baris. Kartu dan tabel harus selalu membicarakan kumpulan
+   * baris yang sama.
+   */
   const statusAll = useMemo(() => {
     const m = {};
-    fundRows.forEach((r) => { const s = r.sts || 'Belum Mengajukan'; m[s] = (m[s] || 0) + 1; });
+    entries.forEach((e) => { const s = e.status || 'Belum Mengajukan'; m[s] = (m[s] || 0) + 1; });
     return Object.entries(m).sort((a, b) => b[1] - a[1]);
-  }, [fundRows]);
+  }, [entries]);
+
+  /**
+   * Tahap/periode di dalam pilihan ini yang BELUM DIBUKA sama sekali.
+   *
+   * Tanda pengenalnya: tidak satu pun barisnya pernah bergerak dari "Belum
+   * Mengajukan". Tahap seperti itu bukan tunggakan — belum ada yang boleh
+   * mengajukan.
+   *
+   * Barisnya sengaja TIDAK dibuang dari hitungan, supaya kartu tetap sepadan
+   * dengan tabel. Yang dilakukan hanya mengatakannya. Tanpa catatan ini,
+   * gabungan dua tahap membaca seolah-olah 489 desa menunggak, padahal 416 di
+   * antaranya berasal dari TAHAP II yang belum dibuka dan hanya 73 desa di
+   * tahap berjalan yang benar-benar belum mengajukan.
+   */
+  const dimBelumDibuka = useMemo(() => {
+    if (sel !== 'Semua') return [];
+    const m = new Map();
+    entries.forEach((e) => {
+      const d = m.get(e.dim) || { n: 0, bergerak: false };
+      d.n += 1;
+      if ((e.status || 'Belum Mengajukan') !== 'Belum Mengajukan') d.bergerak = true;
+      m.set(e.dim, d);
+    });
+    return [...m.entries()]
+      .filter(([, v]) => !v.bergerak)
+      .map(([label, v]) => ({ label, n: v.n }));
+  }, [entries, sel]);
 
   // Kecamatan tertinggal on the tranche that is actually in progress (staged funds).
   // Falls back to the last done tranche so there is always a meaningful spread.
@@ -681,9 +722,24 @@ export default function PenyaluranDashboard({
               subtitle={
                 statusFilter
                   ? `Disaring: ${statusFilter}`
-                  : `${fmtInt(fundRows.length)} penyaluran · klik kartu untuk menyaring`
+                  : `${fmtInt(entries.length)} penyaluran${sel === 'Semua' ? '' : ` · ${sel}`} · klik kartu untuk menyaring`
               }
             >
+              {/*
+                Catatan tahap yang belum dibuka. Tanpa ini, angka "Belum
+                Mengajukan" pada tampilan gabungan terbaca sebagai tunggakan
+                padahal sebagian besarnya tahap yang memang belum bisa diajukan.
+              */}
+              {!statusFilter && dimBelumDibuka.length > 0 && (
+                <p className="mb-3 rounded-lg bg-slate-50 px-3 py-2 text-[12px] leading-relaxed text-slate-600">
+                  {dimBelumDibuka.length <= 3
+                    ? dimBelumDibuka.map((d) => d.label).join(', ')
+                    : `${dimBelumDibuka.length} ${dimLabel.toLowerCase()}`}{' '}
+                  belum dibuka — {fmtInt(dimBelumDibuka.reduce((s, d) => s + d.n, 0))} penyaluran di dalamnya masih
+                  tercatat <span className="font-semibold text-slate-700">Belum Mengajukan</span>, bukan tunggakan.
+                  {dims.length > 1 && <> Pilih satu {dimLabel.toLowerCase()} di atas untuk melihat posisi sebenarnya.</>}
+                </p>
+              )}
               {statusFilter && (
                 <button
                   type="button"
@@ -697,7 +753,7 @@ export default function PenyaluranDashboard({
               <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2">
                 {statusAll.map(([s, n]) => {
                   const t = statusTone(s);
-                  const pct = persen(n, fundRows.length);
+                  const pct = persen(n, entries.length);
                   const aktif = statusFilter === s;
                   return (
                     <button
