@@ -120,6 +120,13 @@ const RingkasanTab = ({ data, memuat, galat, onUlang }) => {
 
   const total = data.total_sensus || 0;
 
+  // Populasi yang benar-benar terbaca saat penyusuran. `total` di atas adalah
+  // hitungan hidup dari server dan hampir selalu sedikit lebih besar; apa pun
+  // yang dihitung dari isi baris (mis. berapa yang berkoordinat) harus dibagi
+  // dengan angka ini, bukan dengan `total`, supaya tidak membandingkan dua
+  // populasi yang berbeda.
+  const totalTerbaca = data.total_terbaca ?? total;
+
   return (
     <div className="space-y-4">
       {data.sebagian && (
@@ -169,7 +176,7 @@ const RingkasanTab = ({ data, memuat, galat, onUlang }) => {
           label="Berkoordinat"
           nilai={data.berkoordinat}
           warna={SERI[3]}
-          keterangan={`${persen(data.berkoordinat, total)} bisa dipetakan`}
+          keterangan={`${persen(data.berkoordinat, totalTerbaca)} bisa dipetakan`}
         />
         <KartuAngka
           icon={CalendarDays}

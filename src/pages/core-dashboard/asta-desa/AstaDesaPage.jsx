@@ -128,7 +128,12 @@ const AstaDesaPage = () => {
       { label: 'Keluarga terdata', value: angka(r.total_sensus) },
       { label: 'Kecamatan', value: angka(r.total_kecamatan) },
       { label: 'Desa/kelurahan', value: angka(r.total_desa) },
-      { label: 'Berkoordinat', value: persen(r.berkoordinat, r.total_sensus) }
+      // Penyebutnya `total_terbaca`, BUKAN `total_sensus`. `total_sensus` kini
+      // hitungan hidup dari server, sementara `berkoordinat` hanya bisa dihitung
+      // dari baris yang benar-benar terbaca saat penyusuran. Membagi keduanya
+      // berarti membandingkan dua populasi berbeda — persentasenya akan terus
+      // terlihat turun tiap kali ada pendataan baru masuk.
+      { label: 'Berkoordinat', value: persen(r.berkoordinat, r.total_terbaca ?? r.total_sensus) }
     ];
   }, [r]);
 
