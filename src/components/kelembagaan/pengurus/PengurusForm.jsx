@@ -488,6 +488,17 @@ export default function PengurusForm({
 
 			if (error.response?.data?.message) {
 				errorMessage = error.response.data.message;
+
+				// Galat 500 dari server mengirim dua medan: `message` yang umum
+				// ("Gagal membuat pengurus") dan `error` yang berisi sebab
+				// sebenarnya. Sebelumnya hanya `message` yang ditampilkan, jadi
+				// pengisi form melihat kegagalan tanpa satu pun petunjuk — dan
+				// sebabnya hanya bisa dibaca dari log server. Selama `error`
+				// belum mengulang `message`, sertakan.
+				const detail = error.response.data.error;
+				if (detail && detail !== errorMessage) {
+					errorMessage = `${errorMessage}\n\n${detail}`;
+				}
 			} else if (error.response?.data?.errors) {
 				const errors = error.response.data.errors;
 
@@ -799,6 +810,8 @@ export default function PengurusForm({
 								<div className="input-group">
 									<input
 										type="date"
+										min="1900-01-01"
+										max="2100-12-31"
 										{...register("tanggal_lahir")}
 										className="w-full bg-white/80 backdrop-blur-sm"
 									/>
@@ -1088,6 +1101,8 @@ export default function PengurusForm({
 									<div className="input-group">
 										<input
 											type="date"
+											min="1900-01-01"
+											max="2100-12-31"
 											{...register("tanggal_mulai_jabatan")}
 											className="w-full bg-white/80 backdrop-blur-sm"
 										/>
@@ -1106,6 +1121,8 @@ export default function PengurusForm({
 									<div className="input-group">
 										<input
 											type="date"
+											min="1900-01-01"
+											max="2100-12-31"
 											{...register("tanggal_akhir_jabatan")}
 											className="w-full bg-white/80 backdrop-blur-sm"
 										/>
