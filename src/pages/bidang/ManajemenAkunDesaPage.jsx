@@ -19,9 +19,11 @@ import api from "../../api";
 import {
 	FiAlertCircle,
 	FiCheck,
+	FiChevronDown,
 	FiEdit2,
 	FiEye,
 	FiEyeOff,
+	FiFilter,
 	FiLock,
 	FiMapPin,
 	FiPlus,
@@ -66,6 +68,254 @@ const buatSandi = () => {
 	for (let i = 0; i < 4; i += 1) hasil += huruf[Math.floor(Math.random() * huruf.length)];
 	for (let i = 0; i < 4; i += 1) hasil += angka[Math.floor(Math.random() * angka.length)];
 	return hasil;
+};
+
+// ── Potongan tampilan ───────────────────────────────────────────────────────
+
+const sebutanDesa = (d) =>
+	d ? `${d.status_pemerintahan === "kelurahan" ? "Kel." : "Desa"} ${d.nama}` : "";
+
+const KELAS_INPUT =
+	"w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-800 transition-shadow placeholder:text-slate-400 focus:border-slate-400 focus:outline-none focus:ring-4 focus:ring-slate-900/5";
+
+/** Dua huruf untuk avatar, diambil dari dua kata pertama nama. */
+const inisialNama = (nama) => {
+	const kata = String(nama || "?")
+		.trim()
+		.split(/\s+/)
+		.filter(Boolean);
+	if (kata.length === 0) return "?";
+	if (kata.length === 1) return kata[0].slice(0, 2).toUpperCase();
+	return (kata[0][0] + kata[1][0]).toUpperCase();
+};
+
+/**
+ * Warna avatar diturunkan dari nama, bukan diacak.
+ *
+ * Alasannya praktis: staf menelusuri daftar ini berulang kali, dan orang yang
+ * sama harus tampil dengan warna yang sama setiap kali halaman dibuka — warna
+ * acak justru menghapus nilai bantunya sebagai penanda.
+ */
+const WARNA_AVATAR = [
+	"bg-indigo-100 text-indigo-700",
+	"bg-emerald-100 text-emerald-700",
+	"bg-amber-100 text-amber-700",
+	"bg-sky-100 text-sky-700",
+	"bg-rose-100 text-rose-700",
+	"bg-violet-100 text-violet-700",
+	"bg-teal-100 text-teal-700",
+];
+const warnaAvatar = (nama) => {
+	const teks = String(nama || "");
+	let jumlah = 0;
+	for (let i = 0; i < teks.length; i += 1) jumlah = (jumlah + teks.charCodeAt(i)) % 1000;
+	return WARNA_AVATAR[jumlah % WARNA_AVATAR.length];
+};
+
+/** Hak akses yang diberikan bidang ini → pekat, karena inilah yang bisa diubah. */
+const ChipMilikBidang = ({ children }) => (
+	<span className="inline-flex items-center gap-1 rounded-lg bg-slate-900 px-2 py-1 text-[11px] font-semibold text-white">
+		<FiCheck className="h-3 w-3" />
+		{children}
+	</span>
+);
+
+const KotakGalat = ({ pesan }) => (
+	<div className="mx-auto mt-10 max-w-2xl rounded-2xl border border-amber-200 bg-amber-50 p-6 text-center">
+		<FiAlertCircle className="mx-auto h-8 w-8 text-amber-500" />
+		<p className="mt-3 font-semibold text-amber-900">Halaman tidak dapat dibuka</p>
+		<p className="mt-1 text-sm text-amber-800">{pesan}</p>
+	</div>
+);
+
+/** Kerangka kartu selama akun dimuat — menahan tinggi daftar supaya tidak melompat. */
+const KerangkaKartu = () => (
+	<div className="animate-pulse rounded-2xl border border-slate-200 bg-white p-4">
+		<div className="flex gap-3">
+			<div className="h-10 w-10 shrink-0 rounded-xl bg-slate-200" />
+			<div className="min-w-0 flex-1 space-y-2">
+				<div className="h-3.5 w-2/5 rounded bg-slate-200" />
+				<div className="h-3 w-3/5 rounded bg-slate-100" />
+				<div className="h-3 w-1/2 rounded bg-slate-100" />
+			</div>
+		</div>
+		<div className="mt-4 flex gap-1.5 border-t border-slate-100 pt-3">
+			<div className="h-6 w-24 rounded-lg bg-slate-100" />
+			<div className="h-6 w-20 rounded-lg bg-slate-100" />
+			<div className="h-6 w-28 rounded-lg bg-slate-100" />
+		</div>
+	</div>
+);
+
+/** Baris ringkas satu akun di dalam panel kondisi desa. */
+const BarisAkunRingkas = ({ user, aksi }) => (
+	<div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2">
+		<div className="flex min-w-0 items-center gap-2.5">
+			<span
+				className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-[11px] font-bold ${warnaAvatar(user.name)}`}
+				aria-hidden
+			>
+				{inisialNama(user.name)}
+			</span>
+			<div className="min-w-0">
+				<div className="flex flex-wrap items-center gap-x-1.5 gap-y-0.5">
+					<span className="text-[13px] font-semibold text-slate-800">{user.name}</span>
+					{user.jabatan_desa && (
+						<span className="text-[11px] text-slate-400">{user.jabatan_desa}</span>
+					)}
+					{!user.is_active && (
+						<span className="rounded bg-slate-200 px-1.5 py-0.5 text-[10px] font-bold uppercase text-slate-600">
+							Nonaktif
+						</span>
+					)}
+				</div>
+				<span className="block break-all text-[11.5px] leading-snug text-slate-500">
+					{user.email}
+				</span>
+			</div>
+		</div>
+		{aksi}
+	</div>
+);
+
+/**
+ * Satu akun operator.
+ *
+ * Hak akses dari bidang LAIN sengaja diringkas jadi satu lencana berpenghitung,
+ * bukan satu chip per fitur. Di lapangan sebagian besar akun desa memegang
+ * hampir seluruh katalog, sehingga menampilkan semuanya membuat tiap kartu
+ * setinggi dua baris chip dan mengubur satu-satunya hal yang bisa diubah staf
+ * di halaman ini: fitur bidangnya sendiri. Rinciannya tetap ada, tinggal diklik.
+ */
+const KartuAkun = ({ user, labelPermission, onUbah, onUbahStatus }) => {
+	const [rincianTerbuka, setRincianTerbuka] = useState(false);
+
+	const milikBidang = user.permissions_dikelola || [];
+	const milikBidangLain = user.permissions_bidang_lain || [];
+	const tanpaAkses = !user.permissions?.length;
+
+	return (
+		<article className="relative overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm transition-all duration-200 hover:border-slate-300 hover:shadow-md">
+			{/* Pita status di tepi kiri: keadaan akun terbaca sebelum teksnya dibaca. */}
+			<span
+				aria-hidden
+				className={`absolute inset-y-0 left-0 w-1 ${user.is_active ? "bg-emerald-500" : "bg-slate-300"}`}
+			/>
+
+			<div className="p-4 pl-5">
+				<div className="flex items-start gap-3">
+					<span
+						className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-[13px] font-bold ${warnaAvatar(user.name)} ${user.is_active ? "" : "opacity-50 grayscale"}`}
+						aria-hidden
+					>
+						{inisialNama(user.name)}
+					</span>
+
+					<div className="min-w-0 flex-1">
+						<div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+							<h3 className="text-[14.5px] font-bold leading-tight text-slate-900">{user.name}</h3>
+							{user.jabatan_desa && (
+								<span className="rounded-md bg-slate-100 px-1.5 py-0.5 text-[10.5px] font-semibold uppercase tracking-wide text-slate-600">
+									{user.jabatan_desa}
+								</span>
+							)}
+							{!user.is_active && (
+								<span className="rounded-md bg-slate-200 px-1.5 py-0.5 text-[10.5px] font-bold uppercase tracking-wide text-slate-600">
+									Nonaktif
+								</span>
+							)}
+						</div>
+
+						<p className="mt-1 break-all text-[12.5px] leading-snug text-slate-500">{user.email}</p>
+
+						{user.desa && (
+							<p className="mt-1 flex items-start gap-1 text-[11.5px] leading-snug text-slate-400">
+								<FiMapPin className="mt-[2px] h-3 w-3 shrink-0" />
+								<span className="min-w-0">
+									{sebutanDesa(user.desa)}
+									{user.desa.kecamatan ? ` · Kec. ${user.desa.kecamatan.nama}` : ""}
+								</span>
+							</p>
+						)}
+					</div>
+
+					<div className="flex shrink-0 items-center gap-1.5">
+						<button
+							onClick={() => onUbah(user)}
+							className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 px-2.5 py-1.5 text-[12px] font-semibold text-slate-700 transition-colors hover:border-slate-300 hover:bg-slate-50"
+						>
+							<FiEdit2 className="h-3.5 w-3.5" />
+							<span className="hidden sm:inline">Ubah</span>
+						</button>
+						{/* Menonaktifkan akun jarang dilakukan dan memutus kerja satu desa,
+						    jadi tombolnya ikon saja — tetap terjangkau, tapi tidak bersaing
+						    perhatian dengan Ubah seperti pada tata letak sebelumnya. */}
+						<button
+							onClick={() => onUbahStatus(user)}
+							title={user.is_active ? "Nonaktifkan akun" : "Aktifkan akun"}
+							aria-label={user.is_active ? "Nonaktifkan akun" : "Aktifkan akun"}
+							className={`inline-flex h-[30px] w-[30px] items-center justify-center rounded-lg border transition-colors ${
+								user.is_active
+									? "border-slate-200 text-slate-400 hover:border-red-200 hover:bg-red-50 hover:text-red-600"
+									: "border-emerald-200 bg-emerald-50 text-emerald-600 hover:bg-emerald-100"
+							}`}
+						>
+							<FiPower className="h-3.5 w-3.5" />
+						</button>
+					</div>
+				</div>
+
+				<div className="mt-3 flex flex-wrap items-center gap-1.5 border-t border-slate-100 pt-3">
+					{milikBidang.map((key) => (
+						<ChipMilikBidang key={key}>{labelPermission.get(key) || key}</ChipMilikBidang>
+					))}
+
+					{milikBidangLain.length > 0 && (
+						<button
+							type="button"
+							onClick={() => setRincianTerbuka((t) => !t)}
+							aria-expanded={rincianTerbuka}
+							className="inline-flex items-center gap-1 rounded-lg border border-dashed border-slate-300 bg-slate-50 px-2 py-1 text-[11px] font-medium text-slate-500 transition-colors hover:bg-slate-100"
+						>
+							<FiLock className="h-3 w-3" />
+							{milikBidangLain.length} fitur bidang lain
+							<FiChevronDown
+								className={`h-3 w-3 transition-transform ${rincianTerbuka ? "rotate-180" : ""}`}
+							/>
+						</button>
+					)}
+
+					{tanpaAkses && (
+						<span className="inline-flex items-center gap-1 rounded-lg bg-amber-50 px-2 py-1 text-[11px] font-medium text-amber-700">
+							<FiAlertCircle className="h-3 w-3" />
+							Belum ada hak akses — hanya bisa melihat dashboard
+						</span>
+					)}
+				</div>
+
+				{/* Hak akses bidang lain ditampilkan tapi tidak bisa disentuh — supaya
+				    staf tahu akun ini juga dipakai untuk urusan di luar bidangnya. */}
+				{rincianTerbuka && milikBidangLain.length > 0 && (
+					<div className="mt-2 rounded-xl bg-slate-50 p-2.5">
+						<p className="mb-1.5 text-[10.5px] font-semibold uppercase tracking-wide text-slate-400">
+							Diberikan bidang lain atau Admin Desa — tidak dapat Anda ubah
+						</p>
+						<div className="flex flex-wrap gap-1.5">
+							{milikBidangLain.map((key) => (
+								<span
+									key={key}
+									className="inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-white px-2 py-1 text-[11px] font-medium text-slate-500"
+								>
+									<FiLock className="h-3 w-3" />
+									{labelPermission.get(key) || key}
+								</span>
+							))}
+						</div>
+					</div>
+				)}
+			</div>
+		</article>
+	);
 };
 
 const ManajemenAkunDesaPage = () => {
@@ -141,10 +391,17 @@ const ManajemenAkunDesaPage = () => {
 		[desas, desaId],
 	);
 
+	const kecamatanTerpilih = useMemo(
+		() => kecamatans.find((k) => String(k.id) === String(kecamatanId)) || null,
+		[kecamatans, kecamatanId],
+	);
+
 	const desaSeKecamatan = useMemo(
 		() => desas.filter((d) => String(d.kecamatan_id) === String(kecamatanId)),
 		[desas, kecamatanId],
 	);
+
+	const adaPenyaring = Boolean(kecamatanId || desaId || cari.trim());
 
 	// ── Muat akun ─────────────────────────────────────────────────────────────
 	const muatAkun = useCallback(async () => {
@@ -399,9 +656,7 @@ const ManajemenAkunDesaPage = () => {
 			// fitur yang sama. Tawarkan jalan keluarnya, jangan sekadar melarang.
 			if (error?.response?.status === 409 && error.response.data?.code === "AKUN_FITUR_SUDAH_ADA") {
 				const sudahAda = error.response.data?.data?.akun_sudah_ada || [];
-				const daftar = sudahAda
-					.map((u) => `<li><b>${u.name}</b> — ${u.email}</li>`)
-					.join("");
+				const daftar = sudahAda.map((u) => `<li><b>${u.name}</b> — ${u.email}</li>`).join("");
 
 				const pilihan = await Swal.fire({
 					icon: "warning",
@@ -465,166 +720,226 @@ const ManajemenAkunDesaPage = () => {
 		}
 	};
 
+	const bersihkanPenyaring = () => {
+		setKecamatanId("");
+		setDesaId("");
+		setCari("");
+	};
+
 	// ── Render ────────────────────────────────────────────────────────────────
 	if (memuatAwal) {
 		return (
-			<div className="max-w-5xl mx-auto p-10 text-center text-slate-500 text-sm">
-				Memuat data...
+			<div className="mx-auto w-full max-w-6xl space-y-4 px-4 py-6 sm:px-6 lg:px-8">
+				<div className="h-32 animate-pulse rounded-3xl bg-slate-200" />
+				<div className="h-20 animate-pulse rounded-2xl bg-slate-100" />
+				<div className="grid gap-3 xl:grid-cols-2">
+					<KerangkaKartu />
+					<KerangkaKartu />
+					<KerangkaKartu />
+					<KerangkaKartu />
+				</div>
 			</div>
 		);
 	}
 
-	if (galatAwal) {
-		return (
-			<div className="max-w-2xl mx-auto mt-10 rounded-2xl border border-amber-200 bg-amber-50 p-6 text-center">
-				<FiAlertCircle className="mx-auto h-8 w-8 text-amber-500" />
-				<p className="mt-3 font-semibold text-amber-900">Halaman tidak dapat dibuka</p>
-				<p className="mt-1 text-sm text-amber-800">{galatAwal}</p>
-			</div>
-		);
-	}
+	if (galatAwal) return <KotakGalat pesan={galatAwal} />;
 
 	return (
-		<div className="max-w-5xl mx-auto space-y-5">
-			{/* Header */}
-			<div className="rounded-2xl bg-slate-900 text-white p-5 shadow-lg">
-				<div className="flex flex-wrap items-start justify-between gap-4">
+		<div className="mx-auto w-full max-w-6xl space-y-4 px-4 py-5 sm:px-6 sm:py-6 lg:px-8">
+			{/* ── Kepala halaman ──────────────────────────────────────────────── */}
+			<header className="relative overflow-hidden rounded-3xl bg-slate-950 px-5 py-5 text-white shadow-xl sm:px-7 sm:py-6">
+				<span
+					aria-hidden
+					className="pointer-events-none absolute -right-16 -top-28 h-64 w-64 rounded-full bg-indigo-500/25 blur-3xl"
+				/>
+				<span
+					aria-hidden
+					className="pointer-events-none absolute -bottom-32 -left-20 h-64 w-64 rounded-full bg-emerald-500/10 blur-3xl"
+				/>
+
+				<div className="relative flex flex-wrap items-start justify-between gap-4">
 					<div className="min-w-0">
-						<h1 className="text-xl font-bold">Akun Operator Desa</h1>
-						<p className="text-slate-300 text-sm mt-1">
+						<h1 className="text-xl font-bold tracking-tight sm:text-2xl">Akun Operator Desa</h1>
+						<p className="mt-1 text-[13px] text-slate-400">
 							{meta?.bidang?.nama
 								? `Dibuat atas nama ${meta.bidang.nama}`
 								: "Buatkan akun petugas desa untuk fitur bidang Anda"}
 						</p>
 					</div>
-					<div className="rounded-xl bg-white/10 px-4 py-2 text-center shrink-0">
-						<div className="text-lg font-bold">{meta?.total_akun_dikelola ?? 0}</div>
-						<div className="text-[11px] text-slate-300">Akun dikelola</div>
+					<div className="shrink-0 rounded-2xl bg-white/[0.07] px-4 py-2.5 text-center ring-1 ring-inset ring-white/10">
+						<div className="text-2xl font-bold leading-none tabular-nums">
+							{meta?.total_akun_dikelola ?? 0}
+						</div>
+						<div className="mt-1 text-[10.5px] font-medium uppercase tracking-wider text-slate-400">
+							Akun dikelola
+						</div>
 					</div>
 				</div>
 
-				<div className="mt-4 flex flex-wrap items-center gap-2">
-					<span className="inline-flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wide text-slate-400">
+				<div className="relative mt-5 border-t border-white/10 pt-4">
+					<span className="inline-flex items-center gap-1.5 text-[10.5px] font-bold uppercase tracking-[0.12em] text-slate-500">
 						<FiShield className="h-3.5 w-3.5" />
 						Fitur yang bisa Anda berikan
 					</span>
-					{katalog.map((p) => (
-						<span
-							key={p.key}
-							className="px-2.5 py-1 rounded-lg bg-white/10 text-[11px] font-semibold"
-						>
-							{p.label}
-						</span>
-					))}
-				</div>
-			</div>
-
-			{/* Pemilih desa */}
-			<div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-				<div className="flex items-center gap-2 mb-3">
-					<FiMapPin className="h-4 w-4 text-slate-400" />
-					<h2 className="text-sm font-bold text-slate-800">Pilih Desa</h2>
-				</div>
-				<div className="grid gap-3 sm:grid-cols-2">
-					<div>
-						<label className="block text-xs font-semibold text-slate-600 mb-1.5">Kecamatan</label>
-						<select
-							value={kecamatanId}
-							onChange={(e) => {
-								setKecamatanId(e.target.value);
-								setDesaId("");
-							}}
-							className="w-full px-3 py-2.5 rounded-xl border border-slate-200 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-slate-900/10"
-						>
-							<option value="">— Semua kecamatan —</option>
-							{kecamatans.map((k) => (
-								<option key={k.id} value={k.id}>
-									{k.nama}
-								</option>
-							))}
-						</select>
+					<div className="mt-2.5 flex flex-wrap gap-1.5">
+						{katalog.map((p) => (
+							<span
+								key={p.key}
+								title={p.description}
+								className="rounded-lg bg-white/[0.08] px-2.5 py-1 text-[11.5px] font-semibold text-slate-100 ring-1 ring-inset ring-white/10"
+							>
+								{p.label}
+							</span>
+						))}
 					</div>
-					<div>
-						<label className="block text-xs font-semibold text-slate-600 mb-1.5">
-							Desa / Kelurahan
+				</div>
+			</header>
+
+			{/* ── Bilah kendali ───────────────────────────────────────────────────
+			    Pemilih wilayah, pencarian, dan tombol tambah disatukan dalam satu
+			    bilah. Sebelumnya ketiganya jadi tiga blok bertumpuk, sehingga daftar
+			    akun baru mulai jauh di bawah lipatan layar. Lengket di atas supaya
+			    penyaring tetap terjangkau saat menelusuri ratusan akun. */}
+			<div className="sticky top-0 z-30 -mx-4 border-y border-slate-200 bg-white/85 px-4 py-3 backdrop-blur-md sm:mx-0 sm:rounded-2xl sm:border sm:px-4 sm:shadow-sm">
+				<div className="flex flex-col gap-2.5 lg:flex-row lg:items-center">
+					<div className="grid flex-1 gap-2.5 sm:grid-cols-2">
+						<label className="relative block">
+							<span className="sr-only">Kecamatan</span>
+							<FiMapPin className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+							<select
+								value={kecamatanId}
+								onChange={(e) => {
+									setKecamatanId(e.target.value);
+									setDesaId("");
+								}}
+								className={`${KELAS_INPUT} cursor-pointer appearance-none pl-9 pr-8 font-medium`}
+							>
+								<option value="">Semua kecamatan</option>
+								{kecamatans.map((k) => (
+									<option key={k.id} value={k.id}>
+										{k.nama}
+									</option>
+								))}
+							</select>
+							<FiChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
 						</label>
-						<select
-							value={desaId}
-							onChange={(e) => setDesaId(e.target.value)}
-							disabled={!kecamatanId}
-							className="w-full px-3 py-2.5 rounded-xl border border-slate-200 bg-white text-sm disabled:bg-slate-50 disabled:text-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-900/10"
-						>
-							<option value="">
-								{kecamatanId ? "— Pilih desa —" : "Pilih kecamatan dulu"}
-							</option>
-							{desaSeKecamatan.map((d) => (
-								<option key={d.id} value={d.id}>
-									{d.status_pemerintahan === "kelurahan" ? "Kel." : "Desa"} {d.nama}
+
+						<label className="relative block">
+							<span className="sr-only">Desa atau kelurahan</span>
+							<select
+								value={desaId}
+								onChange={(e) => setDesaId(e.target.value)}
+								disabled={!kecamatanId}
+								className={`${KELAS_INPUT} cursor-pointer appearance-none pr-8 font-medium disabled:cursor-not-allowed disabled:bg-slate-50 disabled:text-slate-400`}
+							>
+								<option value="">
+									{kecamatanId ? "Semua desa di kecamatan ini" : "Pilih kecamatan dulu"}
 								</option>
-							))}
-						</select>
+								{desaSeKecamatan.map((d) => (
+									<option key={d.id} value={d.id}>
+										{sebutanDesa(d)}
+									</option>
+								))}
+							</select>
+							<FiChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+						</label>
+					</div>
+
+					<div className="flex gap-2.5 lg:w-[22rem]">
+						<div className="relative flex-1">
+							<FiSearch className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+							<input
+								type="text"
+								value={cari}
+								onChange={(e) => setCari(e.target.value)}
+								placeholder="Cari nama, email, atau desa…"
+								className={`${KELAS_INPUT} pl-9 ${cari ? "pr-9" : ""}`}
+							/>
+							{cari && (
+								<button
+									type="button"
+									onClick={() => setCari("")}
+									aria-label="Hapus pencarian"
+									className="absolute right-2.5 top-1/2 -translate-y-1/2 rounded-md p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-600"
+								>
+									<FiX className="h-3.5 w-3.5" />
+								</button>
+							)}
+						</div>
+						<button
+							onClick={bukaTambah}
+							className="inline-flex shrink-0 items-center justify-center gap-2 rounded-xl bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-slate-800"
+						>
+							<FiPlus className="h-4 w-4" />
+							Tambah
+						</button>
 					</div>
 				</div>
+
+				{/* Penyaring aktif dirangkum jadi satu baris: tanpa ini, jumlah yang
+				    tampil di daftar mudah disalahartikan sebagai jumlah se-kabupaten. */}
+				{adaPenyaring && (
+					<div className="mt-2.5 flex flex-wrap items-center gap-x-2 gap-y-1.5 border-t border-slate-100 pt-2.5 text-[11.5px]">
+						<FiFilter className="h-3 w-3 text-slate-400" />
+						{kecamatanTerpilih && (
+							<span className="rounded-md bg-slate-100 px-2 py-0.5 font-semibold text-slate-600">
+								Kec. {kecamatanTerpilih.nama}
+							</span>
+						)}
+						{desaTerpilih && (
+							<span className="rounded-md bg-slate-100 px-2 py-0.5 font-semibold text-slate-600">
+								{sebutanDesa(desaTerpilih)}
+							</span>
+						)}
+						{cari.trim() && (
+							<span className="rounded-md bg-slate-100 px-2 py-0.5 font-semibold text-slate-600">
+								“{cari.trim()}”
+							</span>
+						)}
+						<button
+							onClick={bersihkanPenyaring}
+							className="ml-auto font-semibold text-slate-400 underline-offset-2 hover:text-slate-700 hover:underline"
+						>
+							Bersihkan
+						</button>
+					</div>
+				)}
 			</div>
 
-			{/* Kondisi desa terpilih — ditarik sebelum akun boleh dibuat */}
+			{/* ── Kondisi desa terpilih ───────────────────────────────────────────
+			    Ditarik sebelum akun boleh dibuat; inilah yang mencegah akun ganda. */}
 			{desaTerpilih && (
-				<div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+				<section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
 					{memuatRingkasan ? (
-						<p className="text-sm text-slate-500">Memeriksa akun yang sudah ada di desa ini...</p>
+						<p className="px-4 py-4 text-sm text-slate-500">
+							Memeriksa akun yang sudah ada di {sebutanDesa(desaTerpilih)}…
+						</p>
 					) : !ringkasan ? (
-						<p className="text-sm text-slate-500">Kondisi desa ini belum bisa dipastikan.</p>
+						<p className="px-4 py-4 text-sm text-slate-500">
+							Kondisi desa ini belum bisa dipastikan.
+						</p>
 					) : (
 						<>
-							{/* Sudah ada yang memegang → jangan buat lagi */}
 							{ringkasan.sudah_pegang.length > 0 ? (
-								<div className="rounded-xl border border-emerald-200 bg-emerald-50 p-3">
-									<div className="flex items-start gap-2">
-										<FiUserCheck className="h-4 w-4 text-emerald-600 mt-0.5 shrink-0" />
-										<div className="min-w-0">
-											<p className="text-sm font-bold text-emerald-900">
-												Sudah ada operator untuk fitur ini
-											</p>
-											<p className="text-[12px] text-emerald-800 mt-0.5">
-												Tidak perlu membuat akun baru. Ubah akun di bawah bila perlu.
-											</p>
-										</div>
-									</div>
-									<div className="mt-2.5 space-y-2">
-										{ringkasan.sudah_pegang.map((u) => (
-											<div
-												key={u.id}
-												className="flex flex-wrap items-center justify-between gap-2 rounded-lg bg-white border border-emerald-100 px-3 py-2"
-											>
-												<div className="min-w-0">
-													<span className="text-sm font-semibold text-slate-800">{u.name}</span>
-													{!u.is_active && (
-														<span className="ml-2 px-1.5 py-0.5 rounded bg-slate-200 text-slate-600 text-[10px] font-semibold">
-															Nonaktif
-														</span>
-													)}
-													<span className="block text-[12px] text-slate-500 break-all">
-														{u.email}
-													</span>
-												</div>
-												<button
-													onClick={() => bukaUbah(u)}
-													className="px-3 py-1.5 rounded-lg border border-slate-200 text-slate-700 text-xs font-semibold hover:bg-slate-50 shrink-0"
-												>
-													Ubah
-												</button>
-											</div>
-										))}
+								<div className="flex items-start gap-2.5 border-b border-emerald-100 bg-emerald-50 px-4 py-3">
+									<FiUserCheck className="mt-0.5 h-4 w-4 shrink-0 text-emerald-600" />
+									<div className="min-w-0">
+										<p className="text-[13.5px] font-bold text-emerald-900">
+											{sebutanDesa(desaTerpilih)} sudah punya operator untuk fitur ini
+										</p>
+										<p className="mt-0.5 text-[12px] text-emerald-800">
+											Tidak perlu membuat akun baru — ubah akun yang ada bila perlu.
+										</p>
 									</div>
 								</div>
 							) : (
-								<div className="rounded-xl border border-amber-200 bg-amber-50 p-3 flex items-start gap-2">
-									<FiAlertCircle className="h-4 w-4 text-amber-600 mt-0.5 shrink-0" />
-									<div>
-										<p className="text-sm font-bold text-amber-900">
-											Belum ada operator untuk fitur ini
+								<div className="flex items-start gap-2.5 border-b border-amber-100 bg-amber-50 px-4 py-3">
+									<FiAlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-amber-600" />
+									<div className="min-w-0">
+										<p className="text-[13.5px] font-bold text-amber-900">
+											{sebutanDesa(desaTerpilih)} belum punya operator untuk fitur ini
 										</p>
-										<p className="text-[12px] text-amber-800 mt-0.5">
+										<p className="mt-0.5 text-[12px] text-amber-800">
 											{ringkasan.bisa_diberi.length > 0
 												? "Beri akses ke akun yang sudah ada di bawah, atau buat akun baru."
 												: "Silakan buat akun operator untuk desa ini."}
@@ -633,217 +948,159 @@ const ManajemenAkunDesaPage = () => {
 								</div>
 							)}
 
-							{/* Akun desa yang sudah ada tapi belum punya fitur bidang ini.
-							    Memberi akses ke sini selalu lebih baik daripada akun baru. */}
-							{ringkasan.bisa_diberi.length > 0 && (
-								<div className="mt-3">
-									<p className="text-[11px] font-bold uppercase tracking-wide text-slate-400 mb-2">
-										Akun desa yang sudah ada — bisa langsung diberi akses
-									</p>
-									<div className="space-y-2">
-										{ringkasan.bisa_diberi.map((u) => (
-											<div
-												key={u.id}
-												className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-slate-200 px-3 py-2"
-											>
-												<div className="min-w-0">
-													<span className="text-sm font-semibold text-slate-800">{u.name}</span>
-													{u.jabatan_desa && (
-														<span className="ml-2 text-[11px] text-slate-500">
-															{u.jabatan_desa}
-														</span>
-													)}
-													{!u.is_active && (
-														<span className="ml-2 px-1.5 py-0.5 rounded bg-slate-200 text-slate-600 text-[10px] font-semibold">
-															Nonaktif
-														</span>
-													)}
-													<span className="block text-[12px] text-slate-500 break-all">
-														{u.email}
-													</span>
-												</div>
-												<button
-													onClick={() => beriAkses(u)}
-													className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-900 text-white text-xs font-semibold hover:bg-slate-800 shrink-0"
-												>
-													<FiPlus className="h-3.5 w-3.5" />
-													Beri akses
-												</button>
-											</div>
-										))}
+							<div className="space-y-4 px-4 py-3.5">
+								{ringkasan.sudah_pegang.length > 0 && (
+									<div>
+										<p className="mb-2 text-[10.5px] font-bold uppercase tracking-wide text-slate-400">
+											Sudah memegang fitur bidang ini
+										</p>
+										<div className="space-y-2">
+											{ringkasan.sudah_pegang.map((u) => (
+												<BarisAkunRingkas
+													key={u.id}
+													user={u}
+													aksi={
+														<button
+															onClick={() => bukaUbah(u)}
+															className="shrink-0 rounded-lg border border-slate-200 px-3 py-1.5 text-[12px] font-semibold text-slate-700 transition-colors hover:bg-slate-50"
+														>
+															Ubah
+														</button>
+													}
+												/>
+											))}
+										</div>
 									</div>
-								</div>
-							)}
+								)}
 
-							{/* Siapa yang berwenang di desa ini — supaya staf bisa menghubunginya
-							    alih-alih diam-diam mengambil alih pengelolaan akun. */}
-							{ringkasan.admin_desa.length > 0 && (
-								<p className="mt-3 text-[12px] text-slate-500">
-									Admin Desa:{" "}
-									{ringkasan.admin_desa
-										.map((a) => `${a.name}${a.no_hp ? ` (${a.no_hp})` : ""}`)
-										.join(", ")}
-								</p>
-							)}
+								{/* Akun desa yang sudah ada tapi belum punya fitur bidang ini.
+								    Memberi akses ke sini selalu lebih baik daripada akun baru:
+								    satu orang, satu sandi yang sudah ia hafal. */}
+								{ringkasan.bisa_diberi.length > 0 && (
+									<div>
+										<p className="mb-2 text-[10.5px] font-bold uppercase tracking-wide text-slate-400">
+											Akun desa yang sudah ada — bisa langsung diberi akses
+										</p>
+										<div className="space-y-2">
+											{ringkasan.bisa_diberi.map((u) => (
+												<BarisAkunRingkas
+													key={u.id}
+													user={u}
+													aksi={
+														<button
+															onClick={() => beriAkses(u)}
+															className="inline-flex shrink-0 items-center gap-1.5 rounded-lg bg-slate-900 px-3 py-1.5 text-[12px] font-semibold text-white transition-colors hover:bg-slate-800"
+														>
+															<FiPlus className="h-3.5 w-3.5" />
+															Beri akses
+														</button>
+													}
+												/>
+											))}
+										</div>
+									</div>
+								)}
+
+								{/* Siapa yang berwenang di desa ini — supaya staf bisa
+								    menghubunginya alih-alih diam-diam mengambil alih. */}
+								{ringkasan.admin_desa.length > 0 && (
+									<p className="text-[12px] text-slate-500">
+										<span className="font-semibold text-slate-600">Admin Desa:</span>{" "}
+										{ringkasan.admin_desa
+											.map((a) => `${a.name}${a.no_hp ? ` (${a.no_hp})` : ""}`)
+											.join(", ")}
+									</p>
+								)}
+							</div>
 						</>
 					)}
+				</section>
+			)}
+
+			{/* ── Daftar akun ─────────────────────────────────────────────────── */}
+			{!memuatAkun && akun.length > 0 && (
+				<div className="flex items-baseline justify-between px-1">
+					<h2 className="text-[13px] font-bold text-slate-700">
+						{akun.length} akun
+						{desaTerpilih
+							? ` di ${sebutanDesa(desaTerpilih)}`
+							: kecamatanTerpilih
+								? ` di Kec. ${kecamatanTerpilih.nama}`
+								: ""}
+					</h2>
 				</div>
 			)}
 
-			{/* Toolbar */}
-			<div className="flex flex-col sm:flex-row gap-3 sm:items-center sm:justify-between">
-				<div className="relative flex-1 max-w-md">
-					<FiSearch className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-					<input
-						type="text"
-						value={cari}
-						onChange={(e) => setCari(e.target.value)}
-						placeholder="Cari nama, email, atau desa..."
-						className="w-full pl-9 pr-3 py-2.5 rounded-xl border border-slate-200 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-slate-900/10"
-					/>
-				</div>
-				<button
-					onClick={bukaTambah}
-					className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-slate-900 text-white text-sm font-semibold hover:bg-slate-800 transition-colors"
-				>
-					<FiPlus className="h-4 w-4" />
-					{desaTerpilih ? `Tambah Akun ${desaTerpilih.nama}` : "Tambah Akun"}
-				</button>
-			</div>
-
-			{/* Daftar akun */}
 			{memuatAkun ? (
-				<div className="rounded-2xl border border-slate-200 bg-white p-10 text-center text-slate-500 text-sm">
-					Memuat akun...
+				<div className="grid gap-3 xl:grid-cols-2">
+					<KerangkaKartu />
+					<KerangkaKartu />
+					<KerangkaKartu />
+					<KerangkaKartu />
 				</div>
 			) : akun.length === 0 ? (
-				<div className="rounded-2xl border border-dashed border-slate-300 bg-white p-10 text-center">
-					<FiUsers className="mx-auto h-8 w-8 text-slate-300" />
-					<p className="mt-3 font-semibold text-slate-700">
-						{desaTerpilih ? `Belum ada akun di ${desaTerpilih.nama}` : "Belum ada akun"}
+				<div className="rounded-2xl border border-dashed border-slate-300 bg-white px-6 py-12 text-center">
+					<span className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-slate-100">
+						<FiUsers className="h-6 w-6 text-slate-400" />
+					</span>
+					<p className="mt-3.5 font-semibold text-slate-700">
+						{desaTerpilih ? `Belum ada akun di ${sebutanDesa(desaTerpilih)}` : "Belum ada akun"}
 					</p>
-					<p className="text-sm text-slate-500 mt-1">
+					<p className="mx-auto mt-1 max-w-sm text-[13px] text-slate-500">
 						{desaTerpilih
-							? 'Klik "Tambah Akun" untuk membuatkan operator desa ini.'
-							: "Pilih desa di atas, atau buat akun pertama untuk bidang Anda."}
+							? "Buatkan operator untuk desa ini lewat tombol Tambah di atas."
+							: "Pilih kecamatan dan desa di atas untuk melihat atau membuat akunnya."}
 					</p>
+					{desaTerpilih && (
+						<button
+							onClick={bukaTambah}
+							className="mt-4 inline-flex items-center gap-2 rounded-xl bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-slate-800"
+						>
+							<FiPlus className="h-4 w-4" />
+							Tambah akun {desaTerpilih.nama}
+						</button>
+					)}
 				</div>
 			) : (
-				<div className="space-y-3">
+				// Dua kolom di layar lebar: kartu akun tidak butuh lebar penuh, dan
+				// satu kolom membuat daftar 400+ akun jadi gulungan yang sangat panjang.
+				<div className="grid gap-3 xl:grid-cols-2">
 					{akun.map((user) => (
-						<div
+						<KartuAkun
 							key={user.id}
-							className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm"
-						>
-							<div className="flex flex-wrap items-start justify-between gap-3">
-								<div className="min-w-0">
-									<div className="flex items-center gap-2 flex-wrap">
-										<h3 className="font-bold text-slate-800">{user.name}</h3>
-										{user.jabatan_desa && (
-											<span className="px-2 py-0.5 rounded-full bg-slate-100 text-slate-700 text-[11px] font-semibold">
-												{user.jabatan_desa}
-											</span>
-										)}
-										<span
-											className={`px-2 py-0.5 rounded-full text-[11px] font-semibold ${
-												user.is_active
-													? "bg-emerald-100 text-emerald-700"
-													: "bg-slate-200 text-slate-600"
-											}`}
-										>
-											{user.is_active ? "Aktif" : "Nonaktif"}
-										</span>
-									</div>
-									<p className="text-sm text-slate-500 mt-0.5 break-all">{user.email}</p>
-									{user.desa && (
-										<p className="text-xs text-slate-500 mt-0.5">
-											{user.desa.status_pemerintahan === "kelurahan" ? "Kel." : "Desa"}{" "}
-											{user.desa.nama}
-											{user.desa.kecamatan ? ` — Kec. ${user.desa.kecamatan.nama}` : ""}
-										</p>
-									)}
-								</div>
-
-								<div className="flex items-center gap-2">
-									<button
-										onClick={() => bukaUbah(user)}
-										className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg border border-slate-200 text-slate-700 text-xs font-semibold hover:bg-slate-50"
-									>
-										<FiEdit2 className="h-3.5 w-3.5" />
-										Ubah
-									</button>
-									<button
-										onClick={() => ubahStatus(user)}
-										className={`inline-flex items-center gap-1.5 px-3 py-2 rounded-lg border text-xs font-semibold ${
-											user.is_active
-												? "border-red-200 text-red-600 hover:bg-red-50"
-												: "border-emerald-200 text-emerald-700 hover:bg-emerald-50"
-										}`}
-									>
-										<FiPower className="h-3.5 w-3.5" />
-										{user.is_active ? "Nonaktifkan" : "Aktifkan"}
-									</button>
-								</div>
-							</div>
-
-							<div className="mt-3 pt-3 border-t border-slate-100 flex flex-wrap gap-1.5">
-								{user.permissions_dikelola?.map((key) => (
-									<span
-										key={key}
-										className="inline-flex items-center gap-1 px-2 py-1 rounded-lg bg-slate-900/5 text-slate-700 text-[11px] font-medium"
-									>
-										<FiCheck className="h-3 w-3" />
-										{labelPermission.get(key) || key}
-									</span>
-								))}
-								{/* Hak akses milik bidang lain ditampilkan tapi tidak bisa disentuh —
-								    supaya staf tahu akun ini juga dipakai untuk urusan lain. */}
-								{user.permissions_bidang_lain?.map((key) => (
-									<span
-										key={key}
-										title="Diberikan bidang lain atau Admin Desa — tidak dapat Anda ubah"
-										className="inline-flex items-center gap-1 px-2 py-1 rounded-lg bg-slate-50 text-slate-400 text-[11px] font-medium border border-dashed border-slate-200"
-									>
-										<FiLock className="h-3 w-3" />
-										{labelPermission.get(key) || key}
-									</span>
-								))}
-								{!user.permissions?.length && (
-									<span className="text-xs text-amber-600">
-										Belum ada hak akses — akun ini hanya bisa melihat dashboard.
-									</span>
-								)}
-							</div>
-						</div>
+							user={user}
+							labelPermission={labelPermission}
+							onUbah={bukaUbah}
+							onUbahStatus={ubahStatus}
+						/>
 					))}
 				</div>
 			)}
 
-			{/* Modal tambah/ubah */}
+			{/* ── Modal tambah/ubah ───────────────────────────────────────────── */}
 			{modalTerbuka && (
-				<div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/50 p-0 sm:p-4">
+				<div className="fixed inset-0 z-50 flex items-end justify-center bg-slate-950/60 p-0 backdrop-blur-sm sm:items-center sm:p-4">
 					{/* dvh, bukan vh: di HP, vh mengabaikan bilah alamat browser sehingga
 					    dasar modal — tempat tombol simpan — jatuh di luar layar. */}
 					<div
 						className="flex w-full max-h-[92vh] flex-col overflow-hidden rounded-t-3xl bg-white shadow-2xl sm:max-w-2xl sm:rounded-2xl"
 						style={{ maxHeight: "92dvh" }}
 					>
-						<div className="flex shrink-0 items-center justify-between border-b border-slate-100 bg-white px-5 py-4">
+						<div className="flex shrink-0 items-center justify-between gap-3 border-b border-slate-100 px-5 py-4">
 							<div className="min-w-0">
-								<h2 className="font-bold text-slate-800">
+								<h2 className="font-bold text-slate-900">
 									{akunDiubah ? "Ubah Akun" : "Tambah Akun Operator"}
 								</h2>
 								{!akunDiubah && desaTerpilih && (
-									<p className="text-xs text-slate-500 mt-0.5">
-										{desaTerpilih.status_pemerintahan === "kelurahan" ? "Kel." : "Desa"}{" "}
-										{desaTerpilih.nama}
+									<p className="mt-0.5 text-xs text-slate-500">
+										{sebutanDesa(desaTerpilih)}
 										{desaTerpilih.kecamatans ? ` — Kec. ${desaTerpilih.kecamatans.nama}` : ""}
 									</p>
 								)}
 							</div>
 							<button
 								onClick={() => setModalTerbuka(false)}
-								className="p-2 rounded-lg hover:bg-slate-100 text-slate-500"
+								className="shrink-0 rounded-lg p-2 text-slate-500 hover:bg-slate-100"
 								aria-label="Tutup"
 							>
 								<FiX className="h-5 w-5" />
@@ -852,35 +1109,69 @@ const ManajemenAkunDesaPage = () => {
 
 						<form onSubmit={simpan} className="flex min-h-0 flex-1 flex-col">
 							<div className="min-h-0 flex-1 space-y-4 overflow-y-auto px-5 py-4">
-								<div>
-									<label className="block text-sm font-semibold text-slate-700 mb-1.5">
-										Nama Petugas <span className="text-red-500">*</span>
-									</label>
-									<input
-										type="text"
-										value={form.name}
-										onChange={(e) => setForm({ ...form, name: e.target.value })}
-										placeholder="Contoh: Rahmat Ramadan"
-										className="w-full px-3 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-slate-900/10"
-									/>
+								<div className="grid gap-4 sm:grid-cols-2">
+									<div>
+										<label className="mb-1.5 block text-sm font-semibold text-slate-700">
+											Nama Petugas <span className="text-red-500">*</span>
+										</label>
+										<input
+											type="text"
+											value={form.name}
+											onChange={(e) => setForm({ ...form, name: e.target.value })}
+											placeholder="Contoh: Rahmat Ramadan"
+											className={KELAS_INPUT}
+										/>
+									</div>
+									<div>
+										<label className="mb-1.5 block text-sm font-semibold text-slate-700">
+											Jabatan / Bagian
+										</label>
+										<input
+											type="text"
+											list="saran-jabatan-desa"
+											value={form.jabatan_desa}
+											onChange={(e) => setForm({ ...form, jabatan_desa: e.target.value })}
+											placeholder="Contoh: Kesejahteraan"
+											className={KELAS_INPUT}
+										/>
+										<datalist id="saran-jabatan-desa">
+											{JABATAN_SARAN.map((opt) => (
+												<option key={opt} value={opt} />
+											))}
+										</datalist>
+									</div>
+								</div>
+
+								<div className="grid gap-4 sm:grid-cols-2">
+									<div>
+										<label className="mb-1.5 block text-sm font-semibold text-slate-700">
+											Email (dipakai untuk login) <span className="text-red-500">*</span>
+										</label>
+										<input
+											type="email"
+											value={form.email}
+											onChange={(e) => setForm({ ...form, email: e.target.value })}
+											placeholder="nama@contoh.com"
+											autoComplete="off"
+											className={KELAS_INPUT}
+										/>
+									</div>
+									<div>
+										<label className="mb-1.5 block text-sm font-semibold text-slate-700">
+											Nomor HP
+										</label>
+										<input
+											type="tel"
+											value={form.no_hp}
+											onChange={(e) => setForm({ ...form, no_hp: e.target.value })}
+											placeholder="081234567890"
+											className={KELAS_INPUT}
+										/>
+									</div>
 								</div>
 
 								<div>
-									<label className="block text-sm font-semibold text-slate-700 mb-1.5">
-										Email (dipakai untuk login) <span className="text-red-500">*</span>
-									</label>
-									<input
-										type="email"
-										value={form.email}
-										onChange={(e) => setForm({ ...form, email: e.target.value })}
-										placeholder="nama@contoh.com"
-										autoComplete="off"
-										className="w-full px-3 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-slate-900/10"
-									/>
-								</div>
-
-								<div>
-									<label className="block text-sm font-semibold text-slate-700 mb-1.5">
+									<label className="mb-1.5 block text-sm font-semibold text-slate-700">
 										Password {akunDiubah ? "" : <span className="text-red-500">*</span>}
 									</label>
 									<div className="flex gap-2">
@@ -893,12 +1184,12 @@ const ManajemenAkunDesaPage = () => {
 													akunDiubah ? "Kosongkan bila tidak diganti" : "Minimal 6 karakter"
 												}
 												autoComplete="new-password"
-												className="w-full px-3 py-2.5 pr-11 rounded-xl border border-slate-200 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-slate-900/10"
+												className={`${KELAS_INPUT} pr-11 font-mono tracking-wide`}
 											/>
 											<button
 												type="button"
 												onClick={() => setTampilSandi((s) => !s)}
-												className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400"
+												className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
 												aria-label={tampilSandi ? "Sembunyikan password" : "Tampilkan password"}
 											>
 												{tampilSandi ? (
@@ -914,52 +1205,19 @@ const ManajemenAkunDesaPage = () => {
 												setForm((f) => ({ ...f, password: buatSandi() }));
 												setTampilSandi(true);
 											}}
-											className="px-3 py-2.5 rounded-xl border border-slate-200 text-slate-700 text-xs font-semibold hover:bg-slate-50 whitespace-nowrap"
+											className="whitespace-nowrap rounded-xl border border-slate-200 px-3 py-2.5 text-xs font-semibold text-slate-700 transition-colors hover:bg-slate-50"
 										>
 											Acak
 										</button>
 									</div>
-									<p className="text-[11px] text-slate-500 mt-1">
-										Sandi acak dibuat tanpa huruf/angka yang mudah tertukar, supaya aman
-										dibacakan lewat telepon.
+									<p className="mt-1 text-[11px] text-slate-500">
+										Sandi acak dibuat tanpa huruf/angka yang mudah tertukar, supaya aman dibacakan
+										lewat telepon.
 									</p>
 								</div>
 
-								<div className="grid gap-4 sm:grid-cols-2">
-									<div>
-										<label className="block text-sm font-semibold text-slate-700 mb-1.5">
-											Jabatan / Bagian
-										</label>
-										<input
-											type="text"
-											list="saran-jabatan-desa"
-											value={form.jabatan_desa}
-											onChange={(e) => setForm({ ...form, jabatan_desa: e.target.value })}
-											placeholder="Contoh: Kesejahteraan"
-											className="w-full px-3 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-slate-900/10"
-										/>
-										<datalist id="saran-jabatan-desa">
-											{JABATAN_SARAN.map((opt) => (
-												<option key={opt} value={opt} />
-											))}
-										</datalist>
-									</div>
-									<div>
-										<label className="block text-sm font-semibold text-slate-700 mb-1.5">
-											Nomor HP
-										</label>
-										<input
-											type="tel"
-											value={form.no_hp}
-											onChange={(e) => setForm({ ...form, no_hp: e.target.value })}
-											placeholder="081234567890"
-											className="w-full px-3 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-slate-900/10"
-										/>
-									</div>
-								</div>
-
 								<div>
-									<label className="block text-sm font-semibold text-slate-700 mb-2">
+									<label className="mb-2 block text-sm font-semibold text-slate-700">
 										Hak Akses Fitur
 									</label>
 									<div className="grid gap-2 sm:grid-cols-2">
@@ -968,9 +1226,9 @@ const ManajemenAkunDesaPage = () => {
 											return (
 												<label
 													key={permission.key}
-													className={`flex gap-2.5 items-start rounded-xl border p-3 cursor-pointer transition-colors ${
+													className={`flex cursor-pointer items-start gap-2.5 rounded-xl border p-3 transition-colors ${
 														dicentang
-															? "border-slate-900 bg-slate-900/5"
+															? "border-slate-900 bg-slate-900/[0.04]"
 															: "border-slate-200 hover:bg-slate-50"
 													}`}
 												>
@@ -984,7 +1242,7 @@ const ManajemenAkunDesaPage = () => {
 														<span className="block text-sm font-semibold text-slate-800">
 															{permission.label}
 														</span>
-														<span className="block text-[11px] text-slate-500 leading-snug">
+														<span className="block text-[11px] leading-snug text-slate-500">
 															{permission.description}
 														</span>
 													</span>
@@ -994,36 +1252,36 @@ const ManajemenAkunDesaPage = () => {
 									</div>
 
 									{/* Saat mengubah akun yang juga dipakai bidang lain, tunjukkan apa
-									    yang TIDAK ikut tersimpan — supaya staf tidak mengira ia
-									    baru saja mencabutnya. */}
+									    yang TIDAK ikut tersimpan — supaya staf tidak mengira ia baru
+									    saja mencabutnya. */}
 									{akunDiubah?.permissions_bidang_lain?.length > 0 && (
-										<div className="mt-3 rounded-xl bg-slate-50 border border-slate-200 p-3">
-											<p className="text-[11px] font-semibold text-slate-600 mb-1.5">
+										<div className="mt-3 rounded-xl border border-slate-200 bg-slate-50 p-3">
+											<p className="mb-1.5 text-[11px] font-semibold text-slate-600">
 												Akun ini juga memegang fitur bidang lain:
 											</p>
 											<div className="flex flex-wrap gap-1.5">
 												{akunDiubah.permissions_bidang_lain.map((key) => (
 													<span
 														key={key}
-														className="inline-flex items-center gap-1 px-2 py-1 rounded-lg bg-white text-slate-500 text-[11px] font-medium border border-dashed border-slate-300"
+														className="inline-flex items-center gap-1 rounded-lg border border-dashed border-slate-300 bg-white px-2 py-1 text-[11px] font-medium text-slate-500"
 													>
 														<FiLock className="h-3 w-3" />
 														{labelPermission.get(key) || key}
 													</span>
 												))}
 											</div>
-											<p className="text-[11px] text-slate-500 mt-1.5">
+											<p className="mt-1.5 text-[11px] text-slate-500">
 												Tidak akan berubah saat Anda menyimpan.
 											</p>
 										</div>
 									)}
 
-									<p className="text-[11px] text-slate-500 mt-2">
+									<p className="mt-2 text-[11px] text-slate-500">
 										Dashboard dan Pengaturan selalu bisa diakses semua akun desa.
 									</p>
 								</div>
 
-								<label className="flex items-center gap-2.5 cursor-pointer">
+								<label className="flex cursor-pointer items-center gap-2.5 rounded-xl border border-slate-200 px-3 py-2.5">
 									<input
 										type="checkbox"
 										checked={form.is_active}
@@ -1041,16 +1299,16 @@ const ManajemenAkunDesaPage = () => {
 								<button
 									type="button"
 									onClick={() => setModalTerbuka(false)}
-									className="flex-1 px-4 py-2.5 rounded-xl border border-slate-200 text-slate-700 text-sm font-semibold hover:bg-slate-50"
+									className="flex-1 rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-50"
 								>
 									Batal
 								</button>
 								<button
 									type="submit"
 									disabled={menyimpan}
-									className="flex-1 px-4 py-2.5 rounded-xl bg-slate-900 text-white text-sm font-semibold hover:bg-slate-800 disabled:opacity-60"
+									className="flex-1 rounded-xl bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-slate-800 disabled:opacity-60"
 								>
-									{menyimpan ? "Menyimpan..." : akunDiubah ? "Simpan Perubahan" : "Buat Akun"}
+									{menyimpan ? "Menyimpan…" : akunDiubah ? "Simpan Perubahan" : "Buat Akun"}
 								</button>
 							</div>
 						</form>
