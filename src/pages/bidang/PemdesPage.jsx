@@ -10,7 +10,7 @@ import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useBidangPath } from '../../hooks/useBidangPath';
 import { useAuth } from '../../context/AuthContext';
-import { Landmark, Users, FileText, HardDrive, ClipboardList, MapPinned, Scale, ArrowUpRight, RotateCcw, Building2, Wallet, Gavel } from 'lucide-react';
+import { Landmark, Users, FileText, HardDrive, ClipboardList, MapPinned, Scale, ArrowUpRight, RotateCcw, Building2, Wallet, Gavel, UserPlus } from 'lucide-react';
 import api from '../../api';
 import toast from 'react-hot-toast';
 import DaftarPegawaiBidang from '../../components/bidang/DaftarPegawaiBidang';
@@ -178,6 +178,20 @@ const PemdesPage = () => {
 				icon: Scale,
 				route: getPath('/pemdes/produk-hukum'),
 				angka: { nilai: angkaAtau(stats.total_produk_hukum), label: 'dokumen' },
+			},
+			{
+				id: 'akun-desa',
+				accent: '#7c3aed',
+				judul: 'Akun Operator Desa',
+				deskripsi: 'Buatkan akun petugas desa untuk mengisi aparatur, profil desa, dan produk hukum',
+				icon: UserPlus,
+				// Rutenya hidup di blok /bidang/pemdes, bukan /pemdes seperti modul lain,
+				// karena satu komponen ManajemenAkunDesaPage dipakai bersama semua bidang.
+				route: getPath('/bidang/pemdes/akun-desa'),
+				// Fitur yang boleh diberikan ditentukan server lewat bidang_id staf
+				// (backend/src/config/bidangDesaPermissions.js), jadi labelnya cukup
+				// menyebut wewenang bidang ini tanpa angka.
+				angka: { nilai: null, label: 'aparatur · profil desa · produk hukum' },
 			},
 			{
 				id: 'produk-hukum-kabupaten',
