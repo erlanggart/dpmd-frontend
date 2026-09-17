@@ -20,7 +20,6 @@ import {
 	FaChevronRight,
 	FaHome,
 } from "react-icons/fa";
-import SearchableProdukHukumSelect from "../../../components/shared/SearchableProdukHukumSelect";
 import Swal from "sweetalert2";
 
 // Helper function to convert pengurusable_type (table name) to route type
@@ -66,6 +65,7 @@ const PengurusEditPage = () => {
 	const [loading, setLoading] = useState(true);
 	const [saving, setSaving] = useState(false);
 	const [produkHukumList, setProdukHukumList] = useState([]);
+	const [produkHukumSearch, setProdukHukumSearch] = useState("");
 	const [formData, setFormData] = useState({
 		nama_lengkap: "",
 		nik: "",
@@ -104,18 +104,19 @@ const PengurusEditPage = () => {
 		return "/bidang/pmd"; // All internal DPMD staff
 	};
 
-	const loadProdukHukumList = useCallback(async () => {
+	const loadProdukHukumList = useCallback(async (desaId) => {
+		if (!desaId) return;
+
 		try {
-			console.log("📚 Loading produk hukum list...");
-			const response = await getProdukHukums(1, "");
-			const allData = response?.data?.data || [];
-			const list = allData.data || [];
-			setProdukHukumList(list);
-			console.log(`✓ Loaded ${list.length} produk hukum items`);
+			const response = await getProdukHukums({
+				all: true,
+				desa_id: desaId,
+				jenis: "Keputusan Kepala Desa",
+			});
+			setProdukHukumList(Array.isArray(response?.data?.data) ? response.data.data : []);
 		} catch (error) {
 			console.error("❌ Error loading produk hukum:", error);
 			setProdukHukumList([]);
-			// Don't show error alert, just log it (non-critical)
 		}
 	}, []);
 
@@ -296,8 +297,11 @@ const PengurusEditPage = () => {
 		}
 
 		loadPengurusDetail();
-		loadProdukHukumList();
-	}, [loadPengurusDetail, loadProdukHukumList, canEdit, navigate]);
+	}, [loadPengurusDetail, canEdit, navigate]);
+
+	useEffect(() => {
+		loadProdukHukumList(pengurus?.desa_id);
+	}, [loadProdukHukumList, pengurus?.desa_id]);
 
 	const handleInputChange = (e) => {
 		const { name, value } = e.target;
@@ -497,7 +501,7 @@ const PengurusEditPage = () => {
 		<div className="min-h-screen bg-gray-50">
 			{/* Breadcrumb */}
 			<div className="bg-white border-b border-gray-200">
-				<div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3">
+				<div className="mx-auto px-4 sm:px-6 lg:px-8 py-3">
 					<nav className="flex items-center space-x-2 text-sm">
 						<Link
 							to={`${basePath}/dashboard`}
@@ -632,7 +636,7 @@ const PengurusEditPage = () => {
 			</div>
 
 			<div className="bg-white shadow">
-				<div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+				<div className="mx-auto px-4 sm:px-6 lg:px-8">
 					<div className="flex items-center justify-between py-4">
 						<div className="flex items-center space-x-4">
 							<button
@@ -655,7 +659,7 @@ const PengurusEditPage = () => {
 				</div>
 			</div>
 
-			<div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+			<div className="mx-auto px-4 sm:px-6 lg:px-8 py-8">
 				<form onSubmit={handleSubmit} className="space-y-6">
 					{/* Section 1: Avatar & Basic Identity */}
 					<div className="bg-gradient-to-br from-blue-50 via-indigo-50 to-blue-50 rounded-2xl shadow-sm border-2 border-blue-100 p-6">
@@ -916,6 +920,7 @@ const PengurusEditPage = () => {
 									<option value="B">B</option>
 									<option value="AB">AB</option>
 									<option value="O">O</option>
+									<option value="TIDAK TAHU">Tidak tahu</option>
 								</select>
 							</div>
 
@@ -1003,28 +1008,44 @@ const PengurusEditPage = () => {
 							</div>
 						</div>
 
-						<div className="space-y-4">
-							<SearchableProdukHukumSelect
-								value={formData.produk_hukum_id}
-								onChange={(value) => handleInputChange({ target: { name: 'produk_hukum_id', value } })}
-								produkHukumList={Array.isArray(produkHukumList) ? produkHukumList : []}
+						<div className="space-y-3">
+							<input
+								type="search"
+								value={produkHukumSearch}
+								onChange={(e) => setProdukHukumSearch(e.target.value)}
+								placeholder="Cari nomor atau judul SK..."
+								className="w-full border-2 border-amber-200 rounded-lg px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-amber-500 bg-white/80"
 							/>
 
-							{formData.produk_hukum_id && (
-								<div className="mt-3 p-4 bg-white/70 backdrop-blur-sm border-2 border-amber-200 rounded-xl">
-									<div className="flex items-start gap-3">
-										<div className="w-10 h-10 bg-gradient-to-br from-green-500 to-emerald-600 rounded-lg flex items-center justify-center flex-shrink-0">
-											<svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-												<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-											</svg>
-										</div>
-										<div className="flex-1">
-											<p className="text-sm font-semibold text-gray-900">SK Terpilih</p>
-											<p className="text-xs text-gray-600 mt-1">Produk hukum telah dipilih sebagai dasar jabatan</p>
-										</div>
-									</div>
+							<div className="overflow-hidden rounded-xl border-2 border-amber-100 bg-white">
+								<div className="max-h-72 overflow-y-auto divide-y divide-amber-100">
+									{produkHukumList
+										.filter((item) => {
+											const keyword = produkHukumSearch.toLowerCase();
+											return !keyword || `${item.nomor || ""} ${item.judul || ""}`.toLowerCase().includes(keyword);
+										})
+										.sort((a, b) => Number(String(b.id) === String(formData.produk_hukum_id)) - Number(String(a.id) === String(formData.produk_hukum_id)))
+										.map((item) => {
+											const selected = String(formData.produk_hukum_id) === String(item.id);
+											return (
+												<div key={item.id} className={`flex items-center gap-3 p-4 ${selected ? "bg-green-50" : "hover:bg-amber-50"}`}>
+													<div className="min-w-0 flex-1">
+														<p className={`font-semibold text-sm ${selected ? "text-green-800" : "text-gray-900"}`}>SK Nomor {item.nomor || "-"} Tahun {item.tahun || "-"}</p>
+														<p className="mt-1 text-xs text-gray-600">{item.judul || "Tanpa judul"}</p>
+													</div>
+													<button
+														type="button"
+														onClick={() => setFormData((prev) => ({ ...prev, produk_hukum_id: item.id }))}
+														className={`shrink-0 rounded-lg px-3 py-2 text-xs font-semibold ${selected ? "bg-green-600 text-white" : "bg-amber-500 text-white hover:bg-amber-600"}`}
+													>
+														{selected ? "✓ Terkait" : "Kaitkan"}
+													</button>
+												</div>
+											);
+										})}
+									{produkHukumList.length === 0 && <p className="p-4 text-sm text-gray-500">Belum ada SK Kepala Desa untuk desa ini.</p>}
 								</div>
-							)}
+							</div>
 						</div>
 					</div>
 
