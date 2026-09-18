@@ -45,7 +45,7 @@ const normalizePengurusFormValues = (values = {}) => ({
 	alamat: toUppercaseString(values.alamat || ""),
 	pendidikan: toUppercaseString(values.pendidikan || ""),
 	agama: toUppercaseString(values.agama || ""),
-	golongan_darah: toUppercaseString(values.golongan_darah || ""),
+	golongan_darah: values.golongan_darah === "TIDAK_DIKETAHUI" ? "" : toUppercaseString(values.golongan_darah || ""),
 	jabatan: toUppercaseString(values.jabatan || ""),
 	nomor_buku_nikah: toUppercaseString(values.nomor_buku_nikah || ""),
 });
@@ -979,6 +979,7 @@ export default function PengurusForm({
 										<option value="B" className="text-gray-900 bg-white">B</option>
 										<option value="AB" className="text-gray-900 bg-white">AB</option>
 										<option value="O" className="text-gray-900 bg-white">O</option>
+										<option value="TIDAK_DIKETAHUI" className="text-gray-900 bg-white">Tidak diketahui</option>
 									</select>
 								</div>
 								{errors.golongan_darah && (

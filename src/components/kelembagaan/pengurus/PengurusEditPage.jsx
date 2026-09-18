@@ -400,8 +400,9 @@ const PengurusEditPage = () => {
 
 			// Add form data
 			Object.entries(formData).forEach(([key, value]) => {
-				if (value !== null && value !== undefined && value !== "") {
-					submitData.append(key, value);
+				const valueToSave = value === "TIDAK_DIKETAHUI" ? "" : value;
+				if (valueToSave !== null && valueToSave !== undefined && (valueToSave !== "" || key === "golongan_darah")) {
+					submitData.append(key, valueToSave);
 					console.log(`✓ Added field: ${key}`);
 				}
 			});
@@ -918,9 +919,9 @@ const PengurusEditPage = () => {
 									<option value="">Pilih golongan darah</option>
 									<option value="A">A</option>
 									<option value="B">B</option>
-									<option value="AB">AB</option>
-									<option value="O">O</option>
-									<option value="TIDAK TAHU">Tidak tahu</option>
+										<option value="AB">AB</option>
+										<option value="O">O</option>
+										<option value="TIDAK_DIKETAHUI">Tidak diketahui</option>
 								</select>
 							</div>
 

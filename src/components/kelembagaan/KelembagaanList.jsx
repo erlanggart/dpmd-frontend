@@ -649,58 +649,27 @@ export default function KelembagaanList() {
 	const IconComponent = getIcon();
 
 	return (
-		<div className="p-6 space-y-4  min-h-screen">
+		<div className="p-6 space-y-4 min-h-screen">
 			{/* Breadcrumb */}
 			<div className="sticky top-0 z-10 p-2 bg-white rounded-md shadow-md">
 				<div className="flex items-center justify-between">
 					<nav className="flex items-center space-x-2 text-sm">
-						<Link
-							to={`${basePath}/kelembagaan`}
-							className="flex items-center text-gray-500 hover:text-indigo-600 transition-colors"
-						>
-							<FaHome className="mr-1" />
-							Dashboard Kelembagaan
+						<Link to={`${basePath}/kelembagaan`} className="flex items-center text-gray-500 hover:text-indigo-600 transition-colors">
+							<FaHome className="mr-1" /> Dashboard Kelembagaan
 						</Link>
-						
 						<FaChevronRight className="text-gray-400 text-xs" />
-
-						{/* Admin/Kecamatan: Show Desa name and link */}
 						{desaId && filteredItems.length > 0 && (
 							<>
-								<Link
-									to={isKecamatan?.() ? "/kecamatan/kelembagaan" : `/bidang/pmd/kelembagaan/admin/${desaId}`}
-									className="text-gray-500 hover:text-indigo-600 transition-colors"
-								>
-									{filteredItems[0]?.desas?.nama ||
-										filteredItems[0]?.desa?.nama ||
-										"Desa"}
+								<Link to={isKecamatan?.() ? "/kecamatan/kelembagaan" : `/bidang/pmd/kelembagaan/admin/${desaId}`} className="text-gray-500 hover:text-indigo-600 transition-colors">
+									{filteredItems[0]?.desas?.nama || filteredItems[0]?.desa?.nama || "Desa"}
 								</Link>
 								<FaChevronRight className="text-gray-400 text-xs" />
 							</>
 						)}
-
 						<span className="text-gray-900 font-medium">{title}</span>
 					</nav>
-
-					{/* Status Badge */}
-					<span
-						className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold ${
-							isEditMode
-								? "bg-green-100 text-green-700 border border-green-300"
-								: "bg-red-100 text-red-700 border border-red-300"
-						}`}
-					>
-						{isEditMode ? (
-							<>
-								<LuLockOpen className="w-3 h-3" />
-								<span>Dibuka</span>
-							</>
-						) : (
-							<>
-								<LuLock className="w-3 h-3" />
-								<span>Ditutup</span>
-							</>
-						)}
+					<span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold ${isEditMode ? "bg-green-100 text-green-700 border border-green-300" : "bg-red-100 text-red-700 border border-red-300"}`}>
+						{isEditMode ? <><LuLockOpen className="w-3 h-3" /><span>Dibuka</span></> : <><LuLock className="w-3 h-3" /><span>Ditutup</span></>}
 					</span>
 				</div>
 			</div>
@@ -817,7 +786,7 @@ export default function KelembagaanList() {
 								return (
 								<div
 									key={item.id}
-									className={`bg-white flex flex-col rounded-2xl shadow-md hover:shadow-xl transition-all duration-300 border group overflow-hidden ${
+									className={`bg-white flex flex-col shadow-sm border-b border-gray-200 group ${
 										isVerified
 											? "border-gray-100 hover:border-blue-200"
 											: isDitolak
@@ -825,26 +794,9 @@ export default function KelembagaanList() {
 												: "border-gray-200 hover:border-gray-300"
 									}`}
 								>
-											{/* Gradient Bar */}
-											<div
-												className={`h-1.5 bg-gradient-to-r ${
-													isDitolak
-														? "from-red-400 to-red-500"
-														: !isVerified
-															? "from-gray-300 to-gray-400"
-															: type === "rw"
-																? "from-blue-400 to-blue-500"
-																: type === "posyandu"
-																	? "from-purple-500 to-purple-700"
-																	: type === "pkk"
-																		? "from-pink-500 to-rose-500"
-																		: "from-gray-400 to-gray-500"
-												} rounded-t-2xl`}
-											></div>
-
 											{/* Card Content Wrapper */}
 											<div
-												className="flex justify-between p-6 cursor-pointer"
+																className="flex justify-between px-3 py-3 cursor-pointer"
 												onClick={() =>
 													navigate(
 														isKecamatan?.()

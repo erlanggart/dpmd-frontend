@@ -55,12 +55,16 @@ const FORMATION_TYPES_REQUIRING_PRODUK_HUKUM = new Set([
 const requiresProdukHukum = (type) => FORMATION_TYPES_REQUIRING_PRODUK_HUKUM.has(type);
 
 // Confirmation Modal Component
-const ConfirmationModal = ({ isOpen, onClose, onConfirm, title, description, icon: Icon, gradient, loading, children, confirmDisabled = false, confirmLabel }) => {
+const ConfirmationModal = ({ isOpen, onClose, onConfirm, title, description, icon: Icon, loading, children, confirmDisabled = false, confirmLabel, collapsibleDescription = false }) => {
+	const [isDescriptionOpen, setIsDescriptionOpen] = useState(false);
+
+	useEffect(() => setIsDescriptionOpen(false), [isOpen, description]);
+
 	if (!isOpen) return null;
 
 	return (
 		<div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-fadeIn">
-			<div className="w-full max-w-4xl overflow-hidden rounded-2xl bg-white shadow-2xl animate-slideUp">
+			<div className="w-full max-w-4xl max-h-[calc(100dvh-2rem)] overflow-y-auto rounded-2xl bg-white shadow-2xl animate-slideUp">
 				{/* Header */}
 				<div className="flex items-center justify-between gap-4 border-b border-slate-200 px-6 py-5">
 					<div className="flex items-center gap-3">
@@ -89,7 +93,13 @@ const ConfirmationModal = ({ isOpen, onClose, onConfirm, title, description, ico
 								<LuInfo className="h-4 w-4" />
 							</div>
 							<div className="flex-1 prose prose-sm max-w-none">
-								<div className="text-slate-700 leading-relaxed space-y-3">
+								{collapsibleDescription && (
+									<button type="button" onClick={() => setIsDescriptionOpen((open) => !open)} className="flex w-full items-center justify-between rounded-lg bg-slate-50 px-4 py-3 text-left font-medium text-slate-700 hover:bg-slate-100">
+										<span>Ketentuan pembentukan</span>
+										{isDescriptionOpen ? <LuChevronUp className="h-4 w-4" /> : <LuChevronDown className="h-4 w-4" />}
+									</button>
+								)}
+								<div className={`text-slate-700 leading-relaxed space-y-3 ${collapsibleDescription && !isDescriptionOpen ? 'hidden' : ''}`}>
 									{description.split('\n\n').map((paragraph, idx) => {
 										// Check if paragraph contains numbered list (1., 2., etc)
 										if (/^\d+\./.test(paragraph.trim())) {
@@ -697,9 +707,7 @@ A			pakah Anda yakin ingin membentuk Karang Taruna ${wilayahLabel} ${desaName}?`
 
 			{/* 2 Column Layout */}
 			<div className="grid grid-cols-1 gap-5 lg:grid-cols-3">
-				{/* Left Column (2/3) */}
 				<div className="lg:col-span-2 space-y-5">
-
 			{/* ═══ Ringkasan Verifikasi ═══ */}
 			{summary.verifikasi && (() => {
 				const v = summary.verifikasi;
@@ -730,7 +738,7 @@ A			pakah Anda yakin ingin membentuk Karang Taruna ${wilayahLabel} ${desaName}?`
 
 				return (
 					<div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
-						<div className="px-5 py-4 border-b border-slate-100 flex items-center justify-between">
+						<div className="px-4 py-3 border-b border-slate-100 flex items-center justify-between">
 							<div className="flex items-center gap-3">
 								<div className="p-2 bg-slate-100 rounded-lg">
 									<LuShieldCheck className="w-5 h-5 text-slate-700" />
@@ -745,21 +753,21 @@ A			pakah Anda yakin ingin membentuk Karang Taruna ${wilayahLabel} ${desaName}?`
 								<p className="text-xs text-slate-500">Lembaga Terverifikasi</p>
 							</div>
 						</div>
-						<div className="px-5 py-3">
+						<div className="px-4 py-2">
 							{/* Progress bar */}
-							<div className="w-full bg-slate-100 rounded-full h-2 mb-4">
+							<div className="w-full bg-slate-100 rounded-full h-2 mb-2">
 								<div
 									className={`h-2 rounded-full transition-all duration-500 ${totalVerified === totalAll ? "bg-slate-500" : "bg-slate-500"}`}
 									style={{ width: `${totalAll > 0 ? (totalVerified / totalAll) * 100 : 0}%` }}
 								/>
 							</div>
-							<div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+							<div className="space-y-1.5">
 								{items.map((item) => {
 									const Icon = item.icon;
 									const isComplete = item.verified === item.total;
 									const hasDitolak = item.ditolak > 0;
 									return (
-										<div key={item.label} className={`flex items-center gap-2.5 px-3 py-2.5 rounded-lg border ${isComplete ? "bg-slate-50 border-slate-200" : hasDitolak ? "bg-rose-50 border-rose-200" : "bg-slate-50 border-slate-200"}`}>
+										<div key={item.label} className={`flex items-center gap-2.5 px-3 py-1.5 rounded-lg border ${isComplete ? "bg-slate-50 border-slate-200" : hasDitolak ? "bg-rose-50 border-rose-200" : "bg-slate-50 border-slate-200"}`}>
 											<Icon className={`w-4 h-4 flex-shrink-0 ${isComplete ? "text-slate-600" : hasDitolak ? "text-rose-500" : "text-slate-400"}`} />
 											<div className="min-w-0">
 												<p className="text-xs text-slate-500 truncate">{item.label}</p>
@@ -824,7 +832,6 @@ A			pakah Anda yakin ingin membentuk Karang Taruna ${wilayahLabel} ${desaName}?`
 					</div>
 				</div>
 			)}
-
 			{/* ═══ SECTION 1: Lembaga Kemasyarakatan Desa ═══ */}
 			<div>
 				<div className="flex items-center gap-3 mb-4">
@@ -1574,13 +1581,12 @@ A			pakah Anda yakin ingin membentuk Karang Taruna ${wilayahLabel} ${desaName}?`
 				</div>
 				{/* End of Left Column */}
 
-				{/* Right Column - Activity Log (1/3) */}
 				<div className="lg:col-span-1">
 					<div className="sticky top-4">
 						<AktivitasLog mode="all" />
 					</div>
 				</div>
-				{/* End of Right Column */}
+
 			</div>
 			{/* End of Grid Layout */}
 
@@ -1594,6 +1600,7 @@ A			pakah Anda yakin ingin membentuk Karang Taruna ${wilayahLabel} ${desaName}?`
 				icon={modalConfig.icon}
 				gradient={modalConfig.gradient}
 				loading={creatingLembaga}
+				collapsibleDescription={['karang-taruna', 'pkk', 'lpm', 'satlinmas'].includes(modalConfig.type)}
 				confirmDisabled={Boolean((modalRequiresProdukHukum && !selectedProdukHukumId) || (modalConfig.type === 'lembaga-lainnya' && !namaLembagaLainnya.trim()))}
 				confirmLabel={modalConfig.type === 'lembaga-lainnya' ? 'Oke, Buat' : 'Oke, Bentuk'}
 			>
