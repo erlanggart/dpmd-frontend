@@ -1,7 +1,7 @@
 // Empat angka kepala halaman Statistik BUMDes, mengikuti irisan filter.
 import React from 'react';
 import { Building2, CheckCircle2, ScrollText, TrendingUp } from 'lucide-react';
-import { EASE, nf, persenDari, useAngkaBergerak, useTampil, WARNA_AKTIF } from './bumdesFormat';
+import { EASE, nf, persenDari, useAngkaBergerak, useTampil, RAMP, WARNA_AKTIF } from './bumdesFormat';
 
 /**
  * Angka dan meterannya baru berjalan saat ubinnya masuk layar, dan berjalan
@@ -25,7 +25,10 @@ const Ubin = ({ icon: Icon, label, nilai, dari, keterangan, tanpaMeteran, urutan
         <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-500">
           {label}
         </p>
-        <span className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg bg-slate-100 text-slate-500 transition-colors group-hover:bg-slate-900 group-hover:text-white">
+        <span
+          className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg transition-colors group-hover:bg-slate-900 group-hover:text-white"
+          style={{ backgroundColor: `${RAMP[2]}1f`, color: RAMP[2] }}
+        >
           <Icon className="h-4 w-4" />
         </span>
       </div>

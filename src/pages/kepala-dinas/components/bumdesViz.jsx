@@ -88,12 +88,20 @@ export const Kartu = ({ children, className = '' }) => {
   );
 };
 
-export const Judul = ({ icon: Icon, children, catatan, aksi }) => (
+/**
+ * Judul kartu. `warna` mewarnai lencana ikonnya dengan rona panel itu sendiri,
+ * sehingga tiap kartu punya penanda yang sama dengan batang di bawahnya —
+ * tanpa warna itu, semua kartu berkepala abu-abu yang serupa.
+ */
+export const Judul = ({ icon: Icon, children, catatan, aksi, warna }) => (
   <div className="mb-4 flex items-start justify-between gap-4">
     <div className="min-w-0">
       <div className="flex items-center gap-2">
         {Icon && (
-          <span className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-lg bg-slate-100 text-slate-500">
+          <span
+            className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-lg bg-slate-100 text-slate-500"
+            style={warna ? { backgroundColor: `${warna}1f`, color: warna } : undefined}
+          >
             <Icon className="h-4 w-4" />
           </span>
         )}
@@ -344,6 +352,105 @@ export const Cincin = ({ nilai, total, warna = WARNA_AKTIF, label, tengah, bawah
         </div>
       </div>
       {label && <p className="mt-2 text-center text-xs text-slate-500">{label}</p>}
+    </div>
+  );
+};
+
+/* ------------------------------------------------------------------- peta -- */
+
+/**
+ * Peta panas: satu sel per wilayah, warna menurut besarannya.
+ *
+ * KENAPA BUKAN BATANG. Tiga puluh sembilan kecamatan sebagai batang bertumpuk
+ * menuntut kotak gulir sendiri — pembacanya menggulir untuk membandingkan dua
+ * wilayah yang kebetulan berjauhan di daftar. Sebagai kisi, semuanya muat di
+ * satu layar dan pola persebarannya terbaca sekaligus. Bentuk ini memang yang
+ * dianjurkan untuk "bandingkan besaran pada sebuah kisi".
+ *
+ * WARNA. Tangga sekuensial satu rona — makin pekat makin banyak. Bukan warna
+ * kategori: nama kecamatan tidak punya urutan, yang berurut justru angkanya.
+ *
+ * Angkanya DITULIS di tiap sel, tidak hanya diwakili warna. Dua langkah tangga
+ * yang bersebelahan memang sengaja berjarak cukup untuk dibedakan, tapi mata
+ * tetap buruk menaksir nilai dari kepekatan — dan langkah paling terang tidak
+ * mencapai 3:1 terhadap latar.
+ */
+export const Peta = ({ sel, ramp, onKlik, terpilih }) => {
+  const [disorot, setDisorot] = useState(null);
+  const { arahkan, dariElemen, sembunyi, simpul } = usePetunjuk();
+
+  const maks = Math.max(1, ...sel.map((s) => s.nilai));
+
+  // Enam langkah tangga dipetakan dari nilai, bukan dari peringkat: dua wilayah
+  // bernilai sama harus berwarna sama walau urutannya berbeda.
+  const langkah = (nilai) => {
+    if (nilai <= 0) return -1;
+    const bagian = Math.ceil((nilai / maks) * ramp.length);
+    return Math.min(Math.max(bagian - 1, 0), ramp.length - 1);
+  };
+
+  return (
+    <div>
+      <div className="grid grid-cols-2 gap-1.5 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6">
+        {sel.map((s, i) => {
+          const idx = langkah(s.nilai);
+          const kosong = idx < 0;
+          const warna = kosong ? '#f1f5f9' : ramp[idx];
+          // Tiga langkah terpekat butuh teks putih; sisanya tetap gelap.
+          const teksTerang = idx >= 2;
+          const isi = {
+            judul: s.label,
+            baris: s.rincian || [{ warna, teks: `${nf.format(s.nilai)} BUMDes` }],
+          };
+
+          return (
+            <button
+              key={s.label}
+              type="button"
+              onClick={() => onKlik?.(s.label)}
+              onPointerMove={(e) => { arahkan(e, isi); setDisorot(i); }}
+              onPointerLeave={() => { sembunyi(); setDisorot(null); }}
+              onFocus={(e) => { dariElemen(e.currentTarget, isi); setDisorot(i); }}
+              onBlur={() => { sembunyi(); setDisorot(null); }}
+              className={`group relative flex min-h-[64px] flex-col justify-between rounded-lg p-2.5 text-left outline-none transition-[transform,box-shadow] duration-200 focus-visible:ring-2 focus-visible:ring-slate-900 ${
+                onKlik ? 'cursor-pointer' : 'cursor-default'
+              } ${disorot === i ? '-translate-y-0.5 shadow-md shadow-slate-900/15' : ''} ${
+                terpilih === s.label ? 'ring-2 ring-slate-900 ring-offset-1' : ''
+              }`}
+              style={{ backgroundColor: warna }}
+            >
+              <span
+                className={`line-clamp-2 text-[10.5px] font-medium leading-tight ${
+                  teksTerang ? 'text-white/85' : 'text-slate-600'
+                }`}
+              >
+                {s.label}
+              </span>
+              <span
+                className={`text-[17px] font-semibold leading-none tabular-nums ${
+                  teksTerang ? 'text-white' : 'text-slate-900'
+                }`}
+              >
+                {nf.format(s.nilai)}
+              </span>
+            </button>
+          );
+        })}
+      </div>
+
+      {/* Tangga warna: tanpa ini kepekatan tidak punya satuan. */}
+      <div className="mt-3.5 flex items-center gap-2">
+        <span className="text-[10.5px] text-slate-500">sedikit</span>
+        <span className="flex h-2 flex-1 gap-[2px]">
+          {ramp.map((w) => (
+            <span key={w} className="h-2 flex-1 rounded-[2px]" style={{ backgroundColor: w }} />
+          ))}
+        </span>
+        <span className="text-[10.5px] text-slate-500">banyak</span>
+        <span className="ml-1 text-[10.5px] tabular-nums text-slate-400">maks {nf.format(maks)}</span>
+      </div>
+
+      {simpul}
     </div>
   );
 };

@@ -4,12 +4,23 @@ import API_CONFIG from '../../../config/api';
 // Dipisah dari komponennya karena satu berkas yang mengekspor komponen DAN
 // konstanta mematikan fast refresh saat pengembangan.
 //
-// WARNA. Satu hue slate, terang -> gelap. Seluruh data berkategori di halaman
-// ini BERURUT (belum proses..terbit sertifikat, Perintis..Maju, kelas omset,
-// aktif vs tidak aktif), jadi tangga ordinal satu hue — bukan palet
-// kategorikal. Divalidasi sebagai ordinal: lightness menurun rata, jarak antar
-// langkah >= 0.06, dan langkah paling terang (#94a3b8) mencapai 2,56:1 terhadap
-// permukaan putih, di atas lantai 2:1.
+// WARNA. Seluruh data berkategori di halaman ini BERURUT (belum proses..terbit
+// sertifikat, Perintis..Maju, kelas omset, aktif vs tidak aktif), jadi yang
+// dipakai tangga ORDINAL satu rona — bukan palet kategorikal yang berganti rona
+// tiap batang.
+//
+// Sebelumnya tangganya slate, dan seluruh halaman jadi abu-abu tanpa satu pun
+// titik warna. Ordinal tidak mengharuskan abu-abu; ia hanya mengharuskan SATU
+// rona per konteks. Karena halaman ini memuat DUA konteks berurut sekaligus —
+// tahapan badan hukum dan kelas BUM Desa — keduanya diberi ramp sendiri: biru
+// untuk yang pertama, oranye untuk yang kedua.
+//
+// Keduanya divalidasi sebagai ordinal pada latar terang, dan hasilnya:
+//   lightness monoton, jarak antar langkah >= 0.06, dan langkah paling terang
+//   masih di atas lantai 2:1 terhadap permukaan (#86b6ef 2,06:1; #eda27b 2,1:1).
+// Jangan menyisipkan langkah di tengah tanpa menjalankan ulang validatornya —
+// dua langkah bersebelahan yang terlalu dekat membuat urutannya berhenti
+// terbaca.
 //
 // Karena langkah paling terang TIDAK mencapai 3:1, setiap batang wajib
 // berlabel angka yang terbaca tanpa hover, dan tabel direktori di bawah
@@ -20,15 +31,22 @@ import API_CONFIG from '../../../config/api';
 // besar pada kategori tanpa urutan hanya mengulang panjang batang dengan hue.
 import { useEffect, useRef, useState } from 'react';
 
-/** Tangga ordinal slate, terang -> gelap. */
-export const RAMP = ['#94a3b8', '#64748b', '#475569', '#334155', '#1e293b', '#0f172a'];
+/** Tangga ordinal biru, terang -> gelap. Konteks berurut utama. */
+export const RAMP = ['#86b6ef', '#5598e7', '#2a78d6', '#1c5cab', '#104281', '#0a2650'];
+
+/**
+ * Tangga ordinal oranye untuk konteks berurut KEDUA di halaman yang sama
+ * (kelas BUM Desa). Dua konteks berurut berdampingan tidak boleh memakai rona
+ * yang sama — pembacanya akan mengira keduanya satu skala.
+ */
+export const RAMP_AKSEN = ['#eda27b', '#e87b45', '#d9591f', '#ad4419', '#7d3012', '#4f1e0b'];
 
 /** Warna tunggal untuk kategori tanpa urutan. */
-export const WARNA_TUNGGAL = '#334155';
+export const WARNA_TUNGGAL = '#2a78d6';
 
 /** Dua langkah untuk pasangan berurut aktif / tidak aktif. */
-export const WARNA_AKTIF = '#0f172a';
-export const WARNA_TIDAK_AKTIF = '#94a3b8';
+export const WARNA_AKTIF = '#104281';
+export const WARNA_TIDAK_AKTIF = '#86b6ef';
 
 export const nf = new Intl.NumberFormat('id-ID');
 

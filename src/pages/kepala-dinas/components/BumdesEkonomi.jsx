@@ -90,7 +90,7 @@ const BumdesEkonomi = ({ data = [] }) => {
   return (
     <div className="space-y-5">
       <Kartu>
-        <Judul icon={Database}>BUMDes yang berusaha</Judul>
+        <Judul icon={Database} warna={RAMP[2]}>BUMDes yang berusaha</Judul>
 
         <div className="flex flex-col items-center gap-6 sm:flex-row sm:items-center sm:gap-8">
           <Cincin
@@ -139,7 +139,7 @@ const BumdesEkonomi = ({ data = [] }) => {
 
       <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
         <Kartu>
-          <Judul icon={TrendingUp}>Hasil usaha 2025</Judul>
+          <Judul icon={TrendingUp} warna={RAMP[2]}>Hasil usaha 2025</Judul>
           <div className="space-y-3.5">
             <Batang
               urutan={0}

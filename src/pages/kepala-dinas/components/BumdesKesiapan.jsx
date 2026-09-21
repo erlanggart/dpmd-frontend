@@ -63,7 +63,7 @@ const BumdesKesiapan = ({ data, filter, onFilter }) => {
     <div className="space-y-5">
       <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
         <Kartu>
-          <Judul icon={HandHeart}>Peran program pemerintah</Judul>
+          <Judul icon={HandHeart} warna={RAMP[2]}>Peran program pemerintah</Judul>
           <div className="space-y-3.5">
             {s.program.map((p, i) => (
               <Batang
@@ -100,7 +100,7 @@ const BumdesKesiapan = ({ data, filter, onFilter }) => {
         </Kartu>
 
         <Kartu>
-          <Judul icon={BadgeCheck}>Identitas legal</Judul>
+          <Judul icon={BadgeCheck} warna={RAMP[2]}>Identitas legal</Judul>
           <div className="space-y-3.5">
             {s.legal.map((l, i) => (
               <Batang
@@ -155,7 +155,7 @@ const BumdesKesiapan = ({ data, filter, onFilter }) => {
       </div>
 
       <Kartu>
-        <Judul icon={FolderCheck}>Kelengkapan dokumen</Judul>
+        <Judul icon={FolderCheck} warna={RAMP[2]}>Kelengkapan dokumen</Judul>
 
         <PitaBertumpuk
           total={s.total}

@@ -6,15 +6,16 @@ import {
   URUTAN_BADAN_HUKUM, URUTAN_PERINGKAT, BADAN_HUKUM_LAINNYA, PERINGKAT_KOSONG,
   isAktif, peringkatResmi, tahapBadanHukum,
 } from './bumdesFilter';
-import { Kartu, Judul, Batang, BatangTumpuk, Legenda, Kosong } from './bumdesViz';
-import { RAMP, WARNA_AKTIF, WARNA_TIDAK_AKTIF, nf, persenDari } from './bumdesFormat';
+import { Kartu, Judul, Batang, Peta, PitaBertumpuk, Kosong } from './bumdesViz';
+import { RAMP, RAMP_AKSEN, WARNA_AKTIF, WARNA_TIDAK_AKTIF, nf, persenDari } from './bumdesFormat';
 
-// 39 kecamatan dalam satu kotak gulir menuntut menggulir dua arah sekaligus.
-// Bawaannya sepuluh teratas, sisanya sejauh satu ketukan.
-const BATAS_RINGKAS = 10;
+// Sebagai kisi, seluruh kecamatan muat tanpa kotak gulir — jadi bawaannya
+// tampil semua. Tombol ringkas tetap ada untuk layar sempit, tempat 39 sel
+// berarti dua puluh baris.
+const BATAS_RINGKAS = 12;
 
 const BumdesCharts = ({ data, filter, onFilter }) => {
-  const [ringkas, setRingkas] = useState(true);
+  const [ringkas, setRingkas] = useState(false);
 
   const s = useMemo(() => {
     const total = data.length;
@@ -56,7 +57,6 @@ const BumdesCharts = ({ data, filter, onFilter }) => {
     );
   }
 
-  const maksBadanHukum = Math.max(1, ...s.badanHukum.map((b) => b.n));
   const maksPeringkat = Math.max(1, ...s.peringkat.map((p) => p.n));
   const tidakAktifTotal = s.total - s.aktifTotal;
   const tampilKecamatan = ringkas ? s.kecamatan.slice(0, BATAS_RINGKAS) : s.kecamatan;
@@ -64,31 +64,66 @@ const BumdesCharts = ({ data, filter, onFilter }) => {
   return (
     <div className="space-y-5">
       <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
+        {/* Tahapan badan hukum adalah BAGIAN DARI SATU keseluruhan — seluruh
+            BUM Desa terbagi habis ke lima tahap. Bentuk yang tepat untuk itu pita
+            bertumpuk, bukan lima batang sejajar yang justru menyembunyikan bahwa
+            jumlahnya genap seratus persen. */}
         <Kartu>
-          <Judul icon={ScrollText}>Badan hukum</Judul>
-          <div className="space-y-3">
+          <Judul
+            icon={ScrollText}
+            warna={RAMP[2]}
+            catatan={`${nf.format(s.total)} BUMDes terbagi habis ke lima tahap`}
+          >
+            Badan hukum
+          </Judul>
+
+          <PitaBertumpuk
+            total={s.total}
+            tinggi={18}
+            segmen={s.badanHukum.map((b, i) => ({
+              id: b.label,
+              label: b.label,
+              nilai: b.n,
+              warna: RAMP[i + 1],
+              onKlik: () => onFilter({
+                ...filter,
+                badanHukum: filter.badanHukum === b.label ? 'semua' : b.label,
+              }),
+            }))}
+          />
+
+          <ul className="mt-4 space-y-2">
             {s.badanHukum.map((b, i) => (
-              <Batang
-                key={b.label}
-                label={b.label}
-                nilai={b.n}
-                tampil={`${nf.format(b.n)} · ${persenDari(b.n, s.total)}%`}
-                maks={maksBadanHukum}
-                warna={RAMP[i + 2]}
-                urutan={i}
-                judulHover={`${b.n} BUMDes berstatus ${b.label}`}
-                aktifTersorot={filter.badanHukum === b.label}
-                onKlik={() => onFilter({
-                  ...filter,
-                  badanHukum: filter.badanHukum === b.label ? 'semua' : b.label,
-                })}
-              />
+              <li key={b.label}>
+                <button
+                  type="button"
+                  onClick={() => onFilter({
+                    ...filter,
+                    badanHukum: filter.badanHukum === b.label ? 'semua' : b.label,
+                  })}
+                  className={`-mx-2 flex w-[calc(100%+1rem)] items-center gap-2.5 rounded-lg px-2 py-1 text-left transition-colors hover:bg-slate-50 ${
+                    filter.badanHukum === b.label ? 'bg-slate-50' : ''
+                  }`}
+                >
+                  <span
+                    className="h-2.5 w-2.5 flex-shrink-0 rounded-[3px]"
+                    style={{ backgroundColor: RAMP[i + 1] }}
+                  />
+                  <span className="min-w-0 flex-1 truncate text-sm text-slate-700">{b.label}</span>
+                  <span className="flex-shrink-0 text-sm font-semibold tabular-nums text-slate-900">
+                    {nf.format(b.n)}
+                  </span>
+                  <span className="w-9 flex-shrink-0 text-right text-xs tabular-nums text-slate-400">
+                    {persenDari(b.n, s.total)}%
+                  </span>
+                </button>
+              </li>
             ))}
-          </div>
+          </ul>
         </Kartu>
 
         <Kartu>
-          <Judul icon={Award}>Kelas BUMDes</Judul>
+          <Judul icon={Award} warna={RAMP_AKSEN[2]}>Kelas BUMDes</Judul>
           <div className="space-y-3">
             {s.peringkat.map((p, i) => (
               <Batang
@@ -97,7 +132,7 @@ const BumdesCharts = ({ data, filter, onFilter }) => {
                 nilai={p.n}
                 tampil={`${nf.format(p.n)} · ${persenDari(p.n, s.peringkatTerdata || s.total)}%`}
                 maks={maksPeringkat}
-                warna={p.label === PERINGKAT_KOSONG ? RAMP[0] : RAMP[i + 1]}
+                warna={p.label === PERINGKAT_KOSONG ? RAMP_AKSEN[0] : RAMP_AKSEN[i + 1]}
                 urutan={i}
                 judulHover={`${p.n} BUMDes berkelas ${p.label}`}
                 aktifTersorot={filter.peringkat === p.label}
@@ -114,45 +149,33 @@ const BumdesCharts = ({ data, filter, onFilter }) => {
       <Kartu>
         <Judul
           icon={MapPin}
-          aksi={
-            <div className="hidden flex-shrink-0 sm:block">
-              <Legenda
-                butir={[
-                  { label: 'Aktif', warna: WARNA_AKTIF, nilai: s.aktifTotal },
-                  { label: 'Tidak aktif', warna: WARNA_TIDAK_AKTIF, nilai: tidakAktifTotal },
-                ]}
-              />
-            </div>
-          }
+          warna={RAMP[2]}
+          catatan={`Kepekatan sel menyatakan jumlah BUMDes. ${nf.format(s.aktifTotal)} aktif, ${nf.format(
+            tidakAktifTotal,
+          )} tidak aktif — rinciannya muncul saat sel disentuh.`}
         >
           Sebaran per kecamatan
         </Judul>
 
-        <div className="mb-3 sm:hidden">
-          <Legenda
-            butir={[
-              { label: 'Aktif', warna: WARNA_AKTIF, nilai: s.aktifTotal },
-              { label: 'Tidak aktif', warna: WARNA_TIDAK_AKTIF, nilai: tidakAktifTotal },
-            ]}
-          />
-        </div>
-
-        <div className={ringkas ? 'space-y-0.5' : 'max-h-[30rem] space-y-0.5 overflow-y-auto pr-1'}>
-          {tampilKecamatan.map((k, i) => (
-            <BatangTumpuk
-              key={k.label}
-              label={k.label}
-              aktif={k.aktif}
-              tidakAktif={k.tidakAktif}
-              maks={s.maksKecamatan}
-              urutan={i}
-              onKlik={() => onFilter({
-                ...filter,
-                kecamatan: filter.kecamatan === k.label ? 'semua' : k.label,
-              })}
-            />
-          ))}
-        </div>
+        {/* Kisi, bukan daftar batang: tiga puluh sembilan kecamatan sebagai
+            batang menuntut kotak gulir sendiri, dan membandingkan dua wilayah
+            yang berjauhan di daftar jadi mustahil tanpa menggulir bolak-balik. */}
+        <Peta
+          ramp={RAMP}
+          terpilih={filter.kecamatan !== 'semua' ? filter.kecamatan : null}
+          onKlik={(label) => onFilter({
+            ...filter,
+            kecamatan: filter.kecamatan === label ? 'semua' : label,
+          })}
+          sel={tampilKecamatan.map((k) => ({
+            label: k.label,
+            nilai: k.aktif + k.tidakAktif,
+            rincian: [
+              { warna: WARNA_AKTIF, teks: `${nf.format(k.aktif)} aktif` },
+              { warna: WARNA_TIDAK_AKTIF, teks: `${nf.format(k.tidakAktif)} tidak aktif` },
+            ],
+          }))}
+        />
 
         {s.kecamatan.length > BATAS_RINGKAS && (
           <button
