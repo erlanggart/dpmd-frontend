@@ -54,6 +54,10 @@ const BankeuProposal2025MonitoringPage = lazy(() => import('./spked/bankeu/Banke
 const DpmdBankeuPerubahanPage = lazy(() => import('./spked/bankeu-perubahan/DpmdBankeuPerubahanPage'));
 // Pengelolaan hari libur (tanggal merah) untuk blokir BA & Surat Pengantar
 const HariLiburManager = lazy(() => import('./spked/HariLiburManager'));
+// Akun operator desa. Satu komponen yang sama dipakai PMD dan Pemdes; yang
+// membedakan hanya prop `modul`, yang menyempitkan hak akses yang bisa
+// diberikan menjadi satu fitur saja (lihat config/bidangDesaPermissions.js).
+const ManajemenAkunDesaPage = lazy(() => import('./ManajemenAkunDesaPage'));
 
 const LoadingFallback = () => <PanelMemuat pesan="Menyiapkan modul…" />;
 
@@ -75,6 +79,20 @@ const TABS = [
 	{ id: 'bantuan-provinsi-lpj', label: 'LPJ Bantuan Provinsi', icon: FileText },
 	{ id: 'hari-libur', label: 'Hari Libur', icon: CalendarOff },
 	{ id: 'activity', label: 'Aktivitas', icon: Activity },
+];
+
+// Dua pintu di dalam tab Bantuan Keuangan: berkas bankeu-nya sendiri, dan
+// akun petugas desa yang mengunggahnya. Keduanya pekerjaan bidang ini, tapi
+// yang kedua tidak terikat tahun anggaran — jadi ia duduk di atas pemilih tahun,
+// bukan di dalamnya.
+const SUB_BANKEU = [
+	{ id: 'berkas', label: 'Tahun Anggaran' },
+	{ id: 'akun', label: 'Akun Operator' },
+];
+
+const SUB_BUMDES = [
+	{ id: 'data', label: 'Data BUMDes' },
+	{ id: 'akun', label: 'Akun Operator' },
 ];
 
 const SUB_BANKEU_2025 = [
@@ -106,6 +124,8 @@ const SpkedPage = () => {
 	const [activeTab, setActiveTab] = useState('overview');
 	const [bankeuYear, setBankeuYear] = useState(null); // null = layar pilih tahun
 	const [bankeu2025View, setBankeu2025View] = useState('penyaluran');
+	const [bankeuView, setBankeuView] = useState('berkas');
+	const [bumdesView, setBumdesView] = useState('data');
 
 	// Activity logs state
 	const [activityLogs, setActivityLogs] = useState([]);
@@ -201,7 +221,9 @@ const SpkedPage = () => {
 						if (id === 'bankeu') {
 							setBankeuYear(null);
 							setBankeu2025View('penyaluran');
+							setBankeuView('berkas');
 						}
+						if (id === 'bumdes') setBumdesView('data');
 					}}
 				/>
 
@@ -293,21 +315,33 @@ const SpkedPage = () => {
 				{/* ---------- BUMDes ---------- */}
 				{activeTab === 'bumdes' && (
 					<div key="bumdes" className="animate-fadeIn">
-						{/* Satu tampilan saja. Tambah, ubah, dan kelola dokumen kini
-						    berada DI DALAM halaman statistik — dulu tiga sub-tab
-						    terpisah yang menghitung angkanya sendiri-sendiri. */}
 						<PanelModul>
-							<div className="p-5">
-								<StatistikBumdes tersemat bisaKelola />
-							</div>
+							<SubTabs items={SUB_BUMDES} aktif={bumdesView} onPilih={setBumdesView} />
+							{/* Data BUMDes: satu tampilan saja. Tambah, ubah, dan kelola
+							    dokumen berada DI DALAM halaman statistik — dulu tiga sub-tab
+							    terpisah yang menghitung angkanya sendiri-sendiri. */}
+							{bumdesView === 'data' && (
+								<div className="p-5">
+									<StatistikBumdes tersemat bisaKelola />
+								</div>
+							)}
+							{bumdesView === 'akun' && <ManajemenAkunDesaPage tersemat modul="bumdes" />}
 						</PanelModul>
 					</div>
 				)}
 
 				{/* ---------- Bantuan Keuangan ---------- */}
 				{activeTab === 'bankeu' && (
-					<div key="bankeu" className="animate-fadeIn">
-						{!bankeuYear ? (
+					<div key="bankeu" className="animate-fadeIn space-y-4">
+						<div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+							<SubTabs items={SUB_BANKEU} aktif={bankeuView} onPilih={setBankeuView} />
+						</div>
+
+						{bankeuView === 'akun' ? (
+							<PanelModul>
+								<ManajemenAkunDesaPage tersemat modul="bankeu" />
+							</PanelModul>
+						) : !bankeuYear ? (
 							<div>
 								<h2 className="text-lg font-bold text-slate-900">Bantuan Keuangan</h2>
 								<p className="mt-0.5 text-sm text-slate-500">Pilih tahun anggaran yang ingin dibuka.</p>
