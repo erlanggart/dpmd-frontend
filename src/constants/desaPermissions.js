@@ -48,6 +48,11 @@ export const DESA_PERMISSIONS = [
 		description: "Unggah LPJ bantuan keuangan provinsi.",
 	},
 	{
+		key: "kerjasama-desa",
+		label: "Kerja Sama Desa",
+		description: "Perdes payung kerja sama, kerja sama antardesa, dan dengan pihak ketiga.",
+	},
+	{
 		key: "pesan",
 		label: "Pesan",
 		description: "Percakapan dengan DPMD, kecamatan, dan dinas terkait.",

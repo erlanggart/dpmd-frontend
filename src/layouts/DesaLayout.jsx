@@ -62,6 +62,14 @@ const menuItems = [
     icon: "store",
   },
   {
+    id: "kerjasama",
+    section: "Data Desa",
+    permission: "kerjasama-desa",
+    label: "Kerja Sama Desa",
+    path: "/desa/kerjasama",
+    icon: "briefcase",
+  },
+  {
     id: "bankeu",
     section: "Bantuan Keuangan",
     permission: "bankeu",

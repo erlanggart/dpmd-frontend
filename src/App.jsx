@@ -201,6 +201,9 @@ const ManajemenAkunPage = lazy(
   () => import("./pages/admin-desa/ManajemenAkunPage"),
 );
 const BumdesDesaPage = lazy(() => import("./pages/desa/bumdes/BumdesDesaPage"));
+const KerjasamaDesaPage = lazy(() =>
+  import("./pages/desa/kerjasama/KerjasamaDesaPage"),
+);
 
 // Pegawai routes - Using unified DPMDStaffLayout
 const PegawaiLayout = lazy(() =>
@@ -1089,6 +1092,12 @@ function App() {
 
                   <Route element={<DesaPermissionRoute permission="bumdes" />}>
                     <Route path="bumdes" element={<BumdesDesaPage />} />
+                  </Route>
+
+                  <Route
+                    element={<DesaPermissionRoute permission="kerjasama-desa" />}
+                  >
+                    <Route path="kerjasama" element={<KerjasamaDesaPage />} />
                   </Route>
 
                   <Route element={<DesaPermissionRoute permission="kelembagaan" />}>
