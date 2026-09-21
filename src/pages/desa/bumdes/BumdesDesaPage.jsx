@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import FormulirBumdes from '../../../components/bumdes/FormulirBumdes';
+import UnggahProdukHukumBumdes from '../../../components/bumdes/UnggahProdukHukumBumdes';
 import { useAuth } from "../../../context/AuthContext";
 import Swal from "sweetalert2";
 import {
@@ -63,6 +64,17 @@ const DokumenTersimpan = ({ field, nilai }) => {
 	);
 };
 
+/**
+ * Berkas produk hukum desa TIDAK tinggal di storage/uploads seperti dokumen
+ * BUM Desa, melainkan di storage/produk_hukum — itulah folder yang ditulis
+ * modul Produk Hukum maupun unggahan dari formulir ini. Sebelumnya tautan di
+ * sini memakai STORAGE_URL (= /uploads) dengan nama folder bertanda hubung,
+ * sehingga "Lihat dokumen" selalu berakhir 404 walau dokumennya ada.
+ */
+const BASIS_BERKAS = import.meta.env.VITE_IMAGE_BASE_URL || 'http://127.0.0.1:3001';
+const tautanProdukHukum = (namaBerkas) =>
+	`${BASIS_BERKAS}/storage/produk_hukum/${encodeURIComponent(namaBerkas)}`;
+
 const ProdukHukumTerpilih = ({ id, daftar }) => {
 	if (!id) return null;
 	const dipilih = (daftar || []).find((x) => String(x.id) === String(id));
@@ -70,7 +82,7 @@ const ProdukHukumTerpilih = ({ id, daftar }) => {
 	const berkas = String(dipilih.file).split("/").pop();
 	return (
 		<a
-			href={`${API_CONFIG.STORAGE_URL}/produk-hukum/${berkas}`}
+			href={tautanProdukHukum(berkas)}
 			target="_blank"
 			rel="noreferrer"
 			className="mt-1 text-xs text-slate-600 hover:text-slate-900 underline flex items-center gap-1"
@@ -249,6 +261,26 @@ const BumdesDesaPage = () => {
 			
 			setProdukHukumOptions({ perdes: [], sk: [] });
 		}
+	};
+
+	/**
+	 * Dokumen baru dari unggahan di dalam formulir.
+	 *
+	 * Ditambahkan ke daftar pilihan DAN langsung dipilih. Tanpa langkah kedua,
+	 * petugas yang baru saja mengunggah masih harus mencarinya sendiri di
+	 * dropdown — dan dokumen yang baru diunggah nyaris pasti dokumen yang ia
+	 * maksud.
+	 */
+	const terimaProdukHukumBaru = (fieldName, produkHukum) => {
+		const kunciDaftar = fieldName === 'Perdes' ? 'perdes' : 'sk';
+		const kunciForm =
+			fieldName === 'Perdes' ? 'produk_hukum_perdes_id' : 'produk_hukum_sk_bumdes_id';
+
+		setProdukHukumOptions((prev) => ({
+			...prev,
+			[kunciDaftar]: [produkHukum, ...(prev[kunciDaftar] || [])],
+		}));
+		setFormData((prev) => ({ ...prev, [kunciForm]: produkHukum.id }));
 	};
 
 	const handleInputChange = (field, value) => {
@@ -589,8 +621,9 @@ const BumdesDesaPage = () => {
 								</span>
 							</div>
 							<p className="text-sm text-slate-700">
-								Pilih dokumen PERDES dan SK BUMDES yang sudah diunggah lewat menu
-								Produk Hukum. Bila belum ada, unggah dulu di menu tersebut.
+								Pilih dokumen PERDES dan SK BUMDES yang sudah ada di menu Produk Hukum.
+								Bila belum ada, unggah langsung di sini — dokumennya sekalian tercatat
+								sebagai produk hukum desa, jadi tidak perlu diunggah dua kali.
 							</p>
 						</div>
 
@@ -601,8 +634,9 @@ const BumdesDesaPage = () => {
 									Belum Ada Produk Hukum
 								</h4>
 								<p className="text-xs text-yellow-700">
-									Anda belum mengunggah Peraturan Desa (PERDES) atau SK BUMDES.
-									Silakan unggah lebih dulu lewat menu <strong>Produk Hukum</strong>.
+									Belum ada Peraturan Desa (PERDES) atau SK BUMDES yang terdaftar untuk
+									desa ini. Unggah lewat tombol di bawah masing-masing pilihan — tidak
+									perlu akses menu <strong>Produk Hukum</strong>.
 								</p>
 							</div>
 						)}
@@ -620,6 +654,13 @@ const BumdesDesaPage = () => {
 							id={formData.produk_hukum_perdes_id}
 							daftar={produkHukumOptions.perdes}
 						/>
+						<UnggahProdukHukumBumdes
+							fieldName="Perdes"
+							label="Perdes Pendirian"
+							nomorAwal={formData.NomorPerdes}
+							bisaSunting={isEditing}
+							onSelesai={(ph) => terimaProdukHukumBaru('Perdes', ph)}
+						/>
 
 						{renderSelect(
 							"Surat Keputusan (SK) BUMDES",
@@ -633,6 +674,12 @@ const BumdesDesaPage = () => {
 						<ProdukHukumTerpilih
 							id={formData.produk_hukum_sk_bumdes_id}
 							daftar={produkHukumOptions.sk}
+						/>
+						<UnggahProdukHukumBumdes
+							fieldName="SK_BUM_Desa"
+							label="SK BUM Desa"
+							bisaSunting={isEditing}
+							onSelesai={(ph) => terimaProdukHukumBaru('SK_BUM_Desa', ph)}
 						/>
 					</div>
 				}

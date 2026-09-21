@@ -152,6 +152,27 @@ const BumdesDesaService = {
     }
   },
 
+  /**
+   * Buat Perdes / SK BUM Desa langsung dari formulir BUM Desa.
+   *
+   * Dikirim ke rute BUM Desa, BUKAN ke /produk-hukum, dan itu memang intinya:
+   * penjaganya hak akses "bumdes", sehingga operator yang tidak diberi akses
+   * modul Produk Hukum tetap bisa melengkapi dasar hukum BUM Desa-nya sendiri.
+   *
+   * @param {FormData} formData  file, field_name, nomor, tahun, tanggal_penetapan, judul?
+   */
+  createProdukHukum: async (formData) => {
+    try {
+      const response = await api.post('/desa/bumdes/produk-hukum', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      });
+      return response.data;
+    } catch (error) {
+      console.error('Error creating produk hukum from BUMDES:', error);
+      throw error;
+    }
+  },
+
   // Validate BUMDES data before submission
   validateBumdesData: (data) => {
     const errors = [];
