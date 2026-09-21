@@ -14,12 +14,16 @@
 // justru paling sulit dijawab.
 
 import React, { useCallback, useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import Swal from "sweetalert2";
+import toast from "react-hot-toast";
 import api from "../../api";
 import {
 	FiAlertCircle,
 	FiCheck,
 	FiChevronDown,
+	FiCopy,
+	FiDownload,
 	FiEdit2,
 	FiEye,
 	FiEyeOff,
@@ -33,6 +37,7 @@ import {
 	FiUserCheck,
 	FiUsers,
 	FiX,
+	FiZap,
 } from "react-icons/fi";
 
 const formKosong = {
@@ -318,8 +323,421 @@ const KartuAkun = ({ user, labelPermission, onUbah, onUbahStatus }) => {
 	);
 };
 
-const ManajemenAkunDesaPage = () => {
+/**
+ * Pembuatan akun operator secara massal.
+ *
+ * Dipakai ketika puluhan desa belum punya operator untuk satu fitur dan
+ * membuatkannya satu per satu lewat form berarti ratusan kali mengetik hal yang
+ * sama. Alurnya tiga langkah dan sengaja tidak bisa dipotong:
+ *
+ *   1. TEMPLATE — staf menyusun bentuk emailnya sendiri. Tidak ada bentuk baku
+ *      yang dipaksakan karena tiap bidang punya kebiasaan penamaan sendiri.
+ *   2. PRATINJAU — daftar desa sasaran beserta email yang akan dipakai, plus
+ *      desa yang dilewati beserta alasannya. Template salah ketik paling mahal
+ *      diperbaiki setelah ratusan akun terbentuk.
+ *   3. HASIL — daftar email yang jadi, bisa disalin atau diunduh, karena inilah
+ *      satu-satunya saat sandi dan email berkumpul di satu layar.
+ *
+ * Desa yang sudah punya operator TIDAK PERNAH disentuh. Penyaringannya dilakukan
+ * server (lihat susunRencanaGenerate di bidangAkunDesa.controller.js), dihitung
+ * ulang saat tombol ditekan — bukan dari daftar pratinjau yang bisa saja sudah
+ * basi karena staf lain membuat akun di menit yang sama.
+ */
+const ModalGenerateAkun = ({ meta, kecamatanTerpilih, modulSlug, onSelesai, onTutup }) => {
+  const [template, setTemplate] = useState(meta?.template_bawaan || "");
+  const [seKabupaten, setSeKabupaten] = useState(!kecamatanTerpilih);
+  const [pratinjau, setPratinjau] = useState(null);
+  const [memuat, setMemuat] = useState(false);
+  const [menjalankan, setMenjalankan] = useState(false);
+  const [hasil, setHasil] = useState(null);
+
+  const cakupanKecamatanId = seKabupaten ? null : kecamatanTerpilih?.id || null;
+
+  const badanPermintaan = () => ({
+    modul: modulSlug,
+    template: template.trim(),
+    ...(cakupanKecamatanId ? { kecamatan_id: cakupanKecamatanId } : {}),
+  });
+
+  const ambilPratinjau = async () => {
+    setMemuat(true);
+    try {
+      const res = await api.post("/bidang/akun-desa/generate/pratinjau", badanPermintaan());
+      setPratinjau(res.data?.data || null);
+    } catch (error) {
+      setPratinjau(null);
+      Swal.fire({
+        icon: "error",
+        title: "Template belum bisa dipakai",
+        text: pesanError(error, "Gagal menyusun pratinjau."),
+      });
+    } finally {
+      setMemuat(false);
+    }
+  };
+
+  const jalankan = async () => {
+    const jumlah = pratinjau?.ringkasan?.baru || 0;
+    const konfirmasi = await Swal.fire({
+      icon: "question",
+      title: `Buat ${jumlah} akun sekarang?`,
+      html:
+        `<div style="text-align:left;font-size:14px">` +
+        `<p style="margin:0 0 8px">Semua akun memakai sandi <b>${pratinjau?.sandi_default}</b> dan wajib menggantinya saat login pertama.</p>` +
+        `<p style="margin:0;color:#64748b;font-size:12.5px">Desa yang sudah punya operator tidak akan disentuh.</p>` +
+        `</div>`,
+      showCancelButton: true,
+      confirmButtonText: `Ya, buat ${jumlah} akun`,
+      cancelButtonText: "Batal",
+      confirmButtonColor: "#0f172a",
+    });
+    if (!konfirmasi.isConfirmed) return;
+
+    setMenjalankan(true);
+    try {
+      const res = await api.post("/bidang/akun-desa/generate", badanPermintaan());
+      setHasil(res.data?.data || null);
+      onSelesai();
+    } catch (error) {
+      Swal.fire({
+        icon: "error",
+        title: "Gagal membuat akun",
+        text: pesanError(error, "Terjadi kesalahan."),
+      });
+    } finally {
+      setMenjalankan(false);
+    }
+  };
+
+  // Email + sandi hanya berkumpul di layar ini sekali. Sesudah modal ditutup,
+  // sandinya tidak ditampilkan lagi di mana pun, jadi keduanya harus bisa
+  // dibawa keluar dengan mudah.
+  const barisKredensial = () =>
+    (hasil?.dibuat || [])
+      .map((d) => `${d.desa.kecamatan?.nama || "-"};${d.desa.nama};${d.email};${hasil.sandi_default}`)
+      .join("\n");
+
+  const salin = async () => {
+    try {
+      await navigator.clipboard.writeText(`Kecamatan;Desa;Email;Sandi\n${barisKredensial()}`);
+      toast.success("Daftar akun disalin");
+    } catch {
+      toast.error("Gagal menyalin. Pakai tombol unduh.");
+    }
+  };
+
+  const unduh = () => {
+    const isi = `Kecamatan;Desa;Email;Sandi\n${barisKredensial()}`;
+    const url = URL.createObjectURL(new Blob([`\uFEFF${isi}`], { type: "text/csv;charset=utf-8;" }));
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `akun-operator-${modulSlug}-${new Date().toISOString().slice(0, 10)}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const KELAS_STATUS = {
+    baru: "bg-emerald-50 text-emerald-700 border-emerald-200",
+    sudah_punya: "bg-slate-50 text-slate-500 border-slate-200",
+    sudah_punya_nonaktif: "bg-amber-50 text-amber-700 border-amber-200",
+    email_terpakai: "bg-rose-50 text-rose-700 border-rose-200",
+    email_bentrok: "bg-rose-50 text-rose-700 border-rose-200",
+  };
+
+  const LABEL_STATUS = {
+    baru: "Akan dibuat",
+    sudah_punya: "Sudah ada operator",
+    sudah_punya_nonaktif: "Ada tapi nonaktif",
+    email_terpakai: "Email terpakai",
+    email_bentrok: "Email bentrok",
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-end justify-center bg-slate-950/60 p-0 backdrop-blur-sm sm:items-center sm:p-4">
+      <div
+        className="flex w-full max-h-[92vh] flex-col overflow-hidden rounded-t-3xl bg-white shadow-2xl sm:max-w-3xl sm:rounded-2xl"
+        style={{ maxHeight: "92dvh" }}
+      >
+        <div className="flex shrink-0 items-center justify-between gap-3 border-b border-slate-100 px-5 py-4">
+          <div className="min-w-0">
+            <h2 className="font-bold text-slate-900">
+              {hasil ? "Akun Selesai Dibuat" : "Generate Akun Operator Otomatis"}
+            </h2>
+            <p className="mt-0.5 text-xs text-slate-500">
+              {hasil
+                ? "Sampaikan email dan sandi di bawah ke masing-masing desa."
+                : `Hanya untuk desa yang belum punya operator ${meta?.modul?.label || "fitur ini"}.`}
+            </p>
+          </div>
+          <button
+            onClick={onTutup}
+            className="shrink-0 rounded-lg p-2 text-slate-500 hover:bg-slate-100"
+            aria-label="Tutup"
+          >
+            <FiX className="h-5 w-5" />
+          </button>
+        </div>
+
+        <div className="min-h-0 flex-1 space-y-4 overflow-y-auto px-5 py-4">
+          {hasil ? (
+            <>
+              <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4">
+                <p className="text-sm font-bold text-emerald-900">
+                  {hasil.dibuat.length} akun berhasil dibuat
+                </p>
+                <p className="mt-1 text-[12.5px] text-emerald-800">
+                  Semuanya memakai sandi{" "}
+                  <span className="rounded bg-white px-1.5 py-0.5 font-mono font-bold">
+                    {hasil.sandi_default}
+                  </span>{" "}
+                  dan akan diminta mengganti sandi sekaligus mengisi identitas petugas saat login
+                  pertama.
+                </p>
+                {hasil.gagal.length > 0 && (
+                  <p className="mt-2 text-[12.5px] font-semibold text-rose-700">
+                    {hasil.gagal.length} desa gagal dibuat — lihat daftar di bawah.
+                  </p>
+                )}
+              </div>
+
+              <div className="flex gap-2">
+                <button
+                  onClick={salin}
+                  className="inline-flex items-center gap-2 rounded-xl border border-slate-200 px-3.5 py-2 text-[13px] font-semibold text-slate-700 transition-colors hover:bg-slate-50"
+                >
+                  <FiCopy className="h-4 w-4" /> Salin daftar
+                </button>
+                <button
+                  onClick={unduh}
+                  className="inline-flex items-center gap-2 rounded-xl border border-slate-200 px-3.5 py-2 text-[13px] font-semibold text-slate-700 transition-colors hover:bg-slate-50"
+                >
+                  <FiDownload className="h-4 w-4" /> Unduh CSV
+                </button>
+              </div>
+
+              <div className="overflow-hidden rounded-xl border border-slate-200">
+                {hasil.dibuat.map((d) => (
+                  <div
+                    key={d.id}
+                    className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 px-3 py-2 last:border-b-0"
+                  >
+                    <span className="text-[13px] font-semibold text-slate-700">
+                      {d.desa.status_pemerintahan === "kelurahan" ? "Kel." : "Desa"} {d.desa.nama}
+                      <span className="ml-1.5 text-[11.5px] font-normal text-slate-400">
+                        Kec. {d.desa.kecamatan?.nama || "-"}
+                      </span>
+                    </span>
+                    <span className="break-all font-mono text-[12px] text-slate-600">{d.email}</span>
+                  </div>
+                ))}
+              </div>
+
+              {hasil.gagal.length > 0 && (
+                <div className="overflow-hidden rounded-xl border border-rose-200">
+                  {hasil.gagal.map((g, i) => (
+                    <div key={i} className="border-b border-rose-100 px-3 py-2 last:border-b-0">
+                      <p className="text-[13px] font-semibold text-rose-800">{g.desa.nama}</p>
+                      <p className="text-[11.5px] text-rose-700">{g.alasan}</p>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </>
+          ) : (
+            <>
+              <div>
+                <label className="mb-1.5 block text-sm font-semibold text-slate-700">
+                  Template Username (Email Login)
+                </label>
+                <input
+                  type="text"
+                  value={template}
+                  onChange={(e) => {
+                    setTemplate(e.target.value);
+                    setPratinjau(null);
+                  }}
+                  placeholder="bumdes.{kecamatan}.{desa}@dpmd.bogorkab.go.id"
+                  className={`${KELAS_INPUT} font-mono`}
+                />
+                <div className="mt-2 flex flex-wrap gap-1.5">
+                  {(meta?.token_template || []).map((t) => (
+                    <button
+                      key={t.token}
+                      type="button"
+                      title={t.keterangan}
+                      onClick={() => {
+                        setTemplate((v) => v + t.token);
+                        setPratinjau(null);
+                      }}
+                      className="rounded-lg border border-slate-200 bg-slate-50 px-2 py-1 font-mono text-[11px] text-slate-600 transition-colors hover:bg-slate-100"
+                    >
+                      {t.token}
+                    </button>
+                  ))}
+                </div>
+                <p className="mt-1.5 text-[11px] text-slate-500">
+                  Klik token untuk menyisipkannya. Template wajib memuat {"{desa}"} atau {"{kode}"},
+                  supaya tiap desa mendapat alamat yang berbeda.
+                </p>
+              </div>
+
+              <div>
+                <label className="mb-1.5 block text-sm font-semibold text-slate-700">Cakupan</label>
+                <div className="grid gap-2 sm:grid-cols-2">
+                  <button
+                    type="button"
+                    disabled={!kecamatanTerpilih}
+                    onClick={() => {
+                      setSeKabupaten(false);
+                      setPratinjau(null);
+                    }}
+                    className={`rounded-xl border p-3 text-left transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${
+                      !seKabupaten ? "border-slate-900 bg-slate-900/[0.04]" : "border-slate-200 hover:bg-slate-50"
+                    }`}
+                  >
+                    <span className="block text-sm font-semibold text-slate-800">
+                      Kecamatan terpilih
+                    </span>
+                    <span className="block text-[11.5px] text-slate-500">
+                      {kecamatanTerpilih ? `Kec. ${kecamatanTerpilih.nama}` : "Pilih kecamatan dulu di atas"}
+                    </span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSeKabupaten(true);
+                      setPratinjau(null);
+                    }}
+                    className={`rounded-xl border p-3 text-left transition-colors ${
+                      seKabupaten ? "border-slate-900 bg-slate-900/[0.04]" : "border-slate-200 hover:bg-slate-50"
+                    }`}
+                  >
+                    <span className="block text-sm font-semibold text-slate-800">Seluruh kabupaten</span>
+                    <span className="block text-[11.5px] text-slate-500">
+                      Semua desa & kelurahan yang belum punya operator
+                    </span>
+                  </button>
+                </div>
+              </div>
+
+              {pratinjau && (
+                <div className="space-y-3">
+                  <div className="flex flex-wrap gap-2">
+                    {Object.entries(LABEL_STATUS).map(([kunci, label]) => {
+                      const jumlah = pratinjau.ringkasan[kunci] || 0;
+                      if (!jumlah) return null;
+                      return (
+                        <span
+                          key={kunci}
+                          className={`rounded-lg border px-2.5 py-1 text-[11.5px] font-semibold ${KELAS_STATUS[kunci]}`}
+                        >
+                          {label}: {jumlah}
+                        </span>
+                      );
+                    })}
+                  </div>
+
+                  <div className="max-h-72 overflow-y-auto rounded-xl border border-slate-200">
+                    {pratinjau.kandidat.map((k) => (
+                      <div
+                        key={k.desa.id}
+                        className="flex flex-wrap items-start justify-between gap-2 border-b border-slate-100 px-3 py-2 last:border-b-0"
+                      >
+                        <div className="min-w-0">
+                          <p className="text-[13px] font-semibold text-slate-700">
+                            {k.desa.status_pemerintahan === "kelurahan" ? "Kel." : "Desa"} {k.desa.nama}
+                            <span className="ml-1.5 text-[11.5px] font-normal text-slate-400">
+                              Kec. {k.desa.kecamatan?.nama || "-"}
+                            </span>
+                          </p>
+                          <p className="break-all font-mono text-[11.5px] text-slate-500">{k.email}</p>
+                          {k.alasan && <p className="text-[11px] text-slate-400">{k.alasan}</p>}
+                        </div>
+                        <span
+                          className={`shrink-0 rounded-lg border px-2 py-0.5 text-[10.5px] font-bold uppercase tracking-wide ${KELAS_STATUS[k.status]}`}
+                        >
+                          {LABEL_STATUS[k.status]}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </>
+          )}
+        </div>
+
+        <div
+          className="flex shrink-0 gap-3 border-t border-slate-100 bg-white px-5 py-3"
+          style={{ paddingBottom: "calc(0.75rem + env(safe-area-inset-bottom))" }}
+        >
+          {hasil ? (
+            <button
+              type="button"
+              onClick={onTutup}
+              className="flex-1 rounded-xl bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-slate-800"
+            >
+              Selesai
+            </button>
+          ) : (
+            <>
+              <button
+                type="button"
+                onClick={onTutup}
+                className="flex-1 rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-50"
+              >
+                Batal
+              </button>
+              {!pratinjau ? (
+                <button
+                  type="button"
+                  onClick={ambilPratinjau}
+                  disabled={memuat || !template.trim()}
+                  className="flex-1 rounded-xl bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-slate-800 disabled:opacity-60"
+                >
+                  {memuat ? "Menyusun…" : "Lihat Pratinjau"}
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  onClick={jalankan}
+                  disabled={menjalankan || !(pratinjau.ringkasan.baru > 0)}
+                  className="flex-1 rounded-xl bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-slate-800 disabled:opacity-60"
+                >
+                  {menjalankan
+                    ? "Membuat akun…"
+                    : pratinjau.ringkasan.baru > 0
+                      ? `Buat ${pratinjau.ringkasan.baru} Akun`
+                      : "Tidak ada yang perlu dibuat"}
+                </button>
+              )}
+            </>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+const ManajemenAkunDesaPage = ({ modul = null, tersemat = false }) => {
+	/**
+	 * Modul yang sedang dibuka — "bankeu", "bumdes", atau null untuk halaman penuh.
+	 *
+	 * Dibaca dari prop (saat disematkan di dalam tab halaman bidang) maupun dari
+	 * query URL (saat dibuka sebagai halaman sendiri), supaya satu komponen ini
+	 * tetap melayani PMD dan Pemdes yang tidak memakai modul sama sekali.
+	 *
+	 * Nilainya dikirim pada SETIAP permintaan, bukan hanya saat memuat katalog:
+	 * server memakainya untuk mempersempit wewenang, jadi permintaan tanpa slug
+	 * akan tersimpan dengan cakupan bidang penuh — akun yang dibuat dari tab
+	 * Bankeu ikut membawa hak akses BUMDes.
+	 */
+	const [searchParams] = useSearchParams();
+	const modulSlug = modul || searchParams.get("modul") || null;
+	const paramModul = useMemo(() => (modulSlug ? { modul: modulSlug } : {}), [modulSlug]);
+
 	const [meta, setMeta] = useState(null);
+	const [modalGenerate, setModalGenerate] = useState(false);
 	const [desas, setDesas] = useState([]);
 	const [memuatAwal, setMemuatAwal] = useState(true);
 	const [galatAwal, setGalatAwal] = useState(null);
@@ -357,7 +775,7 @@ const ManajemenAkunDesaPage = () => {
 				// Daftar desa dipakai bersama seluruh aplikasi (location.routes.js).
 				// include_kelurahan wajib: kelurahan juga memakai halaman desa.
 				const [metaRes, desaRes] = await Promise.all([
-					api.get("/bidang/akun-desa/meta"),
+					api.get("/bidang/akun-desa/meta", { params: paramModul }),
 					api.get("/desas", { params: { include_kelurahan: 1 } }),
 				]);
 				if (batal) return;
@@ -374,7 +792,7 @@ const ManajemenAkunDesaPage = () => {
 		return () => {
 			batal = true;
 		};
-	}, []);
+	}, [paramModul]);
 
 	const kecamatans = useMemo(() => {
 		const peta = new Map();
@@ -407,7 +825,7 @@ const ManajemenAkunDesaPage = () => {
 	const muatAkun = useCallback(async () => {
 		setMemuatAkun(true);
 		try {
-			const params = {};
+			const params = { ...paramModul };
 			if (desaId) params.desa_id = desaId;
 			else if (kecamatanId) params.kecamatan_id = kecamatanId;
 			if (cari.trim()) params.q = cari.trim();
@@ -423,7 +841,7 @@ const ManajemenAkunDesaPage = () => {
 		} finally {
 			setMemuatAkun(false);
 		}
-	}, [desaId, kecamatanId, cari]);
+	}, [desaId, kecamatanId, cari, paramModul]);
 
 	useEffect(() => {
 		if (memuatAwal || galatAwal) return;
@@ -446,7 +864,9 @@ const ManajemenAkunDesaPage = () => {
 		}
 		setMemuatRingkasan(true);
 		try {
-			const res = await api.get(`/bidang/akun-desa/desa/${desaId}/ringkasan`);
+			const res = await api.get(`/bidang/akun-desa/desa/${desaId}/ringkasan`, {
+				params: paramModul,
+			});
 			setRingkasan(res.data?.data || null);
 		} catch (error) {
 			setRingkasan(null);
@@ -458,7 +878,7 @@ const ManajemenAkunDesaPage = () => {
 		} finally {
 			setMemuatRingkasan(false);
 		}
-	}, [desaId]);
+	}, [desaId, paramModul]);
 
 	useEffect(() => {
 		if (memuatAwal || galatAwal) return;
@@ -545,6 +965,7 @@ const ManajemenAkunDesaPage = () => {
 
 		try {
 			await api.put(`/bidang/akun-desa/users/${user.id}/permissions`, {
+				...paramModul,
 				// Kirim hak akses yang sudah ia punya dari bidang ini DITAMBAH fitur
 				// intinya. Yang di luar wewenang bidang tidak perlu ikut — server
 				// mempertahankannya sendiri lewat mergePermissions().
@@ -607,6 +1028,7 @@ const ManajemenAkunDesaPage = () => {
 		setMenyimpan(true);
 		try {
 			const payload = {
+				...paramModul,
 				name: form.name.trim(),
 				email: form.email.trim(),
 				jabatan_desa: form.jabatan_desa.trim(),
@@ -709,7 +1131,10 @@ const ManajemenAkunDesaPage = () => {
 		if (!konfirmasi.isConfirmed) return;
 
 		try {
-			await api.patch(`/bidang/akun-desa/users/${user.id}/status`, { is_active: jadiAktif });
+			await api.patch(`/bidang/akun-desa/users/${user.id}/status`, {
+				...paramModul,
+				is_active: jadiAktif,
+			});
 			await muatAkun();
 		} catch (error) {
 			Swal.fire({
@@ -745,7 +1170,16 @@ const ManajemenAkunDesaPage = () => {
 	if (galatAwal) return <KotakGalat pesan={galatAwal} />;
 
 	return (
-		<div className="mx-auto w-full max-w-6xl space-y-4 px-4 py-5 sm:px-6 sm:py-6 lg:px-8">
+		// Saat disematkan di dalam tab halaman bidang, lebar dan jarak tepi sudah
+		// diatur halaman induknya — menambahkannya lagi membuat konten menyempit
+		// dua kali.
+		<div
+			className={
+				tersemat
+					? "w-full space-y-4 p-4 sm:p-5"
+					: "mx-auto w-full max-w-6xl space-y-4 px-4 py-5 sm:px-6 sm:py-6 lg:px-8"
+			}
+		>
 			{/* ── Kepala halaman ──────────────────────────────────────────────── */}
 			<header className="relative overflow-hidden rounded-3xl bg-slate-950 px-5 py-5 text-white shadow-xl sm:px-7 sm:py-6">
 				<span
@@ -759,11 +1193,15 @@ const ManajemenAkunDesaPage = () => {
 
 				<div className="relative flex flex-wrap items-start justify-between gap-4">
 					<div className="min-w-0">
-						<h1 className="text-xl font-bold tracking-tight sm:text-2xl">Akun Operator Desa</h1>
+						<h1 className="text-xl font-bold tracking-tight sm:text-2xl">
+							{meta?.modul ? `Akun Operator ${meta.modul.label}` : "Akun Operator Desa"}
+						</h1>
 						<p className="mt-1 text-[13px] text-slate-400">
-							{meta?.bidang?.nama
-								? `Dibuat atas nama ${meta.bidang.nama}`
-								: "Buatkan akun petugas desa untuk fitur bidang Anda"}
+							{meta?.modul
+								? `Petugas desa yang mengurus ${meta.modul.label}${meta?.bidang?.nama ? ` — ${meta.bidang.nama}` : ""}`
+								: meta?.bidang?.nama
+									? `Dibuat atas nama ${meta.bidang.nama}`
+									: "Buatkan akun petugas desa untuk fitur bidang Anda"}
 						</p>
 					</div>
 					<div className="shrink-0 rounded-2xl bg-white/[0.07] px-4 py-2.5 text-center ring-1 ring-inset ring-white/10">
@@ -800,7 +1238,14 @@ const ManajemenAkunDesaPage = () => {
 			    bilah. Sebelumnya ketiganya jadi tiga blok bertumpuk, sehingga daftar
 			    akun baru mulai jauh di bawah lipatan layar. Lengket di atas supaya
 			    penyaring tetap terjangkau saat menelusuri ratusan akun. */}
-			<div className="sticky top-0 z-30 -mx-4 border-y border-slate-200 bg-white/85 px-4 py-3 backdrop-blur-md sm:mx-0 sm:rounded-2xl sm:border sm:px-4 sm:shadow-sm">
+			{/* Saat disematkan, "lengket" dimatikan: induknya punya overflow-hidden
+			    sehingga position:sticky tidak pernah menempel ke layar, dan yang
+			    tersisa hanya bilah yang ikut tergulung dengan z-index tinggi. */}
+			<div
+				className={`${
+					tersemat ? "" : "sticky top-0 z-30 "
+				}-mx-4 border-y border-slate-200 bg-white/85 px-4 py-3 backdrop-blur-md sm:mx-0 sm:rounded-2xl sm:border sm:px-4 sm:shadow-sm`}
+			>
 				<div className="flex flex-col gap-2.5 lg:flex-row lg:items-center">
 					<div className="grid flex-1 gap-2.5 sm:grid-cols-2">
 						<label className="relative block">
@@ -866,6 +1311,19 @@ const ManajemenAkunDesaPage = () => {
 								</button>
 							)}
 						</div>
+						{/* Generate massal hanya untuk halaman yang terikat satu fitur: tanpa
+						    modul, "sudah punya operator" tidak punya arti tunggal dan akun
+						    yang lahir akan membawa seluruh wewenang bidang sekaligus. */}
+						{modulSlug && (
+							<button
+								onClick={() => setModalGenerate(true)}
+								title="Buatkan akun untuk desa yang belum punya operator"
+								className="inline-flex shrink-0 items-center justify-center gap-2 rounded-xl border border-slate-900/10 bg-slate-100 px-3.5 py-2.5 text-sm font-semibold text-slate-800 transition-colors hover:bg-slate-200"
+							>
+								<FiZap className="h-4 w-4" />
+								<span className="hidden sm:inline">Generate</span>
+							</button>
+						)}
 						<button
 							onClick={bukaTambah}
 							className="inline-flex shrink-0 items-center justify-center gap-2 rounded-xl bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-slate-800"
@@ -1075,6 +1533,20 @@ const ManajemenAkunDesaPage = () => {
 						/>
 					))}
 				</div>
+			)}
+
+			{/* ── Modal generate massal ───────────────────────────────────────── */}
+			{modalGenerate && (
+				<ModalGenerateAkun
+					meta={meta}
+					modulSlug={modulSlug}
+					kecamatanTerpilih={kecamatanTerpilih}
+					onSelesai={() => {
+						muatAkun();
+						muatRingkasan();
+					}}
+					onTutup={() => setModalGenerate(false)}
+				/>
 			)}
 
 			{/* ── Modal tambah/ubah ───────────────────────────────────────────── */}
