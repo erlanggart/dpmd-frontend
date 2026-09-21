@@ -110,6 +110,20 @@ const SuperadminLayout = () => {
 	const [user, setUser] = React.useState(() => JSON.parse(localStorage.getItem("user") || "{}"));
 	const navigate = useNavigate();
 	const location = useLocation();
+
+	/**
+	 * Halaman bidang tidak memakai bilah atas ini.
+	 *
+	 * Tiap halaman bidang sudah punya kepala halamannya sendiri (BidangHeader:
+	 * tombol kembali, identitas bidang, dan aksinya), sehingga bilah pencarian
+	 * global di atasnya membuat dua header bertumpuk — dua baris yang memakan
+	 * tinggi layar sebelum isi halaman dimulai.
+	 *
+	 * Dicocokkan per SEGMEN, bukan lewat awalan "/superadmin/bidang": kalau
+	 * rutenya suatu saat dipindah mount-point, penanda ini ikut sendiri dan
+	 * tidak diam-diam menyala kembali.
+	 */
+	const diHalamanBidang = location.pathname.split('/').filter(Boolean).includes('bidang');
 	const { confirmDialog, showConfirm } = useConfirm();
 	const { isDesktop, isSidebarCollapsed, setIsSidebarCollapsed } = useResponsive();
 
@@ -447,8 +461,8 @@ const SuperadminLayout = () => {
 					isDesktop ? (isSidebarCollapsed ? "lg:ml-20" : "lg:ml-64") : "pb-24"
 				}`}
 			>
-				{/* Desktop Header Bar with Search */}
-				{isDesktop && (
+				{/* Desktop Header Bar with Search — disembunyikan di halaman bidang */}
+				{isDesktop && !diHalamanBidang && (
 					<div className="sticky top-0 z-30 bg-white/70 backdrop-blur-xl border-b border-slate-200/60 shadow-sm">
 						<div className="flex items-center justify-between px-6 py-3">
 							<div className="flex items-center gap-4">
