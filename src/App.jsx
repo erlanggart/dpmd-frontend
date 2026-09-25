@@ -14,7 +14,7 @@ import { Toaster, toast } from "react-hot-toast";
 import { useAuth } from "./context/AuthContext";
 import { useThemeColor } from "./hooks/useThemeColor";
 import { useDesaPermissions } from "./hooks/useDesaPermissions";
-import { isDinasPelihat } from "./utils/dinasPelihat";
+import { isDinasPelihat, canViewBankeuPerubahanPelihat } from "./utils/dinasPelihat";
 import { DataCacheProvider } from "./context/DataCacheContext";
 import { EditModeProvider } from "./context/EditModeContext.jsx";
 import { AlertProvider } from "./components/AlertPopup";
@@ -195,7 +195,8 @@ const PerjadinDetail = lazy(
   () => import("./pages/pegawai/perjadin/PerjadinDetail"),
 );
 const DesaLayout = lazy(() => import("./layouts/DesaLayout"));
-const DesaDashboard = lazy(() => import("./pages/desa/DesaDashboardPage"));
+const DesaBeranda = lazy(() => import("./pages/desa/DesaBerandaPage"));
+const KatalogProdukBumdesPage = lazy(() => import("./pages/desa/bumdes/KatalogProdukBumdesPage"));
 const AdminDesaLayout = lazy(() => import("./layouts/AdminDesaLayout"));
 const ManajemenAkunPage = lazy(
   () => import("./pages/admin-desa/ManajemenAkunPage"),
@@ -616,14 +617,15 @@ const NonPelihatRoute = ({ children }) => {
   return children || <Outlet />;
 };
 
-// Halaman pelihat hanya untuk akun dinas pelihat (BPKAD/Inspektorat).
-// Selama identitas dinas belum termuat di sesi, halaman tetap dirender dan
-// backend yang jadi penjaga terakhir (endpoint /api/dinas-pelihat/* menolak
-// selain mereka) — jadi akun lain tidak bisa mengintip lewat URL.
+// Halaman pelihat hanya untuk akun dinas pelihat (BPKAD/Inspektorat) dan DLH
+// (lihat semua proposal). Selama identitas dinas belum termuat di sesi, halaman
+// tetap dirender dan backend yang jadi penjaga terakhir (endpoint
+// /api/dinas-pelihat/* menolak selain mereka) — jadi akun lain tidak bisa
+// mengintip lewat URL.
 const DinasPelihatRoute = ({ children }) => {
   const { user } = useAuth();
 
-  if (user?.dinas && !isDinasPelihat(user)) {
+  if (user?.dinas && !canViewBankeuPerubahanPelihat(user)) {
     return <Navigate to="/dinas/dashboard" replace />;
   }
 
@@ -1082,7 +1084,8 @@ function App() {
                   }
                 >
                   {/* Dashboard & Pengaturan selalu terbuka untuk semua akun desa */}
-                  <Route path="dashboard" element={<DesaDashboard />} />
+                  {/* Operator khusus BUMDes melihat Katalog Produk BUMDes sebagai dashboard */}
+                  <Route path="dashboard" element={<DesaBeranda />} />
                   <Route path="settings" element={<DesaSettings />} />
 
                   {/* Sisanya mengikuti hak akses yang diberikan Admin Desa */}
@@ -1092,6 +1095,7 @@ function App() {
 
                   <Route element={<DesaPermissionRoute permission="bumdes" />}>
                     <Route path="bumdes" element={<BumdesDesaPage />} />
+                    <Route path="katalog-bumdes" element={<KatalogProdukBumdesPage />} />
                   </Route>
 
                   <Route

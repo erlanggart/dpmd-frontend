@@ -343,6 +343,10 @@ const KartuAkun = ({ user, labelPermission, onUbah, onUbahStatus }) => {
  * ulang saat tombol ditekan — bukan dari daftar pratinjau yang bisa saja sudah
  * basi karena staf lain membuat akun di menit yang sama.
  */
+// Jumlah desa per permintaan generate — cukup kecil untuk selesai jauh di bawah
+// batas waktu klien maupun proxy.
+const UKURAN_GELOMBANG = 40;
+
 const ModalGenerateAkun = ({ meta, kecamatanTerpilih, modulSlug, onSelesai, onTutup }) => {
   const [template, setTemplate] = useState(meta?.template_bawaan || "");
   const [seKabupaten, setSeKabupaten] = useState(!kecamatanTerpilih);
@@ -350,6 +354,7 @@ const ModalGenerateAkun = ({ meta, kecamatanTerpilih, modulSlug, onSelesai, onTu
   const [memuat, setMemuat] = useState(false);
   const [menjalankan, setMenjalankan] = useState(false);
   const [hasil, setHasil] = useState(null);
+  const [progres, setProgres] = useState(null); // { dibuat, target } selama berjalan
 
   const cakupanKecamatanId = seKabupaten ? null : kecamatanTerpilih?.id || null;
 
@@ -393,19 +398,66 @@ const ModalGenerateAkun = ({ meta, kecamatanTerpilih, modulSlug, onSelesai, onTu
     });
     if (!konfirmasi.isConfirmed) return;
 
+    // Dikirim per gelombang: ~416 desa dalam satu permintaan melewati batas
+    // waktu 30 detik, sehingga se-kabupaten dulu tidak pernah selesai. Server
+    // menghitung ulang rencananya setiap gelombang, jadi desa yang sudah
+    // dibuatkan akun otomatis dilewati.
     setMenjalankan(true);
+    setProgres({ dibuat: 0, target: jumlah });
+    const gabungan = { dibuat: [], gagal: [] };
+    let terakhir = null;
     try {
-      const res = await api.post("/bidang/akun-desa/generate", badanPermintaan());
-      setHasil(res.data?.data || null);
+      for (let putaran = 0; putaran < 50; putaran += 1) {
+        let res;
+        try {
+          res = await api.post(
+            "/bidang/akun-desa/generate",
+            { ...badanPermintaan(), gelombang: UKURAN_GELOMBANG },
+            { timeout: 120000 },
+          );
+        } catch (error) {
+          // 409 = tidak ada lagi desa yang perlu dibuatkan akun: selesai.
+          if (error.response?.status === 409 && gabungan.dibuat.length > 0) break;
+          throw error;
+        }
+        terakhir = res.data?.data || null;
+        gabungan.dibuat.push(...(terakhir?.dibuat || []));
+        gabungan.gagal.push(...(terakhir?.gagal || []));
+        setProgres({ dibuat: gabungan.dibuat.length, target: jumlah });
+        // Berhenti bila sudah habis, atau gelombang ini tidak menghasilkan
+        // apa pun (mencegah berputar pada kegagalan yang sama).
+        if (!terakhir?.sisa || (terakhir?.dibuat || []).length === 0) break;
+      }
+      setHasil({
+        ...(terakhir || {}),
+        dibuat: gabungan.dibuat,
+        gagal: gabungan.gagal,
+        ringkasan: { ...(terakhir?.ringkasan || {}), dibuat: gabungan.dibuat.length, gagal: gabungan.gagal.length },
+      });
       onSelesai();
     } catch (error) {
+      if (gabungan.dibuat.length > 0) {
+        // Sebagian sudah jadi: tampilkan yang sudah dibuat supaya kredensialnya
+        // tidak hilang, lalu beri tahu bahwa sisanya bisa dilanjutkan.
+        setHasil({
+          ...(terakhir || {}),
+          dibuat: gabungan.dibuat,
+          gagal: gabungan.gagal,
+          ringkasan: { ...(terakhir?.ringkasan || {}), dibuat: gabungan.dibuat.length, gagal: gabungan.gagal.length },
+        });
+        onSelesai();
+      }
       Swal.fire({
         icon: "error",
-        title: "Gagal membuat akun",
-        text: pesanError(error, "Terjadi kesalahan."),
+        title: gabungan.dibuat.length > 0 ? "Proses terhenti di tengah jalan" : "Gagal membuat akun",
+        text:
+          gabungan.dibuat.length > 0
+            ? `${gabungan.dibuat.length} akun sudah dibuat. Jalankan Generate lagi untuk melanjutkan desa yang tersisa — desa yang sudah punya akun otomatis dilewati.`
+            : pesanError(error, "Terjadi kesalahan."),
       });
     } finally {
       setMenjalankan(false);
+      setProgres(null);
     }
   };
 
@@ -705,7 +757,9 @@ const ModalGenerateAkun = ({ meta, kecamatanTerpilih, modulSlug, onSelesai, onTu
                   className="flex-1 rounded-xl bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-slate-800 disabled:opacity-60"
                 >
                   {menjalankan
-                    ? "Membuat akun…"
+                    ? progres
+                      ? `Membuat akun… ${progres.dibuat}/${progres.target}`
+                      : "Membuat akun…"
                     : pratinjau.ringkasan.baru > 0
                       ? `Buat ${pratinjau.ringkasan.baru} Akun`
                       : "Tidak ada yang perlu dibuat"}

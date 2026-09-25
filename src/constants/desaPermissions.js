@@ -73,5 +73,25 @@ export const DESA_JABATAN_OPTIONS = [
 	"Operator",
 ];
 
+/** Jabatan pada BUM Desa — dipakai akun operator BUMDes. */
+export const JABATAN_BUMDES_OPTIONS = [
+	"Penasehat BUM Desa (Kepala Desa)",
+	"Pengawas BUM Desa",
+	"Direktur BUM Desa",
+	"Sekretaris BUM Desa",
+	"Bendahara BUM Desa",
+];
+
+/**
+ * Akun operator yang HANYA memegang fitur BUMDes (selain Pesan), mis. hasil
+ * generate massal dari tab BUMDes. Akun seperti ini melihat jabatan BUM Desa
+ * saat melengkapi identitas dan katalog produk BUMDes sebagai dasbornya.
+ */
+export const isOperatorBumdes = (user) => {
+	if (String(user?.role || "").toLowerCase() !== "desa") return false;
+	const izin = Array.isArray(user?.desa_permissions) ? user.desa_permissions : [];
+	return izin.includes("bumdes") && izin.every((k) => k === "bumdes" || k === "pesan");
+};
+
 export const getDesaPermissionLabel = (key) =>
 	DESA_PERMISSIONS.find((p) => p.key === key)?.label || key;

@@ -4,6 +4,7 @@ import { ShieldAlert, Lock, Eye, EyeOff, Loader2, LogOut, CheckCircle2, User, Br
 import toast from 'react-hot-toast';
 import api from '../api';
 import { useAuth } from '../context/AuthContext';
+import { JABATAN_BUMDES_OPTIONS, isOperatorBumdes } from '../constants/desaPermissions';
 
 const DEFAULT_PASSWORD = 'password';
 const MIN_LENGTH = 8;
@@ -45,12 +46,17 @@ const ForceChangePasswordModal = () => {
   const [error, setError] = useState(null);
 
   const perluIdentitas = String(user?.role || '').toLowerCase() === 'desa';
+  // Operator BUMDes memilih jabatannya di BUM Desa, bukan bagian di kantor desa.
+  const operatorBumdes = isOperatorBumdes(user);
 
   // Nama bawaan sengaja TIDAK diisikan ke kotak: kalau diisikan, jalan termudah
   // bagi petugas adalah membiarkannya — dan justru nama itulah yang ingin diganti.
   const [identitas, setIdentitas] = useState(() => ({
     name: POLA_NAMA_BAWAAN.test(user?.name || '') ? '' : user?.name || '',
-    jabatan_desa: user?.jabatan_desa || '',
+    // Jabatan bawaan generate massal ("Operator BUMDes") bukan jabatan di BUM
+    // Desa — dikosongkan supaya operator BUMDes benar-benar memilih.
+    jabatan_desa:
+      isOperatorBumdes(user) && POLA_NAMA_BAWAAN.test(user?.jabatan_desa || '') ? '' : user?.jabatan_desa || '',
     no_hp: user?.no_hp || '',
   }));
 
@@ -177,9 +183,28 @@ const ForceChangePasswordModal = () => {
                   </div>
 
                   <div>
-                    <label className="mb-1 block text-sm font-medium text-gray-700">Jabatan / Bagian</label>
+                    <label className="mb-1 block text-sm font-medium text-gray-700">
+                      {operatorBumdes ? 'Jabatan di BUM Desa' : 'Jabatan / Bagian'}
+                    </label>
                     <div className="relative">
                       <Briefcase className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+                      {operatorBumdes ? (
+                        <select
+                          value={identitas.jabatan_desa}
+                          onChange={(e) => ubahIdentitas('jabatan_desa', e.target.value)}
+                          className={KELAS_INPUT}
+                          required
+                        >
+                          <option value="">Pilih jabatan</option>
+                          {/* Jabatan lama yang tidak ada di daftar tetap bisa dipertahankan. */}
+                          {identitas.jabatan_desa && !JABATAN_BUMDES_OPTIONS.includes(identitas.jabatan_desa) && (
+                            <option value={identitas.jabatan_desa}>{identitas.jabatan_desa}</option>
+                          )}
+                          {JABATAN_BUMDES_OPTIONS.map((opt) => (
+                            <option key={opt} value={opt}>{opt}</option>
+                          ))}
+                        </select>
+                      ) : (
                       <input
                         type="text"
                         list="saran-jabatan-operator"
@@ -189,8 +214,9 @@ const ForceChangePasswordModal = () => {
                         className={KELAS_INPUT}
                         required
                       />
+                      )}
                       <datalist id="saran-jabatan-operator">
-                        {JABATAN_SARAN.map((opt) => (
+                        {[...JABATAN_SARAN, ...JABATAN_BUMDES_OPTIONS].map((opt) => (
                           <option key={opt} value={opt} />
                         ))}
                       </datalist>

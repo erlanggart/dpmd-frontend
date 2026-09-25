@@ -17,19 +17,24 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Loader2, Upload, FileText, Check } from 'lucide-react';
 import toast from 'react-hot-toast';
 import api from '../../api';
-import FormulirBumdes from './FormulirBumdes';
+import FormulirBumdes, { DaftarTahunan } from './FormulirBumdes';
+import ProdukBumdesManager from './ProdukBumdesManager';
 import {
-	DOKUMEN_BADAN_HUKUM, DOKUMEN_LAPORAN_KEUANGAN, KUNCI_BUMDES, nilaiAwalBumdes,
+	DOKUMEN_BADAN_HUKUM, DOKUMEN_LAPORAN_KEUANGAN, DOKUMEN_KETAHANAN_PANGAN, KUNCI_BUMDES,
+	DEF_LAPORAN_PERTANGGUNGJAWABAN, nilaiAwalBumdes, lengkapiDaftarDariKolomLama,
 } from './skemaBumdes';
 
+// Ditampilkan di bagian Dokumen. Dokumen ketahanan pangan diunggah dari
+// bagiannya sendiri di dalam formulir.
 const SEMUA_DOKUMEN = [...DOKUMEN_BADAN_HUKUM, ...DOKUMEN_LAPORAN_KEUANGAN];
+const KUNCI_BERKAS = [...SEMUA_DOKUMEN, ...DOKUMEN_KETAHANAN_PANGAN].map((d) => d.kunci);
 
 /** Ambil hanya kunci yang memang disunting formulir, buang sisanya. */
 const susunKiriman = (data) => {
 	const keluar = {};
 	for (const k of KUNCI_BUMDES) {
 		// Kolom path berkas ditolak backend; jangan ikut dikirim.
-		if (SEMUA_DOKUMEN.some((d) => d.kunci === k)) continue;
+		if (KUNCI_BERKAS.includes(k)) continue;
 		if (data[k] !== undefined && data[k] !== null) keluar[k] = data[k];
 	}
 	return keluar;
@@ -125,7 +130,10 @@ const PemilihDesa = ({ data, onPilih, terkunci }) => {
 
 const FormulirBumdesSpked = ({ awal = null, onSelesai }) => {
 	const sedangUbah = Boolean(awal?.id);
-	const [data, setData] = useState(() => ({ ...nilaiAwalBumdes(), ...(awal || {}) }));
+	// Baris lama: daftar bertahun disusun dari kolom tahunan supaya tampil dan
+	// tidak terhapus saat disimpan.
+	const [data, setData] = useState(() =>
+		awal ? lengkapiDaftarDariKolomLama({ ...nilaiAwalBumdes(), ...awal }) : nilaiAwalBumdes());
 	const [berkas, setBerkas] = useState({});   // kunci -> File
 	const [menyimpan, setMenyimpan] = useState(false);
 
@@ -199,6 +207,10 @@ const FormulirBumdesSpked = ({ awal = null, onSelesai }) => {
 
 	const slotDokumen = (
 		<div className="space-y-2">
+			<div className="mb-4 rounded-xl border border-slate-100 p-4">
+				<p className="mb-2 text-sm font-semibold text-slate-800">Laporan Pertanggungjawaban (tahun lain)</p>
+				<DaftarTahunan def={DEF_LAPORAN_PERTANGGUNGJAWABAN} nilai={data.LaporanPertanggungjawaban} onUbah={ubah} mati={false} />
+			</div>
 			<p className="text-xs text-slate-500">
 				Berkas diunggah setelah data tersimpan. Kosongkan bila tidak ingin mengganti.
 			</p>
@@ -245,6 +257,16 @@ const FormulirBumdesSpked = ({ awal = null, onSelesai }) => {
 				mode="spked"
 				slotAtas={<PemilihDesa data={data} onPilih={pilihDesa} terkunci={sedangUbah} />}
 				slotDokumen={slotDokumen}
+				berkasBaru={berkas}
+				onPilihBerkas={(kunci, file) => setBerkas((b) => ({ ...b, [kunci]: file }))}
+				// Produk katalog sama dengan yang dikelola desa di halaman BUMDes-nya.
+				// Hanya untuk BUMDes yang sudah tersimpan: produk butuh id-nya.
+				seksiTambahan={sedangUbah ? [{
+					id: 'produk',
+					judul: 'Produk BUM Desa',
+					keterangan: 'Produk yang tampil di Katalog Produk BUMDes. Perubahan produk langsung tersimpan.',
+					konten: <ProdukBumdesManager adaBumdes bumdesId={awal.id} />,
+				}] : []}
 				// SPKED memang pemilik kolom penilaian, jadi tidak dikunci
 				// baca-saja seperti di halaman desa.
 				tampilkanBacaSaja={false}

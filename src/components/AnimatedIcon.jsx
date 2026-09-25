@@ -30,6 +30,7 @@ import {
   MessageSquare,
   Contact,
   CalendarClock,
+  ShoppingBag,
 } from 'lucide-react';
 import './AnimatedIcon.css';
 
@@ -64,6 +65,7 @@ const ICON_MAP = {
   menu: Menu,
   archive: Archive,
   camera: Camera,
+  shopping: ShoppingBag,
 };
 
 const AnimatedIcon = ({ type, isActive, isHovered, className = 'w-5 h-5' }) => {

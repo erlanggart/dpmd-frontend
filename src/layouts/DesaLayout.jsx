@@ -62,6 +62,16 @@ const menuItems = [
     icon: "store",
   },
   {
+    // Etalase produk seluruh BUM Desa (tanpa transaksi). Untuk operator yang
+    // hanya memegang BUMDes, katalog ini sekaligus menjadi Dashboard-nya.
+    id: "katalog-bumdes",
+    section: "Data Desa",
+    permission: "bumdes",
+    label: "Katalog Produk BUMDes",
+    path: "/desa/katalog-bumdes",
+    icon: "shopping",
+  },
+  {
     id: "kerjasama",
     section: "Data Desa",
     permission: "kerjasama-desa",

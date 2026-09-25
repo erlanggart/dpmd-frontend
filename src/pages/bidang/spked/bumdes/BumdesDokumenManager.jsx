@@ -28,10 +28,31 @@ import {
 } from 'react-icons/fi';
 import API_CONFIG from '../../../../config/api';
 
+/**
+ * Tautan berkas dirakit di klien dari `path` (relatif /uploads) atau `jalur`
+ * (berkas di luar /uploads, mis. Produk Hukum di /storage/produk_hukum).
+ * `download_url` dari server dirakit dari BASE_URL, yang di lingkungan dev
+ * menunjuk origin frontend — hanya dipakai sebagai cadangan.
+ */
+const BASIS_BERKAS = import.meta.env.VITE_IMAGE_BASE_URL || 'http://127.0.0.1:3001';
+const urlDokumen = (item) => {
+  if (item?.jalur) return `${BASIS_BERKAS}${item.jalur}`;
+  if (item?.path) return `${API_CONFIG.STORAGE_URL}/${item.path.split('/').map(encodeURIComponent).join('/')}`;
+  return item?.download_url || null;
+};
+
+// document_type yang dikirim ke /delete-file per tab.
+const JENIS_HAPUS = {
+  'badan-hukum': 'dokumen_badan_hukum',
+  'laporan-keuangan': 'laporan_keuangan',
+  'pendukung': 'dokumen_pendukung',
+};
+
 const BumdesDokumenManager = () => {
   const [activeTab, setActiveTab] = useState('badan-hukum');
   const [dokumenBadanHukum, setDokumenBadanHukum] = useState([]);
   const [laporanKeuangan, setLaporanKeuangan] = useState([]);
+  const [dokumenPendukung, setDokumenPendukung] = useState([]);
   const [loading, setLoading] = useState(true);
   const [initialLoading, setInitialLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -120,6 +141,25 @@ const BumdesDokumenManager = () => {
     }
   };
 
+  const fetchDokumenPendukung = async () => {
+    try {
+      const token = localStorage.getItem('expressToken');
+      if (!token) throw new Error('Token tidak ditemukan. Silakan login kembali.');
+      const response = await fetch(`${API_CONFIG.BASE_URL}/bumdes/dokumen-pendukung`, {
+        method: 'GET',
+        headers: { Accept: 'application/json', 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        mode: 'cors',
+      });
+      if (!response.ok) throw new Error(`HTTP error! status: ${response.status} - ${response.statusText}`);
+      const result = await response.json();
+      if (result.status === 'success') setDokumenPendukung(result.data || []);
+      else throw new Error(result.message || 'Gagal mengambil dokumen pendukung');
+    } catch (error) {
+      console.error('Error fetching dokumen pendukung:', error);
+      setError(error.message);
+    }
+  };
+
   const parseDesaInfo = (desaString) => {
     if (!desaString) return { namaDesa: '' };
     const parts = desaString.split(',').map(part => part.trim());
@@ -136,7 +176,10 @@ const BumdesDokumenManager = () => {
       
       // Fetch laporan keuangan
       await fetchLaporanKeuangan();
-      
+
+      // Dokumen ketahanan pangan, bukti PADes, MoU kemitraan
+      await fetchDokumenPendukung();
+
     } catch (error) {
       console.error('Error in fetchAllData:', error);
       setError(`Failed to fetch data: ${error.message}`);
@@ -146,12 +189,12 @@ const BumdesDokumenManager = () => {
     }
   };
 
-  const extractLocationData = (dokumenData, laporanData) => {
+  const extractLocationData = (dokumenData, laporanData, pendukungData) => {
     const kecamatanSet = new Set();
     const desaSet = new Set();
-    
+
     // Combine all data
-    const allData = [...(dokumenData || []), ...(laporanData || [])];
+    const allData = [...(dokumenData || []), ...(laporanData || []), ...(pendukungData || [])];
     
     allData.forEach(item => {
       if (item.kecamatan) kecamatanSet.add(item.kecamatan);
@@ -171,8 +214,13 @@ const BumdesDokumenManager = () => {
     setTimeout(() => setNotification(null), 5000);
   };
 
-  // Delete file function
-  const handleDeleteFile = async (filename, folder, bumdesId = null) => {
+  // Delete file function. `field` wajib untuk berkas dari formulir baru
+  // (LPJ tahun baru, ketahanan pangan, bukti PADes, MoU) supaya backend tahu
+  // daftar/kolom mana yang harus dibersihkan.
+  const handleDeleteFile = async (item) => {
+    const filename = item.filename;
+    const folder = JENIS_HAPUS[activeTab];
+    const bumdesId = item.bumdes_id ?? item.id ?? null;
     if (!confirm(`Apakah Anda yakin ingin menghapus file "${filename}"? Tindakan ini tidak dapat dibatalkan.`)) {
       return;
     }
@@ -190,7 +238,8 @@ const BumdesDokumenManager = () => {
         body: JSON.stringify({
           filename,
           document_type: folder,
-          bumdes_id: bumdesId
+          bumdes_id: bumdesId,
+          field: item.field
         })
       });
 
@@ -221,13 +270,15 @@ const BumdesDokumenManager = () => {
 
   // Update location data when documents change
   useEffect(() => {
-    if (dokumenBadanHukum.length > 0 || laporanKeuangan.length > 0) {
-      extractLocationData(dokumenBadanHukum, laporanKeuangan);
+    if (dokumenBadanHukum.length > 0 || laporanKeuangan.length > 0 || dokumenPendukung.length > 0) {
+      extractLocationData(dokumenBadanHukum, laporanKeuangan, dokumenPendukung);
     }
-  }, [dokumenBadanHukum, laporanKeuangan]);
+  }, [dokumenBadanHukum, laporanKeuangan, dokumenPendukung]);
 
   const getCurrentData = () => {
-    return activeTab === 'badan-hukum' ? dokumenBadanHukum : laporanKeuangan;
+    if (activeTab === 'badan-hukum') return dokumenBadanHukum;
+    if (activeTab === 'pendukung') return dokumenPendukung;
+    return laporanKeuangan;
   };
 
   const filteredData = getCurrentData().filter(item => {
@@ -237,7 +288,12 @@ const BumdesDokumenManager = () => {
       item.kecamatan?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       item.filename?.toLowerCase().includes(searchTerm.toLowerCase());
 
-    const matchesType = filterType === 'all' || item.document_type === filterType;
+    // Dulu dibandingkan dengan document_type (isinya LABEL, mis. "Profil
+    // BUMDesa") padahal opsi saringan memakai KUNCI kolom — tidak pernah cocok.
+    // LPJ disaring per tahun, sisanya per kolom.
+    const matchesType =
+      filterType === 'all' ||
+      (activeTab === 'laporan-keuangan' ? String(item.year || '') === filterType : item.field === filterType);
     
     const matchesStatus = 
       filterStatus === 'all' ||
@@ -283,31 +339,6 @@ const BumdesDokumenManager = () => {
     setCurrentPage(1); // Reset to first page
   };
 
-  const getDocumentTypeLabel = (type) => {
-    if (activeTab === 'badan-hukum') {
-      const labels = {
-        Perdes: 'Peraturan Desa',
-        ProfilBUMDesa: 'Profil BUMDes',
-        BeritaAcara: 'Berita Acara',
-        AnggaranDasar: 'Anggaran Dasar',
-        AnggaranRumahTangga: 'Anggaran RT',
-        ProgramKerja: 'Program Kerja',
-        SK_BUM_Desa: 'SK BUMDes',
-        unlinked: 'Tidak Terhubung'
-      };
-      return labels[type] || type;
-    } else {
-      const labels = {
-        LaporanKeuangan2021: '2021',
-        LaporanKeuangan2022: '2022',
-        LaporanKeuangan2023: '2023',
-        LaporanKeuangan2024: '2024',
-        unlinked: 'Tidak Terhubung'
-      };
-      return labels[type] || type;
-    }
-  };
-
   const getStatusBadge = (item) => {
     if (item.document_type === 'unlinked') {
       return (
@@ -339,25 +370,28 @@ const BumdesDokumenManager = () => {
     if (activeTab === 'badan-hukum') {
       return [
         { value: 'all', label: 'Semua Dokumen' },
-        { value: 'Perdes', label: 'Peraturan Desa' },
-        { value: 'ProfilBUMDesa', label: 'Profil BUMDes' },
+        { value: 'Perdes', label: 'Perdes Pendirian' },
+        { value: 'ProfilBUMDesa', label: 'Profil BUM Desa' },
         { value: 'BeritaAcara', label: 'Berita Acara' },
-        { value: 'AnggaranDasar', label: 'Anggaran Dasar' },
-        { value: 'AnggaranRumahTangga', label: 'Anggaran RT' },
+        { value: 'AnggaranDasar', label: 'Anggaran Dasar (AD)' },
+        { value: 'AnggaranRumahTangga', label: 'Anggaran Rumah Tangga (ART)' },
         { value: 'ProgramKerja', label: 'Program Kerja' },
-        { value: 'SK_BUM_Desa', label: 'SK BUMDes' },
-        { value: 'unlinked', label: 'Tidak Terhubung' }
-      ];
-    } else {
-      return [
-        { value: 'all', label: 'Semua Tahun' },
-        { value: 'LaporanKeuangan2021', label: '2021' },
-        { value: 'LaporanKeuangan2022', label: '2022' },
-        { value: 'LaporanKeuangan2023', label: '2023' },
-        { value: 'LaporanKeuangan2024', label: '2024' },
-        { value: 'unlinked', label: 'Tidak Terhubung' }
+        { value: 'SK_BUM_Desa', label: 'SK Pendirian BUM Desa' },
       ];
     }
+    if (activeTab === 'pendukung') {
+      return [
+        { value: 'all', label: 'Semua Dokumen' },
+        { value: 'StudiKelayakanUsaha', label: 'Studi Kelayakan Usaha' },
+        { value: 'RABKetahananPangan', label: 'RAB Ketahanan Pangan' },
+        { value: 'DokumentasiGeotagging', label: 'Dokumentasi Geotagging' },
+        { value: 'BuktiPADes', label: 'Bukti Penyerahan PADes' },
+        { value: 'MoUKemitraan', label: 'MoU Kemitraan' },
+      ];
+    }
+    // Tahun LPJ mengikuti data yang ada (2021 … 2026, dst.), bukan daftar tetap.
+    const tahun = [...new Set(laporanKeuangan.map((d) => String(d.year || '')).filter(Boolean))].sort().reverse();
+    return [{ value: 'all', label: 'Semua Tahun' }, ...tahun.map((t) => ({ value: t, label: t }))];
   };
 
   // Show initial loading only on first load
@@ -468,7 +502,7 @@ const BumdesDokumenManager = () => {
                         Kelola Dokumen BUMDes
                       </h1>
                       <p className="text-slate-300 mt-2 text-lg">
-                        Kelola dokumen badan hukum dan laporan keuangan dari semua BUMDes di Kabupaten Bogor
+                        Kelola dokumen pendirian, laporan pertanggungjawaban, dan dokumen pendukung seluruh BUMDes di Kabupaten Bogor
                       </p>
                     </div>
                   </div>
@@ -534,7 +568,7 @@ const BumdesDokumenManager = () => {
           {/* Enhanced Tab Navigation - Dashboard Style */}
           <div className="bg-white/10 backdrop-blur-sm">
             <div className="px-8">
-              <nav className="flex space-x-6">
+              <nav className="flex space-x-6 overflow-x-auto">
                 <button
                   onClick={() => {
                     setActiveTab('badan-hukum');
@@ -556,7 +590,7 @@ const BumdesDokumenManager = () => {
                       <FiFileText className="w-5 h-5" />
                     </div>
                     <div className="text-left">
-                      <div className="font-bold">Dokumen Badan Hukum</div>
+                      <div className="font-bold">Dokumen Pendirian BUM Desa</div>
                       <div className="text-sm opacity-80">
                         {dokumenBadanHukum.length} dokumen
                       </div>
@@ -588,13 +622,45 @@ const BumdesDokumenManager = () => {
                       <FiBarChart2 className="w-5 h-5" />
                     </div>
                     <div className="text-left">
-                      <div className="font-bold">Laporan Keuangan</div>
+                      <div className="font-bold">Laporan Pertanggungjawaban</div>
                       <div className="text-sm opacity-80">
                         {laporanKeuangan.length} laporan
                       </div>
                     </div>
                   </div>
                   {activeTab === 'laporan-keuangan' && (
+                    <div className="absolute bottom-0 left-0 right-0 h-1 bg-white rounded-full shadow-lg" />
+                  )}
+                </button>
+
+                <button
+                  onClick={() => {
+                    setActiveTab('pendukung');
+                    setFilterType('all');
+                    setSearchTerm('');
+                  }}
+                  className={`relative py-6 px-4 font-semibold text-lg transition-all duration-300 ${
+                    activeTab === 'pendukung'
+                      ? 'text-white'
+                      : 'text-slate-300 hover:text-white'
+                  }`}
+                >
+                  <div className="flex items-center gap-4">
+                    <div className={`p-3 rounded-xl transition-all ${
+                      activeTab === 'pendukung'
+                        ? 'bg-white text-slate-800 shadow-lg'
+                        : 'bg-white/10 text-white'
+                    }`}>
+                      <FiArchive className="w-5 h-5" />
+                    </div>
+                    <div className="text-left">
+                      <div className="font-bold">Dokumen Pendukung</div>
+                      <div className="text-sm opacity-80">
+                        {dokumenPendukung.length} dokumen
+                      </div>
+                    </div>
+                  </div>
+                  {activeTab === 'pendukung' && (
                     <div className="absolute bottom-0 left-0 right-0 h-1 bg-white rounded-full shadow-lg" />
                   )}
                 </button>
@@ -794,7 +860,7 @@ const BumdesDokumenManager = () => {
                       BUMDes
                     </th>
                     <th className="px-6 py-4 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">
-                      {activeTab === 'badan-hukum' ? 'Jenis Dokumen' : 'Tahun'}
+                      {activeTab === 'laporan-keuangan' ? 'Laporan' : 'Jenis Dokumen'}
                     </th>
                     <th className="px-6 py-4 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">
                       File
@@ -828,7 +894,7 @@ const BumdesDokumenManager = () => {
                       </td>
                       <td className="px-6 py-4">
                         <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                          {getDocumentTypeLabel(item.document_type)}
+                          {item.document_type}
                         </span>
                         {item.sumber === 'produk_hukum' && (
                           <div className="mt-1 text-xs text-slate-500" title={item.produk_hukum?.judul || ''}>
@@ -859,10 +925,10 @@ const BumdesDokumenManager = () => {
                       </td>
                       <td className="px-6 py-4">
                         <div className="flex items-center gap-2">
-                          {item.file_exists && item.download_url && (
+                          {item.file_exists && urlDokumen(item) && (
                             <>
                               <button
-                                onClick={() => window.open(item.download_url, '_blank')}
+                                onClick={() => window.open(urlDokumen(item), '_blank')}
                                 className="p-2 bg-blue-50 hover:bg-blue-100 text-blue-600 rounded-lg transition-colors"
                                 title="Lihat file"
                               >
@@ -871,7 +937,7 @@ const BumdesDokumenManager = () => {
                               <button
                                 onClick={() => {
                                   const link = document.createElement('a');
-                                  link.href = item.download_url;
+                                  link.href = urlDokumen(item);
                                   link.download = item.filename;
                                   link.click();
                                 }}
@@ -882,11 +948,7 @@ const BumdesDokumenManager = () => {
                               </button>
                               {item.sumber !== 'produk_hukum' && (
                                 <button
-                                  onClick={() => handleDeleteFile(
-                                    item.filename,
-                                    activeTab === 'badan-hukum' ? 'dokumen_badan_hukum' : 'laporan_keuangan',
-                                    item.bumdes_id ?? item.id
-                                  )}
+                                  onClick={() => handleDeleteFile(item)}
                                   disabled={deleteLoading}
                                   className="p-2 bg-red-50 hover:bg-red-100 text-red-600 rounded-lg transition-colors disabled:opacity-50"
                                   title="Hapus file"
@@ -947,7 +1009,7 @@ const BumdesDokumenManager = () => {
 
                       <div>
                         <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-slate-100 text-slate-800">
-                          {getDocumentTypeLabel(item.document_type)}
+                          {item.document_type}
                         </span>
                         {item.sumber === 'produk_hukum' && (
                           <div className="mt-1 text-xs text-slate-500" title={item.produk_hukum?.judul || ''}>
@@ -972,10 +1034,10 @@ const BumdesDokumenManager = () => {
                       {/* Card Actions */}
                       <div className="flex items-center justify-between pt-2 border-t border-slate-100">
                         <div className="flex items-center gap-1">
-                          {item.file_exists && item.download_url && (
+                          {item.file_exists && urlDokumen(item) && (
                             <>
                               <button
-                                onClick={() => window.open(item.download_url, '_blank')}
+                                onClick={() => window.open(urlDokumen(item), '_blank')}
                                 className="p-2 bg-blue-50 hover:bg-blue-100 text-blue-600 rounded-md transition-colors"
                                 title="Lihat file"
                               >
@@ -984,7 +1046,7 @@ const BumdesDokumenManager = () => {
                               <button
                                 onClick={() => {
                                   const link = document.createElement('a');
-                                  link.href = item.download_url;
+                                  link.href = urlDokumen(item);
                                   link.download = item.filename;
                                   link.click();
                                 }}
@@ -999,11 +1061,7 @@ const BumdesDokumenManager = () => {
                         
                         {item.file_exists && item.sumber !== 'produk_hukum' && (
                           <button
-                            onClick={() => handleDeleteFile(
-                              item.filename,
-                              activeTab === 'badan-hukum' ? 'dokumen_badan_hukum' : 'laporan_keuangan',
-                              item.bumdes_id ?? item.id
-                            )}
+                            onClick={() => handleDeleteFile(item)}
                             disabled={deleteLoading}
                             className="p-2 bg-red-50 hover:bg-red-100 text-red-600 rounded-md transition-colors disabled:opacity-50"
                             title="Hapus file"
@@ -1199,7 +1257,7 @@ const BumdesDokumenManager = () => {
                   <p className="text-slate-500 max-w-sm">
                     {searchTerm || filterType !== 'all' || filterStatus !== 'all'
                       ? 'Tidak ditemukan data sesuai filter yang dipilih'
-                      : `Belum ada ${activeTab === 'badan-hukum' ? 'dokumen badan hukum' : 'laporan keuangan'} yang tersedia`
+                      : `Belum ada ${activeTab === 'badan-hukum' ? 'dokumen pendirian' : activeTab === 'pendukung' ? 'dokumen pendukung' : 'laporan pertanggungjawaban'} yang tersedia`
                     }
                   </p>
                 </div>

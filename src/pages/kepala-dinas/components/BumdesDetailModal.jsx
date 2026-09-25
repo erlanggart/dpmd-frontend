@@ -137,7 +137,17 @@ const BumdesDetailModal = ({ item, onClose, onUbah }) => {
       profil: saringTeks([
         { icon: Building2, label: 'Tahun pendirian', nilai: item.tahun_pendirian },
         { icon: Wallet, label: 'Jenis usaha utama', nilai: item.jenis_usaha_utama },
-        { icon: Wallet, label: 'Jenis usaha', nilai: item.jenis_usaha },
+        {
+          icon: Wallet,
+          label: 'Kategori usaha',
+          nilai: item.kategori_usaha?.length ? item.kategori_usaha.join(', ') : item.jenis_usaha,
+        },
+        { icon: Wallet, label: 'Unit usaha', nilai: item.unit_usaha?.length ? item.unit_usaha.join(' · ') : null },
+        {
+          icon: Wallet,
+          label: 'Produk di katalog',
+          nilai: item.jumlah_produk ? `${nf.format(item.jumlah_produk)} produk` : null,
+        },
         {
           icon: User,
           label: 'Direktur',
@@ -149,6 +159,19 @@ const BumdesDetailModal = ({ item, onClose, onUbah }) => {
         { icon: MapPin, label: 'Alamat', nilai: item.alamat },
         { icon: Phone, label: 'Telepon', nilai: item.telepon },
         { icon: Mail, label: 'Email', nilai: item.email },
+        {
+          icon: ExternalLink,
+          label: 'Media sosial & toko daring',
+          nilai: Object.entries({
+            Instagram: item.media_sosial?.instagram,
+            Facebook: item.media_sosial?.facebook,
+            TikTok: item.media_sosial?.tiktok,
+            Website: item.media_sosial?.website,
+            Shopee: item.media_sosial?.shopee,
+            Tokopedia: item.media_sosial?.tokopedia,
+            Lainnya: item.media_sosial?.ecommerce_lain,
+          }).filter(([, v]) => teksAtauNull(v)).map(([k, v]) => `${k}: ${v}`).join(' · ') || null,
+        },
       ]),
 
       legalitas: saringTeks([
@@ -165,21 +188,69 @@ const BumdesDetailModal = ({ item, onClose, onUbah }) => {
         { icon: FileText, label: 'LKPP', nilai: item.lkpp },
       ]),
 
-      program: saringTeks([
-        { label: 'Ketahanan pangan 2025', nilai: item.ketahanan_pangan },
-        { label: 'Desa wisata', nilai: item.desa_wisata },
-        { label: 'Makan Bergizi Gratis', nilai: item.peran_mbg },
-      ]),
+      // Formulir baru mengirim daftar program + peran; baris lama jatuh ke
+      // kolom teks Ketapang2025 / DesaWisata / PeranMBG.
+      program: item.peran_program?.length
+        ? saringTeks(item.peran_program.map((p, i) => ({
+          label: `${p.program === 'Lainnya' && p.program_lain ? p.program_lain : p.program || 'Program'}${item.peran_program.length > 1 ? ` #${i + 1}` : ''}`,
+          nilai: [p.peran, p.produk && `produk: ${p.produk}`, p.keterangan].filter(Boolean).join(' — '),
+        })))
+        : saringTeks([
+          { label: 'Ketahanan pangan 2025', nilai: item.ketahanan_pangan },
+          { label: 'Desa wisata', nilai: item.desa_wisata },
+          { label: 'Makan Bergizi Gratis', nilai: item.peran_mbg },
+        ]),
+
+      // Riwayat per tahun dari formulir baru (null = baris lama).
+      riwayat: [
+        {
+          judul: 'Penyertaan modal',
+          baris: (item.riwayat?.permodalan || []).map((b) => ({
+            tahun: b.tahun, nilai: b.jumlah,
+            catatan: b.sumber === 'lain' ? `Modal lain${b.keterangan ? ` · ${b.keterangan}` : ''}` : 'Modal desa',
+          })),
+        },
+        {
+          judul: 'Omset & laba',
+          baris: (item.riwayat?.omset_laba || []).map((b) => ({
+            tahun: b.tahun, nilai: b.omset, catatan: adaAngka(b.laba) ? `Laba ${rupiahRingkas(b.laba)}` : null,
+          })),
+        },
+        {
+          judul: 'Kontribusi PADes',
+          baris: (item.riwayat?.pades || []).map((b) => ({ tahun: b.tahun, nilai: b.jumlah })),
+        },
+        {
+          judul: 'Nilai aset',
+          baris: (item.riwayat?.aset || []).map((b) => ({ tahun: b.tahun, nilai: b.nilai, catatan: b.jenis })),
+        },
+        {
+          judul: 'Kemitraan',
+          baris: (item.riwayat?.kemitraan || []).map((b) => ({
+            tahun: b.tahun, nilai: b.kontribusi,
+            catatan: [b.mitra, b.periode].filter(Boolean).join(' · '),
+          })),
+        },
+      ].filter((r) => r.baris.length),
 
       keuangan: [
         { label: 'Nilai aset', nilai: item.aset },
-        { label: 'Penyertaan modal', nilai: item.total_penyertaan_modal },
-        { label: 'Omset 2025', nilai: item.omset_2025 },
-        { label: 'Laba 2025', nilai: item.laba_2025 },
-        { label: 'Omset 2024', nilai: item.omset_2024 },
-        { label: 'Laba 2024', nilai: item.laba_2024 },
-        { label: 'PADes 2025', nilai: item.pades_2025 },
-        { label: 'PADes 2024', nilai: item.pades_2024 },
+        { label: 'Penyertaan modal desa', nilai: item.total_penyertaan_modal },
+        {
+          label: item.tahun_omset_terbaru ? `Omset ${item.tahun_omset_terbaru}` : 'Omset 2025',
+          nilai: item.omset_terbaru ?? item.omset_2025,
+        },
+        {
+          label: item.tahun_laba_terbaru ? `Laba ${item.tahun_laba_terbaru}` : 'Laba 2025',
+          nilai: item.laba_terbaru ?? item.laba_2025,
+        },
+        { label: 'Omset 2024', nilai: item.tahun_omset_terbaru === 2024 ? null : item.omset_2024 },
+        { label: 'Laba 2024', nilai: item.tahun_laba_terbaru === 2024 ? null : item.laba_2024 },
+        {
+          label: item.tahun_pades_terbaru ? `PADes ${item.tahun_pades_terbaru}` : 'PADes 2025',
+          nilai: item.pades_terbaru ?? item.pades_2025,
+        },
+        { label: 'PADes 2024', nilai: item.tahun_pades_terbaru === 2024 ? null : item.pades_2024 },
       ].filter((a) => adaAngka(a.nilai)),
 
       berkas: item.berkas || [],
@@ -267,9 +338,9 @@ const BumdesDetailModal = ({ item, onClose, onUbah }) => {
                 menyesuaikan isian tiap BUMDes. */}
             <div className="mt-4 flex flex-wrap items-end gap-x-8 gap-y-3">
               <Sorotan label="Nilai aset" nilai={item.aset} />
-              <Sorotan label="Omset terbaru" nilai={omsetTerbaru(item)} />
-              <Sorotan label="Laba 2025" nilai={item.laba_2025} />
-              <Sorotan label="PADes 2025" nilai={item.pades_2025} />
+              <Sorotan label={item.tahun_omset_terbaru ? `Omset ${item.tahun_omset_terbaru}` : 'Omset terbaru'} nilai={omsetTerbaru(item)} />
+              <Sorotan label={item.tahun_laba_terbaru ? `Laba ${item.tahun_laba_terbaru}` : 'Laba 2025'} nilai={item.laba_terbaru ?? item.laba_2025} />
+              <Sorotan label={item.tahun_pades_terbaru ? `PADes ${item.tahun_pades_terbaru}` : 'PADes 2025'} nilai={item.pades_terbaru ?? item.pades_2025} />
 
               <div className="ml-auto min-w-[9rem]">
                 <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-400">
@@ -386,6 +457,29 @@ const BumdesDetailModal = ({ item, onClose, onUbah }) => {
                     </div>
                   </section>
                 )}
+
+                {/* Riwayat per tahun yang diisi desa lewat formulir baru */}
+                {d.riwayat.map((r) => (
+                  <section key={r.judul} className="rounded-xl border border-slate-200 bg-white p-4">
+                    <h3 className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-wider text-slate-400">
+                      <Wallet className="h-3.5 w-3.5" />
+                      {r.judul} per tahun
+                    </h3>
+                    <div className="mt-2 divide-y divide-slate-100">
+                      {r.baris.map((b, i) => (
+                        <div key={i} className="flex items-center gap-3 py-2">
+                          <span className="w-12 flex-shrink-0 rounded-md bg-slate-900 py-0.5 text-center text-[11px] font-bold tabular-nums text-white">
+                            {b.tahun || '—'}
+                          </span>
+                          <span className="min-w-0 flex-1 truncate text-xs text-slate-500">{b.catatan || ''}</span>
+                          <span className="flex-shrink-0 text-sm font-semibold tabular-nums text-slate-900">
+                            {adaAngka(b.nilai) ? rupiahRingkas(b.nilai) : '—'}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </section>
+                ))}
               </div>
             </div>
           </div>

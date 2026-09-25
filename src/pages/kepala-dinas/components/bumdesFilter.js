@@ -81,9 +81,15 @@ export const KELAS_OMSET = [
   { id: 'raksasa', label: 'di atas Rp 1 M', min: 1e9, maks: Infinity },
 ];
 
-/** Omset tahun terbaru yang tersedia. 2025 kalau ada, kalau tidak 2024. */
-export const omsetTerbaru = (d) =>
-  d.omset_2025 !== null && d.omset_2025 !== undefined ? d.omset_2025 : d.omset_2024;
+/**
+ * Omset tahun terbaru yang tersedia. Backend mengirim `omset_terbaru` dari
+ * daftar omset per tahun formulir baru (bisa 2026 dst.); baris lama jatuh ke
+ * 2025, lalu 2024.
+ */
+export const omsetTerbaru = (d) => {
+  if (d.omset_terbaru !== null && d.omset_terbaru !== undefined) return d.omset_terbaru;
+  return d.omset_2025 !== null && d.omset_2025 !== undefined ? d.omset_2025 : d.omset_2024;
+};
 
 /**
  * "Benar-benar berusaha" = melaporkan omset di atas nol pada tahun terbaru yang
