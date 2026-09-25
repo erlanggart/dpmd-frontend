@@ -10,10 +10,14 @@ import {
 import BankeuRevisionHistoryModal from '../../../components/shared/BankeuRevisionHistoryModal';
 import BankeuPerubahanTrackingModal from '../../../components/shared/BankeuPerubahanTrackingModal';
 import { useAuth } from '../../../context/AuthContext';
-import { namaDinasPelihat } from '../../../utils/dinasPelihat';
+import { namaDinasPelihat, isDinasLihatSemuaPerubahan } from '../../../utils/dinasPelihat';
 
 /**
- * Bantuan Keuangan Perubahan — halaman dinas PELIHAT (BPKAD & Inspektorat).
+ * Bantuan Keuangan Perubahan — halaman dinas PELIHAT (BPKAD, Inspektorat & DLH).
+ *
+ * BPKAD/Inspektorat hanya menerima proposal yang final di DPMD, sedangkan DLH
+ * menerima SEMUA proposal (semua tahap) — backend yang menentukan cakupannya,
+ * halaman ini hanya menyesuaikan label status, filter, dan ringkasan.
  *
  * Isinya sama dengan halaman SPKED, tetapi perannya PELIHAT: tidak ada aksi
  * verifikasi, edit proposal, troubleshoot, maupun pengaturan di sini. Yang
@@ -39,6 +43,40 @@ const StatusBadge = ({ status }) => (
     {STATUS_LABELS[status] || status || '-'}
   </span>
 );
+
+// Tahap "saat ini" proposal di alur Desa→Kecamatan→DPMD — dipakai untuk akun
+// yang melihat semua proposal (DLH). Selaras dengan currentStage di halaman
+// SPKED (DpmdBankeuPerubahanVerificationPage).
+const STAGE_META = {
+  draft: { label: 'Draft di Desa', tone: 'bg-slate-100 text-slate-600 border-slate-200' },
+  revisi_desa: { label: 'Revisi di Desa', tone: 'bg-rose-50 text-rose-700 border-rose-200' },
+  menunggu_kec: { label: 'Menunggu Kecamatan', tone: 'bg-amber-50 text-amber-700 border-amber-200' },
+  revisi_kec: { label: 'Revisi Kecamatan', tone: 'bg-orange-50 text-orange-700 border-orange-200' },
+  ditolak_kec: { label: 'Ditolak Kecamatan', tone: 'bg-rose-50 text-rose-700 border-rose-200' },
+  disetujui_kec: { label: 'Disetujui Kec. (belum diteruskan)', tone: 'bg-cyan-50 text-cyan-700 border-cyan-200' },
+  revisi_dokumen_kec: { label: 'Revisi BA/SP Kecamatan', tone: 'bg-orange-50 text-orange-700 border-orange-200' },
+  diterima_dpmd: { label: 'Diterima DPMD', tone: 'bg-emerald-50 text-emerald-700 border-emerald-200' },
+};
+const currentStage = (p) => {
+  const kec = p.kecamatan_status || 'pending';
+  if (['revision', 'rejected'].includes(p.dpmd_status)) return 'revisi_dokumen_kec';
+  if (!p.submitted_to_dpmd) {
+    if (kec === 'revision') return 'revisi_kec';
+    if (kec === 'rejected') return 'ditolak_kec';
+  }
+  if (['revision', 'rejected'].includes(p.status) && !p.submitted_to_kecamatan) return 'revisi_desa';
+  if (p.submitted_to_dpmd) return 'diterima_dpmd';
+  if (p.submitted_to_kecamatan) return kec === 'approved' ? 'disetujui_kec' : 'menunggu_kec';
+  return 'draft';
+};
+const StageBadge = ({ proposal }) => {
+  const meta = STAGE_META[currentStage(proposal)];
+  return (
+    <span className={`inline-flex items-center gap-1 px-2 py-0.5 text-xs font-semibold rounded-full border ${meta.tone}`}>
+      {meta.label}
+    </span>
+  );
+};
 
 const KATEGORI_META = {
   wajib: { label: 'Wajib', badge: 'bg-rose-50 text-rose-700 border-rose-200' },
@@ -77,9 +115,12 @@ const NODE_STYLE = {
 };
 const PerubahanStepper = ({ proposal: p }) => {
   const kecState = p.kecamatan_status === 'approved' ? 'done' : p.kecamatan_status === 'rejected' ? 'rejected' : 'pending';
-  const dpmdState = p.dpmd_status === 'rejected' ? 'rejected' : p.dpmd_status === 'approved' ? 'done' : 'pending';
+  const dpmdState = p.dpmd_status === 'rejected' ? 'rejected'
+    : (p.dpmd_status === 'approved' || p.submitted_to_dpmd) ? 'done' : 'pending';
+  // Draft yang belum pernah diajukan desa (hanya terlihat oleh akun lihat-semua).
+  const desaState = (p.submitted_to_kecamatan || p.submitted_to_dpmd || p.submitted_at) ? 'done' : 'pending';
   const nodes = [
-    { key: 'desa', label: 'Desa', TahapIcon: LuHouse, state: 'done', date: fmtShort(p.submitted_at || p.created_at) || '-' },
+    { key: 'desa', label: 'Desa', TahapIcon: LuHouse, state: desaState, date: fmtShort(p.submitted_at || p.created_at) || '-' },
     { key: 'kec', label: 'Kec.', TahapIcon: LuBuilding2, state: kecState, date: fmtShort(p.kecamatan_verified_at) || '-' },
     { key: 'dpmd', label: 'DPMD', TahapIcon: LuShield, state: dpmdState, date: fmtShort(p.dpmd_verified_at) || fmtShort(p.submitted_to_dpmd_at) || '-' },
   ];
@@ -99,7 +140,7 @@ const PerubahanStepper = ({ proposal: p }) => {
                 <span className="text-[9px] sm:text-[10px] text-slate-500">{n.date}</span>
               </div>
               {i < nodes.length - 1 && (
-                <div className="flex-1 h-1 mt-[18px] sm:mt-5 mx-1 rounded-full bg-emerald-400" />
+                <div className={`flex-1 h-1 mt-[18px] sm:mt-5 mx-1 rounded-full ${nodes[i + 1].state === 'pending' ? 'bg-slate-200' : 'bg-emerald-400'}`} />
               )}
             </div>
           );
@@ -110,7 +151,7 @@ const PerubahanStepper = ({ proposal: p }) => {
 };
 
 /* Baris proposal — hanya tautan dokumen & modal informasi, tanpa tombol aksi. */
-const ProposalRow = ({ proposal }) => {
+const ProposalRow = ({ proposal, lihatSemua }) => {
   const [showHistory, setShowHistory] = useState(false);
   const [showTracking, setShowTracking] = useState(false);
   const firstKegiatan = proposal.kegiatan_list?.[0];
@@ -122,7 +163,7 @@ const ProposalRow = ({ proposal }) => {
       <div className="flex flex-col md:flex-row md:items-start gap-3">
         <div className="flex-1 min-w-0">
           <div className="flex flex-wrap items-center gap-1.5 mb-1.5">
-            <StatusBadge status={proposal.dpmd_status} />
+            {lihatSemua ? <StageBadge proposal={proposal} /> : <StatusBadge status={proposal.dpmd_status} />}
             {KATEGORI_META[proposal.jenis_kegiatan] && (
               <span className={`inline-flex items-center px-2 py-0.5 text-[11px] font-semibold rounded-full border ${KATEGORI_META[proposal.jenis_kegiatan].badge}`}>
                 {KATEGORI_META[proposal.jenis_kegiatan].label}
@@ -225,6 +266,8 @@ const TABS = [
 const DinasPelihatBankeuPerubahanPage = () => {
   const { user } = useAuth();
   const namaDinas = namaDinasPelihat(user);
+  // DLH melihat semua proposal (semua tahap); BPKAD/Inspektorat hanya yang final.
+  const lihatSemua = isDinasLihatSemuaPerubahan(user);
   const [selectedYear, setSelectedYear] = useState(null);
   const [activeTab, setActiveTab] = useState('daftar');
 
@@ -272,15 +315,19 @@ const DinasPelihatBankeuPerubahanPage = () => {
 
   /* Ringkasan — dihitung dari data final yang diterima, tanpa endpoint tambahan. */
   const stats = useMemo(() => {
-    let approved = 0, rejected = 0, anggaran = 0, anggaranApproved = 0;
+    let approved = 0, rejected = 0, anggaran = 0, anggaranApproved = 0, diDpmd = 0;
     const desa = new Set();
     proposals.forEach(p => {
       if (p.dpmd_status === 'approved') { approved += 1; anggaranApproved += Number(p.anggaran_usulan || 0); }
       if (p.dpmd_status === 'rejected') rejected += 1;
+      if (currentStage(p) === 'diterima_dpmd') diDpmd += 1;
       anggaran += Number(p.anggaran_usulan || 0);
       if (p.desa_id != null) desa.add(Number(p.desa_id));
     });
-    return { total: proposals.length, approved, rejected, anggaran, anggaranApproved, desaCount: desa.size };
+    return {
+      total: proposals.length, approved, rejected, anggaran, anggaranApproved,
+      diDpmd, diProses: proposals.length - diDpmd, desaCount: desa.size,
+    };
   }, [proposals]);
 
   const kecamatanOptions = useMemo(() => {
@@ -296,7 +343,7 @@ const DinasPelihatBankeuPerubahanPage = () => {
   const filteredProposals = useMemo(() => {
     const q = searchQuery.trim().toLowerCase();
     return proposals.filter(p => {
-      if (filterStatus !== 'all' && p.dpmd_status !== filterStatus) return false;
+      if (filterStatus !== 'all' && (lihatSemua ? currentStage(p) : p.dpmd_status) !== filterStatus) return false;
       if (filterKategori !== 'all' && p.jenis_kegiatan !== filterKategori) return false;
       if (filterKecamatan !== 'all' && String(p.desa_kecamatan_id) !== String(filterKecamatan)) return false;
       if (q) {
@@ -306,7 +353,7 @@ const DinasPelihatBankeuPerubahanPage = () => {
       }
       return true;
     });
-  }, [proposals, searchQuery, filterStatus, filterKategori, filterKecamatan]);
+  }, [proposals, searchQuery, filterStatus, filterKategori, filterKecamatan, lihatSemua]);
 
   // Hierarki Kecamatan → Desa → Proposal (mengikuti tampilan SPKED).
   const groupedByKecamatan = useMemo(() => {
@@ -373,9 +420,14 @@ const DinasPelihatBankeuPerubahanPage = () => {
       };
       const primaryKegiatan = (p) => p.kegiatan_nama || p.kegiatan_list?.[0]?.nama_kegiatan || '';
 
-      // Sheet 1 — rincian proposal final (mengikuti filter yang sedang aktif)
+      // Sheet 1 — rincian proposal (mengikuti filter yang sedang aktif)
       appendSheet(filteredProposals.map((p, i) => ({
         No: i + 1,
+        ...(lihatSemua && {
+          Tahap: STAGE_META[currentStage(p)].label,
+          'Status Kecamatan': p.kecamatan_status || '',
+          'Tgl Diajukan Desa': fmtDate(p.submitted_at),
+        }),
         Kecamatan: p.kecamatan_nama || '',
         Desa: p.desa_nama || '',
         Kategori: KATEGORI_META[p.jenis_kegiatan]?.label || p.jenis_kegiatan || '',
@@ -388,7 +440,8 @@ const DinasPelihatBankeuPerubahanPage = () => {
         'Status DPMD': STATUS_LABELS[p.dpmd_status] || p.dpmd_status || '',
         'Catatan DPMD': p.dpmd_catatan || '',
         'Tgl Keputusan DPMD': fmtDate(p.dpmd_verified_at),
-      })), 'Proposal Final');
+        ...(lihatSemua && { 'Catatan Kecamatan': p.kecamatan_catatan || '' }),
+      })), lihatSemua ? 'Semua Proposal' : 'Proposal Final');
 
       // Sheet 2 — rekap anggaran per desa
       const perDesa = new Map();
@@ -501,20 +554,32 @@ const DinasPelihatBankeuPerubahanPage = () => {
         <div className="flex items-start gap-2 rounded-xl bg-slate-100 border border-slate-200 px-4 py-2.5 text-sm text-slate-700">
           <LuEye className="w-4 h-4 mt-0.5 flex-shrink-0" />
           <span>
-            Mode <strong>pelihat</strong>. {namaDinas} dapat melihat dan mengunduh proposal beserta dokumennya,
-            namun tidak dapat memverifikasi maupun mengubah data apa pun. Yang ditampilkan hanya proposal
-            yang keputusan DPMD-nya sudah final.
+            Mode <strong>pelihat</strong>. {namaDinas} dapat melihat, memfilter, dan mengunduh proposal beserta
+            dokumennya, namun tidak dapat memverifikasi maupun mengubah data apa pun.
+            {lihatSemua
+              ? ' Yang ditampilkan adalah seluruh proposal di semua tahap (Desa, Kecamatan, DPMD).'
+              : ' Yang ditampilkan hanya proposal yang keputusan DPMD-nya sudah final.'}
           </span>
         </div>
 
         {/* Ringkasan */}
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
-          <StatCard icon={LuFolder} label="Proposal Final" value={stats.total} tone="bg-slate-100 text-slate-600" />
-          <StatCard icon={LuCircleCheck} label="Disetujui" value={stats.approved} tone="bg-emerald-50 text-emerald-600" />
-          <StatCard icon={LuCircleX} label="Ditolak" value={stats.rejected} tone="bg-rose-50 text-rose-600" />
-          <StatCard icon={LuHouse} label="Desa" value={stats.desaCount} tone="bg-indigo-50 text-indigo-600" />
-          <StatCard icon={LuDollarSign} label="Anggaran Disetujui" value={rupiah(stats.anggaranApproved)} tone="bg-amber-50 text-amber-600" />
-        </div>
+        {lihatSemua ? (
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
+            <StatCard icon={LuFolder} label="Total Proposal" value={stats.total} tone="bg-slate-100 text-slate-600" />
+            <StatCard icon={LuCircleCheck} label="Diterima DPMD" value={stats.diDpmd} tone="bg-emerald-50 text-emerald-600" />
+            <StatCard icon={LuClock} label="Proses Desa/Kecamatan" value={stats.diProses} tone="bg-amber-50 text-amber-600" />
+            <StatCard icon={LuHouse} label="Desa" value={stats.desaCount} tone="bg-indigo-50 text-indigo-600" />
+            <StatCard icon={LuDollarSign} label="Total Anggaran" value={rupiah(stats.anggaran)} tone="bg-amber-50 text-amber-600" />
+          </div>
+        ) : (
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
+            <StatCard icon={LuFolder} label="Proposal Final" value={stats.total} tone="bg-slate-100 text-slate-600" />
+            <StatCard icon={LuCircleCheck} label="Disetujui" value={stats.approved} tone="bg-emerald-50 text-emerald-600" />
+            <StatCard icon={LuCircleX} label="Ditolak" value={stats.rejected} tone="bg-rose-50 text-rose-600" />
+            <StatCard icon={LuHouse} label="Desa" value={stats.desaCount} tone="bg-indigo-50 text-indigo-600" />
+            <StatCard icon={LuDollarSign} label="Anggaran Disetujui" value={rupiah(stats.anggaranApproved)} tone="bg-amber-50 text-amber-600" />
+          </div>
+        )}
 
         {error && <div className="rounded-xl bg-rose-50 border border-rose-200 px-4 py-3 text-sm text-rose-700">{error}</div>}
 
@@ -529,8 +594,10 @@ const DinasPelihatBankeuPerubahanPage = () => {
               <div className="flex items-center gap-2 text-sm font-semibold text-slate-700"><LuFilter className="w-4 h-4" /> Filter:</div>
               <select value={filterStatus} onChange={e => setFilterStatus(e.target.value)}
                 className="px-3 py-1.5 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-slate-300">
-                <option value="all">Semua Status</option>
-                {Object.entries(STATUS_LABELS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
+                <option value="all">{lihatSemua ? 'Semua Tahap' : 'Semua Status'}</option>
+                {lihatSemua
+                  ? Object.entries(STAGE_META).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)
+                  : Object.entries(STATUS_LABELS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
               </select>
               <select value={filterKategori} onChange={e => setFilterKategori(e.target.value)}
                 className="px-3 py-1.5 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-slate-300">
@@ -555,7 +622,9 @@ const DinasPelihatBankeuPerubahanPage = () => {
               <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-12 text-center">
                 <LuInfo className="w-12 h-12 mx-auto text-slate-300 mb-3" />
                 <p className="text-slate-600 font-medium">
-                  {proposals.length === 0 ? 'Belum ada proposal yang final di DPMD' : 'Tidak ada proposal yang sesuai filter'}
+                  {proposals.length === 0
+                    ? (lihatSemua ? 'Belum ada proposal' : 'Belum ada proposal yang final di DPMD')
+                    : 'Tidak ada proposal yang sesuai filter'}
                 </p>
               </div>
             ) : (
@@ -610,7 +679,7 @@ const DinasPelihatBankeuPerubahanPage = () => {
                                     <div className="sm:hidden px-4 py-2 bg-amber-50 text-amber-800 text-xs font-bold flex items-center gap-1">
                                       <LuDollarSign className="w-3.5 h-3.5" /> Total {rupiah(desa.anggaran)}
                                     </div>
-                                    {desa.items.map(p => <ProposalRow key={p.id} proposal={p} />)}
+                                    {desa.items.map(p => <ProposalRow key={p.id} proposal={p} lihatSemua={lihatSemua} />)}
                                   </div>
                                 )}
                               </div>
@@ -693,7 +762,7 @@ const DinasPelihatBankeuPerubahanPage = () => {
                                     </span>
                                   )}
                                 </div>
-                                <StatusBadge status={p.dpmd_status} />
+                                {lihatSemua ? <StageBadge proposal={p} /> : <StatusBadge status={p.dpmd_status} />}
                               </div>
                               <div className="sm:ml-11 space-y-3">
                                 <PerubahanStepper proposal={p} />
