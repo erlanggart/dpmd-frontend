@@ -8,7 +8,7 @@
 // ditentukan backend), dengan pesan yang sudah terisi.
 import React, { useEffect, useState } from 'react';
 import {
-	Beef, Box, Cookie, Coffee, ExternalLink, Fish, Heart, HeartPulse, Image as ImageIcon,
+	Beef, Cookie, Coffee, ExternalLink, Fish, Heart, HeartPulse, Image as ImageIcon,
 	Instagram, Leaf, MapPin, MessageCircle, Mountain, Package, Palette, Shirt, Sprout,
 	Store, Tag, Wheat, Wrench, X,
 } from 'lucide-react';
@@ -99,19 +99,16 @@ export const useFavorit = () => {
 
 /* ───────────────────────────── Foto ─────────────────────────────── */
 
-export const FotoProduk = ({ foto, nama, kelas = 'aspect-square', kategori }) => {
+export const FotoProduk = ({ foto, nama, kelas = 'aspect-[4/3]', kategori }) => {
 	const url = urlFotoProduk(foto);
 	const m = metaKategori(kategori);
 	return (
-		<div className={`${kelas} relative w-full overflow-hidden bg-gradient-to-br from-emerald-50 via-stone-50 to-amber-50`}>
+		<div className={`${kelas} relative w-full overflow-hidden bg-stone-100`}>
 			{url ? (
-				<img src={url} alt={nama} loading="lazy" className="h-full w-full object-cover transition-transform duration-700 ease-out group-hover:scale-[1.07]" />
+				<img src={url} alt={nama} loading="lazy" className="h-full w-full object-cover transition-transform duration-500 ease-out group-hover:scale-[1.03]" />
 			) : (
-				<div className="flex h-full w-full flex-col items-center justify-center gap-2">
-					<span className={`flex h-14 w-14 items-center justify-center rounded-2xl ${m.warna}`}>
-						{kategori ? <m.ikon className="h-7 w-7" /> : <ImageIcon className="h-7 w-7" />}
-					</span>
-					<span className="text-[10px] font-semibold uppercase tracking-wider text-stone-400">Foto belum ada</span>
+				<div className="flex h-full w-full items-center justify-center text-stone-300">
+					{kategori ? <m.ikon className="h-8 w-8" strokeWidth={1.5} /> : <ImageIcon className="h-8 w-8" strokeWidth={1.5} />}
 				</div>
 			)}
 		</div>
@@ -127,20 +124,14 @@ export const FotoProduk = ({ foto, nama, kelas = 'aspect-square', kategori }) =>
 export const KartuProduk = ({ produk: p, onBuka, tanpaPenjual = false, favorit, onFavorit }) => {
 	const wisata = isWisata(p);
 	const wa = tautanPesan(p);
+	const buka = onBuka ? () => onBuka(p) : undefined;
 	return (
-		<article
-			className={`group relative flex h-full flex-col overflow-hidden rounded-[1.35rem] border border-stone-200/80 bg-white shadow-sm shadow-stone-900/[0.04] transition-all duration-300 ${
-				onBuka ? 'hover:-translate-y-1 hover:border-emerald-200 hover:shadow-xl hover:shadow-emerald-900/[0.08]' : ''
-			}`}
-		>
-			<button type="button" onClick={onBuka ? () => onBuka(p) : undefined} className={`relative block text-left ${onBuka ? '' : 'cursor-default'}`}>
+		<article className="group relative flex h-full flex-col">
+			<button type="button" onClick={buka} className={`relative block overflow-hidden rounded-2xl text-left ${onBuka ? '' : 'cursor-default'}`}>
 				<FotoProduk foto={p.foto} nama={p.nama} kategori={p.kategori} />
-				{/* Gradasi bawah foto supaya lencana tetap terbaca di foto terang */}
-				<div className="pointer-events-none absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-black/25 to-transparent" />
-				<span className="absolute bottom-2.5 left-2.5"><LencanaKategori kategori={p.kategori} /></span>
 				{p.unggulan && !tanpaPenjual && (
-					<span className="absolute left-2.5 top-2.5 inline-flex items-center gap-1 rounded-full bg-amber-400 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-amber-950 shadow">
-						★ Unggulan
+					<span className="absolute left-3 top-3 rounded-md bg-white/95 px-2 py-0.5 text-[11px] font-semibold text-stone-800 shadow-sm">
+						Unggulan
 					</span>
 				)}
 			</button>
@@ -150,46 +141,39 @@ export const KartuProduk = ({ produk: p, onBuka, tanpaPenjual = false, favorit, 
 					type="button"
 					onClick={() => onFavorit(p.id)}
 					aria-label={favorit ? 'Hapus dari favorit' : 'Tambah ke favorit'}
-					className="absolute right-2.5 top-2.5 flex h-8 w-8 items-center justify-center rounded-full bg-white/90 shadow-sm backdrop-blur transition-transform hover:scale-110"
+					className={`absolute right-3 top-3 flex h-8 w-8 items-center justify-center rounded-full bg-white/95 shadow-sm transition-opacity ${favorit ? 'opacity-100' : 'opacity-100 sm:opacity-0 sm:group-hover:opacity-100'}`}
 				>
-					<Heart className={`h-4 w-4 ${favorit ? 'fill-rose-500 text-rose-500' : 'text-stone-500'}`} />
+					<Heart className={`h-4 w-4 ${favorit ? 'fill-rose-500 text-rose-500' : 'text-stone-600'}`} />
 				</button>
 			)}
 
-			<div className="flex flex-1 flex-col px-3.5 pb-3.5 pt-3">
-				<button type="button" onClick={onBuka ? () => onBuka(p) : undefined} className="text-left">
-					<h3 className="line-clamp-2 text-[14.5px] font-bold leading-snug tracking-tight text-stone-900 group-hover:text-emerald-800">{p.nama}</h3>
+			<div className="flex flex-1 flex-col pt-3">
+				{p.kategori && <p className="text-xs text-stone-500">{p.kategori}</p>}
+				<button type="button" onClick={buka} className="mt-0.5 text-left">
+					<h3 className="line-clamp-2 text-[15px] font-semibold leading-snug text-stone-900">{p.nama}</h3>
 				</button>
 				{!tanpaPenjual && p.bumdes && (
-					<div className="mt-1.5 space-y-0.5 text-[11.5px] leading-4 text-stone-500">
-						<p className="flex items-center gap-1 truncate"><Store className="h-3 w-3 flex-shrink-0" /> {p.bumdes.nama}</p>
-						<p className="flex items-center gap-1 truncate"><MapPin className="h-3 w-3 flex-shrink-0" /> Kec. {p.bumdes.kecamatan}</p>
-					</div>
+					<p className="mt-1 truncate text-xs text-stone-500">{p.bumdes.nama} · Kec. {p.bumdes.kecamatan}</p>
 				)}
 				{tanpaPenjual && p.deskripsi && <p className="mt-1 line-clamp-2 text-xs leading-5 text-stone-500">{p.deskripsi}</p>}
 
-				<div className="mt-auto flex items-baseline justify-between gap-2 pt-3">
-					<span className="text-[17px] font-extrabold tracking-tight text-emerald-800">{hargaProduk(p)}</span>
-					{adaHarga(p) && p.satuan && <span className="truncate text-[11px] text-stone-400">/ {p.satuan}</span>}
-				</div>
-
-				{!tanpaPenjual && (
-					wa ? (
+				<div className="mt-auto flex items-center justify-between gap-2 pt-3">
+					<p className="min-w-0 truncate">
+						<span className="text-[15px] font-semibold text-stone-900">{hargaProduk(p)}</span>
+						{adaHarga(p) && p.satuan && <span className="text-xs text-stone-400"> / {p.satuan}</span>}
+					</p>
+					{!tanpaPenjual && wa && (
 						<a
 							href={wa}
 							target="_blank"
 							rel="noreferrer"
-							className="mt-3 inline-flex w-full items-center justify-center gap-1.5 rounded-xl bg-emerald-800 py-2.5 text-xs font-bold text-white shadow-sm shadow-emerald-900/20 transition-all hover:bg-emerald-900 hover:shadow-md"
+							title={wisata ? 'Pesan paket wisata via WhatsApp' : 'Pesan via WhatsApp'}
+							className="inline-flex flex-shrink-0 items-center gap-1.5 rounded-lg border border-stone-200 px-2.5 py-1.5 text-xs font-medium text-stone-700 transition-colors hover:border-emerald-800 hover:bg-emerald-800 hover:text-white"
 						>
-							<MessageCircle className="h-4 w-4" /> {wisata ? 'Pesan Sekarang' : 'Pesan via WhatsApp'}
+							<MessageCircle className="h-3.5 w-3.5" /> Pesan
 						</a>
-					) : (
-						<button type="button" onClick={onBuka ? () => onBuka(p) : undefined}
-							className="mt-3 inline-flex w-full items-center justify-center gap-1.5 rounded-xl border border-stone-200 py-2.5 text-xs font-bold text-stone-600 hover:bg-stone-50">
-							<Box className="h-4 w-4" /> Lihat Detail
-						</button>
-					)
-				)}
+					)}
+				</div>
 			</div>
 		</article>
 	);
@@ -228,22 +212,22 @@ export const ModalDetailProduk = ({ produk: p, onTutup, favorit, onFavorit }) =>
 				<div className="grid flex-1 grid-cols-1 overflow-y-auto md:grid-cols-2">
 					<div className="relative">
 						<FotoProduk foto={p.foto} nama={p.nama} kategori={p.kategori} kelas="aspect-square md:h-full md:aspect-auto md:min-h-[26rem]" />
-						<span className="absolute bottom-4 left-4"><LencanaKategori kategori={p.kategori} /></span>
+						
 					</div>
 					<div className="flex flex-col gap-4 p-6">
 						<div>
-							{p.unggulan && <span className="mb-2 inline-flex rounded-full bg-amber-100 px-2.5 py-0.5 text-[11px] font-bold text-amber-800">★ Produk Unggulan</span>}
-							<h2 className="text-2xl font-extrabold leading-tight tracking-tight text-stone-900">{p.nama}</h2>
+							{p.kategori && <p className="mb-1 text-sm text-stone-500">{p.kategori}{p.unggulan ? ' · Unggulan' : ''}</p>}
+							<h2 className="text-2xl font-semibold leading-tight tracking-tight text-stone-900">{p.nama}</h2>
 							<p className="mt-2">
-								<span className="text-3xl font-extrabold tracking-tight text-emerald-800">{hargaProduk(p)}</span>
+								<span className="text-2xl font-semibold tracking-tight text-stone-900">{hargaProduk(p)}</span>
 								{adaHarga(p) && p.satuan && <span className="text-sm text-stone-400"> / {p.satuan}</span>}
 							</p>
 						</div>
 						{p.deskripsi && <p className="whitespace-pre-line text-sm leading-6 text-stone-600">{p.deskripsi}</p>}
 
-						<div className="rounded-2xl border border-emerald-100 bg-emerald-50/50 p-4 text-sm">
-							<p className="text-[10.5px] font-bold uppercase tracking-wider text-emerald-700">{wisata ? 'Pengelola wisata' : 'Penjual'}</p>
-							<p className="mt-1 flex items-center gap-2 font-bold text-stone-900"><Store className="h-4 w-4 text-emerald-700" /> {b.nama}</p>
+						<div className="rounded-2xl bg-stone-50 p-4 text-sm">
+							<p className="text-xs text-stone-500">{wisata ? 'Pengelola wisata' : 'Penjual'}</p>
+							<p className="mt-1 flex items-center gap-2 font-semibold text-stone-900"><Store className="h-4 w-4 text-stone-500" /> {b.nama}</p>
 							<p className="mt-1 flex items-center gap-2 text-stone-500"><MapPin className="h-4 w-4" /> Desa {b.desa}, Kec. {b.kecamatan}, Kab. Bogor</p>
 							{sosmed.instagram && <p className="mt-1 flex items-center gap-2 text-stone-500"><Instagram className="h-4 w-4" /> {sosmed.instagram}</p>}
 						</div>
@@ -251,7 +235,7 @@ export const ModalDetailProduk = ({ produk: p, onTutup, favorit, onFavorit }) =>
 						<div className="mt-auto space-y-2">
 							{wa ? (
 								<a href={wa} target="_blank" rel="noreferrer"
-									className="flex w-full items-center justify-center gap-2 rounded-2xl bg-[#25D366] py-3.5 text-sm font-bold text-white shadow-lg shadow-emerald-600/25 transition-all hover:brightness-95">
+									className="flex w-full items-center justify-center gap-2 rounded-xl bg-[#25D366] py-3 text-sm font-semibold text-white transition-all hover:brightness-95">
 									<MessageCircle className="h-5 w-5" /> {wisata ? 'Pesan Paket Wisata via WhatsApp' : 'Pesan via WhatsApp'}
 								</a>
 							) : (
@@ -259,7 +243,7 @@ export const ModalDetailProduk = ({ produk: p, onTutup, favorit, onFavorit }) =>
 							)}
 							{tokoLain.map((t) => (
 								<a key={t.label} href={t.url} target="_blank" rel="noreferrer"
-									className="flex w-full items-center justify-center gap-2 rounded-2xl border border-stone-200 py-3 text-sm font-semibold text-stone-700 transition-colors hover:bg-stone-50">
+									className="flex w-full items-center justify-center gap-2 rounded-xl border border-stone-200 py-3 text-sm font-medium text-stone-700 transition-colors hover:bg-stone-50">
 									<ExternalLink className="h-4 w-4" /> {t.label}
 								</a>
 							))}
