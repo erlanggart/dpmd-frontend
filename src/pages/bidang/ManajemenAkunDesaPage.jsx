@@ -389,7 +389,7 @@ const ModalGenerateAkun = ({ meta, kecamatanTerpilih, modulSlug, onSelesai, onTu
       html:
         `<div style="text-align:left;font-size:14px">` +
         `<p style="margin:0 0 8px">Semua akun memakai sandi <b>${pratinjau?.sandi_default}</b> dan wajib menggantinya saat login pertama.</p>` +
-        `<p style="margin:0;color:#64748b;font-size:12.5px">Desa yang sudah punya operator tidak akan disentuh.</p>` +
+        `<p style="margin:0;color:#64748b;font-size:12.5px">Akun yang sudah ada tidak diubah; desa yang sudah punya operator mendapat akun tambahan.</p>` +
         `</div>`,
       showCancelButton: true,
       confirmButtonText: `Ya, buat ${jumlah} akun`,
@@ -488,18 +488,19 @@ const ModalGenerateAkun = ({ meta, kecamatanTerpilih, modulSlug, onSelesai, onTu
     URL.revokeObjectURL(url);
   };
 
+  // Desa yang sudah punya operator fitur ini TETAP dibuatkan akun (satu desa
+  // boleh punya beberapa operator). Yang dilewati hanya akun template yang
+  // sudah pernah dibuat, jadi Generate aman ditekan berulang.
   const KELAS_STATUS = {
     baru: "bg-emerald-50 text-emerald-700 border-emerald-200",
-    sudah_punya: "bg-slate-50 text-slate-500 border-slate-200",
-    sudah_punya_nonaktif: "bg-amber-50 text-amber-700 border-amber-200",
+    sudah_dibuat: "bg-slate-50 text-slate-500 border-slate-200",
     email_terpakai: "bg-rose-50 text-rose-700 border-rose-200",
     email_bentrok: "bg-rose-50 text-rose-700 border-rose-200",
   };
 
   const LABEL_STATUS = {
     baru: "Akan dibuat",
-    sudah_punya: "Sudah ada operator",
-    sudah_punya_nonaktif: "Ada tapi nonaktif",
+    sudah_dibuat: "Sudah dibuat",
     email_terpakai: "Email terpakai",
     email_bentrok: "Email bentrok",
   };
@@ -518,7 +519,7 @@ const ModalGenerateAkun = ({ meta, kecamatanTerpilih, modulSlug, onSelesai, onTu
             <p className="mt-0.5 text-xs text-slate-500">
               {hasil
                 ? "Sampaikan email dan sandi di bawah ke masing-masing desa."
-                : `Hanya untuk desa yang belum punya operator ${meta?.modul?.label || "fitur ini"}.`}
+                : `Untuk semua desa — termasuk yang sudah punya operator ${meta?.modul?.label || "fitur ini"}. Akun yang sudah pernah dibuat dilewati.`}
             </p>
           </div>
           <button
@@ -666,7 +667,7 @@ const ModalGenerateAkun = ({ meta, kecamatanTerpilih, modulSlug, onSelesai, onTu
                   >
                     <span className="block text-sm font-semibold text-slate-800">Seluruh kabupaten</span>
                     <span className="block text-[11.5px] text-slate-500">
-                      Semua desa & kelurahan yang belum punya operator
+                      Semua desa & kelurahan (±416)
                     </span>
                   </button>
                 </div>
@@ -938,6 +939,71 @@ const ManajemenAkunDesaPage = ({ modul = null, tersemat = false }) => {
 		if (memuatAwal || galatAwal) return;
 		muatRingkasan();
 	}, [muatRingkasan, memuatAwal, galatAwal]);
+
+	/**
+	 * Ekspor akun operator fitur ini ke Excel, untuk dibagikan ke penanggung
+	 * jawab di desa. Sandi HANYA terisi untuk akun yang masih memakai sandi
+	 * default (diperiksa server dengan bcrypt); akun yang sandinya sudah diganti
+	 * pemiliknya ditandai "sudah diganti" tanpa sandi.
+	 */
+	const [mengekspor, setMengekspor] = useState(false);
+	const eksporAkun = async () => {
+		const cakupan = kecamatanTerpilih ? `Kec. ${kecamatanTerpilih.nama}` : "seluruh kabupaten";
+		const ok = await Swal.fire({
+			icon: "question",
+			title: "Ekspor akun operator?",
+			html:
+				`<div style="text-align:left;font-size:14px">` +
+				`<p style="margin:0 0 8px">Cakupan: <b>${cakupan}</b>.</p>` +
+				`<p style="margin:0 0 6px">Berkas memuat <b>sandi</b> akun yang <b>masih memakai sandi default</b>. Akun yang sandinya sudah diganti tidak ikut sandinya.</p>` +
+				`<p style="margin:0;color:#b45309;font-size:12.5px">Bagikan hanya ke penanggung jawab BUMDes/desa yang bersangkutan.</p>` +
+				`</div>`,
+			showCancelButton: true,
+			confirmButtonText: "Ekspor Excel",
+			cancelButtonText: "Batal",
+			confirmButtonColor: "#0f172a",
+		});
+		if (!ok.isConfirmed) return;
+
+		setMengekspor(true);
+		try {
+			const params = { ...paramModul };
+			if (kecamatanId) params.kecamatan_id = kecamatanId;
+			const res = await api.get("/bidang/akun-desa/ekspor", { params, timeout: 120000 });
+			const baris = res.data?.data || [];
+			if (baris.length === 0) {
+				toast.error("Belum ada akun operator untuk diekspor");
+				return;
+			}
+			const XLSX = await import("xlsx");
+			const lembar = XLSX.utils.json_to_sheet(baris.map((b, i) => ({
+				No: i + 1,
+				Kecamatan: b.kecamatan,
+				"Desa/Kelurahan": b.desa,
+				"Nama Petugas": b.nama,
+				Jabatan: b.jabatan,
+				"No. HP": b.no_hp,
+				"Email / Username": b.email,
+				Sandi: b.sandi_default ? b.sandi : "— sudah diganti pemilik",
+				"Status Sandi": b.sandi_default ? "Masih default (wajib diganti saat login)" : "Sudah diganti",
+				"Status Akun": b.aktif ? "Aktif" : "Nonaktif",
+				"Terakhir Aktif": b.terakhir_aktif ? new Date(b.terakhir_aktif).toLocaleString("id-ID") : "Belum pernah",
+			})));
+			lembar["!cols"] = [5, 20, 22, 28, 24, 16, 42, 24, 36, 12, 20].map((wch) => ({ wch }));
+			const buku = XLSX.utils.book_new();
+			XLSX.utils.book_append_sheet(buku, lembar, "Akun Operator");
+			const slug = meta?.modul?.slug || modulSlug || "desa";
+			const wilayah = kecamatanTerpilih ? `-${kecamatanTerpilih.nama.toLowerCase().replace(/\s+/g, "-")}` : "";
+			XLSX.writeFile(buku, `akun-operator-${slug}${wilayah}-${new Date().toISOString().slice(0, 10)}.xlsx`);
+
+			const r = res.data?.ringkasan || {};
+			toast.success(`${baris.length} akun diekspor · ${r.sandi_default ?? 0} masih sandi default`);
+		} catch (error) {
+			Swal.fire({ icon: "error", title: "Gagal mengekspor", text: pesanError(error, "Terjadi kesalahan.") });
+		} finally {
+			setMengekspor(false);
+		}
+	};
 
 	// ── Aksi ──────────────────────────────────────────────────────────────────
 	const bukaTambah = async () => {
@@ -1370,8 +1436,19 @@ const ManajemenAkunDesaPage = ({ modul = null, tersemat = false }) => {
 						    yang lahir akan membawa seluruh wewenang bidang sekaligus. */}
 						{modulSlug && (
 							<button
+								onClick={eksporAkun}
+								disabled={mengekspor}
+								title="Ekspor akun operator ke Excel (sandi hanya untuk yang masih default)"
+								className="inline-flex shrink-0 items-center justify-center gap-2 rounded-xl border border-slate-900/10 bg-slate-100 px-3.5 py-2.5 text-sm font-semibold text-slate-800 transition-colors hover:bg-slate-200 disabled:opacity-60"
+							>
+								<FiDownload className={`h-4 w-4 ${mengekspor ? "animate-bounce" : ""}`} />
+								<span className="hidden sm:inline">{mengekspor ? "Mengekspor…" : "Ekspor"}</span>
+							</button>
+						)}
+						{modulSlug && (
+							<button
 								onClick={() => setModalGenerate(true)}
-								title="Buatkan akun untuk desa yang belum punya operator"
+								title="Buatkan akun operator untuk semua desa"
 								className="inline-flex shrink-0 items-center justify-center gap-2 rounded-xl border border-slate-900/10 bg-slate-100 px-3.5 py-2.5 text-sm font-semibold text-slate-800 transition-colors hover:bg-slate-200"
 							>
 								<FiZap className="h-4 w-4" />
