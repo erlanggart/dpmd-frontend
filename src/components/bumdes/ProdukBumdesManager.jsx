@@ -8,18 +8,23 @@
 // tersimpan (tidak menunggu tombol Simpan halaman).
 import React, { useCallback, useEffect, useState } from 'react';
 import Swal from 'sweetalert2';
-import { FiEdit3, FiImage, FiLoader, FiPlus, FiStar, FiTrash2, FiX } from 'react-icons/fi';
+import { FiEdit3, FiImage, FiLoader, FiMessageCircle, FiPlus, FiStar, FiTrash2, FiX } from 'react-icons/fi';
 import api from '../../api';
 import { KartuProduk, urlFotoProduk } from './KatalogProdukUI';
 
 const KELAS_INPUT =
 	'w-full rounded-lg border border-slate-200 bg-white px-3.5 py-2.5 text-sm text-slate-900 outline-none placeholder:text-slate-400 focus:border-slate-900';
 
-const kosong = { nama: '', kategori: '', harga: '', satuan: '', deskripsi: '', tautan: '', unggulan: false, is_active: true };
+const kosong = { nama: '', kategori: '', harga: '', satuan: '', deskripsi: '', tautan: '', whatsapp: '', unggulan: false, is_active: true };
 
 const FormProduk = ({ awal, kategoriOpsi, bumdesId, onTutup, onTersimpan }) => {
 	const [isian, setIsian] = useState(() => (awal
-		? { ...kosong, ...awal, harga: awal.harga ?? '', tautan: awal.tautan || '', deskripsi: awal.deskripsi || '', satuan: awal.satuan || '', kategori: awal.kategori || '' }
+		? {
+			...kosong, ...awal, harga: awal.harga ?? '', tautan: awal.tautan || '', deskripsi: awal.deskripsi || '',
+			satuan: awal.satuan || '', kategori: awal.kategori || '',
+			// Hanya nomor yang diisi untuk produk ini, bukan cadangan dari BUM Desa.
+			whatsapp: awal.whatsapp_produk ? `0${String(awal.whatsapp_produk).replace(/^62/, '')}` : '',
+		}
 		: kosong));
 	const [foto, setFoto] = useState(null);
 	const [pratinjau, setPratinjau] = useState(null);
@@ -39,7 +44,7 @@ const FormProduk = ({ awal, kategoriOpsi, bumdesId, onTutup, onTersimpan }) => {
 		setGalat(null);
 		try {
 			const fd = new FormData();
-			['nama', 'kategori', 'harga', 'satuan', 'deskripsi', 'tautan'].forEach((k) => fd.append(k, isian[k] ?? ''));
+			['nama', 'kategori', 'harga', 'satuan', 'deskripsi', 'tautan', 'whatsapp'].forEach((k) => fd.append(k, isian[k] ?? ''));
 			fd.append('unggulan', isian.unggulan ? '1' : '0');
 			fd.append('is_active', isian.is_active ? '1' : '0');
 			if (foto) fd.append('foto', foto);
@@ -123,6 +128,15 @@ const FormProduk = ({ awal, kategoriOpsi, bumdesId, onTutup, onTersimpan }) => {
 						<label className="mb-1.5 block text-sm font-medium text-slate-700">Deskripsi</label>
 						<textarea className={`${KELAS_INPUT} resize-none`} rows={3} value={isian.deskripsi} onChange={(e) => ubah('deskripsi', e.target.value)}
 							placeholder="Keunggulan produk, bahan, cara pemesanan, dll." />
+					</div>
+					<div className="sm:col-span-2 rounded-xl border border-emerald-200 bg-emerald-50/60 p-3.5">
+						<label className="mb-1.5 flex items-center gap-1.5 text-sm font-semibold text-emerald-900">
+							<FiMessageCircle className="h-4 w-4" /> Nomor WhatsApp Penjual
+						</label>
+						<input className={KELAS_INPUT} inputMode="tel" value={isian.whatsapp} onChange={(e) => ubah('whatsapp', e.target.value)} placeholder="Contoh: 081234567890" />
+						<p className="mt-1 text-xs text-emerald-800/80">
+							Tombol <strong>Pesan</strong> di katalog membuka WhatsApp langsung ke nomor ini. Bila dikosongkan, dipakai nomor telepon BUM Desa.
+						</p>
 					</div>
 					<div className="sm:col-span-2">
 						<label className="mb-1.5 block text-sm font-medium text-slate-700">Tautan Toko Daring (opsional)</label>
