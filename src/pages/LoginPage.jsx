@@ -2,10 +2,9 @@ import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 
 import api from "../api";
-import { FiEye, FiEyeOff, FiLoader, FiAlertCircle, FiLock, FiClock, FiMapPin } from "react-icons/fi";
+import { FiEye, FiEyeOff, FiLoader, FiAlertCircle, FiLock, FiClock } from "react-icons/fi";
 import LoginImageSlider from "../components/login/LoginImageSlider";
 import { useAuth } from "../context/AuthContext";
-import toast from "react-hot-toast";
 import { isPWA } from "../utils/pwaDetection";
 
 // "Ingat saya" hanya berguna di browser biasa: cuma mengisi ulang kolom email,
@@ -16,21 +15,6 @@ import { isPWA } from "../utils/pwaDetection";
 // (lihat AuthContext/sessionPersistence) sampai user menekan keluar sendiri —
 // tidak perlu isi ulang form sama sekali, jadi checkbox ini disembunyikan.
 const REMEMBERED_EMAIL_KEY = "dpmd_remembered_email";
-
-// Ambil posisi GPS sebagai Promise (lokasi WAJIB saat login).
-const getCurrentPosition = (options = {}) =>
-	new Promise((resolve, reject) => {
-		if (!("geolocation" in navigator)) {
-			reject(new Error("Perangkat tidak mendukung lokasi"));
-			return;
-		}
-		navigator.geolocation.getCurrentPosition(resolve, reject, {
-			enableHighAccuracy: true,
-			timeout: 12000,
-			maximumAge: 60000,
-			...options,
-		});
-	});
 
 const LoginPage = () => {
 	const [email, setEmail] = useState("");
@@ -55,10 +39,6 @@ const LoginPage = () => {
 	const { login } = useAuth();
 	const [lockoutUntil, setLockoutUntil] = useState(null);
 	const [lockoutRemaining, setLockoutRemaining] = useState(0);
-	// Lokasi wajib saat login
-	const [coords, setCoords] = useState(null);
-	const [locationStatus, setLocationStatus] = useState('unknown'); // unknown | granted | denied | error
-	const [gettingLocation, setGettingLocation] = useState(false);
 	// Dihitung sekali: mode tampilan (browser/PWA) tidak berubah selama app dibuka.
 	const [tampilkanIngatSaya] = useState(() => !isPWA());
 	const [ingatSaya, setIngatSaya] = useState(false);
@@ -76,42 +56,6 @@ const LoginPage = () => {
 			// localStorage bisa diblokir (mode privat); abaikan saja.
 		}
 	}, [tampilkanIngatSaya]);
-
-	useEffect(() => {
-		// Cek status izin lokasi (jika browser mendukung Permissions API).
-		if (navigator.permissions?.query) {
-			navigator.permissions.query({ name: 'geolocation' }).then((res) => {
-				if (res.state === 'granted') setLocationStatus('granted');
-				else if (res.state === 'denied') setLocationStatus('denied');
-				res.onchange = () => {
-					if (res.state === 'denied') setLocationStatus('denied');
-				};
-			}).catch(() => {});
-		}
-	}, []);
-
-	// Minta izin & ambil lokasi. Mengembalikan koordinat bila berhasil.
-	const handleRequestLocation = async () => {
-		setGettingLocation(true);
-		setError(null);
-		try {
-			const pos = await getCurrentPosition();
-			const c = { latitude: pos.coords.latitude, longitude: pos.coords.longitude };
-			setCoords(c);
-			setLocationStatus('granted');
-			toast.success('Lokasi aktif!', { duration: 3000 });
-			return c;
-		} catch (err) {
-			const denied = err?.code === 1; // PERMISSION_DENIED
-			setLocationStatus(denied ? 'denied' : 'error');
-			setError(denied
-				? 'Izin lokasi ditolak. Aktifkan lokasi di pengaturan browser/HP lalu coba lagi.'
-				: 'Gagal mendapatkan lokasi. Pastikan GPS/lokasi menyala lalu coba lagi.');
-			return null;
-		} finally {
-			setGettingLocation(false);
-		}
-	};
 
 	// Countdown timer for lockout
 	useEffect(() => {
@@ -150,13 +94,6 @@ const LoginPage = () => {
 		setEmailError(null);
 		setPasswordError(null);
 
-		// Lokasi WAJIB: pastikan koordinat tersedia sebelum login.
-		let position = coords;
-		if (!position) {
-			position = await handleRequestLocation();
-			if (!position) { setLoading(false); return; }
-		}
-
 		try {
 			// Get device ID for auto-registration
 			let deviceId = localStorage.getItem('dpmd_device_id');
@@ -169,13 +106,11 @@ const LoginPage = () => {
 				localStorage.setItem('dpmd_device_id', deviceId);
 			}
 
-			// Login to Express backend (sertakan koordinat lokasi wajib)
+			// Login to Express backend
 			const response = await api.post("/auth/login", {
 				email,
 				password,
 				device_id: deviceId,
-				latitude: position.latitude,
-				longitude: position.longitude,
 			});
 
 			const newUser = response.data.data.user;
@@ -234,10 +169,6 @@ const LoginPage = () => {
 					setLockoutUntil(Date.now() + 5 * 60 * 1000);
 				}
 				setError(error.response.data?.message || 'Terlalu banyak percobaan login. Silakan coba lagi dalam 5 menit.');
-			} else if (error.response?.data?.code === 'LOCATION_REQUIRED') {
-				setLocationStatus('error');
-				setCoords(null);
-				setError(error.response.data?.message || 'Lokasi wajib diaktifkan untuk login.');
 			} else if (error.response?.data?.error_type === 'email_not_found') {
 				setEmailError('Email salah atau tidak ditemukan');
 			} else if (error.response?.data?.error_type === 'wrong_password') {
@@ -297,38 +228,8 @@ const LoginPage = () => {
 						</div>
 					)}
 
-					{/* Hanya lokasi — izin notifikasi tidak lagi diminta di sini; langganan
+					{/* Izin lokasi & notifikasi tidak diminta di halaman login; langganan
 					    push dibentuk setelah login oleh layout masing-masing peran. */}
-					<div className="mt-7 grid gap-3">
-						<div className="min-w-0 rounded-2xl border border-slate-200 bg-slate-50 p-4">
-							<div className="flex items-center gap-3">
-								<div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl bg-amber-50 text-amber-700">
-									<FiMapPin className="h-5 w-5" />
-								</div>
-								<p className="min-w-0 flex-1 truncate text-sm font-semibold text-slate-900">Lokasi</p>
-							{locationStatus === 'granted' ? (
-									<span className="flex-shrink-0 rounded-full bg-emerald-100 px-2.5 py-1.5 text-[11px] font-semibold leading-none text-emerald-700">
-									✓ Siap
-								</span>
-							) : (
-								<button
-									type="button"
-									onClick={handleRequestLocation}
-									disabled={gettingLocation}
-										className="flex flex-shrink-0 items-center rounded-xl bg-amber-600 px-3 py-2 text-xs font-semibold text-white transition-colors hover:bg-amber-700 disabled:opacity-60"
-								>
-									{gettingLocation ? <FiLoader className="h-4 w-4 animate-spin" /> : 'Aktifkan'}
-								</button>
-							)}
-							</div>
-							<p className="mt-3 text-xs leading-relaxed text-slate-500">
-								{locationStatus === 'denied'
-									? 'Izin lokasi belum aktif.'
-									: 'Wajib saat login.'}
-							</p>
-						</div>
-					</div>
-
 					<form onSubmit={handleLogin} className="mt-8 space-y-5">
 						<div>
 							<label htmlFor="email" className="mb-2 block text-sm font-semibold text-slate-700">
@@ -398,7 +299,7 @@ const LoginPage = () => {
 						)}
 						<button
 							type="submit"
-							disabled={loading || isLockedOut || locationStatus !== 'granted'}
+							disabled={loading || isLockedOut}
 							className={`flex min-h-12 w-full items-center justify-center rounded-2xl px-5 py-3.5 text-sm font-bold text-white shadow-lg transition disabled:cursor-not-allowed disabled:opacity-65 ${
 								isLockedOut ? 'bg-red-500 shadow-red-500/20' : 'bg-[rgb(var(--color-primary))] shadow-slate-950/15 hover:bg-slate-800 disabled:bg-slate-400'
 							}`}
@@ -410,8 +311,6 @@ const LoginPage = () => {
 									<FiLock className="h-4 w-4" />
 									Dikunci {lockoutMinutes}:{lockoutSeconds.toString().padStart(2, '0')}
 								</span>
-							) : locationStatus !== 'granted' ? (
-								"Aktifkan Lokasi Dulu"
 							) : (
 								"Masuk"
 							)}
