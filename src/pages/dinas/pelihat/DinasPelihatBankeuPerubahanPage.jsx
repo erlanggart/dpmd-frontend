@@ -11,6 +11,13 @@ import BankeuRevisionHistoryModal from '../../../components/shared/BankeuRevisio
 import BankeuPerubahanTrackingModal from '../../../components/shared/BankeuPerubahanTrackingModal';
 import { useAuth } from '../../../context/AuthContext';
 import { namaDinasPelihat, isDinasLihatSemuaPerubahan } from '../../../utils/dinasPelihat';
+// Grafik & perhitungannya SAMA dengan halaman SPKED — tidak dibuat ulang.
+import { StatisticsTab, PartisipasiTab } from '../../bidang/spked/bankeu-perubahan/DpmdBankeuPerubahanVerificationPage';
+import {
+  hitungFunnel, hitungPartisipasi, hitungPerKategori, hitungPerKecamatan, hitungPerKegiatan,
+  hitungStatsDpmd, sudahDiDpmd,
+} from '../../../utils/statistikBankeuPerubahan';
+import { LuChartColumn, LuUsers } from 'react-icons/lu';
 
 /**
  * Bantuan Keuangan Perubahan — halaman dinas PELIHAT (BPKAD, Inspektorat & DLH).
@@ -95,17 +102,29 @@ const fileUrl = (path) =>
 
 /* ───────────────────────── Komponen kecil ───────────────────────── */
 
-const StatCard = ({ icon: Icon, label, value, tone }) => (
-  <div className="bg-white border border-slate-200 rounded-2xl p-4 flex items-center gap-3 shadow-sm">
-    <div className={`h-10 w-10 rounded-xl flex items-center justify-center flex-shrink-0 ${tone}`}>
-      <Icon className="w-5 h-5" />
-    </div>
-    <div className="min-w-0">
-      <p className="text-xs text-slate-500 truncate">{label}</p>
-      <p className="text-lg font-bold text-slate-800 truncate">{value}</p>
+const StatCard = ({ icon: Icon, label, value, tone, sub, title }) => (
+  <div className="group relative overflow-hidden bg-white border border-slate-200/80 rounded-2xl p-4 sm:p-5 shadow-sm shadow-slate-900/[0.03] transition-all hover:-translate-y-0.5 hover:shadow-md" title={title}>
+    <div className="flex items-start justify-between gap-3">
+      <div className="min-w-0">
+        <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-400 truncate">{label}</p>
+        <p className="mt-1.5 text-xl sm:text-2xl font-extrabold tracking-tight text-slate-900 truncate tabular-nums">{value}</p>
+        {sub && <p className="mt-0.5 text-xs text-slate-500 truncate">{sub}</p>}
+      </div>
+      <div className={`h-11 w-11 rounded-xl flex items-center justify-center flex-shrink-0 ${tone}`}>
+        <Icon className="w-5 h-5" />
+      </div>
     </div>
   </div>
 );
+
+// Rupiah ringkas untuk kartu (nilai penuh tetap di tooltip).
+const rupiahRingkas = (n) => {
+  const v = Number(n || 0);
+  if (v >= 1e12) return `Rp ${(v / 1e12).toLocaleString('id-ID', { maximumFractionDigits: 2 })} T`;
+  if (v >= 1e9) return `Rp ${(v / 1e9).toLocaleString('id-ID', { maximumFractionDigits: 2 })} M`;
+  if (v >= 1e6) return `Rp ${(v / 1e6).toLocaleString('id-ID', { maximumFractionDigits: 1 })} jt`;
+  return rupiah(v);
+};
 
 // Stepper Desa → Kecamatan → DPMD (tampilan saja, tanpa aksi).
 const NODE_STYLE = {
@@ -259,8 +278,12 @@ const ProposalRow = ({ proposal, lihatSemua }) => {
 /* ───────────────────────── Halaman utama ───────────────────────── */
 
 const TABS = [
+  // Statistik & Partisipasi hanya untuk akun lihat-semua (DLH): datanya
+  // mencakup seluruh tahap, sama seperti halaman SPKED.
+  { id: 'statistik', label: 'Statistik Dashboard', icon: LuChartColumn, lihatSemua: true },
   { id: 'daftar', label: 'Daftar Proposal', icon: LuFolder },
   { id: 'tracking', label: 'Tracking Status', icon: LuRoute },
+  { id: 'partisipasi', label: 'Partisipasi Desa', icon: LuUsers, lihatSemua: true },
 ];
 
 const DinasPelihatBankeuPerubahanPage = () => {
@@ -269,7 +292,12 @@ const DinasPelihatBankeuPerubahanPage = () => {
   // DLH melihat semua proposal (semua tahap); BPKAD/Inspektorat hanya yang final.
   const lihatSemua = isDinasLihatSemuaPerubahan(user);
   const [selectedYear, setSelectedYear] = useState(null);
-  const [activeTab, setActiveTab] = useState('daftar');
+  const [activeTab, setActiveTab] = useState(lihatSemua ? 'statistik' : 'daftar');
+  const tabTampil = TABS.filter((t) => !t.lihatSemua || lihatSemua);
+
+  // Master wilayah untuk grafik partisipasi desa (sama dengan SPKED).
+  const [allDesa, setAllDesa] = useState([]);
+  const [allKecamatan, setAllKecamatan] = useState([]);
 
   const [proposals, setProposals] = useState([]);
   const [tracking, setTracking] = useState([]);
@@ -312,6 +340,27 @@ const DinasPelihatBankeuPerubahanPage = () => {
   useEffect(() => {
     if (selectedYear) loadData(selectedYear);
   }, [selectedYear]);
+
+  useEffect(() => {
+    if (!lihatSemua || !selectedYear || allDesa.length) return;
+    Promise.all([api.get('/desas'), api.get('/kecamatans')])
+      .then(([d, k]) => { setAllDesa(d.data?.data || []); setAllKecamatan(k.data?.data || []); })
+      .catch((err) => console.error('Gagal memuat master wilayah:', err));
+  }, [lihatSemua, selectedYear, allDesa.length]);
+
+  // Statistik — fungsi yang sama dengan halaman SPKED.
+  const statistik = useMemo(() => {
+    if (!lihatSemua) return null;
+    const diDpmd = tracking.filter(sudahDiDpmd);
+    return {
+      stats: hitungStatsDpmd(tracking),
+      funnel: hitungFunnel(tracking),
+      perKategori: hitungPerKategori(tracking),
+      perKecamatan: hitungPerKecamatan(tracking),
+      perKegiatan: hitungPerKegiatan(diDpmd),
+      partisipasi: hitungPartisipasi(allDesa, allKecamatan, tracking),
+    };
+  }, [lihatSemua, tracking, allDesa, allKecamatan]);
 
   /* Ringkasan — dihitung dari data final yang diterima, tanpa endpoint tambahan. */
   const stats = useMemo(() => {
@@ -514,62 +563,68 @@ const DinasPelihatBankeuPerubahanPage = () => {
   }
 
   return (
-    <div className="relative bg-slate-50 min-h-screen">
-      {/* Header + tab */}
-      <div className="bg-white border-b border-slate-200 sticky top-0 z-20">
-        <div className="w-full px-4 sm:px-6">
-          <div className="flex items-center gap-2 h-14 overflow-x-auto scrollbar-hide">
-            <button onClick={() => setSelectedYear(null)}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-semibold text-slate-600 hover:bg-slate-100 transition-colors flex-shrink-0">
-              <LuArrowLeft className="w-4 h-4" /><span>TA {selectedYear}</span>
-            </button>
-            <div className="h-5 w-px bg-slate-200 flex-shrink-0" />
-            {TABS.map(tab => {
-              const active = activeTab === tab.id;
-              return (
-                <button key={tab.id} onClick={() => setActiveTab(tab.id)}
-                  className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-sm font-semibold whitespace-nowrap transition-colors ${
-                    active ? 'bg-slate-800 text-white shadow-sm' : 'text-slate-500 hover:text-slate-800 hover:bg-slate-100'}`}>
-                  <tab.icon className="w-4 h-4" />{tab.label}
-                </button>
-              );
-            })}
-            <div className="ml-auto flex items-center gap-1.5 flex-shrink-0">
+    <div className="relative min-h-screen">
+      <div className="mx-auto max-w-7xl space-y-5">
+        {/* Kepala halaman */}
+        <section className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-slate-900 via-slate-800 to-emerald-900 px-5 py-6 text-white shadow-xl shadow-slate-900/10 sm:px-7">
+          <div className="pointer-events-none absolute -right-16 -top-16 h-56 w-56 rounded-full bg-emerald-400/20 blur-3xl" />
+          <div className="pointer-events-none absolute bottom-0 left-1/3 h-40 w-72 rounded-full bg-amber-300/10 blur-3xl" />
+          <div className="relative flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
+            <div className="min-w-0">
+              <button onClick={() => setSelectedYear(null)}
+                className="mb-3 inline-flex items-center gap-1.5 rounded-full bg-white/10 px-3 py-1 text-xs font-semibold text-slate-200 ring-1 ring-white/15 transition-colors hover:bg-white/20">
+                <LuArrowLeft className="h-3.5 w-3.5" /> Tahun Anggaran {selectedYear}
+              </button>
+              <h1 className="text-2xl font-extrabold tracking-tight sm:text-3xl">Bantuan Keuangan Perubahan</h1>
+              <p className="mt-1.5 max-w-2xl text-sm leading-6 text-slate-300">
+                {namaDinas} · {lihatSemua
+                  ? 'seluruh proposal di semua tahap (Desa, Kecamatan, DPMD).'
+                  : 'proposal yang keputusan DPMD-nya sudah final.'}
+              </p>
+              <span className="mt-3 inline-flex items-center gap-1.5 rounded-full bg-emerald-400/15 px-3 py-1 text-xs font-semibold text-emerald-200 ring-1 ring-emerald-300/20">
+                <LuEye className="h-3.5 w-3.5" /> Mode pelihat — lihat, filter, unduh, dan ekspor saja
+              </span>
+            </div>
+            <div className="flex flex-shrink-0 gap-2">
               <button onClick={() => loadData(selectedYear)} disabled={loading}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-semibold text-slate-600 hover:bg-slate-100 transition-colors disabled:opacity-50">
-                <LuRefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
-                <span className="hidden md:inline">Muat ulang</span>
+                className="inline-flex items-center gap-2 rounded-xl bg-white/10 px-4 py-2.5 text-sm font-semibold text-white ring-1 ring-white/15 transition-colors hover:bg-white/20 disabled:opacity-50">
+                <LuRefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
+                <span className="hidden sm:inline">Muat ulang</span>
               </button>
               <button onClick={exportExcel} disabled={exporting || !proposals.length}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-semibold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 transition-colors disabled:opacity-50">
-                <LuDownload className="w-4 h-4" /><span className="hidden md:inline">Unduh Excel</span>
+                className="inline-flex items-center gap-2 rounded-xl bg-emerald-500 px-4 py-2.5 text-sm font-bold text-white shadow-lg shadow-emerald-900/30 transition-colors hover:bg-emerald-400 disabled:opacity-50">
+                <LuDownload className="h-4 w-4" /> Ekspor Excel
               </button>
             </div>
           </div>
-        </div>
-      </div>
+        </section>
 
-      <div className="p-4 sm:p-6 max-w-7xl mx-auto space-y-4">
-        {/* Penegasan peran BPKAD */}
-        <div className="flex items-start gap-2 rounded-xl bg-slate-100 border border-slate-200 px-4 py-2.5 text-sm text-slate-700">
-          <LuEye className="w-4 h-4 mt-0.5 flex-shrink-0" />
-          <span>
-            Mode <strong>pelihat</strong>. {namaDinas} dapat melihat, memfilter, dan mengunduh proposal beserta
-            dokumennya, namun tidak dapat memverifikasi maupun mengubah data apa pun.
-            {lihatSemua
-              ? ' Yang ditampilkan adalah seluruh proposal di semua tahap (Desa, Kecamatan, DPMD).'
-              : ' Yang ditampilkan hanya proposal yang keputusan DPMD-nya sudah final.'}
-          </span>
+        {/* Tab — menempel di atas saat digulir */}
+        <div className="sticky top-0 z-20 -mx-1 px-1 py-1">
+          <div className="flex gap-1 overflow-x-auto rounded-2xl border border-slate-200/80 bg-white/90 p-1.5 shadow-sm backdrop-blur scrollbar-hide">
+            {tabTampil.map(tab => {
+              const active = activeTab === tab.id;
+              return (
+                <button key={tab.id} onClick={() => setActiveTab(tab.id)}
+                  className={`flex flex-shrink-0 items-center gap-2 rounded-xl px-4 py-2 text-sm font-semibold whitespace-nowrap transition-all ${
+                    active ? 'bg-slate-900 text-white shadow' : 'text-slate-500 hover:bg-slate-100 hover:text-slate-900'}`}>
+                  <tab.icon className="h-4 w-4" />{tab.label}
+                </button>
+              );
+            })}
+          </div>
         </div>
 
         {/* Ringkasan */}
         {lihatSemua ? (
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
-            <StatCard icon={LuFolder} label="Total Proposal" value={stats.total} tone="bg-slate-100 text-slate-600" />
-            <StatCard icon={LuCircleCheck} label="Diterima DPMD" value={stats.diDpmd} tone="bg-emerald-50 text-emerald-600" />
-            <StatCard icon={LuClock} label="Proses Desa/Kecamatan" value={stats.diProses} tone="bg-amber-50 text-amber-600" />
-            <StatCard icon={LuHouse} label="Desa" value={stats.desaCount} tone="bg-indigo-50 text-indigo-600" />
-            <StatCard icon={LuDollarSign} label="Total Anggaran" value={rupiah(stats.anggaran)} tone="bg-amber-50 text-amber-600" />
+          <div className="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-5">
+            <StatCard icon={LuFolder} label="Total Proposal" value={stats.total.toLocaleString('id-ID')} sub="semua tahap" tone="bg-slate-100 text-slate-700" />
+            <StatCard icon={LuCircleCheck} label="Diterima DPMD" value={stats.diDpmd.toLocaleString('id-ID')}
+              sub={stats.total ? `${Math.round((stats.diDpmd / stats.total) * 100)}% dari total` : '—'} tone="bg-emerald-50 text-emerald-600" />
+            <StatCard icon={LuClock} label="Proses Desa/Kec." value={stats.diProses.toLocaleString('id-ID')} sub="belum sampai DPMD" tone="bg-amber-50 text-amber-600" />
+            <StatCard icon={LuHouse} label="Desa Pengusul" value={stats.desaCount.toLocaleString('id-ID')}
+              sub={allDesa.length ? `dari ${allDesa.length.toLocaleString('id-ID')} desa/kelurahan` : 'desa/kelurahan'} tone="bg-indigo-50 text-indigo-600" />
+            <StatCard icon={LuDollarSign} label="Total Anggaran" value={rupiahRingkas(stats.anggaran)} title={rupiah(stats.anggaran)} sub="usulan seluruh proposal" tone="bg-amber-50 text-amber-700" />
           </div>
         ) : (
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
@@ -577,7 +632,7 @@ const DinasPelihatBankeuPerubahanPage = () => {
             <StatCard icon={LuCircleCheck} label="Disetujui" value={stats.approved} tone="bg-emerald-50 text-emerald-600" />
             <StatCard icon={LuCircleX} label="Ditolak" value={stats.rejected} tone="bg-rose-50 text-rose-600" />
             <StatCard icon={LuHouse} label="Desa" value={stats.desaCount} tone="bg-indigo-50 text-indigo-600" />
-            <StatCard icon={LuDollarSign} label="Anggaran Disetujui" value={rupiah(stats.anggaranApproved)} tone="bg-amber-50 text-amber-600" />
+            <StatCard icon={LuDollarSign} label="Anggaran Disetujui" value={rupiahRingkas(stats.anggaranApproved)} title={rupiah(stats.anggaranApproved)} tone="bg-amber-50 text-amber-600" />
           </div>
         )}
 
@@ -587,25 +642,37 @@ const DinasPelihatBankeuPerubahanPage = () => {
           <div className="flex items-center justify-center py-20 text-slate-400">
             <LuRefreshCw className="w-6 h-6 animate-spin mr-2" /> Memuat data…
           </div>
+        ) : activeTab === 'statistik' && statistik ? (
+          <StatisticsTab
+            stats={statistik.stats}
+            funnel={statistik.funnel}
+            perKategori={statistik.perKategori}
+            perKecamatan={statistik.perKecamatan}
+            perKegiatan={statistik.perKegiatan}
+            partisipasi={statistik.partisipasi}
+            tahun={selectedYear}
+          />
+        ) : activeTab === 'partisipasi' && statistik ? (
+          <PartisipasiTab loading={!allDesa.length} data={statistik.partisipasi} />
         ) : activeTab === 'daftar' ? (
           <>
             {/* Filter */}
-            <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-4 flex flex-wrap items-center gap-3">
+            <div className="flex flex-wrap items-center gap-2.5 rounded-2xl border border-slate-200/80 bg-white p-3 shadow-sm sm:p-4">
               <div className="flex items-center gap-2 text-sm font-semibold text-slate-700"><LuFilter className="w-4 h-4" /> Filter:</div>
               <select value={filterStatus} onChange={e => setFilterStatus(e.target.value)}
-                className="px-3 py-1.5 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-slate-300">
+                className="h-10 rounded-xl border border-slate-200 bg-white px-3 text-sm font-medium text-slate-700 shadow-sm outline-none transition focus:border-slate-400 focus:ring-4 focus:ring-slate-900/5">
                 <option value="all">{lihatSemua ? 'Semua Tahap' : 'Semua Status'}</option>
                 {lihatSemua
                   ? Object.entries(STAGE_META).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)
                   : Object.entries(STATUS_LABELS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
               </select>
               <select value={filterKategori} onChange={e => setFilterKategori(e.target.value)}
-                className="px-3 py-1.5 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-slate-300">
+                className="h-10 rounded-xl border border-slate-200 bg-white px-3 text-sm font-medium text-slate-700 shadow-sm outline-none transition focus:border-slate-400 focus:ring-4 focus:ring-slate-900/5">
                 <option value="all">Semua Kategori</option>
                 {KATEGORI_KEYS.map(k => <option key={k} value={k}>{KATEGORI_META[k].label}</option>)}
               </select>
               <select value={filterKecamatan} onChange={e => setFilterKecamatan(e.target.value)}
-                className="px-3 py-1.5 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-slate-300">
+                className="h-10 rounded-xl border border-slate-200 bg-white px-3 text-sm font-medium text-slate-700 shadow-sm outline-none transition focus:border-slate-400 focus:ring-4 focus:ring-slate-900/5">
                 <option value="all">Semua Kecamatan</option>
                 {kecamatanOptions.map(k => <option key={k.id} value={k.id}>{k.nama}</option>)}
               </select>
@@ -613,7 +680,7 @@ const DinasPelihatBankeuPerubahanPage = () => {
                 <LuSearch className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                 <input type="text" value={searchQuery} onChange={e => setSearchQuery(e.target.value)}
                   placeholder="Cari judul / desa / kecamatan / kegiatan..."
-                  className="w-full pl-9 pr-3 py-1.5 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-slate-300" />
+                  className="h-10 w-full rounded-xl border border-slate-200 bg-white pl-9 pr-3 text-sm shadow-sm outline-none transition focus:border-slate-400 focus:ring-4 focus:ring-slate-900/5" />
               </div>
               <span className="ml-auto text-xs text-slate-500">{filteredProposals.length} dari {proposals.length} proposal</span>
             </div>
@@ -696,10 +763,10 @@ const DinasPelihatBankeuPerubahanPage = () => {
         ) : (
           <>
             {/* Filter tracking */}
-            <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-4 flex flex-wrap items-center gap-3">
+            <div className="flex flex-wrap items-center gap-2.5 rounded-2xl border border-slate-200/80 bg-white p-3 shadow-sm sm:p-4">
               <div className="flex items-center gap-2 text-sm font-semibold text-slate-700"><LuFilter className="w-4 h-4" /> Filter:</div>
               <select value={trackKecamatan} onChange={e => setTrackKecamatan(e.target.value)}
-                className="px-3 py-1.5 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-slate-300">
+                className="h-10 rounded-xl border border-slate-200 bg-white px-3 text-sm font-medium text-slate-700 shadow-sm outline-none transition focus:border-slate-400 focus:ring-4 focus:ring-slate-900/5">
                 <option value="all">Semua Kecamatan</option>
                 {kecamatanOptions.map(k => <option key={k.id} value={k.id}>{k.nama}</option>)}
               </select>
@@ -707,7 +774,7 @@ const DinasPelihatBankeuPerubahanPage = () => {
                 <LuSearch className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                 <input type="text" value={trackSearch} onChange={e => setTrackSearch(e.target.value)}
                   placeholder="Cari judul / desa / kecamatan / kegiatan..."
-                  className="w-full pl-9 pr-3 py-1.5 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-slate-300" />
+                  className="h-10 w-full rounded-xl border border-slate-200 bg-white pl-9 pr-3 text-sm shadow-sm outline-none transition focus:border-slate-400 focus:ring-4 focus:ring-slate-900/5" />
               </div>
               <span className="ml-auto text-xs text-slate-500">{trackingGroups.length} desa</span>
             </div>

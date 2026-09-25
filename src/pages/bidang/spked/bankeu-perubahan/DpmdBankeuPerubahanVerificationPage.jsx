@@ -13,6 +13,9 @@ import {
 import BankeuRevisionHistoryModal from '../../../../components/shared/BankeuRevisionHistoryModal';
 import BankeuPerubahanTrackingModal from '../../../../components/shared/BankeuPerubahanTrackingModal';
 import {
+  hitungFunnel, hitungPartisipasi, hitungPerKategori, hitungPerKecamatan, hitungPerKegiatan,
+} from '../../../../utils/statistikBankeuPerubahan';
+import {
   PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, CartesianGrid,
   Tooltip as RTooltip, ResponsiveContainer, RadialBarChart, RadialBar,
   LabelList, PolarAngleAxis,
@@ -281,92 +284,20 @@ const DpmdBankeuPerubahanVerificationPage = ({ tahun }) => {
       .sort((a, b) => (a.nama || '').localeCompare(b.nama || '', 'id'));
   }, [trackingData]);
 
-  // ---- PARTISIPASI: desa sudah/belum mengajukan ----
-  const partisipasiData = useMemo(() => {
-    const submittedDesaIds = new Set(trackingData.filter(p => p.submitted_to_kecamatan).map(p => Number(p.desa_id)));
-    const kecNameById = new Map(allKecamatan.map(k => [Number(k.id), k.nama]));
-    const byKec = {};
-    allKecamatan.forEach(k => { byKec[k.nama] = { sudah: [], belum: [] }; });
-    allDesa.forEach(d => {
-      const kecName = kecNameById.get(Number(d.kecamatan_id)) || 'Tanpa Kecamatan';
-      if (!byKec[kecName]) byKec[kecName] = { sudah: [], belum: [] };
-      (submittedDesaIds.has(Number(d.id)) ? byKec[kecName].sudah : byKec[kecName].belum).push(d.nama);
-    });
-    let totalSudah = 0, totalBelum = 0;
-    // Statistik per-kecamatan (untuk grafik & identifikasi kecamatan yang tertinggal).
-    const kecStats = Object.entries(byKec).map(([nama, v]) => {
-      const sudah = v.sudah.length, belum = v.belum.length, total = sudah + belum;
-      totalSudah += sudah; totalBelum += belum;
-      return { nama, sudah, belum, total, pct: total ? Math.round((sudah / total) * 100) : 0 };
-    });
-    const total = totalSudah + totalBelum;
-    const pct = total ? Math.round((totalSudah / total) * 100) : 0;
-    const kecTuntas = kecStats.filter(k => k.total > 0 && k.belum === 0).length;
-    return { byKec, totalSudah, totalBelum, total, pct, kecStats, kecTuntas, totalKec: kecStats.length };
-  }, [allDesa, allKecamatan, trackingData]);
-
-  // ---- STATISTIK: funnel & breakdown lintas-tahap ----
-  const funnel = useMemo(() => {
-    const f = { total: trackingData.length, desa: 0, kecamatan: 0, dpmd: 0, selesai: 0 };
-    trackingData.forEach(p => {
-      // Revisi/penolakan kecamatan mengembalikan proposal ke desa (submitted_to_kecamatan=FALSE)
-      // namun secara tahap masih milik Kecamatan — kenali via kecamatan_status agar tidak
-      // salah dihitung sebagai "Masih di Desa".
-      const kecReturned = !p.submitted_to_dpmd && ['revision', 'rejected'].includes(p.kecamatan_status);
-      if (kecReturned) f.kecamatan += 1;
-      else if (!p.submitted_to_kecamatan) f.desa += 1;
-      else if (!p.submitted_to_dpmd) f.kecamatan += 1;
-      else if (p.dpmd_status === 'approved') f.selesai += 1;
-      else f.dpmd += 1;
-    });
-    return f;
-  }, [trackingData]);
-
-  const perKategori = useMemo(() => {
-    const out = {};
-    KATEGORI_KEYS.forEach(k => { out[k] = { count: 0, anggaran: 0 }; });
-    trackingData.forEach(p => {
-      if (!out[p.jenis_kegiatan]) return;
-      out[p.jenis_kegiatan].count += 1;
-      out[p.jenis_kegiatan].anggaran += Number(p.anggaran_usulan || 0);
-    });
-    return out;
-  }, [trackingData]);
-
-  const perKecamatan = useMemo(() => {
-    const map = new Map();
-    trackingData.forEach(p => {
-      const nama = p.kecamatan_nama || '-';
-      const cur = map.get(nama) || { count: 0, anggaran: 0 };
-      cur.count += 1; cur.anggaran += Number(p.anggaran_usulan || 0);
-      map.set(nama, cur);
-    });
-    return Array.from(map.entries()).map(([nama, v]) => ({ nama, ...v })).sort((a, b) => b.count - a.count);
-  }, [trackingData]);
-
-  // ---- STATISTIK: rekapitulasi anggaran per kegiatan (1 proposal = 1 kegiatan) ----
+  // ---- PARTISIPASI & STATISTIK ----
+  // Perhitungannya di utils/statistikBankeuPerubahan.js, dipakai bersama halaman
+  // dinas pelihat (DLH) yang menampilkan grafik yang sama.
+  const partisipasiData = useMemo(
+    () => hitungPartisipasi(allDesa, allKecamatan, trackingData),
+    [allDesa, allKecamatan, trackingData],
+  );
+  const funnel = useMemo(() => hitungFunnel(trackingData), [trackingData]);
+  const perKategori = useMemo(() => hitungPerKategori(trackingData), [trackingData]);
+  const perKecamatan = useMemo(() => hitungPerKecamatan(trackingData), [trackingData]);
   // Rekapitulasi hanya menghitung proposal yang SUDAH MASUK DPMD. `proposals` (arsip)
   // adalah himpunan proposal yang telah sampai DPMD, berbeda dari `trackingData` yang
   // mencakup semua tahap (Desa/Kecamatan/DPMD).
-  const perKegiatan = useMemo(() => {
-    const map = new Map(); // id -> { id, nama, kategori, desaSet, proposalCount, anggaran }
-    proposals.forEach(p => {
-      const primary = (p.kegiatan_list && p.kegiatan_list[0])
-        ? { id: String(p.kegiatan_list[0].id), nama: p.kegiatan_list[0].nama_kegiatan, kategori: p.kegiatan_list[0].kategori || p.jenis_kegiatan }
-        : (p.kegiatan_id ? { id: String(p.kegiatan_id), nama: p.kegiatan_nama, kategori: p.jenis_kegiatan } : null);
-      if (!primary || !primary.id) return;
-      if (!map.has(primary.id)) {
-        map.set(primary.id, { id: primary.id, nama: primary.nama || '-', kategori: primary.kategori, desaSet: new Set(), proposalCount: 0, anggaran: 0 });
-      }
-      const e = map.get(primary.id);
-      e.proposalCount += 1;
-      e.anggaran += Number(p.anggaran_usulan || 0);
-      if (p.desa_id != null) e.desaSet.add(Number(p.desa_id));
-    });
-    return Array.from(map.values())
-      .map(e => ({ id: e.id, nama: e.nama, kategori: e.kategori, desaCount: e.desaSet.size, proposalCount: e.proposalCount, anggaran: e.anggaran }))
-      .sort((a, b) => b.anggaran - a.anggaran);
-  }, [proposals]);
+  const perKegiatan = useMemo(() => hitungPerKegiatan(proposals), [proposals]);
 
   // ---- Verifikasi ----
   const openVerify = (proposal, status) => setVerifyModal({ proposal, status, catatan: '' });
@@ -1596,7 +1527,8 @@ const KpiTile = ({ label, value, sub, icon: Icon, accent = 'slate', pct }) => {
   );
 };
 
-const PartisipasiTab = ({ loading, data }) => {
+// Diekspor supaya halaman dinas pelihat (DLH) memakai grafik yang sama persis.
+export const PartisipasiTab = ({ loading, data }) => {
   const [tab, setTab] = useState('belum');
   const [expanded, setExpanded] = useState({});
   const [search, setSearch] = useState('');
@@ -1770,7 +1702,8 @@ const KPI_META = [
   { key: 'revision', label: 'Revisi', icon: LuMessageSquare, ring: 'text-orange-600', bar: 'bg-orange-500', bg: 'from-orange-50' },
 ];
 
-const StatisticsTab = ({ stats, funnel, perKategori, perKecamatan, perKegiatan = [], partisipasi, tahun }) => {
+// Diekspor supaya halaman dinas pelihat (DLH) memakai grafik yang sama persis.
+export const StatisticsTab = ({ stats, funnel, perKategori, perKecamatan, perKegiatan = [], partisipasi, tahun }) => {
   const totalAnggaran = stats.total_anggaran || Object.values(perKategori).reduce((s, v) => s + v.anggaran, 0);
   const totalMasuk = Number(stats.total) || 0;
 
