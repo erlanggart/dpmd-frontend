@@ -8,6 +8,7 @@ import { ChevronLeft, Menu } from "lucide-react";
 import AnimatedIcon from "../components/AnimatedIcon";
 import { useUnreadMessages } from "../hooks/useUnreadMessages";
 import { useDesaPermissions } from "../hooks/useDesaPermissions";
+import { isOperatorBumdes } from "../constants/desaPermissions";
 
 // Menu items configuration.
 // `permission` = key hak akses yang diberikan Admin Desa; menu tanpa `permission`
@@ -128,7 +129,9 @@ const useResponsive = () => {
 };
 
 const DesaLayout = () => {
-  const { logout } = useAuth();
+  // Pakai user dari AuthContext (sama dengan DesaBerandaPage) supaya keputusan
+  // "katalog = dashboard" di menu dan di halaman selalu sepakat.
+  const { logout, user: authUser } = useAuth();
   const user = useUserProfile();
   const navigate = useNavigate();
   const location = useLocation();
@@ -138,9 +141,15 @@ const DesaLayout = () => {
   const { unreadMessages } = useUnreadMessages('/desa/pesan');
   const { hasPermission } = useDesaPermissions();
 
+  // Operator yang hanya memegang BUMDes sudah melihat katalog sebagai
+  // Dashboard-nya (DesaBerandaPage), jadi menu katalog terpisah itu dobel.
+  const katalogJadiDashboard = isOperatorBumdes(authUser);
+
   // Menu yang tidak diizinkan Admin Desa tidak ditampilkan sama sekali.
   const visibleMenuItems = menuItems.filter(
-    (item) => !item.permission || hasPermission(item.permission)
+    (item) =>
+      (!item.permission || hasPermission(item.permission)) &&
+      !(item.id === "katalog-bumdes" && katalogJadiDashboard)
   );
 
   const handleLogout = () => {
