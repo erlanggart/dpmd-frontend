@@ -14,8 +14,11 @@ import { RAMP, RAMP_AKSEN, WARNA_AKTIF, WARNA_TIDAK_AKTIF, nf, persenDari } from
 // berarti dua puluh baris.
 const BATAS_RINGKAS = 12;
 
-const BumdesCharts = ({ data, filter, onFilter }) => {
+// `perDesa`: data sudah satu kecamatan (akun kecamatan). Peta sebaran lalu
+// dipecah per desa — satu sel kecamatan tidak menerangkan apa pun.
+const BumdesCharts = ({ data, filter, onFilter, perDesa = false }) => {
   const [ringkas, setRingkas] = useState(false);
+  const satuan = perDesa ? 'desa' : 'kecamatan';
 
   const s = useMemo(() => {
     const total = data.length;
@@ -30,7 +33,7 @@ const BumdesCharts = ({ data, filter, onFilter }) => {
 
     const peta = new Map();
     for (const d of data) {
-      const k = d.kecamatan || 'Tidak tercatat';
+      const k = (perDesa ? d.desa : d.kecamatan) || 'Tidak tercatat';
       const baris = peta.get(k) || { label: k, aktif: 0, tidakAktif: 0 };
       if (isAktif(d.status)) baris.aktif += 1; else baris.tidakAktif += 1;
       peta.set(k, baris);
@@ -47,7 +50,7 @@ const BumdesCharts = ({ data, filter, onFilter }) => {
       aktifTotal: data.filter((d) => isAktif(d.status)).length,
       maksKecamatan: Math.max(1, ...kecamatan.map((k) => k.aktif + k.tidakAktif)),
     };
-  }, [data]);
+  }, [data, perDesa]);
 
   if (!s.total) {
     return (
@@ -154,7 +157,7 @@ const BumdesCharts = ({ data, filter, onFilter }) => {
             tidakAktifTotal,
           )} tidak aktif — rinciannya muncul saat sel disentuh.`}
         >
-          Sebaran per kecamatan
+          Sebaran per {satuan}
         </Judul>
 
         {/* Kisi, bukan daftar batang: tiga puluh sembilan kecamatan sebagai
@@ -162,8 +165,8 @@ const BumdesCharts = ({ data, filter, onFilter }) => {
             yang berjauhan di daftar jadi mustahil tanpa menggulir bolak-balik. */}
         <Peta
           ramp={RAMP}
-          terpilih={filter.kecamatan !== 'semua' ? filter.kecamatan : null}
-          onKlik={(label) => onFilter({
+          terpilih={!perDesa && filter.kecamatan !== 'semua' ? filter.kecamatan : null}
+          onKlik={perDesa ? undefined : (label) => onFilter({
             ...filter,
             kecamatan: filter.kecamatan === label ? 'semua' : label,
           })}
@@ -184,7 +187,7 @@ const BumdesCharts = ({ data, filter, onFilter }) => {
             className="mt-3 w-full rounded-lg border border-slate-200 py-2 text-xs font-medium text-slate-600 transition-colors hover:border-slate-300 hover:bg-slate-50 hover:text-slate-900"
           >
             {ringkas
-              ? `Tampilkan semua ${nf.format(s.kecamatan.length)} kecamatan`
+              ? `Tampilkan semua ${nf.format(s.kecamatan.length)} ${satuan}`
               : `Tampilkan ${BATAS_RINGKAS} teratas saja`}
           </button>
         )}

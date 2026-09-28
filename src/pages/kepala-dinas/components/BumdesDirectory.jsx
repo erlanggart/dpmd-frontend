@@ -39,7 +39,7 @@ const KOLOM_URUT = [
  * Direktori hanya mengurus pengurutan, halaman, dan panel detail — kalau ia
  * menyaring lagi sendiri, angkanya bisa berbeda dari grafik di atasnya.
  */
-const BumdesDirectory = ({ data = [], adaFilter = false, onReset, onUbah }) => {
+const BumdesDirectory = ({ data = [], adaFilter = false, onReset, onUbah, namaWilayah = 'Kabupaten Bogor' }) => {
   const [urut, setUrut] = useState({ key: 'nama', arah: 'asc' });
   const [halaman, setHalaman] = useState(1);
   const [dipilih, setDipilih] = useState(null);
@@ -91,7 +91,7 @@ const BumdesDirectory = ({ data = [], adaFilter = false, onReset, onUbah }) => {
           <h3 className="text-sm font-semibold text-slate-900">Direktori BUMDes</h3>
           <p className="mt-0.5 text-xs text-slate-500">
             Menampilkan <span className="font-semibold text-slate-800">{nf.format(hasil.length)}</span> BUMDes
-            {adaFilter ? ' sesuai filter di atas' : ' se-Kabupaten Bogor'}. Klik satu baris untuk melihat rinciannya.
+            {adaFilter ? ' sesuai filter di atas' : ` se-${namaWilayah}`}. Klik satu baris untuk melihat rinciannya.
           </p>
         </div>
       </div>

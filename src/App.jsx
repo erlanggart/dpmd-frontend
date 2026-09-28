@@ -367,6 +367,12 @@ const KecamatanKelembagaanPage = lazy(
 const KecamatanChangePasswordPage = lazy(
   () => import("./pages/kecamatan/KecamatanChangePasswordPage"),
 );
+const KecamatanBumdesPage = lazy(
+  () => import("./pages/kecamatan/bumdes/KecamatanBumdesPage"),
+);
+const KecamatanAparaturPage = lazy(
+  () => import("./pages/kecamatan/aparatur/KecamatanAparaturPage"),
+);
 const DinasBankeuPage = lazy(() => import("./pages/dinas/DinasBankeuPage"));
 const DinasBankeuPerubahanArsipPage = lazy(
   () => import("./pages/dinas/DinasBankeuPerubahanArsipPage"),
@@ -1639,6 +1645,8 @@ function App() {
                     element={<KecamatanPerubahanTimProposalPage />}
                   />
                   <Route path="kelembagaan" element={<KecamatanKelembagaanPage />} />
+                  <Route path="bumdes" element={<KecamatanBumdesPage />} />
+                  <Route path="aparatur-desa" element={<KecamatanAparaturPage />} />
                   <Route
                     path="kelembagaan/:desaId/:type"
                     element={<KelembagaanList />}

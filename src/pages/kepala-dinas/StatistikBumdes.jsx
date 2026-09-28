@@ -47,11 +47,20 @@ const nf = new Intl.NumberFormat('id-ID');
  * — perhitungannya tidak boleh bercabang, justru itu inti "satu sumber, satu
  * irisan": angka di SPKED dan di Core Dashboard harus mustahil berbeda.
  */
-const StatistikBumdes = ({ tersemat = false, bisaKelola = false }) => {
+/**
+ * `lingkup` dipakai akun yang hanya boleh melihat sebagian wilayah (akun
+ * kecamatan): { endpoint, cacheKey, kicker, perDesa }. Datanya sudah disaring
+ * server dan bentuknya sama persis dengan daftar se-kabupaten, jadi seluruh
+ * perhitungan di bawah tetap satu jalur. Di sana halaman ini selalu lihat-saja.
+ */
+const StatistikBumdes = ({ tersemat = false, bisaKelola: bolehKelola = false, lingkup = null }) => {
+  const bisaKelola = bolehKelola && !lingkup;
   const { getCachedData, setCachedData, isCached } = useDataCache();
+  const cacheKey = lingkup?.cacheKey || CACHE_KEY_DAFTAR;
   const [daftar, setDaftar] = useState(() =>
-    (isCached(CACHE_KEY_DAFTAR) ? getCachedData(CACHE_KEY_DAFTAR).data : null));
-  const [loading, setLoading] = useState(() => !isCached(CACHE_KEY_DAFTAR));
+    (isCached(cacheKey) ? getCachedData(cacheKey).data : null));
+  const [wilayah, setWilayah] = useState(null);
+  const [loading, setLoading] = useState(() => !isCached(cacheKey));
   const [error, setError] = useState(null);
   const [filter, setFilter] = useState({ ...FILTER_AWAL });
 
@@ -64,12 +73,18 @@ const StatistikBumdes = ({ tersemat = false, bisaKelola = false }) => {
   const ambilData = React.useCallback(async () => {
     try {
       setLoading(true);
-      const token = localStorage.getItem('expressToken');
-      const config = token ? { headers: { Authorization: `Bearer ${token}` } } : {};
-      const res = await axios.get(API_CONFIG.getEndpoint('/bumdes'), config);
+      let res;
+      if (lingkup) {
+        res = await api.get(lingkup.endpoint);
+        setWilayah(res.data?.wilayah || null);
+      } else {
+        const token = localStorage.getItem('expressToken');
+        const config = token ? { headers: { Authorization: `Bearer ${token}` } } : {};
+        res = await axios.get(API_CONFIG.getEndpoint('/bumdes'), config);
+      }
       const isi = res.data?.data || [];
       setDaftar(isi);
-      setCachedData(CACHE_KEY_DAFTAR, isi);
+      setCachedData(cacheKey, isi);
       setError(null);
     } catch (err) {
       console.error('Error fetching bumdes data:', err);
@@ -77,10 +92,12 @@ const StatistikBumdes = ({ tersemat = false, bisaKelola = false }) => {
     } finally {
       setLoading(false);
     }
-  }, [setCachedData]);
+  }, [setCachedData, cacheKey, lingkup]);
 
   React.useEffect(() => {
-    if (daftar === null) ambilData();
+    // Dengan lingkup wilayah selalu diambil ulang: nama kecamatan di kepala
+    // halaman datang dari response, bukan dari cache.
+    if (daftar === null || lingkup) ambilData();
     // Sengaja hanya sekali: cache sudah dibaca saat state dibuat.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -118,6 +135,11 @@ const StatistikBumdes = ({ tersemat = false, bisaKelola = false }) => {
   }, [ambilData]);
 
   const semua = useMemo(() => daftar || [], [daftar]);
+  // Tanpa bingkai halaman penuh Core Dashboard — layout pemanggil yang mengatur.
+  const polos = tersemat || !!lingkup;
+  const namaWilayah = lingkup
+    ? (wilayah?.kecamatan ? `Kecamatan ${wilayah.kecamatan}` : 'wilayah ini')
+    : 'Kabupaten Bogor';
   const hasil = useMemo(() => terapkanFilter(semua, filter), [semua, filter]);
 
   const ringkasan = useMemo(() => ({
@@ -129,7 +151,7 @@ const StatistikBumdes = ({ tersemat = false, bisaKelola = false }) => {
 
   if (loading && daftar === null) {
     return (
-      <div className={`flex items-center justify-center px-4 ${tersemat ? 'py-20' : 'min-h-screen bg-slate-50'}`}>
+      <div className={`flex items-center justify-center px-4 ${polos ? 'py-20' : 'min-h-screen bg-slate-50'}`}>
         <div className="text-center">
           <div className="mx-auto h-10 w-10 animate-spin rounded-full border-[3px] border-slate-200 border-t-slate-900" />
           <p className="mt-3 text-sm text-slate-500">Memuat data BUMDes…</p>
@@ -140,7 +162,7 @@ const StatistikBumdes = ({ tersemat = false, bisaKelola = false }) => {
 
   if (error && daftar === null) {
     return (
-      <div className={`flex items-center justify-center p-4 ${tersemat ? 'py-16' : 'min-h-screen bg-slate-50'}`}>
+      <div className={`flex items-center justify-center p-4 ${polos ? 'py-16' : 'min-h-screen bg-slate-50'}`}>
         <div className="w-full max-w-md rounded-2xl border border-slate-200 bg-white p-8 text-center">
           <div className="mx-auto flex h-11 w-11 items-center justify-center rounded-full bg-rose-50 ring-1 ring-rose-100">
             <AlertCircle className="h-5 w-5 text-rose-600" />
@@ -165,14 +187,18 @@ const StatistikBumdes = ({ tersemat = false, bisaKelola = false }) => {
   ).length;
 
   return (
-    <div className={tersemat ? '' : 'min-h-screen bg-slate-50 p-4 pt-20 sm:p-6 lg:p-8 lg:pt-8'}>
+    <div className={polos ? '' : 'min-h-screen bg-slate-50 p-4 pt-20 sm:p-6 lg:p-8 lg:pt-8'}>
       {!tersemat && (
-        <div className={`mx-auto ${LEBAR_CORE}`}>
-          {/* Angka di kepala halaman selalu se-kabupaten, tidak ikut filter. */}
+        <div className={`mx-auto ${lingkup ? '' : LEBAR_CORE}`}>
+          {/* Angka di kepala halaman selalu se-wilayah, tidak ikut filter. */}
           <PageHeader
             icon={Store}
-            title="Statistik BUMDes"
-            subtitle="Badan Usaha Milik Desa se-Kabupaten Bogor"
+            kicker={lingkup?.kicker}
+            title={lingkup ? 'BUMDes di Wilayah Anda' : 'Statistik BUMDes'}
+            subtitle={lingkup
+              ? `Kecamatan ${wilayah?.kecamatan || '…'}${
+                wilayah?.jumlah_desa ? ` · ${nf.format(wilayah.jumlah_desa)} desa` : ''} — mode lihat saja`
+              : 'Badan Usaha Milik Desa se-Kabupaten Bogor'}
             stats={[
               { label: 'Total BUMDes', value: nf.format(totalKabupaten) },
               { label: 'Aktif', value: nf.format(aktifKabupaten) },
@@ -220,19 +246,20 @@ const StatistikBumdes = ({ tersemat = false, bisaKelola = false }) => {
           filter={filter}
           onChange={setFilter}
           jumlahHasil={hasil.length}
-          tersemat={tersemat}
+          tersemat={polos}
+          tanpaKecamatan={lingkup?.perDesa}
         />
       </div>
 
       {/* Saat data diambil ulang, isi lama ditahan dengan opasitas diturunkan. */}
       <div
-        className={`mx-auto mt-5 space-y-5 transition-opacity duration-300 ${tersemat ? '' : LEBAR_CORE} ${
+        className={`mx-auto mt-5 space-y-5 transition-opacity duration-300 ${polos ? '' : LEBAR_CORE} ${
           loading ? 'opacity-50' : 'opacity-100'
         }`}
       >
-        <BumdesRingkasan ringkasan={ringkasan} totalKeseluruhan={totalKabupaten} />
+        <BumdesRingkasan ringkasan={ringkasan} totalKeseluruhan={totalKabupaten} namaWilayah={namaWilayah} />
 
-        <BumdesCharts data={hasil} filter={filter} onFilter={setFilter} />
+        <BumdesCharts data={hasil} filter={filter} onFilter={setFilter} perDesa={lingkup?.perDesa} />
 
         <BumdesEkonomi data={hasil} />
 
@@ -243,6 +270,7 @@ const StatistikBumdes = ({ tersemat = false, bisaKelola = false }) => {
           adaFilter={adaFilterAktif(filter)}
           onReset={() => setFilter({ ...FILTER_AWAL })}
           onUbah={bisaKelola ? bukaUbah : undefined}
+          namaWilayah={namaWilayah}
         />
       </div>
 

@@ -47,7 +47,9 @@ const Keping = ({ children, onHapus }) => (
   </span>
 );
 
-const BumdesFilterBar = ({ data, filter, onChange, jumlahHasil, tersemat = false }) => {
+// `tanpaKecamatan`: data sudah satu kecamatan (akun kecamatan), jadi pilihan
+// kecamatan hanya akan berisi satu baris — disembunyikan.
+const BumdesFilterBar = ({ data, filter, onChange, jumlahHasil, tersemat = false, tanpaKecamatan = false }) => {
   const [terbuka, setTerbuka] = useState(false);
 
   // Setiap pilihan menyebut jumlahnya, dan jumlah itu dihitung dengan ember
@@ -150,16 +152,20 @@ const BumdesFilterBar = ({ data, filter, onChange, jumlahHasil, tersemat = false
               type="search"
               value={filter.cari}
               onChange={(e) => ubah('cari')(e.target.value)}
-              placeholder="Cari nama BUMDes, desa, kecamatan, atau direktur…"
+              placeholder={tanpaKecamatan
+                ? 'Cari nama BUMDes, desa, atau direktur…'
+                : 'Cari nama BUMDes, desa, kecamatan, atau direktur…'}
               aria-label="Cari BUMDes"
               className="w-full rounded-lg border border-slate-200 bg-white py-2.5 pl-9 pr-3 text-sm text-slate-800 outline-none transition-colors placeholder:text-slate-400 focus:border-slate-900 focus:ring-1 focus:ring-slate-900"
             />
           </div>
 
-          <div className="grid grid-cols-2 gap-3 sm:w-auto sm:grid-cols-2">
-            <div className="w-full sm:w-52">
-              <Pilihan label="Kecamatan" value={filter.kecamatan} onChange={ubah('kecamatan')} options={opsiKecamatan} />
-            </div>
+          <div className={`grid gap-3 sm:w-auto ${tanpaKecamatan ? 'grid-cols-1' : 'grid-cols-2'}`}>
+            {!tanpaKecamatan && (
+              <div className="w-full sm:w-52">
+                <Pilihan label="Kecamatan" value={filter.kecamatan} onChange={ubah('kecamatan')} options={opsiKecamatan} />
+              </div>
+            )}
             <div className="w-full sm:w-40">
               <Pilihan
                 label="Status"

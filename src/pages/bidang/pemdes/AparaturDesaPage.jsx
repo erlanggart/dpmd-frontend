@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import SelectBox from '../../../components/ui/SelectBox';
+import { jenjangKey } from '../../../utils/jenjangPendidikan';
 import {
 	Users,
 	Search,
@@ -1402,27 +1403,7 @@ export const AparaturDesaDetailPage = ({ backPath }) => {
 // ============================================================
 // Tab: Database Lokal
 // ============================================================
-// Menyatukan ejaan jenjang pendidikan dari dua sumber data menjadi satu label.
-// Urutan pengujian penting: yang paling spesifik lebih dulu, kalau tidak
-// "STRATA II" akan tertangkap duluan oleh pola "STRATA I".
-const JENJANG = [
-	{ label: 'S3', order: 8, match: /^s-?3\b|strata\s*iii\b|doktor/i },
-	{ label: 'S2', order: 7, match: /^s-?2\b|strata\s*ii\b|magister|pasca\s*sarjana/i },
-	{ label: 'S1 / Diploma IV', order: 6, match: /^s-?1\b|^d-?4\b|strata\s*i\b|diploma\s*iv\b|sarjana/i },
-	{ label: 'Diploma III', order: 5, match: /^d-?3\b|diploma\s*iii\b|sarjana\s*muda|s\.\s*muda/i },
-	{ label: 'Diploma I-II', order: 4, match: /^d-?[12]\b|diploma\s*i{1,2}\b/i },
-	{ label: 'SMA / SMK / Sederajat', order: 3, match: /^(sma|smk|slta|stm|smea|man|ma)\b/i },
-	{ label: 'SMP / Sederajat', order: 2, match: /^(smp|sltp|mts)\b/i },
-	{ label: 'SD / Sederajat', order: 1, match: /^(sd|mi)\b|sekolah\s*dasar/i },
-];
-
-const jenjangKey = (raw) => {
-	const value = String(raw).trim();
-	for (const item of JENJANG) {
-		if (item.match.test(value)) return item;
-	}
-	return { label: value, order: 99 };
-};
+// Pengelompokan ejaan jenjang pendidikan: lihat utils/jenjangPendidikan.js.
 
 const EMPTY_FILTERS = { search: '', kecamatan_id: '', desa_id: '', jabatan: '', jenis_kelamin: '', status: '', pendidikan: '' };
 

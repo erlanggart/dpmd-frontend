@@ -56,7 +56,7 @@ const Ubin = ({ icon: Icon, label, nilai, dari, keterangan, tanpaMeteran, urutan
   );
 };
 
-const BumdesRingkasan = ({ ringkasan, totalKeseluruhan }) => {
+const BumdesRingkasan = ({ ringkasan, totalKeseluruhan, namaWilayah = 'Kabupaten Bogor' }) => {
   const { total, aktif, berbadanHukum, beroperasi } = ringkasan;
 
   return (
@@ -70,7 +70,7 @@ const BumdesRingkasan = ({ ringkasan, totalKeseluruhan }) => {
         tanpaMeteran={false}
         keterangan={
           total === totalKeseluruhan
-            ? 'Seluruh Kabupaten Bogor'
+            ? `Seluruh ${namaWilayah}`
             : `${persenDari(total, totalKeseluruhan)}% dari ${nf.format(totalKeseluruhan)}`
         }
       />
