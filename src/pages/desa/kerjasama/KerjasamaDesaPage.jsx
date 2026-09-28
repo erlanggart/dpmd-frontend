@@ -63,6 +63,15 @@ const formKosong = {
 const pesanGalat = (error, cadangan) =>
 	error?.response?.data?.message || error?.message || cadangan;
 
+const BATAS_BERKAS = 10 * 1024 * 1024;
+
+/** Pesan penolakan berkas dokumen kegiatan, atau null bila berkasnya layak. */
+const cekBerkas = (berkas) => {
+	if (berkas.type !== "application/pdf") return "Modul ini hanya menerima PDF.";
+	if (berkas.size > BATAS_BERKAS) return "Ukuran maksimal 10MB.";
+	return null;
+};
+
 const tanggalSingkat = (nilai) =>
 	nilai
 		? new Date(nilai).toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" })
@@ -266,6 +275,9 @@ const KerjasamaDesaPage = () => {
 	const [entriDiubah, setEntriDiubah] = useState(null);
 	const [form, setForm] = useState(formKosong);
 	const [menyimpan, setMenyimpan] = useState(false);
+	// Berkas yang dipilih di formulir, per kolom dokumen ({ file_sk_bkd: File }).
+	// Tidak wajib: dikirim sesudah entri tersimpan, karena unggahan butuh id-nya.
+	const [berkasForm, setBerkasForm] = useState({});
 
 	// Satu input berkas dipakai bergantian oleh semua tombol unggah; sasarannya
 	// disimpan di ref supaya tidak perlu satu <input> per dokumen per baris.
@@ -419,6 +431,7 @@ const KerjasamaDesaPage = () => {
 	const bukaTambah = () => {
 		setEntriDiubah(null);
 		setForm({ ...formKosong, jenis: meta?.jenis?.[0]?.key || "" });
+		setBerkasForm({});
 		setModalTerbuka(true);
 	};
 
@@ -435,6 +448,7 @@ const KerjasamaDesaPage = () => {
 			tanggal_selesai: entri.tanggal_selesai ? String(entri.tanggal_selesai).slice(0, 10) : "",
 			pelaksanaan: entri.pelaksanaan || "",
 		});
+		setBerkasForm({});
 		setModalTerbuka(true);
 	};
 
@@ -447,26 +461,69 @@ const KerjasamaDesaPage = () => {
 		if (!form.mitra.trim()) return Swal.fire("Belum lengkap", "Isi mitra kerja sama.", "warning");
 
 		setMenyimpan(true);
+		let id;
 		try {
 			if (entriDiubah) {
 				await api.put(`/desa/kerjasama/${entriDiubah.id}`, form);
+				id = entriDiubah.id;
 			} else {
-				await api.post("/desa/kerjasama", form);
+				const res = await api.post("/desa/kerjasama", form);
+				id = res.data?.data?.id;
 			}
-			setModalTerbuka(false);
-			await Promise.all([muatDaftar(), muatMeta()]);
-			Swal.fire({
-				icon: "success",
-				title: entriDiubah ? "Kerja sama diperbarui" : "Kerja sama tersimpan",
-				text: entriDiubah ? undefined : "Unggah dokumennya lewat tautan di baris daftar.",
-				timer: entriDiubah ? 1500 : 2600,
-				showConfirmButton: false,
-			});
 		} catch (error) {
-			Swal.fire("Gagal menyimpan", pesanGalat(error, "Terjadi kesalahan."), "error");
-		} finally {
 			setMenyimpan(false);
+			return Swal.fire("Gagal menyimpan", pesanGalat(error, "Terjadi kesalahan."), "error");
 		}
+
+		// Entri sudah tersimpan; berkas yang dipilih menyusul satu per satu. Hanya
+		// dokumen milik jenis yang dipilih terakhir — pilihan dari jenis lain yang
+		// sempat diklik sebelumnya diabaikan. Kegagalan unggah tidak membatalkan
+		// entri: berkasnya masih bisa diunggah dari baris daftar.
+		const antrean = (petaJenis.get(form.jenis)?.dokumen || []).filter((d) => berkasForm[d.field]);
+		const gagal = [];
+		for (const d of antrean) {
+			try {
+				const fd = new FormData();
+				fd.append("file", berkasForm[d.field]);
+				fd.append("field_name", d.field);
+				await api.post(`/desa/kerjasama/${id}/dokumen`, fd, {
+					headers: { "Content-Type": "multipart/form-data" },
+				});
+			} catch (error) {
+				gagal.push(`${d.singkat}: ${pesanGalat(error, "gagal")}`);
+			}
+		}
+
+		setModalTerbuka(false);
+		setBerkasForm({});
+		setMenyimpan(false);
+		await Promise.all([muatDaftar(), muatMeta()]).catch(() => {});
+
+		if (gagal.length) {
+			return Swal.fire({
+				icon: "warning",
+				title: "Data tersimpan, sebagian dokumen gagal",
+				html: `${gagal.join("<br/>")}<br/><span style="font-size:12px;color:#64748b">Unggah ulang lewat tautan di baris daftar.</span>`,
+			});
+		}
+		const belumAda = (petaJenis.get(form.jenis)?.dokumen || []).some((d) => {
+			const sudah = entriDiubah?.dokumen?.find((x) => x.field === d.field)?.file;
+			return !sudah && !berkasForm[d.field];
+		});
+		Swal.fire({
+			icon: "success",
+			title: entriDiubah ? "Kerja sama diperbarui" : "Kerja sama tersimpan",
+			text: belumAda ? "Dokumen yang belum ada bisa diunggah nanti lewat tautan di baris daftar." : undefined,
+			timer: belumAda ? 2600 : 1500,
+			showConfirmButton: false,
+		});
+	};
+
+	const pilihBerkasForm = (field, berkas) => {
+		if (!berkas) return;
+		const galat = cekBerkas(berkas);
+		if (galat) return Swal.fire("Berkas tidak dapat dipakai", galat, "warning");
+		setBerkasForm((lama) => ({ ...lama, [field]: berkas }));
 	};
 
 	const hapus = async (entri) => {
@@ -500,12 +557,8 @@ const KerjasamaDesaPage = () => {
 		const sasaran = sasaranUnggah.current;
 		if (!berkas || !sasaran) return;
 
-		if (berkas.type !== "application/pdf") {
-			return Swal.fire("Berkas harus PDF", "Modul ini hanya menerima PDF.", "warning");
-		}
-		if (berkas.size > 10 * 1024 * 1024) {
-			return Swal.fire("Berkas terlalu besar", "Ukuran maksimal 10MB.", "warning");
-		}
+		const galat = cekBerkas(berkas);
+		if (galat) return Swal.fire("Berkas tidak dapat dipakai", galat, "warning");
 
 		try {
 			const fd = new FormData();
@@ -850,11 +903,76 @@ const KerjasamaDesaPage = () => {
 									/>
 								</div>
 
-								{!entriDiubah && (
-									<p className="rounded-xl bg-slate-50 px-4 py-3 text-[11.5px] leading-relaxed text-slate-500">
-										Dokumen diunggah setelah entri tersimpan — tautannya muncul di baris daftar. Entri boleh
-										disimpan lebih dulu meski berkasnya belum siap.
-									</p>
+								{form.jenis && (
+									<div>
+										<p className={KICKER}>
+											Dokumen <span className="normal-case tracking-normal text-slate-400">· opsional</span>
+										</p>
+										<div className="mt-3 divide-y divide-slate-100 overflow-hidden rounded-xl border border-slate-200">
+											{(petaJenis.get(form.jenis)?.dokumen || []).map((d) => {
+												const dipilih = berkasForm[d.field];
+												const lama = entriDiubah?.dokumen?.find((x) => x.field === d.field)?.file;
+												return (
+													<div key={d.field} className="flex flex-wrap items-center gap-3 px-4 py-3">
+														<LuFileText
+															className={`h-4 w-4 shrink-0 ${dipilih || lama ? "text-emerald-600" : "text-slate-400"}`}
+														/>
+														<div className="min-w-0 flex-1">
+															<p className="text-[13px] font-semibold text-slate-800">{d.label}</p>
+															<p className="truncate text-[11.5px] text-slate-500">
+																{dipilih ? (
+																	<>
+																		{dipilih.name}{" "}
+																		<span className="text-slate-400">
+																			· {(dipilih.size / 1024 / 1024).toFixed(1)} MB · diunggah saat disimpan
+																		</span>
+																	</>
+																) : lama ? (
+																	<a
+																		href={urlDokumen(lama)}
+																		target="_blank"
+																		rel="noreferrer"
+																		className="underline underline-offset-2 hover:text-slate-900"
+																	>
+																		Sudah diunggah — lihat
+																	</a>
+																) : (
+																	"Belum ada berkas"
+																)}
+															</p>
+														</div>
+														{dipilih && (
+															<button
+																type="button"
+																onClick={() => setBerkasForm((lama) => ({ ...lama, [d.field]: undefined }))}
+																className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-700"
+																aria-label={`Batalkan ${d.singkat}`}
+															>
+																<LuX className="h-4 w-4" />
+															</button>
+														)}
+														<label className="inline-flex cursor-pointer items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-[12px] font-semibold text-slate-700 transition-colors hover:bg-slate-50">
+															<LuUpload className="h-3.5 w-3.5" />
+															{dipilih || lama ? "Ganti" : "Pilih PDF"}
+															<input
+																type="file"
+																accept="application/pdf"
+																className="hidden"
+																onChange={(e) => {
+																	pilihBerkasForm(d.field, e.target.files?.[0]);
+																	e.target.value = "";
+																}}
+															/>
+														</label>
+													</div>
+												);
+											})}
+										</div>
+										<p className="mt-2 text-[11.5px] leading-relaxed text-slate-500">
+											PDF, maks. 10MB. Boleh dikosongkan — entri tetap tersimpan dan berkasnya bisa diunggah nanti
+											dari baris daftar.
+										</p>
+									</div>
 								)}
 							</div>
 
