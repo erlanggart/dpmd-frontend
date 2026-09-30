@@ -34,7 +34,9 @@ import {
  * padahal hanya bertambahnya BUMDes yang mengisi.
  */
 const DeretTahun = ({ deret, warna }) => {
-	const max = Math.max(...deret.per_tahun.map((tahun) => tahun.nilai), 1);
+	// Laba bersih bisa negatif bila rugi lebih besar dari untung: tinggi batang
+	// memakai nilai mutlak, warnanya merah untuk menandai minus.
+	const max = Math.max(...deret.per_tahun.map((tahun) => Math.abs(tahun.nilai)), 1);
 	return (
 		<div className="rounded-xl border border-slate-100 p-4">
 			<div className="flex items-baseline justify-between gap-2">
@@ -50,15 +52,16 @@ const DeretTahun = ({ deret, warna }) => {
 			<div className="mt-4 flex items-end gap-2">
 				{deret.per_tahun.map((tahun) => (
 					<div key={tahun.tahun} className="flex min-w-0 flex-1 flex-col items-center gap-1.5" title={rupiahPenuh(tahun.nilai)}>
-						<span className="text-[10px] font-semibold tabular-nums text-slate-700">
-							{tahun.nilai > 0 ? rupiahRingkas(tahun.nilai).replace('Rp ', '') : '–'}
+						<span className={`text-[10px] font-semibold tabular-nums ${tahun.nilai < 0 ? 'text-rose-600' : 'text-slate-700'}`}>
+							{tahun.nilai !== 0 ? rupiahRingkas(tahun.nilai).replace('Rp ', '') : '–'}
 						</span>
 						<div
 							className="w-full rounded-t-[4px] transition-[height] duration-700"
-							style={{ height: `${Math.max((tahun.nilai / max) * 96, 3)}px`, backgroundColor: warna }}
+							style={{ height: `${Math.max((Math.abs(tahun.nilai) / max) * 96, 3)}px`, backgroundColor: tahun.nilai < 0 ? '#e11d48' : warna }}
 						/>
 						<span className="text-[10px] text-slate-500">{tahun.tahun}</span>
 						<span className="text-[10px] text-slate-400">{tahun.pengisi} isi</span>
+						{tahun.rugi > 0 && <span className="text-[10px] font-semibold text-rose-600">{tahun.rugi} rugi</span>}
 					</div>
 				))}
 			</div>
@@ -287,8 +290,8 @@ const OutputBumdesPage = () => {
 												<td className="px-5 py-3 text-right font-semibold tabular-nums text-slate-900">
 													{item.omset_terakhir > 0 ? rupiahRingkas(item.omset_terakhir) : '–'}
 												</td>
-												<td className="px-5 py-3 text-right tabular-nums text-slate-600">
-													{item.laba_terakhir > 0 ? rupiahRingkas(item.laba_terakhir) : '–'}
+												<td className={`px-5 py-3 text-right tabular-nums ${item.laba_terakhir < 0 ? 'font-semibold text-rose-600' : 'text-slate-600'}`}>
+													{item.laba_terakhir !== 0 ? rupiahRingkas(item.laba_terakhir) : '–'}
 												</td>
 												<td className="px-5 py-3 text-right tabular-nums text-slate-600">
 													{item.kontribusi_pades_terakhir > 0 ? rupiahRingkas(item.kontribusi_pades_terakhir) : '–'}

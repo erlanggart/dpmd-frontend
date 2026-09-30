@@ -200,19 +200,45 @@ const BumdesDesaService = {
       errors.push('Format nomor telepon tidak valid');
     }
 
-    // Numeric fields validation
-    const numericFields = [
+    // Numeric fields validation.
+    // Laba, SHU, dan kekayaan bersih BOLEH negatif — BUM Desa yang merugi
+    // mengisinya dengan tanda minus. Sisanya (omset, modal, aset, tenaga kerja)
+    // memang tidak mungkin di bawah nol.
+    const labelField = (field) => field
+      .replace(/(\d{4})Sem(\d)/, ' $1 Semester $2')
+      .replace(/(\d{4})$/, ' $1')
+      .replace(/([a-z])([A-Z])/g, '$1 $2')
+      .replace('Omzet', 'Omset')
+      .replace('P A Des', 'PADes')
+      .replace(/\s+/g, ' ')
+      .trim();
+
+    const bukanAngka = (v) => v !== null && v !== undefined && v !== '' && v !== '-' && isNaN(Number(v));
+
+    const nonNegatif = [
       'TahunPendirian', 'TotalTenagaKerja', 'TenagaKerjaLaki', 'TenagaKerjaPerempuan',
-      'ModalAwal', 'ModalSekarang', 'Aset', 'KekayaanBersih',
+      'ModalAwal', 'ModalSekarang', 'Aset',
       'Omzet2022', 'Omzet2023', 'Omzet2024',
-      'SHU2022', 'SHU2023', 'SHU2024',
-      'Laba2022', 'Laba2023', 'Laba2024',
+      'Omset2023', 'Omset2024', 'Omset2024Sem1', 'Omset2025',
       'KontribusiPADesRP', 'KontribusiPADesPersen'
     ];
+    const bolehNegatif = [
+      'KekayaanBersih',
+      'SHU2022', 'SHU2023', 'SHU2024',
+      'Laba2022', 'Laba2023', 'Laba2024', 'Laba2024Sem1', 'Laba2025'
+    ];
 
-    numericFields.forEach(field => {
-      if (data[field] && (isNaN(data[field]) || data[field] < 0)) {
-        errors.push(`${field} harus berupa angka positif`);
+    nonNegatif.forEach(field => {
+      if (bukanAngka(data[field])) {
+        errors.push(`${labelField(field)} harus berupa angka`);
+      } else if (data[field] !== '' && data[field] !== null && data[field] !== undefined && Number(data[field]) < 0) {
+        errors.push(`${labelField(field)} tidak boleh minus`);
+      }
+    });
+
+    bolehNegatif.forEach(field => {
+      if (bukanAngka(data[field])) {
+        errors.push(`${labelField(field)} harus berupa angka (pakai tanda minus bila rugi)`);
       }
     });
 

@@ -243,7 +243,7 @@ export const SEKSI_BUMDES = [
 				kolom: [
 					{ kunci: 'tahun', label: 'Tahun', jenis: 'tahun', wajib: true },
 					{ kunci: 'omset', label: 'Omset (Rp)', jenis: 'uang', wajib: true },
-					{ kunci: 'laba', label: 'Laba (Rp)', jenis: 'uang' },
+					{ kunci: 'laba', label: 'Laba / Rugi (Rp)', jenis: 'uang', bolehMinus: true, contoh: 'Mis. 5.000.000 atau -2.000.000 bila rugi' },
 				],
 			},
 		],

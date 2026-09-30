@@ -145,28 +145,40 @@ const TombolKecil = ({ children, bahaya = false, ...props }) => (
 
 /* ───────────────────────────── Isian dasar ───────────────────────────── */
 
-/** Input rupiah: ditampilkan berpemisah ribuan, disimpan sebagai angka mentah. */
-const InputUang = ({ nilai, onUbah, mati, contoh = '0' }) => {
+/**
+ * Input rupiah: ditampilkan berpemisah ribuan, disimpan sebagai angka mentah.
+ * Tanda minus hanya diterima bila `bolehMinus` (laba/rugi) — omset, modal, dan
+ * aset tidak mungkin negatif, jadi minus di sana pasti salah ketik.
+ */
+const InputUang = ({ nilai, onUbah, mati, contoh = '0', bolehMinus = false }) => {
 	const tampil = nilai === null || nilai === undefined || nilai === '' || nilai === '-'
 		? (nilai === '-' ? '-' : '')
 		: Number(nilai).toLocaleString('id-ID');
+	const rugi = bolehMinus && Number(nilai) < 0;
 	return (
 		<div className="relative">
 			<span className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-xs font-semibold text-slate-400">Rp</span>
 			<input
 				type="text"
-				inputMode="numeric"
+				// Papan ketik angka di ponsel tidak punya tombol minus — kolom yang
+				// boleh negatif memakai papan ketik biasa.
+				inputMode={bolehMinus ? 'text' : 'numeric'}
 				value={tampil}
 				onChange={(e) => {
 					const mentah = e.target.value.trim();
-					const negatif = mentah.startsWith('-');
+					const negatif = bolehMinus && mentah.startsWith('-');
 					const digit = mentah.replace(/[^\d]/g, '');
 					onUbah(digit ? `${negatif ? '-' : ''}${digit}` : negatif ? '-' : '');
 				}}
 				placeholder={contoh}
 				disabled={mati}
-				className={`${kelasKolom(mati)} pl-10 tabular-nums`}
+				className={`${kelasKolom(mati)} pl-10 tabular-nums ${rugi ? 'text-rose-600' : ''}`}
 			/>
+			{rugi && (
+				<span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 rounded bg-rose-50 px-1.5 py-0.5 text-[10.5px] font-semibold text-rose-600">
+					Rugi
+				</span>
+			)}
 		</div>
 	);
 };
@@ -199,7 +211,7 @@ const IsianBaris = ({ def, nilai, onUbah, unggah }) => {
 			</select>
 		);
 	}
-	if (def.jenis === 'uang') return <InputUang nilai={nilai} onUbah={onUbah} mati={false} />;
+	if (def.jenis === 'uang') return <InputUang nilai={nilai} onUbah={onUbah} mati={false} bolehMinus={def.bolehMinus} contoh={def.contoh} />;
 	if (def.jenis === 'berkas') {
 		return (
 			<div>
@@ -246,7 +258,14 @@ const IsianBaris = ({ def, nilai, onUbah, unggah }) => {
 
 const tampilNilaiBaris = (def, nilai) => {
 	if (nilai === null || nilai === undefined || nilai === '') return null;
-	if (def.jenis === 'uang') return <span className="tabular-nums">{rupiah(nilai)}</span>;
+	if (def.jenis === 'uang') {
+		// Laba negatif = rugi: diberi warna dan keterangan, bukan sekadar tanda
+		// minus kecil yang mudah terlewat saat membaca.
+		if (def.bolehMinus && Number(nilai) < 0) {
+			return <span className="tabular-nums font-semibold text-rose-600">{rupiah(nilai)} <span className="text-[11px] font-medium">(rugi)</span></span>;
+		}
+		return <span className="tabular-nums">{rupiah(nilai)}</span>;
+	}
 	if (def.jenis === 'pilih') return def.opsi.find((o) => o.value === nilai)?.label || nilai;
 	if (def.jenis === 'berkas') {
 		return (
