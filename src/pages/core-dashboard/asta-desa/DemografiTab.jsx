@@ -72,6 +72,13 @@ const AnggotaKeluarga = ({ data, memuat, galat, onUlang, totalKeluarga }) => {
   if (galat) return <Galat pesan={galat} onUlang={onUlang} />;
   if (memuat && !data) return <Memuat pesan="Menghitung demografi anggota keluarga…" />;
   if (!data) return <Kosong pesan="Belum ada data anggota keluarga." />;
+  // Penyusuran ±1.650 halaman anggota berjalan di latar server. Nol di sini
+  // berarti "belum dihitung", bukan "tidak ada" — jangan disajikan sebagai angka.
+  if (data.rincian_siap === false) {
+    return (
+      <Memuat pesan="Server sedang menghitung data anggota keluarga dari ASTA DESA. Ini bisa memakan beberapa menit — halaman akan terisi sendiri." />
+    );
+  }
 
   const total = data.total_anggota || 0;
   // Usia produktif 15–64, mengikuti pengelompokan pada piramida.
@@ -293,7 +300,7 @@ const DemografiTab = ({ data, memuat, galat, onUlang, totalKeluarga, kategori, f
           {kategori?.memuat && <span className="self-center px-2 text-xs text-slate-400">Memuat kategori sensus…</span>}
           {!kategori?.memuat && dk && !dk.rincian_siap && (
             <span className="self-center px-2 text-xs text-amber-700">
-              Server masih menyusuri data sensus — tekan Muat ulang sebentar lagi.
+              Server sedang menyusun kategori sensus dari ASTA DESA — akan muncul sendiri dalam beberapa menit.
             </span>
           )}
         </nav>

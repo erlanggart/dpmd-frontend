@@ -117,7 +117,13 @@ const AstaDesaPage = () => {
   // terbuka seharian. Pembaruannya diam-diam: tidak ada kedipan kerangka
   // pemuatan, dan kegagalan sesaat tidak mengosongkan angka yang sudah tampil.
   const ringkasan = useAstaDesa('/ringkasan', {}, { aktif: Boolean(siap), segarkanTiapMs: 60 * 1000 });
-  const demografi = useAstaDesa('/demografi', {}, { aktif: Boolean(siap) && tab === 'demografi' });
+  // Diperbarui diam-diam tiap 30 detik: server menjawab dari cache seketika,
+  // dan begitu penyusuran di latar selesai angkanya muncul sendiri tanpa
+  // pengguna perlu menekan apa pun.
+  const demografi = useAstaDesa('/demografi', {}, {
+    aktif: Boolean(siap) && tab === 'demografi',
+    segarkanTiapMs: 30 * 1000
+  });
   // Profil keluarga per kategori sensus (rumah, bansos, …), bisa disaring per
   // wilayah. Params tanpa kunci kosong supaya kunci cache-nya tetap stabil.
   const [filterWilayah, setFilterWilayah] = useState({});
@@ -126,7 +132,8 @@ const AstaDesaPage = () => {
     [filterWilayah]
   );
   const kategoriSensus = useAstaDesa('/demografi/kategori', paramsKategori, {
-    aktif: Boolean(siap) && tab === 'demografi'
+    aktif: Boolean(siap) && tab === 'demografi',
+    segarkanTiapMs: 30 * 1000
   });
 
   const muatUlang = async () => {
