@@ -12,7 +12,7 @@
  * memperlihatkan "-1.204 orang".
  */
 
-import React, { useMemo } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   Bar,
   BarChart,
@@ -22,14 +22,16 @@ import {
   XAxis,
   YAxis
 } from 'recharts';
-import { AlertTriangle, Baby, GraduationCap, HeartHandshake, Users2 } from 'lucide-react';
+import { AlertTriangle, Baby, GraduationCap, HeartHandshake, Info, Users2 } from 'lucide-react';
 import { DaftarBatang, Galat, KartuAngka, Kosong, Legenda, Memuat, Panel, Tooltip1 } from './ui';
 import { GAYA_SUMBU, SERI, angka, persen, rapikanLabel } from './warna';
+import { FilterWilayah, GridKategori } from './KategoriSensus';
 
 const WARNA_L = SERI[0];
 const WARNA_P = SERI[1];
 
-const DemografiTab = ({ data, memuat, galat, onUlang, totalKeluarga }) => {
+/** Agregat anggota keluarga (usia, jenis kelamin, pendidikan, …). */
+const AnggotaKeluarga = ({ data, memuat, galat, onUlang, totalKeluarga }) => {
   const piramida = useMemo(
     () =>
       (data?.piramida || []).map((k) => ({
@@ -234,6 +236,103 @@ const DemografiTab = ({ data, memuat, galat, onUlang, totalKeluarga }) => {
           <DaftarBatang baris={hubungan} total={total} warna={SERI[4]} batas={10} />
         </Panel>
       </div>
+    </div>
+  );
+};
+
+/**
+ * Tab Demografi dipetakan per kategori sensus: "Anggota Keluarga" (data
+ * orang per orang) lalu satu tab per kelompok kolom sensus keluarga (rumah,
+ * bantuan sosial, …) yang ditemukan backend dari data.
+ *
+ * Penyaring wilayah hanya berlaku untuk kategori sensus keluarga. Data anggota
+ * datang dari `/sensus-anggotas` yang tidak membawa kecamatan/desa, jadi
+ * bagian itu selalu se-kabupaten — dan halaman mengatakannya terang-terangan
+ * alih-alih diam-diam menampilkan angka kabupaten di bawah judul desa.
+ */
+const DemografiTab = ({ data, memuat, galat, onUlang, totalKeluarga, kategori, filter, onFilter }) => {
+  const [pilihan, setPilihan] = useState('anggota');
+  const dk = kategori?.data;
+  const daftar = useMemo(() => dk?.kategori || [], [dk]);
+
+  // Kategori yang sedang dipilih bisa hilang setelah penyaring wilayah diubah
+  // (mis. desa kecil tanpa satu pun kolom sosial terisi) — kembali ke awal.
+  useEffect(() => {
+    if (pilihan !== 'anggota' && dk && !daftar.some((k) => k.kode === pilihan)) setPilihan('anggota');
+  }, [dk, daftar, pilihan]);
+
+  const aktif = daftar.find((k) => k.kode === pilihan);
+  const adaFilter = filter?.kecamatan || filter?.desa;
+
+  const chip = (kode, label, jumlah) => {
+    const terpilih = pilihan === kode;
+    return (
+      <button
+        key={kode}
+        type="button"
+        onClick={() => setPilihan(kode)}
+        className={`inline-flex flex-shrink-0 items-center gap-1.5 rounded-lg px-3 py-2 text-xs font-semibold transition-colors ${
+          terpilih ? 'bg-slate-900 text-white shadow-sm' : 'bg-white text-slate-600 ring-1 ring-slate-200 hover:text-slate-900 hover:ring-slate-300'
+        }`}
+      >
+        {label}
+        {jumlah !== undefined && (
+          <span className={`rounded px-1 text-[10.5px] tabular-nums ${terpilih ? 'bg-white/15' : 'bg-slate-100 text-slate-500'}`}>{jumlah}</span>
+        )}
+      </button>
+    );
+  };
+
+  return (
+    <div className="space-y-4">
+      <div className="space-y-3 rounded-2xl border border-slate-200 bg-white p-3 shadow-sm shadow-slate-900/[0.03] sm:p-4">
+        <FilterWilayah wilayah={dk?.wilayah} filter={filter || {}} onUbah={onFilter} total={dk?.total_keluarga} />
+        <nav className="-mx-1 flex gap-1.5 overflow-x-auto px-1 pb-0.5">
+          {chip('anggota', 'Anggota Keluarga')}
+          {daftar.map((k) => chip(k.kode, k.label, k.kolom.length))}
+          {kategori?.memuat && <span className="self-center px-2 text-xs text-slate-400">Memuat kategori sensus…</span>}
+          {!kategori?.memuat && dk && !dk.rincian_siap && (
+            <span className="self-center px-2 text-xs text-amber-700">
+              Server masih menyusuri data sensus — tekan Muat ulang sebentar lagi.
+            </span>
+          )}
+        </nav>
+      </div>
+
+      {pilihan === 'anggota' ? (
+        <>
+          {adaFilter && (
+            <p className="flex items-start gap-2 rounded-xl bg-sky-50 px-3 py-2 text-xs leading-relaxed text-sky-800">
+              <Info className="mt-0.5 h-3.5 w-3.5 flex-shrink-0" />
+              Data anggota keluarga belum bisa disaring per wilayah (sumbernya tidak membawa kecamatan/desa) — bagian ini
+              tetap menampilkan angka se-kabupaten.
+            </p>
+          )}
+          <AnggotaKeluarga data={data} memuat={memuat} galat={galat} onUlang={onUlang} totalKeluarga={totalKeluarga} />
+        </>
+      ) : kategori?.galat ? (
+        <Galat pesan={kategori.galat} onUlang={kategori.ambil} />
+      ) : !aktif ? (
+        <Memuat pesan="Menghitung profil keluarga per kategori…" />
+      ) : (
+        <>
+          {dk.sebagian && (
+            <div className="flex items-start gap-3 rounded-2xl border border-amber-200 bg-amber-50/70 px-4 py-3">
+              <AlertTriangle className="mt-0.5 h-4 w-4 flex-shrink-0 text-amber-500" />
+              <p className="text-xs leading-relaxed text-slate-700">
+                <span className="font-semibold text-slate-900">Angka ini sebagian.</span> Pembacaan sensus berhenti di pagar
+                batas baris — bacalah proporsinya, bukan jumlah mutlaknya.
+              </p>
+            </div>
+          )}
+          <GridKategori
+            key={`${aktif.kode}-${filter?.kecamatan || ''}-${filter?.desa || ''}`}
+            kategori={aktif}
+            totalKeluarga={dk.total_keluarga}
+            indeksWarna={daftar.indexOf(aktif)}
+          />
+        </>
+      )}
     </div>
   );
 };

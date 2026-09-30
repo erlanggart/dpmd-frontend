@@ -118,13 +118,24 @@ const AstaDesaPage = () => {
   // pemuatan, dan kegagalan sesaat tidak mengosongkan angka yang sudah tampil.
   const ringkasan = useAstaDesa('/ringkasan', {}, { aktif: Boolean(siap), segarkanTiapMs: 60 * 1000 });
   const demografi = useAstaDesa('/demografi', {}, { aktif: Boolean(siap) && tab === 'demografi' });
+  // Profil keluarga per kategori sensus (rumah, bansos, …), bisa disaring per
+  // wilayah. Params tanpa kunci kosong supaya kunci cache-nya tetap stabil.
+  const [filterWilayah, setFilterWilayah] = useState({});
+  const paramsKategori = useMemo(
+    () => Object.fromEntries(Object.entries(filterWilayah).filter(([, v]) => v)),
+    [filterWilayah]
+  );
+  const kategoriSensus = useAstaDesa('/demografi/kategori', paramsKategori, {
+    aktif: Boolean(siap) && tab === 'demografi'
+  });
 
   const muatUlang = async () => {
     setMenyegarkan(true);
     await segarkanSemua();
     await Promise.all([
       ringkasan.ambil(true),
-      tab === 'demografi' ? demografi.ambil(true) : Promise.resolve()
+      tab === 'demografi' ? demografi.ambil(true) : Promise.resolve(),
+      tab === 'demografi' ? kategoriSensus.ambil(true) : Promise.resolve()
     ]);
     setMenyegarkan(false);
   };
@@ -229,6 +240,9 @@ const AstaDesaPage = () => {
                 galat={demografi.galat}
                 onUlang={demografi.ambil}
                 totalKeluarga={ringkasan.data?.total_sensus}
+                kategori={kategoriSensus}
+                filter={filterWilayah}
+                onFilter={setFilterWilayah}
               />
             )}
             {tab === 'pengguna' && <PenggunaTab ringkasan={ringkasan.data} />}
