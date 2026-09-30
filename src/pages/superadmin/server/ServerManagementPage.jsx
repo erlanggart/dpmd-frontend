@@ -94,7 +94,7 @@ const ServerManagementPage = () => {
 	const sys = overview?.system;
 
 	return (
-		<div className="mx-auto max-w-7xl space-y-4 pb-10">
+		<div className="mx-auto w-full max-w-[1920px] space-y-4 p-3 pb-10 sm:p-5 lg:p-6">
 			{/* Header */}
 			<div className="overflow-hidden rounded-2xl bg-gradient-to-br from-slate-900 via-slate-900 to-slate-800 text-white shadow-lg">
 				<div className="flex flex-wrap items-start justify-between gap-4 p-5">

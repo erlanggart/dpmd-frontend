@@ -71,10 +71,11 @@ const PanduanSetup = ({ status, onRetry }) => (
 			<ol className="list-decimal space-y-3 pl-5">
 				<li>
 					Di shell <b>host Proxmox</b>, buat user & token khusus panel dengan hak terbatas:
-					<pre className="mt-1.5 overflow-x-auto rounded-lg bg-slate-900 p-3 text-[11.5px] leading-relaxed text-slate-100">{`pveum role add DPMDPanel -privs "Sys.Audit VM.Audit VM.PowerMgmt VM.Config.Disk VM.Config.Memory VM.Config.CPU Datastore.Audit Datastore.AllocateSpace"
+					<pre className="mt-1.5 overflow-x-auto rounded-lg bg-slate-900 p-3 text-[11.5px] leading-relaxed text-slate-100">{`pveum role add DPMDPanel --privs "Sys.Audit,VM.Audit,VM.PowerMgmt,VM.Config.Disk,VM.Config.Memory,VM.Config.CPU,VM.Config.Options,Datastore.Audit,Datastore.AllocateSpace"
 pveum user add panel@pve --comment "Panel Manajemen Server DPMD"
-pveum aclmod / -user panel@pve -role DPMDPanel
+pveum acl modify / --users panel@pve --roles DPMDPanel --propagate 1
 pveum user token add panel@pve dpmd --privsep 0`}</pre>
+					<p className="mt-1 text-xs text-slate-500">VM.Config.Options wajib — tanpa itu Proxmox menolak (403) penambahan disk container.</p>
 					<p className="mt-1 text-xs text-slate-500">Perintah terakhir menampilkan secret token satu kali — salin.</p>
 				</li>
 				<li>
@@ -161,7 +162,12 @@ const KartuGuest = ({ g, onOpen }) => {
 					<Bar percent={disk ?? 0} tingkat={tingkatDari(disk, 85)} className="h-1.5" />
 				</div>
 			</div>
-			<p className="mt-3 text-[11px] text-slate-500">{jalan ? `Aktif ${formatDurasi(g.uptime)}` : "Tidak berjalan"}</p>
+			<div className="mt-3 flex items-center justify-between gap-2 border-t border-slate-100 pt-2.5">
+				<p className="text-[11px] text-slate-500">{jalan ? `Aktif ${formatDurasi(g.uptime)}` : "Tidak berjalan"}</p>
+				<span className="inline-flex items-center gap-1 text-[11px] font-semibold text-slate-400 transition group-hover:text-blue-600">
+					<FiSettings className="h-3 w-3" /> Atur kapasitas
+				</span>
+			</div>
 		</button>
 	);
 };
@@ -188,20 +194,228 @@ const konfirmasiNama = async (judul, html, nama, tombol, warna = "#dc2626") => {
 	return r.isConfirmed ? r.value : null;
 };
 
-const DetailGuest = ({ vmid, onClose, onChanged }) => {
+const GB = 1024 ** 3;
+const PILIHAN_DISK = [5, 10, 25, 50, 100];
+
+/** Satu disk: pemakaian, pilihan cepat tambah GB, dan pratinjau hasilnya. */
+const KelolaDisk = ({ disk, pakai, sisaPool, sibuk, onTambah }) => {
+	const [tambah, setTambah] = useState(10);
+	const gb = Math.round(Number(tambah) || 0);
+	const sekarangGb = disk.size_bytes ? Math.round(disk.size_bytes / GB) : null;
+	const sisaGb = sisaPool != null ? Math.floor(sisaPool / GB) : null;
+	const melebihi = sisaGb != null && gb > sisaGb;
+	const valid = gb >= 1 && gb <= 2048 && !melebihi;
+	const p = pakai?.total ? persen(pakai.used, pakai.total) : null;
+
+	return (
+		<div className="rounded-xl border border-slate-200 bg-white p-4">
+			<div className="flex flex-wrap items-start justify-between gap-2">
+				<div className="min-w-0">
+					<p className="text-sm font-bold text-slate-800">
+						{disk.key === "rootfs" ? "Disk utama" : `Disk tambahan ${disk.key}`}
+						{disk.mountpoint && <span className="ml-1 font-mono text-xs font-normal text-slate-500">→ {disk.mountpoint}</span>}
+					</p>
+					<p className="truncate font-mono text-[11px] text-slate-400">
+						{disk.storage}:{disk.volume}
+					</p>
+				</div>
+				<span className="text-2xl font-extrabold tracking-tight text-slate-900">{disk.size || "-"}</span>
+			</div>
+
+			{p !== null && (
+				<div className="mt-3">
+					<Bar percent={p} tingkat={tingkatDari(p, 85)} className="h-2.5" />
+					<div className="mt-1 flex flex-wrap justify-between gap-2 text-xs text-slate-500">
+						<span>
+							Terpakai <b className="text-slate-700">{formatBytes(pakai.used)}</b> dari {formatBytes(pakai.total)} ({p}%)
+						</span>
+						<span>Sisa {formatBytes(pakai.total - pakai.used)}</span>
+					</div>
+					{p >= 85 && <p className="mt-1.5 rounded-lg bg-amber-50 px-2.5 py-1.5 text-xs font-medium text-amber-800">Disk hampir penuh — disarankan tambah kapasitas.</p>}
+				</div>
+			)}
+
+			<p className="mt-4 text-xs font-semibold text-slate-600">Tambah kapasitas</p>
+			<div className="mt-1.5 flex flex-wrap items-center gap-1.5">
+				{PILIHAN_DISK.map((n) => (
+					<button
+						key={n}
+						onClick={() => setTambah(n)}
+						disabled={sisaGb != null && n > sisaGb}
+						className={`rounded-lg px-3 py-1.5 text-xs font-bold ring-1 transition disabled:cursor-not-allowed disabled:opacity-40 ${
+							gb === n ? "bg-slate-900 text-white ring-slate-900" : "bg-white text-slate-700 ring-slate-200 hover:ring-slate-400"
+						}`}
+					>
+						+{n} GB
+					</button>
+				))}
+				<label className="flex items-center gap-1 rounded-lg px-2 py-1 text-xs ring-1 ring-slate-200">
+					<span className="text-slate-500">Lainnya</span>
+					<input
+						type="number"
+						min={1}
+						max={2048}
+						value={tambah}
+						onChange={(e) => setTambah(e.target.value)}
+						className="w-16 bg-transparent text-right font-bold text-slate-800 outline-none"
+					/>
+					<span className="text-slate-500">GB</span>
+				</label>
+			</div>
+
+			<div className="mt-3 flex flex-wrap items-center justify-between gap-3 rounded-lg bg-slate-50 px-3 py-2.5">
+				<div className="text-xs text-slate-600">
+					<p>
+						Ukuran baru: <b className="text-slate-900">{disk.size || "-"}</b> → <b className="text-emerald-700">{sekarangGb != null ? `${sekarangGb + gb} GB` : `+${gb} GB`}</b>
+					</p>
+					{sisaGb != null && (
+						<p className={melebihi ? "font-semibold text-red-600" : "text-slate-500"}>
+							{melebihi ? `Ruang pool ${disk.storage} tidak cukup (sisa ${sisaGb} GB).` : `Sisa pool ${disk.storage} setelahnya: ${sisaGb - gb} GB`}
+						</p>
+					)}
+				</div>
+				<Tombol icon={FiPlus} variant="dark" disabled={sibuk || !valid} onClick={() => onTambah(disk, gb)}>
+					Tambah {gb || 0} GB
+				</Tombol>
+			</div>
+			<p className="mt-2 text-[11px] text-slate-400">Aplikasi tetap berjalan selama proses. Disk hanya bisa diperbesar, tidak bisa dikecilkan kembali.</p>
+		</div>
+	);
+};
+
+const PILIHAN_RAM = [1024, 2048, 4096, 8192, 16384, 32768];
+const PILIHAN_SWAP = [0, 512, 1024, 2048, 4096];
+
+/** Jatah RAM/CPU/swap dengan slider, pratinjau perubahan, dan peringatan OOM. */
+const KelolaSumberDaya = ({ d, host, sibuk, onSimpan }) => {
+	const awal = { memory_mb: d.config.memory_mb ?? 0, cores: d.config.cores ?? 1, swap_mb: d.config.swap_mb ?? 0 };
+	const [v, setV] = useState(awal);
+	const maxRam = host?.maxmem ? Math.floor(host.maxmem / 1024 ** 2 / 512) * 512 : 65536;
+	const maxCores = host?.maxcpu || 64;
+	const dipakaiMb = Math.round((d.mem || 0) / 1024 ** 2);
+	const ramBaru = Number(v.memory_mb) || 0;
+	const terlaluKecil = d.status === "running" && ramBaru > 0 && ramBaru < dipakaiMb * 1.15;
+	const berubah =
+		ramBaru !== Number(awal.memory_mb) || Number(v.cores) !== Number(awal.cores) || (d.type === "lxc" && Number(v.swap_mb) !== Number(awal.swap_mb));
+
+	const Selisih = ({ lama, baru, satuan }) =>
+		Number(lama) === Number(baru) ? (
+			<span className="text-xs text-slate-400">tidak berubah</span>
+		) : (
+			<span className={`text-xs font-bold ${Number(baru) > Number(lama) ? "text-emerald-600" : "text-amber-600"}`}>
+				{lama} → {baru} {satuan}
+			</span>
+		);
+
+	return (
+		<div className="space-y-5">
+			<div>
+				<div className="flex items-baseline justify-between gap-2">
+					<p className="text-sm font-bold text-slate-800">RAM</p>
+					<Selisih lama={`${(awal.memory_mb / 1024).toFixed(1)}`} baru={`${(ramBaru / 1024).toFixed(1)}`} satuan="GB" />
+				</div>
+				<div className="mt-2 flex items-center gap-3">
+					<input
+						type="range"
+						min={512}
+						max={Math.max(maxRam, ramBaru)}
+						step={512}
+						value={ramBaru}
+						onChange={(e) => setV({ ...v, memory_mb: Number(e.target.value) })}
+						className="h-2 flex-1 cursor-pointer accent-slate-900"
+					/>
+					<span className="w-20 text-right text-sm font-extrabold tabular-nums text-slate-900">{(ramBaru / 1024).toFixed(1)} GB</span>
+				</div>
+				<div className="mt-2 flex flex-wrap gap-1.5">
+					{PILIHAN_RAM.filter((m) => m <= maxRam).map((m) => (
+						<button
+							key={m}
+							onClick={() => setV({ ...v, memory_mb: m })}
+							className={`rounded-md px-2 py-1 text-xs font-semibold ring-1 ${ramBaru === m ? "bg-slate-900 text-white ring-slate-900" : "bg-white text-slate-600 ring-slate-200 hover:ring-slate-400"}`}
+						>
+							{m / 1024} GB
+						</button>
+					))}
+				</div>
+				<p className="mt-1.5 text-[11px] text-slate-500">
+					Sedang dipakai {formatBytes(d.mem)} · RAM fisik host {host ? formatBytes(host.maxmem) : "-"}
+				</p>
+				{terlaluKecil && (
+					<p className="mt-1.5 rounded-lg bg-red-50 px-2.5 py-1.5 text-xs font-medium text-red-700">
+						Terlalu dekat/di bawah pemakaian saat ini — aplikasi bisa dimatikan sistem karena kehabisan memori.
+					</p>
+				)}
+			</div>
+
+			<div>
+				<div className="flex items-baseline justify-between gap-2">
+					<p className="text-sm font-bold text-slate-800">Core CPU</p>
+					<Selisih lama={awal.cores} baru={v.cores} satuan="core" />
+				</div>
+				<div className="mt-2 flex items-center gap-3">
+					<input
+						type="range"
+						min={1}
+						max={Math.max(maxCores, Number(v.cores) || 1)}
+						step={1}
+						value={v.cores}
+						onChange={(e) => setV({ ...v, cores: Number(e.target.value) })}
+						className="h-2 flex-1 cursor-pointer accent-slate-900"
+					/>
+					<span className="w-20 text-right text-sm font-extrabold tabular-nums text-slate-900">{v.cores} core</span>
+				</div>
+				<p className="mt-1.5 text-[11px] text-slate-500">
+					Pemakaian CPU saat ini {d.status === "running" ? `${d.cpu}%` : "-"} · host punya {maxCores} thread
+				</p>
+			</div>
+
+			{d.type === "lxc" && (
+				<div>
+					<div className="flex items-baseline justify-between gap-2">
+						<p className="text-sm font-bold text-slate-800">Swap</p>
+						<Selisih lama={awal.swap_mb} baru={v.swap_mb} satuan="MB" />
+					</div>
+					<div className="mt-2 flex flex-wrap gap-1.5">
+						{PILIHAN_SWAP.map((m) => (
+							<button
+								key={m}
+								onClick={() => setV({ ...v, swap_mb: m })}
+								className={`rounded-md px-2 py-1 text-xs font-semibold ring-1 ${Number(v.swap_mb) === m ? "bg-slate-900 text-white ring-slate-900" : "bg-white text-slate-600 ring-slate-200 hover:ring-slate-400"}`}
+							>
+								{m === 0 ? "Tanpa swap" : m < 1024 ? `${m} MB` : `${m / 1024} GB`}
+							</button>
+						))}
+					</div>
+					<p className="mt-1.5 text-[11px] text-slate-500">Cadangan memori di disk saat RAM penuh (lebih lambat dari RAM).</p>
+				</div>
+			)}
+
+			<div className="flex flex-wrap items-center gap-2 border-t border-slate-100 pt-4">
+				<Tombol icon={FiSettings} variant="dark" disabled={sibuk || !berubah} onClick={() => onSimpan(v)}>
+					Simpan perubahan
+				</Tombol>
+				{berubah && (
+					<Tombol disabled={sibuk} onClick={() => setV(awal)}>
+						Batalkan
+					</Tombol>
+				)}
+				{!berubah && <span className="text-xs text-slate-400">Geser slider atau pilih ukuran untuk mengubah.</span>}
+			</div>
+		</div>
+	);
+};
+
+const DetailGuest = ({ vmid, nodes = [], storages = [], onClose, onChanged }) => {
 	const [d, setD] = useState(null);
 	const [galat, setGalat] = useState(null);
 	const [rentang, setRentang] = useState("hour");
 	const [rrd, setRrd] = useState(null);
 	const [sibuk, setSibuk] = useState(false);
-	const [res, setRes] = useState({ memory_mb: "", swap_mb: "", cores: "" });
 
 	const muat = useCallback(async () => {
 		try {
 			const r = await api.get(`/superadmin/server/proxmox/guests/${vmid}`);
-			const data = r.data?.data;
-			setD(data);
-			setRes({ memory_mb: data.config.memory_mb ?? "", swap_mb: data.config.swap_mb ?? "", cores: data.config.cores ?? "" });
+			setD(r.data?.data);
 			setGalat(null);
 		} catch (e) {
 			setGalat(pesanError(e));
@@ -247,21 +461,7 @@ const DetailGuest = ({ vmid, onClose, onChanged }) => {
 		}
 	};
 
-	const tambahDisk = async (disk) => {
-		const pilih = await Swal.fire({
-			title: `Tambah kapasitas ${disk.key}`,
-			html: `<p style="font-size:14px">Ukuran sekarang <b>${disk.size}</b> di storage <b>${disk.storage}</b>.<br/><small>Proxmox hanya bisa MEMPERBESAR disk — tidak bisa dikecilkan kembali.</small></p>`,
-			input: "number",
-			inputLabel: "Tambah berapa GB?",
-			inputValue: 10,
-			inputAttributes: { min: 1, max: 2048, step: 1 },
-			showCancelButton: true,
-			confirmButtonText: "Lanjut",
-			cancelButtonText: "Batal",
-			inputValidator: (v) => (!v || Number(v) < 1 ? "Minimal 1 GB" : undefined),
-		});
-		if (!pilih.isConfirmed) return;
-		const gb = Number(pilih.value);
+	const tambahDisk = async (disk, gb) => {
 		const nama = await konfirmasiNama(
 			`Tambah ${gb} GB ke ${d.name}?`,
 			`<p style="font-size:14px">${disk.key}: ${disk.size} → ±${Math.round((disk.size_bytes || 0) / 1024 ** 3) + gb}G. Aplikasi tetap berjalan selama proses.</p>`,
@@ -283,7 +483,7 @@ const DetailGuest = ({ vmid, onClose, onChanged }) => {
 		}
 	};
 
-	const simpanSumberDaya = async () => {
+	const simpanSumberDaya = async (res) => {
 		const nama = await konfirmasiNama(
 			`Ubah sumber daya ${d.name}?`,
 			`<p style="font-size:14px">RAM ${d.config.memory_mb} → <b>${res.memory_mb} MB</b>, core ${d.config.cores ?? "-"} → <b>${res.cores}</b>${
@@ -314,7 +514,7 @@ const DetailGuest = ({ vmid, onClose, onChanged }) => {
 
 	return (
 		<div className="fixed inset-0 z-50 flex justify-end bg-slate-900/50" onClick={onClose}>
-			<div className="h-full w-full max-w-4xl overflow-y-auto bg-slate-50 shadow-2xl" onClick={(e) => e.stopPropagation()}>
+			<div className="h-full w-full max-w-6xl overflow-y-auto bg-slate-50 shadow-2xl" onClick={(e) => e.stopPropagation()}>
 				<div className="sticky top-0 z-10 flex items-center justify-between gap-3 border-b bg-white px-5 py-3">
 					<div className="min-w-0">
 						<p className="truncate text-lg font-bold text-slate-800">{d?.name || `#${vmid}`}</p>
@@ -382,6 +582,37 @@ const DetailGuest = ({ vmid, onClose, onChanged }) => {
 								<Stat icon={FiDatabase} label="Total trafik" value={formatBytes(d.netin + d.netout)} hint={`↓ ${formatBytes(d.netin)} · ↑ ${formatBytes(d.netout)}`} />
 							</div>
 
+							<div className="grid gap-4 xl:grid-cols-2">
+								<Card title="Kapasitas Disk" subtitle="Tambah ruang penyimpanan tanpa mematikan aplikasi" icon={FiHardDrive}>
+									<div className="space-y-3">
+										{d.disks.map((disk) => {
+											const pool = storages.find((s) => s.storage === disk.storage && s.node === d.node);
+											return (
+												<KelolaDisk
+													key={disk.key}
+													disk={disk}
+													pakai={disk.key === "rootfs" && d.type === "lxc" ? { used: d.disk, total: d.maxdisk } : null}
+													sisaPool={pool?.maxdisk ? pool.maxdisk - pool.disk : null}
+													sibuk={sibuk}
+													onTambah={tambahDisk}
+												/>
+											);
+										})}
+										{!d.disks.length && <p className="text-sm text-slate-500">Tidak ada disk terbaca (butuh izin VM.Audit).</p>}
+									</div>
+								</Card>
+
+								<Card title="Jatah RAM & CPU" subtitle={d.type === "lxc" ? "Berlaku langsung tanpa restart" : "Sebagian perubahan butuh reboot VM"} icon={FiSettings}>
+									<KelolaSumberDaya
+										key={`${d.config.memory_mb}-${d.config.cores}-${d.config.swap_mb}`}
+										d={d}
+										host={nodes.find((n) => n.node === d.node)}
+										sibuk={sibuk}
+										onSimpan={simpanSumberDaya}
+									/>
+								</Card>
+							</div>
+
 							<Card title="Grafik Kinerja" icon={FiClock} actions={<PilihRentang value={rentang} onChange={setRentang} opsi={RENTANG} />}>
 								{rrd === null ? (
 									<Memuat teks="Memuat grafik…" />
@@ -433,65 +664,6 @@ const DetailGuest = ({ vmid, onClose, onChanged }) => {
 										</div>
 									</div>
 								)}
-							</Card>
-
-							<Card title="Storage Aplikasi" subtitle="Tambah kapasitas disk tanpa mematikan aplikasi" icon={FiHardDrive}>
-								<div className="space-y-2">
-									{d.disks.map((disk) => (
-										<div key={disk.key} className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-slate-200 p-3">
-											<div>
-												<p className="text-sm font-semibold text-slate-800">
-													{disk.key === "rootfs" ? "Disk utama (rootfs)" : disk.key}
-													{disk.mountpoint && <span className="ml-1 font-mono text-xs text-slate-500">→ {disk.mountpoint}</span>}
-												</p>
-												<p className="font-mono text-[11px] text-slate-500">
-													{disk.storage}:{disk.volume}
-												</p>
-											</div>
-											<div className="flex items-center gap-3">
-												<span className="text-lg font-extrabold text-slate-800">{disk.size || "-"}</span>
-												<Tombol icon={FiPlus} variant="dark" disabled={sibuk} onClick={() => tambahDisk(disk)}>
-													Tambah kapasitas
-												</Tombol>
-											</div>
-										</div>
-									))}
-									{!d.disks.length && <p className="text-sm text-slate-500">Tidak ada disk terbaca (butuh izin VM.Audit).</p>}
-								</div>
-							</Card>
-
-							<Card title="Jatah RAM & CPU" subtitle={d.type === "lxc" ? "Berlaku langsung tanpa restart" : "Sebagian perubahan butuh reboot VM"} icon={FiSettings}>
-								<div className="grid gap-3 sm:grid-cols-3">
-									<label className="text-sm">
-										<span className="font-semibold text-slate-700">RAM (MB)</span>
-										<input type="number" min={256} step={256} value={res.memory_mb} onChange={(e) => setRes({ ...res, memory_mb: e.target.value })} className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2" />
-										<span className="text-[11px] text-slate-500">≈ {res.memory_mb ? (Number(res.memory_mb) / 1024).toFixed(1) : 0} GB</span>
-									</label>
-									{d.type === "lxc" && (
-										<label className="text-sm">
-											<span className="font-semibold text-slate-700">Swap (MB)</span>
-											<input type="number" min={0} step={256} value={res.swap_mb} onChange={(e) => setRes({ ...res, swap_mb: e.target.value })} className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2" />
-										</label>
-									)}
-									<label className="text-sm">
-										<span className="font-semibold text-slate-700">Core CPU</span>
-										<input type="number" min={1} max={512} value={res.cores} onChange={(e) => setRes({ ...res, cores: e.target.value })} className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2" />
-									</label>
-								</div>
-								<div className="mt-2 flex flex-wrap gap-1.5">
-									{[1024, 2048, 4096, 8192, 16384, 32768].map((m) => (
-										<button
-											key={m}
-											onClick={() => setRes({ ...res, memory_mb: m })}
-											className={`rounded-md px-2 py-1 text-xs font-semibold ring-1 ${Number(res.memory_mb) === m ? "bg-slate-900 text-white ring-slate-900" : "bg-white text-slate-600 ring-slate-200"}`}
-										>
-											{m / 1024} GB
-										</button>
-									))}
-								</div>
-								<Tombol className="mt-3" icon={FiSettings} variant="dark" disabled={sibuk} onClick={simpanSumberDaya}>
-									Simpan perubahan
-								</Tombol>
 							</Card>
 
 							<div className="grid gap-4 md:grid-cols-2">
@@ -672,7 +844,7 @@ const ProxmoxTab = () => {
 				{!guests.length ? (
 					<Kosong icon={FiBox} title="Tidak ada aplikasi" />
 				) : (
-					<div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+					<div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
 						{guests.map((g) => (
 							<KartuGuest key={g.vmid} g={g} onOpen={setBuka} />
 						))}
@@ -699,7 +871,7 @@ const ProxmoxTab = () => {
 				)}
 			</Card>
 
-			{buka && <DetailGuest vmid={buka} onClose={() => setBuka(null)} onChanged={muat} />}
+			{buka && <DetailGuest vmid={buka} nodes={data.nodes} storages={data.storages} onClose={() => setBuka(null)} onChanged={muat} />}
 		</div>
 	);
 };
