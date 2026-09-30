@@ -323,6 +323,7 @@ const SuperadminDashboard = lazy(
   () => import("./pages/superadmin/SuperadminDashboard"),
 );
 const BackupPage = lazy(() => import("./pages/superadmin/BackupPage"));
+const ServerManagementPage = lazy(() => import("./pages/superadmin/server/ServerManagementPage"));
 const KepegawaianPage = lazy(
   () => import("./pages/superadmin/KepegawaianPage"),
 );
@@ -1507,6 +1508,7 @@ function App() {
                     element={<HeroGalleryManagement />}
                   />
                   <Route path="backup" element={<BackupPage />} />
+                  <Route path="server" element={<ServerManagementPage />} />
                   <Route path="settings" element={<SettingsPage />} />
                   <Route path="profile" element={<ProfilePage />} />
 

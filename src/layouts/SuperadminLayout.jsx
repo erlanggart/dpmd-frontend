@@ -18,6 +18,7 @@ import {
 	FiMenu,
 	FiSettings,
 	FiShield,
+	FiServer,
 	FiUser,
 	FiUsers,
 	FiX,
@@ -28,7 +29,6 @@ import { useAuth } from "../context/AuthContext";
 import { useConfirm } from "../hooks/useConfirm.jsx";
 import { getAvatarUrl } from "../utils/avatarUtils";
 import { performFullLogout } from "../utils/sessionPersistence";
-import HeaderSearchBot from "../components/chatbot/HeaderSearchBot";
 import MessageLottieIcon from "../components/MessageLottieIcon";
 
 const useResponsive = () => {
@@ -70,6 +70,7 @@ const MENU_GROUPS = [
 	{
 		title: "Sistem",
 		items: [
+			{ path: "/superadmin/server", label: "Manajemen Server", icon: FiServer },
 			{ path: "/superadmin/activity-logs", label: "Activity Logs", icon: FiActivity },
 			{ path: "/superadmin/backup", label: "Backup Sistem", icon: FiDownloadCloud },
 			{ path: "/superadmin/pesan", label: "Pesan", icon: MessageLottieIcon },
@@ -111,19 +112,6 @@ const SuperadminLayout = () => {
 	const navigate = useNavigate();
 	const location = useLocation();
 
-	/**
-	 * Halaman bidang tidak memakai bilah atas ini.
-	 *
-	 * Tiap halaman bidang sudah punya kepala halamannya sendiri (BidangHeader:
-	 * tombol kembali, identitas bidang, dan aksinya), sehingga bilah pencarian
-	 * global di atasnya membuat dua header bertumpuk — dua baris yang memakan
-	 * tinggi layar sebelum isi halaman dimulai.
-	 *
-	 * Dicocokkan per SEGMEN, bukan lewat awalan "/superadmin/bidang": kalau
-	 * rutenya suatu saat dipindah mount-point, penanda ini ikut sendiri dan
-	 * tidak diam-diam menyala kembali.
-	 */
-	const diHalamanBidang = location.pathname.split('/').filter(Boolean).includes('bidang');
 	const { confirmDialog, showConfirm } = useConfirm();
 	const { isDesktop, isSidebarCollapsed, setIsSidebarCollapsed } = useResponsive();
 
@@ -335,6 +323,25 @@ const SuperadminLayout = () => {
 
 					<div className="flex-shrink-0 border-t border-slate-200 p-2.5">
 						<button
+							onClick={openNotifications}
+							title={isSidebarCollapsed ? "Notifikasi" : ""}
+							className={`mb-1 flex w-full items-center rounded-lg px-2.5 py-2 text-slate-600 transition-colors hover:bg-slate-100 hover:text-slate-900 ${
+								isSidebarCollapsed ? "justify-center" : "gap-3"
+							}`}
+						>
+							<span className="relative flex-shrink-0">
+								<FiBell className="h-5 w-5" />
+								{unreadCount > 0 && (
+									<span className="absolute -right-1.5 -top-1.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-bold text-white">
+										{unreadCount > 9 ? "9+" : unreadCount}
+									</span>
+								)}
+							</span>
+							{!isSidebarCollapsed && (
+								<span className="flex-1 text-left text-sm font-medium">Notifikasi</span>
+							)}
+						</button>
+						<button
 							onClick={() => navigate("/superadmin/profile")}
 							title={isSidebarCollapsed ? "Profil" : ""}
 							className={`flex w-full items-center rounded-lg py-2 transition-colors hover:bg-slate-100 ${
@@ -461,33 +468,6 @@ const SuperadminLayout = () => {
 					isDesktop ? (isSidebarCollapsed ? "lg:ml-20" : "lg:ml-64") : "pb-24"
 				}`}
 			>
-				{/* Desktop Header Bar with Search — disembunyikan di halaman bidang */}
-				{isDesktop && !diHalamanBidang && (
-					<div className="sticky top-0 z-30 bg-white/70 backdrop-blur-xl border-b border-slate-200/60 shadow-sm">
-						<div className="flex items-center justify-between px-6 py-3">
-							<div className="flex items-center gap-4">
-								<HeaderSearchBot />
-							</div>
-							<div className="flex items-center gap-3">
-								<span className="hidden text-xs font-medium text-slate-400 xl:inline">
-									{new Date().toLocaleDateString('id-ID', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
-								</span>
-								<button
-									onClick={openNotifications}
-									aria-label="Notifikasi"
-									className="relative flex h-9 w-9 items-center justify-center rounded-xl border border-slate-200 text-slate-600 transition-colors hover:bg-slate-100 hover:text-slate-900"
-								>
-									<FiBell className="h-4 w-4" />
-									{unreadCount > 0 && (
-										<span className="absolute -right-1 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-bold text-white">
-											{unreadCount > 9 ? "9+" : unreadCount}
-										</span>
-									)}
-								</button>
-							</div>
-						</div>
-					</div>
-				)}
 				<div className="">
 					<div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
 						<Outlet />
