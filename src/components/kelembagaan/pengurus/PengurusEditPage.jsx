@@ -19,6 +19,7 @@ import {
 	FaFileAlt,
 	FaChevronRight,
 	FaHome,
+	FaUniversity,
 } from "react-icons/fa";
 import Swal from "sweetalert2";
 
@@ -83,6 +84,9 @@ const PengurusEditPage = () => {
 		tanggal_akhir_jabatan: "",
 		produk_hukum_id: "",
 		nomor_buku_nikah: "",
+		nama_bank: "",
+		nomor_rekening: "",
+		nama_rekening: "",
 		status_verifikasi: "",
 	});
 	const [avatarFile, setAvatarFile] = useState(null);
@@ -187,6 +191,17 @@ const PengurusEditPage = () => {
 		}
 	}, []);
 
+	// Backend menyimpan nilai select dalam UPPERCASE dan jenis kelamin sebagai
+	// enum Prisma ("Laki_laki"), jadi samakan dengan value <option> agar select
+	// tidak tampil kosong saat data dimuat.
+	const normalizeJenisKelamin = (value) => {
+		const v = String(value || "").replace(/_/g, "-").toUpperCase();
+		if (v === "LAKI-LAKI") return "Laki-laki";
+		if (v === "PEREMPUAN") return "Perempuan";
+		return "";
+	};
+	const toUpperValue = (value) => (value ? String(value).toUpperCase() : "");
+
 	// Helper function to format date for input[type="date"]
 	const formatDateForInput = (dateString) => {
 		// Handle null, undefined, or empty string
@@ -233,14 +248,17 @@ const PengurusEditPage = () => {
 					nik: data.nik || "",
 					tempat_lahir: data.tempat_lahir || "",
 					tanggal_lahir: formatDateForInput(data.tanggal_lahir),
-					jenis_kelamin: data.jenis_kelamin || "",
-					status_perkawinan: data.status_perkawinan || "",
+					jenis_kelamin: normalizeJenisKelamin(data.jenis_kelamin),
+					status_perkawinan: toUpperValue(data.status_perkawinan),
 					alamat: data.alamat || "",
 					no_telepon: data.no_telepon || "",
 					pendidikan: data.pendidikan || "",
-					agama: data.agama || "",
+					agama: toUpperValue(data.agama),
 					golongan_darah: data.golongan_darah || "",
 					nomor_buku_nikah: data.nomor_buku_nikah || "",
+					nama_bank: data.nama_bank || "",
+					nomor_rekening: data.nomor_rekening || "",
+					nama_rekening: data.nama_rekening || "",
 					jabatan: data.jabatan || "",
 					tanggal_mulai_jabatan: formatDateForInput(data.tanggal_mulai_jabatan),
 					tanggal_akhir_jabatan: formatDateForInput(data.tanggal_akhir_jabatan),
@@ -371,6 +389,9 @@ const PengurusEditPage = () => {
 		}
 	};
 
+	// Field yang tetap dikirim walau kosong, supaya pengosongan tersimpan
+	const ALWAYS_SEND_FIELDS = ["golongan_darah", "nama_bank", "nomor_rekening", "nama_rekening"];
+
 	const handleSubmit = async (e) => {
 		e.preventDefault();
 
@@ -401,7 +422,7 @@ const PengurusEditPage = () => {
 			// Add form data
 			Object.entries(formData).forEach(([key, value]) => {
 				const valueToSave = value === "TIDAK_DIKETAHUI" ? "" : value;
-				if (valueToSave !== null && valueToSave !== undefined && (valueToSave !== "" || key === "golongan_darah")) {
+				if (valueToSave !== null && valueToSave !== undefined && (valueToSave !== "" || ALWAYS_SEND_FIELDS.includes(key))) {
 					submitData.append(key, valueToSave);
 					console.log(`✓ Added field: ${key}`);
 				}
@@ -837,16 +858,16 @@ const PengurusEditPage = () => {
 									className="w-full border-2 border-gray-200 rounded-lg px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 bg-white/80 backdrop-blur-sm transition-all duration-200"
 								>
 									<option value="">Pilih Status</option>
-									<option value="Belum Menikah">Belum Menikah</option>
-									<option value="Menikah">Menikah</option>
-									<option value="Cerai Hidup">Cerai Hidup</option>
-									<option value="Cerai Mati">Cerai Mati</option>
+									<option value="BELUM MENIKAH">Belum Menikah</option>
+									<option value="MENIKAH">Menikah</option>
+									<option value="CERAI HIDUP">Cerai Hidup</option>
+									<option value="CERAI MATI">Cerai Mati</option>
 								</select>
 							</div>
 
 							{/* Nomor Buku Nikah - opsional, hanya ditampilkan untuk Ketua RT/RW yang menikah */}
-							{formData.status_perkawinan === "Menikah" &&
-								(formData.jabatan === "KETUA RT" || formData.jabatan === "KETUA RW") && (
+							{formData.status_perkawinan === "MENIKAH" &&
+								["KETUA RT", "KETUA RW"].includes(formData.jabatan.toUpperCase()) && (
 								<div>
 									<label className="block text-sm font-semibold text-gray-800 mb-1.5">
 										Nomor Buku Nikah{" "}
@@ -897,12 +918,12 @@ const PengurusEditPage = () => {
 									className="w-full border-2 border-gray-200 rounded-lg px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 bg-white/80 backdrop-blur-sm transition-all duration-200"
 								>
 									<option value="">Pilih agama</option>
-									<option value="Islam">Islam</option>
-									<option value="Kristen">Kristen</option>
-									<option value="Katolik">Katolik</option>
-									<option value="Hindu">Hindu</option>
-									<option value="Buddha">Buddha</option>
-									<option value="Konghucu">Konghucu</option>
+									<option value="ISLAM">Islam</option>
+									<option value="KRISTEN">Kristen</option>
+									<option value="KATOLIK">Katolik</option>
+									<option value="HINDU">Hindu</option>
+									<option value="BUDDHA">Buddha</option>
+									<option value="KONGHUCU">Konghucu</option>
 								</select>
 							</div>
 
@@ -995,7 +1016,68 @@ const PengurusEditPage = () => {
 						</div>
 					</div>
 
-					{/* Section 4: SK Produk Hukum */}
+					{/* Section 4: Informasi Rekening */}
+					<div className="bg-gradient-to-br from-sky-50 via-blue-50 to-cyan-50 rounded-2xl shadow-sm border-2 border-sky-100 p-6">
+						<div className="flex items-center gap-3 mb-6">
+							<div className="w-10 h-10 bg-gradient-to-br from-sky-500 to-blue-600 rounded-xl flex items-center justify-center shadow-lg">
+								<FaUniversity className="w-5 h-5 text-white" />
+							</div>
+							<div>
+								<h3 className="text-lg font-bold text-gray-900">Informasi Rekening</h3>
+								<p className="text-sm text-gray-600">Data rekening untuk keperluan insentif</p>
+							</div>
+						</div>
+
+						<div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+							<div>
+								<label className="block text-sm font-semibold text-gray-800 mb-1.5">
+									Nama Bank
+								</label>
+								<input
+									type="text"
+									name="nama_bank"
+									value={formData.nama_bank}
+									onChange={handleInputChange}
+									maxLength="100"
+									placeholder="Contoh: BJB"
+									className="w-full border-2 border-gray-200 rounded-lg px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-sky-500 focus:border-sky-500 bg-white/80 backdrop-blur-sm transition-all duration-200"
+								/>
+							</div>
+
+							<div>
+								<label className="block text-sm font-semibold text-gray-800 mb-1.5">
+									Nomor Rekening
+								</label>
+								<input
+									type="text"
+									name="nomor_rekening"
+									value={formData.nomor_rekening}
+									onChange={handleInputChange}
+									maxLength="100"
+									inputMode="numeric"
+									placeholder="Nomor rekening"
+									className="w-full border-2 border-gray-200 rounded-lg px-4 py-2.5 font-mono tracking-wider focus:outline-none focus:ring-2 focus:ring-sky-500 focus:border-sky-500 bg-white/80 backdrop-blur-sm transition-all duration-200"
+								/>
+							</div>
+
+							<div>
+								<label className="block text-sm font-semibold text-gray-800 mb-1.5">
+									Nama Pemilik Rekening
+								</label>
+								<input
+									type="text"
+									name="nama_rekening"
+									value={formData.nama_rekening}
+									onChange={handleInputChange}
+									maxLength="255"
+									placeholder="Sesuai buku tabungan"
+									className="w-full border-2 border-gray-200 rounded-lg px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-sky-500 focus:border-sky-500 bg-white/80 backdrop-blur-sm transition-all duration-200"
+								/>
+							</div>
+						</div>
+					</div>
+
+					{/* Section 5: SK Produk Hukum */}
 					<div className="bg-gradient-to-br from-amber-50 via-orange-50 to-yellow-50 rounded-2xl shadow-sm border-2 border-amber-100 p-6">
 						<div className="flex items-center gap-3 mb-6">
 							<div className="w-10 h-10 bg-gradient-to-br from-amber-500 to-orange-600 rounded-xl flex items-center justify-center shadow-lg">

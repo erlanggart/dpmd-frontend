@@ -10,6 +10,7 @@ import {
 	FaUpload,
 	FaCheck,
 	FaSpinner,
+	FaUniversity,
 } from "react-icons/fa";
 import {
 	LuChevronDown,
@@ -48,6 +49,9 @@ const normalizePengurusFormValues = (values = {}) => ({
 	golongan_darah: values.golongan_darah === "TIDAK_DIKETAHUI" ? "" : toUppercaseString(values.golongan_darah || ""),
 	jabatan: toUppercaseString(values.jabatan || ""),
 	nomor_buku_nikah: toUppercaseString(values.nomor_buku_nikah || ""),
+	nama_bank: toUppercaseString(values.nama_bank || ""),
+	nomor_rekening: values.nomor_rekening || "",
+	nama_rekening: toUppercaseString(values.nama_rekening || ""),
 });
 
 const forceUppercaseInput = (event) => {
@@ -108,6 +112,11 @@ const pengurusSchema = z.object({
 	status_jabatan: z.enum(["aktif", "nonaktif"]).default("aktif"),
 	produk_hukum_id: z.string().min(1, "Produk hukum (SK) wajib dipilih"),
 	nomor_buku_nikah: emptyToUndef(z.string().max(100, "Nomor buku nikah maksimal 100 karakter").optional()),
+	nama_bank: emptyToUndef(z.string().max(100, "Nama bank maksimal 100 karakter").optional()),
+	nomor_rekening: emptyToUndef(
+		z.string().max(100, "Nomor rekening maksimal 100 karakter").regex(/^[0-9\s-]+$/, "Nomor rekening hanya boleh berisi angka").optional()
+	),
+	nama_rekening: emptyToUndef(z.string().max(255, "Nama pemilik rekening maksimal 255 karakter").optional()),
 }).refine(
 	(data) => {
 		// Cross-field validation: end date must be after start date
@@ -162,6 +171,9 @@ export default function PengurusForm({
 			status_jabatan: "aktif",
 			produk_hukum_id: "",
 			nomor_buku_nikah: "",
+			nama_bank: "",
+			nomor_rekening: "",
+			nama_rekening: "",
 		}),
 	});
 
@@ -230,6 +242,9 @@ export default function PengurusForm({
 				status_jabatan: editData.status_jabatan || "aktif",
 				produk_hukum_id: editData.produk_hukum_id || "",
 				nomor_buku_nikah: editData.nomor_buku_nikah || "",
+				nama_bank: editData.nama_bank || "",
+				nomor_rekening: editData.nomor_rekening || "",
+				nama_rekening: editData.nama_rekening || "",
 			}));
 
 			if (editData.avatar) {
@@ -254,6 +269,9 @@ export default function PengurusForm({
 				status_jabatan: "aktif",
 				produk_hukum_id: "",
 				nomor_buku_nikah: "",
+				nama_bank: "",
+				nomor_rekening: "",
+				nama_rekening: "",
 			}));
 			setAvatarPreview(null);
 		}
@@ -1132,6 +1150,76 @@ export default function PengurusForm({
 										<p className="text-red-500 text-sm mt-1 flex items-center gap-1">
 											<FaExclamationCircle className="w-3 h-3" />
 											{errors.tanggal_akhir_jabatan.message}
+										</p>
+									)}
+								</div>
+							</div>
+						</div>
+
+						{/* Section: Informasi Rekening */}
+						<div className="space-y-5 p-6 bg-gradient-to-br from-sky-50 via-blue-50 to-cyan-50 rounded-2xl border border-sky-200 shadow-sm">
+							<div className="flex items-center gap-3 mb-4">
+								<div className="w-10 h-10 bg-gradient-to-br from-sky-500 to-blue-600 rounded-xl flex items-center justify-center shadow-lg">
+									<FaUniversity className="w-5 h-5 text-white" />
+								</div>
+								<div>
+									<h3 className="text-lg font-bold text-gray-900">Informasi Rekening</h3>
+									<p className="text-sm text-gray-600">Data rekening untuk keperluan insentif (opsional)</p>
+								</div>
+							</div>
+
+							<div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+								<div>
+									<label className="block text-sm font-semibold text-gray-800 mb-1.5">Nama Bank</label>
+									<div className="input-group">
+										<input
+											type="text"
+											{...register("nama_bank")}
+											onInput={forceUppercaseInput}
+											className="w-full bg-white/80 backdrop-blur-sm uppercase"
+											placeholder="CONTOH: BJB"
+										/>
+									</div>
+									{errors.nama_bank && (
+										<p className="text-red-500 text-sm mt-1 flex items-center gap-1">
+											<FaExclamationCircle className="w-3 h-3" />
+											{errors.nama_bank.message}
+										</p>
+									)}
+								</div>
+								<div>
+									<label className="block text-sm font-semibold text-gray-800 mb-1.5">Nomor Rekening</label>
+									<div className="input-group">
+										<input
+											type="text"
+											{...register("nomor_rekening")}
+											inputMode="numeric"
+											className="w-full bg-white/80 backdrop-blur-sm font-mono tracking-wider"
+											placeholder="Nomor rekening"
+										/>
+									</div>
+									{errors.nomor_rekening && (
+										<p className="text-red-500 text-sm mt-1 flex items-center gap-1">
+											<FaExclamationCircle className="w-3 h-3" />
+											{errors.nomor_rekening.message}
+										</p>
+									)}
+								</div>
+								<div>
+									<label className="block text-sm font-semibold text-gray-800 mb-1.5">Nama Pemilik Rekening</label>
+									<div className="input-group">
+										<input
+											type="text"
+											{...register("nama_rekening")}
+											onInput={forceUppercaseInput}
+											className="w-full bg-white/80 backdrop-blur-sm uppercase"
+											placeholder="SESUAI BUKU TABUNGAN"
+										/>
+									</div>
+									{errors.nama_rekening && (
+										<p className="text-red-500 text-sm mt-1 flex items-center gap-1">
+											<FaExclamationCircle className="w-3 h-3" />
+											{errors.nama_rekening.message}
 										</p>
 									)}
 								</div>
