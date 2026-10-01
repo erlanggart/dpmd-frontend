@@ -3,6 +3,7 @@ import {
 	makeApiCall,
 	getEndpoint,
 	getAdminParams,
+	isDesaUser,
 } from "../utils/apiHelpers";
 
 // Map slug type to pengurusable_type value (as stored in database)
@@ -184,3 +185,15 @@ export const ajukanUlangPengurusVerifikasi = (id, desaId = null) => {
 	const params = getAdminParams("pengurus", "update", baseParams);
 	return api.put(`/desa/pengurus/${id}/ajukan-ulang`, {}, { params });
 };
+
+// Transfer pengurus antar-lembaga. Akun desa lewat /desa (dikunci ke desanya
+// oleh backend); staf DPMD & superadmin lewat /kelembagaan.
+const transferPrefix = () => (isDesaUser() ? "/desa" : "/kelembagaan");
+
+export const getPengurusTransferTargets = (targetDesaId = null) =>
+	api.get(`${transferPrefix()}/pengurus/transfer-targets`, {
+		params: targetDesaId ? { target_desa_id: targetDesaId } : {},
+	});
+
+export const transferPengurus = (id, payload) =>
+	api.put(`${transferPrefix()}/pengurus/${id}/transfer`, payload);

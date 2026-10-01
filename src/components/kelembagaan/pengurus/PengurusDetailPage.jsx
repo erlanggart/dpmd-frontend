@@ -34,8 +34,10 @@ import {
 	FaLockOpen,
 	FaUniversity,
 	FaTrash,
+	FaExchangeAlt,
 } from "react-icons/fa";
 import Swal from "sweetalert2";
+import TransferPengurusModal from "./TransferPengurusModal";
 
 const imageBaseUrl = import.meta.env.VITE_IMAGE_BASE_URL;
 
@@ -101,6 +103,7 @@ const PengurusDetailPage = () => {
 	const [rwInfo, setRwInfo] = useState(null);
 	const [loading, setLoading] = useState(true);
 	const [updating, setUpdating] = useState(false);
+	const [showTransfer, setShowTransfer] = useState(false);
 
 	const isKecamatanUser = isKecamatan?.() ?? false;
 
@@ -866,6 +869,20 @@ const PengurusDetailPage = () => {
 						)}
 
 							<button
+								onClick={() => setShowTransfer(true)}
+								disabled={updating || !isEditMode}
+								className={`flex items-center space-x-2 px-4 py-2 rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
+									isEditMode
+										? "bg-purple-100 text-purple-700 hover:bg-purple-200"
+										: "bg-gray-300 text-gray-500"
+								}`}
+								title={!isEditMode ? "Fitur pindah pengurus ditutup" : "Pindahkan ke lembaga lain"}
+							>
+								<FaExchangeAlt className="text-sm" />
+								<span>Pindahkan</span>
+							</button>
+
+							<button
 								onClick={() =>
 									handleStatusUpdate(
 										pengurus.status_jabatan === "aktif" ? "selesai" : "aktif",
@@ -944,6 +961,18 @@ const PengurusDetailPage = () => {
 					)}
 				</div>
 			</div>
+
+			<TransferPengurusModal
+				isOpen={showTransfer}
+				onClose={() => setShowTransfer(false)}
+				pengurus={pengurus}
+				desaInfo={desaInfo}
+				canCrossDesa={isSuperAdmin()}
+				onTransferred={() => {
+					setShowTransfer(false);
+					loadPengurusDetail();
+				}}
+			/>
 
 			{/* Main Content */}
 			<div>
@@ -1231,7 +1260,6 @@ const PengurusDetailPage = () => {
 						</div>
 
 						{/* Informasi Rekening */}
-						{(pengurus.nama_bank || pengurus.nomor_rekening || pengurus.nama_rekening) && (
 							<div className="bg-gradient-to-br from-sky-50 via-blue-50 to-cyan-50 rounded-2xl shadow-sm border-2 border-sky-100 p-6">
 								<div className="flex items-center gap-3 mb-6">
 									<div className="w-10 h-10 bg-gradient-to-br from-sky-500 to-blue-600 rounded-xl flex items-center justify-center shadow-lg">
@@ -1263,7 +1291,6 @@ const PengurusDetailPage = () => {
 									</div>
 								</div>
 							</div>
-						)}
 
 						{/* SK Pengangkatan */}
 						<div className="bg-gradient-to-br from-amber-50 via-orange-50 to-yellow-50 rounded-2xl shadow-sm border-2 border-amber-100 p-6">
