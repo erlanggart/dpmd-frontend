@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import {
-	AlertTriangle, ArrowLeft, Check, Download, Film, Link2, Loader2, MapPin, Phone, Play, Search, Settings2, Trash2, X, XCircle, RotateCcw,
+	AlertTriangle, ArrowLeft, Check, Download, Film, Loader2, MapPin, Phone, Play, Search, Settings2, ShieldAlert, ShieldCheck, Trash2, X, XCircle, RotateCcw,
 } from "lucide-react";
 import toast from "react-hot-toast";
 import Swal from "sweetalert2";
@@ -10,7 +10,7 @@ import {
 } from "../../../api/videoDesaApi";
 import PengaturanPermintaan from "./PengaturanPermintaan";
 import {
-	LABEL_ORIENTASI, LABEL_STATUS_KIRIMAN, catatanKesesuaian, salinTautanUnggah, formatDurasi, formatUkuran, formatWaktu,
+	LABEL_ORIENTASI, LABEL_PROSES, LABEL_STATUS_KIRIMAN, catatanKesesuaian, formatDurasi, formatUkuran, formatWaktu,
 } from "./videoDesaUtils";
 
 const SARINGAN = [
@@ -44,9 +44,7 @@ const Pemutar = ({ video, onTutup }) => {
 					</button>
 				</div>
 				<video src={video.src} controls autoPlay className="max-h-[80vh] w-full rounded-lg bg-black" />
-				{video.mkv && (
-					<p className="mt-2 text-xs text-white/60">Format MKV sering tidak bisa diputar di browser — unduh lalu putar dengan VLC.</p>
-				)}
+				<p className="mt-2 text-xs text-white/60">Video ini sudah dibangun ulang oleh sistem menjadi MP4 H.264 yang bersih — siap untuk videotron.</p>
 			</div>
 		</div>
 	);
@@ -55,6 +53,8 @@ const Pemutar = ({ video, onTutup }) => {
 const KartuKiriman = ({ k, permintaan, onPutar, onUnduh, onTinjau, onHapus, sibuk }) => {
 	const catatan = catatanKesesuaian(k, permintaan);
 	const durasi = formatDurasi(k.durasi_detik);
+	const siap = k.pemrosesan === "siap";
+	const sedangDiperiksa = k.pemrosesan === "antre" || k.pemrosesan === "diproses";
 	return (
 		<div className="flex flex-col rounded-xl border border-slate-200 bg-white p-4">
 			<div className="flex items-start justify-between gap-3">
@@ -71,19 +71,45 @@ const KartuKiriman = ({ k, permintaan, onPutar, onUnduh, onTinjau, onHapus, sibu
 				</span>
 			</div>
 
-			<button
-				onClick={onPutar}
-				className="group mt-3 flex aspect-video w-full items-center justify-center rounded-lg bg-slate-900 text-white transition-colors hover:bg-slate-800"
-			>
-				<span className="flex flex-col items-center gap-1.5">
-					<span className="flex h-11 w-11 items-center justify-center rounded-full bg-white/15 transition-transform group-hover:scale-110">
-						<Play className="ml-0.5 h-5 w-5" />
+			{siap ? (
+				<button
+					onClick={onPutar}
+					className="group mt-3 flex aspect-video w-full items-center justify-center rounded-lg bg-slate-900 text-white transition-colors hover:bg-slate-800"
+				>
+					<span className="flex flex-col items-center gap-1.5">
+						<span className="flex h-11 w-11 items-center justify-center rounded-full bg-white/15 transition-transform group-hover:scale-110">
+							<Play className="ml-0.5 h-5 w-5" />
+						</span>
+						<span className="text-[11px] text-white/70">
+							{[durasi, k.lebar && k.tinggi ? `${k.lebar}×${k.tinggi}` : null, formatUkuran(k.ukuran)].filter(Boolean).join(" · ")}
+						</span>
 					</span>
-					<span className="text-[11px] text-white/70">
-						{[durasi, k.lebar && k.tinggi ? `${k.lebar}×${k.tinggi}` : null, formatUkuran(k.ukuran)].filter(Boolean).join(" · ")}
-					</span>
-				</span>
-			</button>
+				</button>
+			) : (
+				<div className={`mt-3 flex aspect-video w-full flex-col items-center justify-center gap-2 rounded-lg px-4 text-center ${sedangDiperiksa ? "bg-slate-100" : "bg-rose-50"}`}>
+					{sedangDiperiksa ? (
+						<>
+							<Loader2 className="h-6 w-6 animate-spin text-slate-500" />
+							<p className="text-xs font-medium text-slate-700">
+								{LABEL_PROSES[k.pemrosesan]}
+								{k.posisi_antrean > 1 ? ` · urutan ${k.posisi_antrean}` : ""}
+							</p>
+							<p className="text-[11px] text-slate-500">Video dibangun ulang & diperiksa keamanannya sebelum bisa diputar ({formatUkuran(k.ukuran_asli)}).</p>
+						</>
+					) : (
+						<>
+							<ShieldAlert className="h-6 w-6 text-rose-500" />
+							<p className="text-xs font-semibold text-rose-700">{LABEL_PROSES.gagal}</p>
+							<p className="text-[11px] text-rose-600">{k.pesan_proses}</p>
+						</>
+					)}
+				</div>
+			)}
+			{siap && (
+				<p className="mt-1.5 flex items-center gap-1 text-[11px] font-medium text-emerald-700">
+					<ShieldCheck className="h-3 w-3" /> {LABEL_PROSES.siap}
+				</p>
+			)}
 
 			{catatan.length > 0 && (
 				<div className="mt-2 space-y-1">
@@ -111,12 +137,12 @@ const KartuKiriman = ({ k, permintaan, onPutar, onUnduh, onTinjau, onHapus, sibu
 			</div>
 
 			<div className="mt-auto flex flex-wrap items-center gap-1 border-t border-slate-100 pt-3">
-				{k.status !== "disetujui" && (
+				{k.status !== "disetujui" && siap && (
 					<button disabled={sibuk} onClick={() => onTinjau("disetujui")} className="inline-flex items-center gap-1 rounded-lg bg-emerald-600 px-2.5 py-1.5 text-xs font-semibold text-white hover:bg-emerald-700 disabled:opacity-50">
 						<Check className="h-3.5 w-3.5" /> Setujui
 					</button>
 				)}
-				{k.status !== "ditolak" && (
+				{k.status !== "ditolak" && k.pemrosesan !== "gagal" && (
 					<button disabled={sibuk} onClick={() => onTinjau("ditolak")} className="inline-flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-xs font-medium text-rose-600 hover:bg-rose-50 disabled:opacity-50">
 						<XCircle className="h-3.5 w-3.5" /> Tolak
 					</button>
@@ -126,10 +152,13 @@ const KartuKiriman = ({ k, permintaan, onPutar, onUnduh, onTinjau, onHapus, sibu
 						<RotateCcw className="h-3.5 w-3.5" /> Batalkan
 					</button>
 				)}
-				<button onClick={onUnduh} className="ml-auto inline-flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-100">
-					<Download className="h-3.5 w-3.5" /> Unduh
-				</button>
-				<button onClick={onHapus} className="rounded-lg p-1.5 text-slate-400 hover:bg-rose-50 hover:text-rose-600" aria-label="Hapus video">
+				<span className="ml-auto" />
+				{siap && (
+					<button onClick={onUnduh} className="inline-flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-100">
+						<Download className="h-3.5 w-3.5" /> Unduh
+					</button>
+				)}
+				<button onClick={onHapus} disabled={k.pemrosesan === "diproses"} className="rounded-lg p-1.5 disabled:opacity-30 text-slate-400 hover:bg-rose-50 hover:text-rose-600" aria-label="Hapus video">
 					<Trash2 className="h-3.5 w-3.5" />
 				</button>
 			</div>
@@ -153,7 +182,7 @@ const VideoDesaDetailPage = () => {
 			const r = await getPermintaan(id);
 			setData(r.data.data);
 		} catch (e) {
-			toast.error(e.response?.data?.message || "Gagal memuat permintaan video.");
+			toast.error(e.response?.data?.message || "Gagal memuat kegiatan video.");
 		} finally {
 			setMemuat(false);
 		}
@@ -162,6 +191,17 @@ const VideoDesaDetailPage = () => {
 	useEffect(() => {
 		muat();
 	}, [muat]);
+
+	// Selama ada video yang sedang diperiksa sistem, segarkan tiap 10 detik
+	// supaya bidang melihatnya berubah menjadi bisa diputar tanpa memuat ulang.
+	const adaDiperiksa = (data?.kiriman || []).some((k) => k.pemrosesan === "antre" || k.pemrosesan === "diproses");
+	useEffect(() => {
+		if (!adaDiperiksa) return undefined;
+		const t = setInterval(() => {
+			if (!document.hidden) muat();
+		}, 10000);
+		return () => clearInterval(t);
+	}, [adaDiperiksa, muat]);
 
 	const kiriman = useMemo(() => {
 		if (!data) return [];
@@ -182,7 +222,7 @@ const VideoDesaDetailPage = () => {
 	const putar = async (k) => {
 		try {
 			const t = await getTautanVideo(k.id);
-			setDiputar({ ...k, src: t.putar, mkv: /\.mkv$/i.test(k.nama_berkas) });
+			setDiputar({ ...k, src: t.putar });
 		} catch (e) {
 			toast.error(e.response?.data?.message || "Gagal membuka video.");
 		}
@@ -281,7 +321,7 @@ const VideoDesaDetailPage = () => {
 	if (!data) {
 		return (
 			<div className="flex min-h-screen flex-col items-center justify-center gap-3 bg-slate-50 p-6 text-center">
-				<p className="text-sm text-slate-600">Permintaan video tidak ditemukan atau Anda tidak berhak membukanya.</p>
+				<p className="text-sm text-slate-600">Kegiatan video tidak ditemukan atau Anda tidak berhak membukanya.</p>
 				<button onClick={() => navigate(-1)} className="rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700">Kembali</button>
 			</div>
 		);
@@ -308,16 +348,13 @@ const VideoDesaDetailPage = () => {
 							<p className="mt-1 text-sm text-slate-500">
 								{LABEL_ORIENTASI[data.orientasi]}
 								{data.maks_durasi_detik ? ` · maks ${formatDurasi(data.maks_durasi_detik)}` : ""}
-								{` · ${data.maks_per_desa} video/desa`}
+								{" · 1 video/desa"}
 								{data.tutup_pada ? ` · batas ${formatWaktu(data.tutup_pada)}` : ""}
 							</p>
 							{data.tertutup && <p className="mt-1 text-xs text-slate-500">{data.tertutup}</p>}
 							{data.deskripsi && <p className="mt-3 max-w-3xl whitespace-pre-line rounded-lg bg-slate-50 px-3 py-2 text-sm text-slate-600">{data.deskripsi}</p>}
 						</div>
 						<div className="flex flex-shrink-0 flex-wrap gap-2">
-							<button onClick={() => salinTautanUnggah(data.token)} className="inline-flex items-center gap-2 rounded-lg bg-slate-900 px-3.5 py-2 text-sm font-semibold text-white hover:bg-slate-800">
-								<Link2 className="h-4 w-4" /> Salin tautan desa
-							</button>
 							<button onClick={() => setPengaturan(true)} className="inline-flex items-center gap-2 rounded-lg border border-slate-200 px-3.5 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50">
 								<Settings2 className="h-4 w-4" /> Pengaturan
 							</button>
@@ -364,7 +401,7 @@ const VideoDesaDetailPage = () => {
 						<Film className="mx-auto h-8 w-8 text-slate-300" />
 						<p className="mt-3 text-sm font-semibold text-slate-900">{hitung.semua ? "Tidak ada yang cocok" : "Belum ada video masuk"}</p>
 						<p className="mx-auto mt-1 max-w-sm text-sm text-slate-500">
-							{hitung.semua ? "Ubah saringan atau kata kunci." : "Salin tautan desa lalu bagikan ke grup WhatsApp operator desa."}
+							{hitung.semua ? "Ubah saringan atau kata kunci." : data.tertutup ? "Kegiatan ini sedang ditutup, jadi tidak tampil di tautan Video Desa." : "Kegiatan ini sudah tampil di tautan Video Desa yang dibagikan Bidang Sekretariat."}
 						</p>
 					</div>
 				) : (

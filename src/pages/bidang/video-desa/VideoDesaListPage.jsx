@@ -1,36 +1,28 @@
 import React, { useCallback, useEffect, useState } from "react";
-import { ArrowLeft, Clapperboard, Link2, Loader2, Plus, Square, Play, Trash2, ExternalLink } from "lucide-react";
+import { ArrowLeft, Clapperboard, Loader2, Plus, Square, Play, Trash2 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
 import Swal from "sweetalert2";
-import {
-	buatPermintaan,
-	getDaftarPermintaan,
-	hapusPermintaan,
-	tautanUnggah,
-	ubahPermintaan,
-} from "../../../api/videoDesaApi";
+import { buatPermintaan, getDaftarPermintaan, hapusPermintaan, ubahPermintaan } from "../../../api/videoDesaApi";
 import { BIDANG_DRIVE } from "../drive/driveUtils";
+import PanelTautan from "./PanelTautan";
 import PengaturanPermintaan from "./PengaturanPermintaan";
-import { LABEL_ORIENTASI, formatUkuran, formatWaktu, salinTautanUnggah } from "./videoDesaUtils";
+import { LABEL_ORIENTASI, formatUkuran, formatWaktu } from "./videoDesaUtils";
 
-const Lencana = ({ p }) => {
-	const terbuka = !p.tertutup;
-	return (
-		<span
-			className={`inline-flex flex-shrink-0 rounded-full border px-2 py-0.5 text-[11px] font-semibold ${
-				terbuka ? "border-emerald-200 bg-emerald-50 text-emerald-700" : "border-slate-200 bg-slate-100 text-slate-500"
-			}`}
-		>
-			{terbuka ? "Menerima video" : "Ditutup"}
-		</span>
-	);
-};
+const Lencana = ({ p }) => (
+	<span
+		className={`inline-flex flex-shrink-0 rounded-full border px-2 py-0.5 text-[11px] font-semibold ${
+			p.tertutup ? "border-slate-200 bg-slate-100 text-slate-500" : "border-emerald-200 bg-emerald-50 text-emerald-700"
+		}`}
+	>
+		{p.tertutup ? "Ditutup" : "Tampil di tautan"}
+	</span>
+);
 
 const Angka = ({ nilai, label, sorot }) => (
 	<div>
 		<p className={`text-lg font-semibold tabular-nums ${sorot ? "text-amber-600" : "text-slate-900"}`}>{nilai}</p>
-		<p className="text-[11px] text-slate-500">{label}</p>
+		<p className="text-[11px] leading-tight text-slate-500">{label}</p>
 	</div>
 );
 
@@ -48,7 +40,7 @@ const VideoDesaListPage = ({ bidangId }) => {
 			const r = await getDaftarPermintaan(bidangId);
 			setDaftar(r.data.data || []);
 		} catch (e) {
-			toast.error(e.response?.data?.message || "Gagal memuat permintaan video.");
+			toast.error(e.response?.data?.message || "Gagal memuat kegiatan video.");
 		} finally {
 			setMemuat(false);
 		}
@@ -61,10 +53,10 @@ const VideoDesaListPage = ({ bidangId }) => {
 	const simpanBaru = async (data) => {
 		try {
 			const r = await buatPermintaan(bidangId, data);
-			await salinTautanUnggah(r.data.data.token);
+			toast.success("Kegiatan dibuat dan langsung tampil di tautan Video Desa.");
 			navigate(`/video-desa/${r.data.data.id}`);
 		} catch (e) {
-			toast.error(e.response?.data?.message || "Gagal membuat permintaan video.");
+			toast.error(e.response?.data?.message || "Gagal membuat kegiatan video.");
 			throw e;
 		}
 	};
@@ -74,8 +66,11 @@ const VideoDesaListPage = ({ bidangId }) => {
 		try {
 			// Membuka kembali juga menghapus batas waktu yang sudah lewat — kalau
 			// tidak, status "dibuka" tetap tertutup oleh tanggalnya sendiri.
-			await ubahPermintaan(p.id, tutup ? { status: "ditutup" } : { status: "dibuka", ...(p.tutup_pada && new Date(p.tutup_pada) < new Date() ? { tutup_pada: null } : {}) });
-			toast.success(tutup ? "Permintaan ditutup." : "Permintaan dibuka kembali.");
+			await ubahPermintaan(
+				p.id,
+				tutup ? { status: "ditutup" } : { status: "dibuka", ...(p.tutup_pada && new Date(p.tutup_pada) < new Date() ? { tutup_pada: null } : {}) }
+			);
+			toast.success(tutup ? "Kegiatan ditutup dan disembunyikan dari tautan." : "Kegiatan dibuka kembali.");
 			muat();
 		} catch (e) {
 			toast.error(e.response?.data?.message || "Gagal mengubah status.");
@@ -84,10 +79,10 @@ const VideoDesaListPage = ({ bidangId }) => {
 
 	const hapus = async (p) => {
 		const k = await Swal.fire({
-			title: "Hapus permintaan video?",
+			title: "Hapus kegiatan video?",
 			text: p.jumlah_video
 				? `"${p.judul}" beserta ${p.jumlah_video} video (${formatUkuran(p.ukuran_total)}) akan dihapus permanen dari server.`
-				: `"${p.judul}" akan dihapus dan tautannya berhenti bekerja.`,
+				: `"${p.judul}" akan dihapus dari tautan Video Desa.`,
 			icon: "warning",
 			showCancelButton: true,
 			confirmButtonText: "Hapus",
@@ -97,7 +92,7 @@ const VideoDesaListPage = ({ bidangId }) => {
 		if (!k.isConfirmed) return;
 		try {
 			await hapusPermintaan(p.id);
-			toast.success("Permintaan video dihapus.");
+			toast.success("Kegiatan video dihapus.");
 			muat();
 		} catch (e) {
 			toast.error(e.response?.data?.message || "Gagal menghapus.");
@@ -122,8 +117,8 @@ const VideoDesaListPage = ({ bidangId }) => {
 								<p className="truncate text-xs font-semibold uppercase tracking-wide text-brand-600">{infoBidang.nama}</p>
 								<h1 className="text-xl font-semibold tracking-tight text-slate-900 sm:text-2xl">Video Desa</h1>
 								<p className="mt-1 max-w-2xl text-sm leading-6 text-slate-500">
-									Minta video dari desa untuk videotron dan media sosial DPMD. Buat permintaan, bagikan tautannya ke desa, lalu
-									tinjau video yang masuk.
+									Buat kegiatan video untuk videotron dan media sosial DPMD. Setiap kegiatan tampil sebagai card di tautan Video Desa;
+									tiap desa mengirim satu video per kegiatan, lalu bidang memverifikasinya.
 								</p>
 							</div>
 						</div>
@@ -132,10 +127,12 @@ const VideoDesaListPage = ({ bidangId }) => {
 							className="inline-flex flex-shrink-0 items-center gap-2 rounded-lg bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-slate-800"
 						>
 							<Plus className="h-4 w-4" />
-							Permintaan baru
+							Kegiatan baru
 						</button>
 					</div>
 				</div>
+
+				<PanelTautan />
 
 				{memuat ? (
 					<div className="flex items-center justify-center rounded-xl border border-slate-200 bg-white py-20">
@@ -146,9 +143,9 @@ const VideoDesaListPage = ({ bidangId }) => {
 						<div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-xl bg-slate-100">
 							<Clapperboard className="h-6 w-6 text-slate-400" />
 						</div>
-						<p className="text-sm font-semibold text-slate-900">Belum ada permintaan video</p>
+						<p className="text-sm font-semibold text-slate-900">Belum ada kegiatan video</p>
 						<p className="mx-auto mt-1 max-w-sm text-sm text-slate-500">
-							Buat permintaan pertama — mis. "Profil Potensi Desa" untuk videotron — lalu bagikan tautannya ke grup WhatsApp desa.
+							Buat kegiatan pertama — mis. "Profil Potensi Desa" untuk videotron. Kegiatan langsung tampil di tautan Video Desa.
 						</p>
 					</div>
 				) : (
@@ -170,27 +167,21 @@ const VideoDesaListPage = ({ bidangId }) => {
 
 								<div className="mt-4 grid grid-cols-4 gap-2 border-t border-slate-100 pt-3">
 									<Angka nilai={p.jumlah_desa} label="desa" />
-									<Angka nilai={p.jumlah_video} label="video" />
-									<Angka nilai={p.menunggu} label="belum ditinjau" sorot={p.menunggu > 0} />
+									<Angka nilai={p.diproses} label="diperiksa sistem" />
+									<Angka nilai={p.menunggu} label="perlu verifikasi" sorot={p.menunggu > 0} />
 									<Angka nilai={p.disetujui} label="disetujui" />
 								</div>
 
 								<div className="mt-3 flex flex-wrap items-center gap-1 border-t border-slate-100 pt-3" onClick={(e) => e.stopPropagation()}>
-									<button onClick={() => salinTautanUnggah(p.token)} className="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-100">
-										<Link2 className="h-3.5 w-3.5" /> Salin tautan
-									</button>
-									<button onClick={() => window.open(tautanUnggah(p.token), "_blank")} className="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-100">
-										<ExternalLink className="h-3.5 w-3.5" /> Lihat halaman desa
-									</button>
 									<button onClick={() => alihStatus(p)} className="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-100">
 										{p.tertutup ? <Play className="h-3.5 w-3.5" /> : <Square className="h-3.5 w-3.5" />}
 										{p.tertutup ? "Buka lagi" : "Tutup"}
 									</button>
-									<button onClick={() => hapus(p)} className="ml-auto inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-medium text-rose-600 hover:bg-rose-50">
+									{p.ukuran_total > 0 && <span className="text-[11px] text-slate-400">{formatUkuran(p.ukuran_total)} di server</span>}
+									<button onClick={() => hapus(p)} className="ml-auto inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-medium text-rose-600 hover:bg-rose-50" aria-label="Hapus kegiatan">
 										<Trash2 className="h-3.5 w-3.5" />
 									</button>
 								</div>
-								{p.ukuran_total > 0 && <p className="mt-2 text-[11px] text-slate-400">{formatUkuran(p.ukuran_total)} di server</p>}
 							</div>
 						))}
 					</div>

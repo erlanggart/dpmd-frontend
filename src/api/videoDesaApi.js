@@ -4,7 +4,9 @@ import { API_ENDPOINTS } from "../config/apiConfig";
 import { ambilToken } from "../utils/tokenSesi";
 
 /**
- * Video Desa: bidang meminta video dari desa lewat tautan publik.
+ * Video Desa: tiap bidang membuat kegiatan video; Bidang Sekretariat
+ * membagikan SATU tautan ke semua desa, berisi card seluruh kegiatan yang
+ * sedang dibuka. Desa mengunggah tanpa login, bidang memverifikasi.
  *
  * Pengelolaan memakai `api` biasa (butuh login). Halaman unggah desa memakai
  * instance terpisah tanpa interceptor 401 — alasannya sama dengan formulir:
@@ -13,13 +15,21 @@ import { ambilToken } from "../utils/tokenSesi";
 const apiPublik = axios.create({ baseURL: API_ENDPOINTS.EXPRESS_BASE, timeout: 60000 });
 
 apiPublik.interceptors.request.use((config) => {
-	// Bila yang membuka akun desa yang sedang login, desanya terkunci otomatis.
+	// Bila yang membuka akun desa yang sedang login, desanya terisi otomatis.
 	const token = ambilToken();
 	if (token && token !== "VPN_ACCESS_TOKEN") config.headers.Authorization = `Bearer ${token}`;
 	return config;
 });
 
-// ---------- Pengelolaan ----------
+// ---------- Tautan tunggal (dikelola Sekretariat) ----------
+export const getTautanTunggal = () => api.get("/video-desa/tautan");
+export const buatTautanTunggal = () => api.post("/video-desa/tautan");
+export const ubahTautanTunggal = (status) => api.patch("/video-desa/tautan", { status });
+
+/** Tautan untuk desa. Pendek (/v/...) karena ditempel di WhatsApp. */
+export const tautanUnggah = (token) => `${window.location.origin}/v/${token}`;
+
+// ---------- Kegiatan per bidang ----------
 export const getDaftarPermintaan = (bidangId) => api.get(`/video-desa/bidang/${bidangId}`);
 export const buatPermintaan = (bidangId, data) => api.post(`/video-desa/bidang/${bidangId}`, data);
 export const getPermintaan = (id) => api.get(`/video-desa/${id}`);
@@ -39,11 +49,9 @@ export const getTautanVideo = async (kirimanId) => {
 	return { putar: asal + r.data.data.putar, unduh: asal + r.data.data.unduh };
 };
 
-/** Tautan yang dibagikan ke desa. Pendek (/v/...) karena ditempel di WhatsApp. */
-export const tautanUnggah = (token) => `${window.location.origin}/v/${token}`;
-
 // ---------- Unggah (publik) ----------
 export const getHalamanUnggah = (token) => apiPublik.get(`/video-desa/publik/${token}`);
+export const getStatusDesa = (token, desaId) => apiPublik.get(`/video-desa/publik/${token}/desa/${desaId}`);
 
 const mulaiUnggah = (token, data) => apiPublik.post(`/video-desa/publik/${token}/unggah`, data);
 const statusUnggah = (token, uploadId) => apiPublik.get(`/video-desa/publik/${token}/unggah/${uploadId}`);
@@ -72,7 +80,8 @@ const bisaDiulang = (e) => !e.response || e.response.status >= 500 || e.response
  * diterima tidak dikirim dua kali). Sinyal di desa sering hilang sebentar —
  * tanpa ini satu putus 2 detik menggagalkan unggahan ratusan MB.
  *
- * `onKemajuan({ terkirim, total })` dipanggil setiap kali byte bertambah.
+ * `isian` memuat permintaan_id (kegiatan), desa_id, nama_pengirim, no_hp,
+ * keterangan. `onKemajuan({ terkirim, total })` dipanggil saat byte bertambah.
  */
 const MAKS_ULANG = 8;
 
@@ -98,6 +107,7 @@ export const unggahVideo = async ({ token, berkas, isian, onKemajuan, onSesi, si
 			} catch (e) {
 				if (signal?.aborted || axios.isCancel(e)) throw new DOMException("Dibatalkan", "AbortError");
 				percobaan += 1;
+				// 400/403/404 = ditolak server (bukan video, tautan ditutup, dll.) — jangan diulang.
 				if (!bisaDiulang(e) || percobaan > MAKS_ULANG) throw e;
 				await tunggu(Math.min(30000, 1000 * 2 ** (percobaan - 1)));
 				try {

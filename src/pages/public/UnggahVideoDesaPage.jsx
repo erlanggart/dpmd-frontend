@@ -1,19 +1,24 @@
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useParams } from "react-router-dom";
-import { AlertCircle, CheckCircle2, Clapperboard, Film, Loader2, Lock, UploadCloud, X } from "lucide-react";
-import { batalUnggah, getHalamanUnggah, unggahVideo } from "../../api/videoDesaApi";
+import {
+	AlertCircle, CheckCircle2, Clapperboard, Clock, Film, Loader2, Lock, RotateCcw, ShieldCheck, UploadCloud, X, XCircle,
+} from "lucide-react";
+import { batalUnggah, getHalamanUnggah, getStatusDesa, unggahVideo } from "../../api/videoDesaApi";
 import { LABEL_ORIENTASI, formatDurasi, formatUkuran, formatWaktu } from "../bidang/video-desa/videoDesaUtils";
 
 /**
- * Halaman unggah video untuk desa — dibuka dari tautan yang dibagikan bidang,
- * TANPA login. Kebanyakan dibuka dari HP lewat WhatsApp, dengan sinyal yang
- * tidak bisa diandalkan: unggahan dikirim per potongan dan otomatis lanjut
- * setelah sinyal kembali (lihat unggahVideo di api/videoDesaApi.js).
+ * Tautan tunggal Video Desa — dibagikan Bidang Sekretariat ke semua desa,
+ * dibuka TANPA login. Isinya card semua kegiatan video dari seluruh bidang;
+ * desa memilih desanya lalu mengirim satu video per kegiatan.
+ *
+ * Kebanyakan dibuka dari HP lewat WhatsApp dengan sinyal yang tidak bisa
+ * diandalkan: unggahan dikirim per potongan dan lanjut sendiri setelah sinyal
+ * kembali (lihat unggahVideo di api/videoDesaApi.js).
  */
 
 const Bingkai = ({ children }) => (
 	<div className="min-h-screen bg-slate-100">
-		<div className="mx-auto max-w-2xl px-4 py-6 sm:px-6 sm:py-10">{children}</div>
+		<div className="mx-auto max-w-3xl px-4 py-6 sm:px-6 sm:py-10">{children}</div>
 	</div>
 );
 
@@ -27,15 +32,14 @@ const Kop = () => (
 	</div>
 );
 
-const Pemberitahuan = ({ ikon: Ikon, judul, keterangan, baik, children }) => (
+const Pemberitahuan = ({ ikon: Ikon, judul, keterangan }) => (
 	<Bingkai>
 		<div className="rounded-2xl border border-slate-200 bg-white px-6 py-14 text-center shadow-sm">
-			<div className={`mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-2xl ${baik ? "bg-emerald-50" : "bg-slate-100"}`}>
-				<Ikon className={`h-7 w-7 ${baik ? "text-emerald-600" : "text-slate-500"}`} />
+			<div className="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-2xl bg-slate-100">
+				<Ikon className="h-7 w-7 text-slate-500" />
 			</div>
 			<h1 className="text-lg font-semibold tracking-tight text-slate-900 sm:text-xl">{judul}</h1>
 			{keterangan && <p className="mx-auto mt-2.5 max-w-md text-sm leading-6 text-slate-500">{keterangan}</p>}
-			{children}
 			<div className="mt-10 flex justify-center border-t border-slate-100 pt-6"><Kop /></div>
 		</div>
 	</Bingkai>
@@ -50,67 +54,53 @@ const bacaInfoVideo = (berkas) =>
 		const url = URL.createObjectURL(berkas);
 		const v = document.createElement("video");
 		v.preload = "metadata";
-		const selesai = (info) => { URL.revokeObjectURL(url); resolve(info); };
-		v.onloadedmetadata = () => selesai({ durasi: v.duration, lebar: v.videoWidth, tinggi: v.videoHeight });
-		v.onerror = () => selesai(null);
-		setTimeout(() => selesai(null), 8000);
+		let selesai = false;
+		const akhiri = (info) => { if (selesai) return; selesai = true; URL.revokeObjectURL(url); resolve(info); };
+		v.onloadedmetadata = () => akhiri({ durasi: v.duration, lebar: v.videoWidth, tinggi: v.videoHeight });
+		v.onerror = () => akhiri(null);
+		setTimeout(() => akhiri(null), 8000);
 		v.src = url;
 	});
 
-const UnggahVideoDesaPage = () => {
-	const { token } = useParams();
-	const [memuat, setMemuat] = useState(true);
-	const [data, setData] = useState(null);
-	const [galatMuat, setGalatMuat] = useState(null);
+/** Status kiriman desa untuk satu kegiatan, dalam bahasa desa. */
+const StatusKiriman = ({ s }) => {
+	if (!s) return null;
+	if (s.pemrosesan === "gagal") {
+		return <p className="flex items-start gap-1.5 text-xs text-rose-700"><XCircle className="mt-0.5 h-3.5 w-3.5 flex-shrink-0" />Video sebelumnya tidak lolos pemeriksaan: {s.alasan}. Silakan kirim ulang.</p>;
+	}
+	if (s.status === "ditolak") {
+		return <p className="flex items-start gap-1.5 text-xs text-rose-700"><XCircle className="mt-0.5 h-3.5 w-3.5 flex-shrink-0" />Video sebelumnya ditolak bidang{s.alasan ? `: ${s.alasan}` : ""}. Silakan kirim ulang.</p>;
+	}
+	if (s.status === "disetujui") {
+		return <p className="flex items-center gap-1.5 text-xs font-semibold text-emerald-700"><CheckCircle2 className="h-4 w-4" />Video sudah disetujui. Terima kasih!</p>;
+	}
+	if (s.pemrosesan === "antre" || s.pemrosesan === "diproses") {
+		return <p className="flex items-center gap-1.5 text-xs font-medium text-slate-600"><ShieldCheck className="h-4 w-4" />Terkirim — sedang diperiksa keamanannya oleh sistem.</p>;
+	}
+	return <p className="flex items-center gap-1.5 text-xs font-medium text-amber-700"><Clock className="h-4 w-4" />Terkirim {formatWaktu(s.dikirim_pada)} — menunggu verifikasi bidang.</p>;
+};
 
-	const [kecamatanId, setKecamatanId] = useState("");
-	const [desaId, setDesaId] = useState("");
-	const [nama, setNama] = useState("");
-	const [hp, setHp] = useState("");
-	const [keterangan, setKeterangan] = useState("");
+/** Form unggah di dalam satu card kegiatan. */
+const FormUnggah = ({ token, data, kegiatan, identitas, onSelesai, onBatal, onSibuk }) => {
 	const [berkas, setBerkas] = useState(null);
 	const [info, setInfo] = useState(null);
+	const [keterangan, setKeterangan] = useState("");
 	const [galat, setGalat] = useState("");
-
-	const [kemajuan, setKemajuan] = useState(null); // { terkirim, total }
-	const [selesai, setSelesai] = useState(null);
+	const [kemajuan, setKemajuan] = useState(null);
 	const pengendali = useRef(null);
 	const sesiRef = useRef(null);
-	const masukanBerkas = useRef(null);
+	const masukan = useRef(null);
 
 	useEffect(() => {
-		(async () => {
-			try {
-				const r = await getHalamanUnggah(token);
-				const d = r.data.data;
-				setData(d);
-				document.title = `${d.judul} — Unggah Video Desa`;
-				if (d.desa_terkunci) {
-					const desa = d.desa.find((x) => x.id === d.desa_terkunci);
-					if (desa) { setKecamatanId(String(desa.kecamatan_id)); setDesaId(String(desa.id)); }
-				}
-			} catch (e) {
-				setGalatMuat(e.response?.data?.message || "Halaman tidak dapat dimuat. Periksa koneksi internet lalu muat ulang.");
-			} finally {
-				setMemuat(false);
-			}
-		})();
-	}, [token]);
-
-	// Cegah tab tertutup tanpa sengaja di tengah unggahan.
-	useEffect(() => {
+		onSibuk(Boolean(kemajuan));
 		if (!kemajuan) return undefined;
+		// Cegah tab tertutup tanpa sengaja di tengah unggahan.
 		const tahan = (e) => { e.preventDefault(); e.returnValue = ""; };
 		window.addEventListener("beforeunload", tahan);
 		return () => window.removeEventListener("beforeunload", tahan);
-	}, [kemajuan]);
+	}, [kemajuan, onSibuk]);
 
-	const desaDiKecamatan = useMemo(
-		() => (data?.desa || []).filter((d) => String(d.kecamatan_id) === String(kecamatanId)),
-		[data, kecamatanId]
-	);
-
-	const pilihBerkas = async (f) => {
+	const pilih = async (f) => {
 		setGalat("");
 		setInfo(null);
 		if (!f) { setBerkas(null); return; }
@@ -130,35 +120,33 @@ const UnggahVideoDesaPage = () => {
 	};
 
 	const peringatan = useMemo(() => {
-		if (!info || !data) return [];
+		if (!info) return [];
 		const p = [];
-		if (data.orientasi === "lanskap" && info.tinggi > info.lebar) p.push("Video ini tegak (potret), padahal diminta mendatar (lanskap 16:9).");
-		if (data.orientasi === "potret" && info.lebar > info.tinggi) p.push("Video ini mendatar (lanskap), padahal diminta tegak (potret 9:16).");
-		if (data.maks_durasi_detik && info.durasi > data.maks_durasi_detik + 1) {
-			p.push(`Durasi ${formatDurasi(info.durasi)} melebihi arahan ${formatDurasi(data.maks_durasi_detik)}.`);
+		if (kegiatan.orientasi === "lanskap" && info.tinggi > info.lebar) p.push("Video ini tegak (potret), padahal diminta mendatar (lanskap 16:9).");
+		if (kegiatan.orientasi === "potret" && info.lebar > info.tinggi) p.push("Video ini mendatar (lanskap), padahal diminta tegak (potret 9:16).");
+		if (kegiatan.maks_durasi_detik && info.durasi > kegiatan.maks_durasi_detik + 1) {
+			p.push(`Durasi ${formatDurasi(info.durasi)} melebihi arahan ${formatDurasi(kegiatan.maks_durasi_detik)}.`);
 		}
 		if (info.lebar && Math.min(info.lebar, info.tinggi) < 720) p.push("Resolusi di bawah 720p — akan terlihat pecah di videotron.");
 		return p;
-	}, [info, data]);
+	}, [info, kegiatan]);
 
-	const kirim = async (e) => {
-		e.preventDefault();
+	const kirim = async () => {
 		setGalat("");
-		if (!desaId) return setGalat("Pilih kecamatan dan desa terlebih dahulu.");
 		if (!berkas) return setGalat("Pilih berkas video terlebih dahulu.");
-
 		pengendali.current = new AbortController();
 		setKemajuan({ terkirim: 0, total: berkas.size });
 		try {
-			const hasil = await unggahVideo({
+			await unggahVideo({
 				token,
 				berkas,
-				isian: { desa_id: Number(desaId), nama_pengirim: nama, no_hp: hp, keterangan },
+				isian: { ...identitas, permintaan_id: kegiatan.id, keterangan },
 				onKemajuan: setKemajuan,
 				onSesi: (id) => { sesiRef.current = id; },
 				signal: pengendali.current.signal,
 			});
-			setSelesai(hasil || {});
+			setKemajuan(null);
+			onSelesai();
 		} catch (err) {
 			if (err?.name === "AbortError") {
 				if (sesiRef.current) batalUnggah(token, sesiRef.current);
@@ -166,14 +154,154 @@ const UnggahVideoDesaPage = () => {
 			} else {
 				setGalat(
 					err.response?.data?.message ||
-						"Unggahan terhenti karena koneksi terputus terlalu lama. Pastikan sinyal stabil (lebih baik pakai Wi-Fi), lalu tekan Kirim lagi."
+						"Unggahan terhenti karena koneksi terputus terlalu lama. Pastikan sinyal stabil (lebih baik pakai Wi-Fi), lalu kirim lagi."
 				);
 			}
-		} finally {
 			setKemajuan(null);
+		} finally {
 			sesiRef.current = null;
 		}
 	};
+
+	const persen = kemajuan ? Math.floor((kemajuan.terkirim / kemajuan.total) * 100) : 0;
+
+	return (
+		<div className="mt-4 space-y-3 rounded-xl border border-slate-200 bg-slate-50 p-4">
+			{!berkas ? (
+				<button type="button" onClick={() => masukan.current?.click()} className="flex w-full flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed border-slate-300 bg-white px-4 py-7 text-center transition-colors hover:border-slate-400">
+					<UploadCloud className="h-8 w-8 text-slate-400" />
+					<span className="text-sm font-medium text-slate-700">Pilih video dari galeri / berkas</span>
+					<span className="text-xs text-slate-500">MP4, MOV, WebM · maks {formatUkuran(data.maks_ukuran)}</span>
+				</button>
+			) : (
+				<div className="flex items-center gap-3 rounded-xl border border-slate-200 bg-white px-4 py-3">
+					<Film className="h-6 w-6 flex-shrink-0 text-slate-500" />
+					<div className="min-w-0 flex-1">
+						<p className="truncate text-sm font-medium text-slate-900">{berkas.name}</p>
+						<p className="text-xs text-slate-500">
+							{[formatUkuran(berkas.size), info?.durasi ? formatDurasi(info.durasi) : null, info?.lebar ? `${info.lebar}×${info.tinggi}` : null].filter(Boolean).join(" · ")}
+						</p>
+					</div>
+					{!kemajuan && (
+						<button type="button" onClick={() => { pilih(null); if (masukan.current) masukan.current.value = ""; }} className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-700" aria-label="Ganti video">
+							<X className="h-4 w-4" />
+						</button>
+					)}
+				</div>
+			)}
+			<input ref={masukan} type="file" accept={["video/*", ...data.ekstensi].join(",")} className="hidden" onChange={(e) => pilih(e.target.files?.[0])} />
+
+			{peringatan.length > 0 && (
+				<div className="space-y-1 rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-800">
+					{peringatan.map((p) => <p key={p}>⚠ {p}</p>)}
+					<p className="text-amber-700/80">Video tetap bisa dikirim, tapi mungkin tidak terpakai.</p>
+				</div>
+			)}
+
+			<label className="block">
+				<span className="text-xs font-semibold text-slate-700">Keterangan video</span>
+				<textarea value={keterangan} onChange={(e) => setKeterangan(e.target.value)} disabled={!!kemajuan} rows={2} maxLength={2000} placeholder="Isi singkat video, lokasi pengambilan, nama kegiatan…" className={kelasMasukan} />
+			</label>
+
+			{galat && <p className="flex items-start gap-2 rounded-lg bg-rose-50 px-3 py-2 text-sm text-rose-700"><AlertCircle className="mt-0.5 h-4 w-4 flex-shrink-0" />{galat}</p>}
+
+			{kemajuan ? (
+				<div className="space-y-2">
+					<div className="flex items-center justify-between text-sm">
+						<span className="font-medium text-slate-900">{persen < 100 ? "Mengunggah…" : "Menyelesaikan…"}</span>
+						<span className="tabular-nums text-slate-600">{persen}% · {formatUkuran(kemajuan.terkirim)} / {formatUkuran(kemajuan.total)}</span>
+					</div>
+					<div className="h-2.5 w-full overflow-hidden rounded-full bg-slate-200">
+						<div className="h-full rounded-full bg-slate-900 transition-[width] duration-300" style={{ width: `${persen}%` }} />
+					</div>
+					<p className="text-xs text-slate-500">Jangan tutup halaman ini. Bila sinyal putus sebentar, unggahan lanjut sendiri.</p>
+					<button type="button" onClick={() => pengendali.current?.abort()} className="text-xs font-medium text-rose-600 hover:underline">Batalkan unggahan</button>
+				</div>
+			) : (
+				<div className="flex gap-2">
+					<button type="button" onClick={kirim} disabled={!berkas} className="flex flex-1 items-center justify-center gap-2 rounded-lg bg-slate-900 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-slate-800 disabled:bg-slate-300">
+						<UploadCloud className="h-4 w-4" /> Kirim video
+					</button>
+					<button type="button" onClick={onBatal} className="rounded-lg px-4 py-2.5 text-sm font-medium text-slate-600 hover:bg-slate-200">Tutup</button>
+				</div>
+			)}
+		</div>
+	);
+};
+
+const UnggahVideoDesaPage = () => {
+	const { token } = useParams();
+	const [memuat, setMemuat] = useState(true);
+	const [data, setData] = useState(null);
+	const [galatMuat, setGalatMuat] = useState(null);
+
+	const [kecamatanId, setKecamatanId] = useState("");
+	const [desaId, setDesaId] = useState("");
+	const [nama, setNama] = useState("");
+	const [hp, setHp] = useState("");
+	const [statusDesa, setStatusDesa] = useState({});
+	const [memuatStatus, setMemuatStatus] = useState(false);
+	const [terbuka, setTerbuka] = useState(null); // id kegiatan yang form-nya terbuka
+	const [sibuk, setSibuk] = useState(false);
+	const [pesanSukses, setPesanSukses] = useState(null);
+
+	useEffect(() => {
+		(async () => {
+			try {
+				const r = await getHalamanUnggah(token);
+				const d = r.data.data;
+				setData(d);
+				document.title = "Video Desa — DPMD Kabupaten Bogor";
+				if (d.desa_terkunci) {
+					const desa = d.desa.find((x) => x.id === d.desa_terkunci);
+					if (desa) { setKecamatanId(String(desa.kecamatan_id)); setDesaId(String(desa.id)); }
+				}
+			} catch (e) {
+				const kode = e.response?.status;
+				setGalatMuat({
+					ikon: kode === 403 ? Lock : AlertCircle,
+					judul: kode === 403 ? "Pengumpulan video ditutup" : "Tautan tidak dapat dibuka",
+					pesan: e.response?.data?.message || "Halaman tidak dapat dimuat. Periksa koneksi internet lalu muat ulang.",
+				});
+			} finally {
+				setMemuat(false);
+			}
+		})();
+	}, [token]);
+
+	const muatStatus = useCallback(async (id) => {
+		if (!id) { setStatusDesa({}); return; }
+		setMemuatStatus(true);
+		try {
+			const r = await getStatusDesa(token, id);
+			setStatusDesa(Object.fromEntries((r.data.data || []).map((s) => [s.permintaan_id, s])));
+		} catch {
+			setStatusDesa({});
+		} finally {
+			setMemuatStatus(false);
+		}
+	}, [token]);
+
+	useEffect(() => {
+		setTerbuka(null);
+		setPesanSukses(null);
+		muatStatus(desaId);
+	}, [desaId, muatStatus]);
+
+	const desaDiKecamatan = useMemo(
+		() => (data?.desa || []).filter((d) => String(d.kecamatan_id) === String(kecamatanId)),
+		[data, kecamatanId]
+	);
+
+	const perBidang = useMemo(() => {
+		const kelompok = new Map();
+		(data?.kegiatan || []).forEach((k) => {
+			const kunci = k.bidang || "Lainnya";
+			if (!kelompok.has(kunci)) kelompok.set(kunci, []);
+			kelompok.get(kunci).push(k);
+		});
+		return [...kelompok.entries()];
+	}, [data]);
 
 	if (memuat) {
 		return (
@@ -182,24 +310,12 @@ const UnggahVideoDesaPage = () => {
 			</Bingkai>
 		);
 	}
-	if (galatMuat) return <Pemberitahuan ikon={AlertCircle} judul="Tautan tidak dapat dibuka" keterangan={galatMuat} />;
-	if (data.tertutup) return <Pemberitahuan ikon={Lock} judul={data.judul} keterangan={data.tertutup} />;
-	if (selesai) {
-		const desa = data.desa.find((d) => String(d.id) === String(desaId));
-		return (
-			<Pemberitahuan ikon={CheckCircle2} baik judul="Video berhasil terkirim" keterangan={`Terima kasih. Video dari ${desa?.status_pemerintahan === "kelurahan" ? "Kelurahan" : "Desa"} ${desa?.nama || ""} sudah diterima DPMD dan akan ditinjau oleh bidang.`}>
-				<button
-					onClick={() => { setSelesai(null); setBerkas(null); setInfo(null); setKeterangan(""); if (masukanBerkas.current) masukanBerkas.current.value = ""; }}
-					className="mt-6 rounded-lg border border-slate-200 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
-				>
-					Kirim video lain
-				</button>
-			</Pemberitahuan>
-		);
-	}
+	if (galatMuat) return <Pemberitahuan ikon={galatMuat.ikon} judul={galatMuat.judul} keterangan={galatMuat.pesan} />;
 
-	const persen = kemajuan ? Math.floor((kemajuan.terkirim / kemajuan.total) * 100) : 0;
+	const desaTerpilih = data.desa.find((d) => String(d.id) === String(desaId));
+	const identitasLengkap = Boolean(desaId && nama.trim() && hp.replace(/\D/g, "").length >= 9);
 	const terkunci = Boolean(data.desa_terkunci && desaId);
+	const bolehKirim = (s) => !s || s.status === "ditolak" || s.pemrosesan === "gagal";
 
 	return (
 		<Bingkai>
@@ -211,112 +327,124 @@ const UnggahVideoDesaPage = () => {
 						<div className="mt-5 flex items-start gap-3">
 							<div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl bg-slate-900 text-white"><Clapperboard className="h-5 w-5" /></div>
 							<div className="min-w-0">
-								<p className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">Unggah Video Desa</p>
-								<h1 className="text-xl font-semibold tracking-tight text-slate-900 sm:text-2xl">{data.judul}</h1>
+								<p className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">Pengumpulan Video Desa</p>
+								<h1 className="text-xl font-semibold tracking-tight text-slate-900 sm:text-2xl">Video Kegiatan Desa untuk Videotron & Media Sosial DPMD</h1>
 							</div>
 						</div>
-						{data.deskripsi && <p className="mt-4 whitespace-pre-line text-sm leading-6 text-slate-600">{data.deskripsi}</p>}
 						<ul className="mt-4 space-y-1 rounded-xl bg-slate-50 px-4 py-3 text-xs leading-5 text-slate-600">
-							<li>• Orientasi: <b>{LABEL_ORIENTASI[data.orientasi]}</b></li>
-							{data.maks_durasi_detik && <li>• Durasi maksimal: <b>{formatDurasi(data.maks_durasi_detik)}</b> (menit:detik)</li>}
-							<li>• Format: <b>MP4</b> (disarankan), MOV, atau WebM — maksimal <b>{formatUkuran(data.maks_ukuran)}</b></li>
-							<li>• Kualitas disarankan: <b>1080p (Full HD)</b>, gambar stabil, suara jelas</li>
-							<li>• Maksimal <b>{data.maks_per_desa} video</b> per desa{data.tutup_pada ? `, paling lambat ${formatWaktu(data.tutup_pada)}` : ""}</li>
+							<li>• Pilih desa Anda, lalu kirim <b>satu video untuk setiap kegiatan</b> di bawah.</li>
+							<li>• Format <b>MP4</b> (disarankan), MOV, atau WebM — maksimal <b>{formatUkuran(data.maks_ukuran)}</b> per video.</li>
+							<li>• Kualitas disarankan <b>1080p (Full HD)</b>, gambar stabil, suara jelas, tanpa musik berhak cipta.</li>
+							<li>• Video diperiksa keamanannya oleh sistem, lalu diverifikasi bidang terkait.</li>
 						</ul>
 					</div>
 				</div>
 
-				<form onSubmit={kirim} className="space-y-4 rounded-2xl border border-slate-200 bg-white px-5 py-6 shadow-sm sm:px-7">
+				<div className="space-y-3 rounded-2xl border border-slate-200 bg-white px-5 py-6 shadow-sm sm:px-7">
+					<p className="text-sm font-semibold text-slate-900">1. Identitas pengirim</p>
 					<div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
 						<label className="block">
-							<span className="text-sm font-semibold text-slate-900">Kecamatan <span className="text-rose-600">*</span></span>
-							<select value={kecamatanId} disabled={terkunci || !!kemajuan} onChange={(e) => { setKecamatanId(e.target.value); setDesaId(""); }} className={kelasMasukan} required>
+							<span className="text-xs font-semibold text-slate-700">Kecamatan <span className="text-rose-600">*</span></span>
+							<select value={kecamatanId} disabled={terkunci || sibuk} onChange={(e) => { setKecamatanId(e.target.value); setDesaId(""); }} className={kelasMasukan}>
 								<option value="">Pilih kecamatan</option>
 								{data.kecamatan.map((k) => <option key={k.id} value={k.id}>{k.nama}</option>)}
 							</select>
 						</label>
 						<label className="block">
-							<span className="text-sm font-semibold text-slate-900">Desa/Kelurahan <span className="text-rose-600">*</span></span>
-							<select value={desaId} disabled={terkunci || !kecamatanId || !!kemajuan} onChange={(e) => setDesaId(e.target.value)} className={kelasMasukan} required>
+							<span className="text-xs font-semibold text-slate-700">Desa/Kelurahan <span className="text-rose-600">*</span></span>
+							<select value={desaId} disabled={terkunci || !kecamatanId || sibuk} onChange={(e) => setDesaId(e.target.value)} className={kelasMasukan}>
 								<option value="">{kecamatanId ? "Pilih desa" : "Pilih kecamatan dulu"}</option>
 								{desaDiKecamatan.map((d) => <option key={d.id} value={d.id}>{d.nama}</option>)}
 							</select>
 						</label>
-					</div>
-
-					<div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
 						<label className="block">
-							<span className="text-sm font-semibold text-slate-900">Nama pengirim <span className="text-rose-600">*</span></span>
-							<input value={nama} onChange={(e) => setNama(e.target.value)} disabled={!!kemajuan} required maxLength={150} placeholder="Nama dan jabatan" className={kelasMasukan} />
+							<span className="text-xs font-semibold text-slate-700">Nama pengirim <span className="text-rose-600">*</span></span>
+							<input value={nama} onChange={(e) => setNama(e.target.value)} disabled={sibuk} maxLength={150} placeholder="Nama dan jabatan" className={kelasMasukan} />
 						</label>
 						<label className="block">
-							<span className="text-sm font-semibold text-slate-900">No. HP / WhatsApp <span className="text-rose-600">*</span></span>
-							<input value={hp} onChange={(e) => setHp(e.target.value)} disabled={!!kemajuan} required inputMode="tel" maxLength={20} placeholder="08…" className={kelasMasukan} />
+							<span className="text-xs font-semibold text-slate-700">No. HP / WhatsApp <span className="text-rose-600">*</span></span>
+							<input value={hp} onChange={(e) => setHp(e.target.value)} disabled={sibuk} inputMode="tel" maxLength={20} placeholder="08…" className={kelasMasukan} />
 						</label>
 					</div>
+				</div>
 
-					<label className="block">
-						<span className="text-sm font-semibold text-slate-900">Keterangan video</span>
-						<textarea value={keterangan} onChange={(e) => setKeterangan(e.target.value)} disabled={!!kemajuan} rows={3} maxLength={2000} placeholder="Isi singkat video, lokasi pengambilan, nama kegiatan…" className={kelasMasukan} />
-					</label>
+				<div className="space-y-3">
+					<p className="px-1 text-sm font-semibold text-slate-900">
+						2. Kegiatan video{desaTerpilih ? ` — ${desaTerpilih.status_pemerintahan === "kelurahan" ? "Kelurahan" : "Desa"} ${desaTerpilih.nama}` : ""}
+						{memuatStatus && <Loader2 className="ml-2 inline h-3.5 w-3.5 animate-spin text-slate-400" />}
+					</p>
 
-					<div>
-						<span className="text-sm font-semibold text-slate-900">Berkas video <span className="text-rose-600">*</span></span>
-						{!berkas ? (
-							<button type="button" onClick={() => masukanBerkas.current?.click()} className="mt-1.5 flex w-full flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed border-slate-300 px-4 py-8 text-center transition-colors hover:border-slate-400 hover:bg-slate-50">
-								<UploadCloud className="h-8 w-8 text-slate-400" />
-								<span className="text-sm font-medium text-slate-700">Pilih video dari galeri / berkas</span>
-								<span className="text-xs text-slate-500">MP4, MOV, WebM · maks {formatUkuran(data.maks_ukuran)}</span>
-							</button>
-						) : (
-							<div className="mt-1.5 flex items-center gap-3 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">
-								<Film className="h-6 w-6 flex-shrink-0 text-slate-500" />
-								<div className="min-w-0 flex-1">
-									<p className="truncate text-sm font-medium text-slate-900">{berkas.name}</p>
-									<p className="text-xs text-slate-500">
-										{[formatUkuran(berkas.size), info?.durasi ? formatDurasi(info.durasi) : null, info?.lebar ? `${info.lebar}×${info.tinggi}` : null].filter(Boolean).join(" · ")}
-									</p>
-								</div>
-								{!kemajuan && (
-									<button type="button" onClick={() => { pilihBerkas(null); if (masukanBerkas.current) masukanBerkas.current.value = ""; }} className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-200 hover:text-slate-700" aria-label="Ganti video">
-										<X className="h-4 w-4" />
-									</button>
-								)}
-							</div>
-						)}
-						<input ref={masukanBerkas} type="file" accept={["video/*", ...data.ekstensi].join(",")} className="hidden" onChange={(e) => pilihBerkas(e.target.files?.[0])} />
-						{peringatan.length > 0 && (
-							<div className="mt-2 space-y-1 rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-800">
-								{peringatan.map((p) => <p key={p}>⚠ {p}</p>)}
-								<p className="text-amber-700/80">Video tetap bisa dikirim, tapi mungkin tidak terpakai.</p>
-							</div>
-						)}
-					</div>
+					{pesanSukses && (
+						<p className="flex items-start gap-2 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
+							<CheckCircle2 className="mt-0.5 h-4 w-4 flex-shrink-0" /> {pesanSukses}
+						</p>
+					)}
 
-					{galat && <p className="flex items-start gap-2 rounded-lg bg-rose-50 px-3 py-2 text-sm text-rose-700"><AlertCircle className="mt-0.5 h-4 w-4 flex-shrink-0" />{galat}</p>}
-
-					{kemajuan ? (
-						<div className="space-y-2">
-							<div className="flex items-center justify-between text-sm">
-								<span className="font-medium text-slate-900">{persen < 100 ? "Mengunggah…" : "Memproses video…"}</span>
-								<span className="tabular-nums text-slate-600">{persen}% · {formatUkuran(kemajuan.terkirim)} / {formatUkuran(kemajuan.total)}</span>
-							</div>
-							<div className="h-2.5 w-full overflow-hidden rounded-full bg-slate-100">
-								<div className="h-full rounded-full bg-slate-900 transition-[width] duration-300" style={{ width: `${persen}%` }} />
-							</div>
-							<p className="text-xs text-slate-500">Jangan tutup halaman ini. Bila sinyal putus sebentar, unggahan lanjut sendiri.</p>
-							<button type="button" onClick={() => pengendali.current?.abort()} className="text-xs font-medium text-rose-600 hover:underline">Batalkan unggahan</button>
+					{perBidang.length === 0 ? (
+						<div className="rounded-2xl border border-dashed border-slate-300 bg-white px-6 py-12 text-center text-sm text-slate-500">
+							Belum ada kegiatan video yang dibuka. Silakan cek kembali nanti.
 						</div>
 					) : (
-						<button type="submit" className="flex w-full items-center justify-center gap-2 rounded-lg bg-slate-900 py-3 text-sm font-semibold text-white transition-colors hover:bg-slate-800">
-							<UploadCloud className="h-4 w-4" /> Kirim video
-						</button>
-					)}
-				</form>
+						perBidang.map(([bidang, daftar]) => (
+							<div key={bidang} className="space-y-2">
+								<p className="px-1 pt-2 text-[11px] font-semibold uppercase tracking-wide text-slate-500">Bidang {bidang}</p>
+								{daftar.map((k) => {
+									const s = statusDesa[k.id];
+									const boleh = bolehKirim(s);
+									return (
+										<div key={k.id} className="rounded-2xl border border-slate-200 bg-white px-5 py-5 shadow-sm sm:px-6">
+											<div className="flex items-start justify-between gap-3">
+												<div className="min-w-0">
+													<h2 className="text-base font-semibold text-slate-900">{k.judul}</h2>
+													<p className="mt-0.5 text-xs text-slate-500">
+														{LABEL_ORIENTASI[k.orientasi]}
+														{k.maks_durasi_detik ? ` · maks ${formatDurasi(k.maks_durasi_detik)} (menit:detik)` : ""}
+														{k.tutup_pada ? ` · paling lambat ${formatWaktu(k.tutup_pada)}` : ""}
+													</p>
+												</div>
+												{s && s.status === "disetujui" && <CheckCircle2 className="h-5 w-5 flex-shrink-0 text-emerald-600" />}
+											</div>
+											{k.deskripsi && <p className="mt-3 whitespace-pre-line text-sm leading-6 text-slate-600">{k.deskripsi}</p>}
+											{desaId && <div className="mt-3"><StatusKiriman s={s} /></div>}
 
-				{kemajuan && (
-					<p className="flex items-center justify-center gap-2 text-xs text-slate-500"><Loader2 className="h-3.5 w-3.5 animate-spin" /> Unggahan berjalan…</p>
-				)}
+											{terbuka === k.id ? (
+												<FormUnggah
+													token={token}
+													data={data}
+													kegiatan={k}
+													identitas={{ desa_id: Number(desaId), nama_pengirim: nama, no_hp: hp }}
+													onSibuk={setSibuk}
+													onBatal={() => setTerbuka(null)}
+													onSelesai={() => {
+														setSibuk(false);
+														setTerbuka(null);
+														setPesanSukses(`Video untuk "${k.judul}" berhasil terkirim. Sistem memeriksa keamanannya, lalu bidang akan memverifikasi.`);
+														muatStatus(desaId);
+													}}
+												/>
+											) : (
+												boleh && (
+													<button
+														type="button"
+														disabled={!identitasLengkap || sibuk || memuatStatus}
+														onClick={() => { setPesanSukses(null); setTerbuka(k.id); }}
+														className="mt-4 inline-flex items-center gap-2 rounded-lg bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-slate-800 disabled:bg-slate-300"
+													>
+														{s ? <RotateCcw className="h-4 w-4" /> : <UploadCloud className="h-4 w-4" />}
+														{s ? "Kirim ulang video" : "Unggah video"}
+													</button>
+												)
+											)}
+											{boleh && !identitasLengkap && terbuka !== k.id && (
+												<p className="mt-2 text-xs text-slate-400">Lengkapi identitas pengirim di atas dulu.</p>
+											)}
+										</div>
+									);
+								})}
+							</div>
+						))
+					)}
+				</div>
 			</div>
 		</Bingkai>
 	);

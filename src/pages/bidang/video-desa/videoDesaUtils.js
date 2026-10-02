@@ -15,6 +15,14 @@ export const LABEL_STATUS_KIRIMAN = {
 	ditolak: "Ditolak",
 };
 
+/** Tahap pemeriksaan keamanan oleh server sebelum video bisa diputar. */
+export const LABEL_PROSES = {
+	antre: "Antre diperiksa",
+	diproses: "Sedang diperiksa",
+	siap: "Lolos pemeriksaan",
+	gagal: "Gagal pemeriksaan",
+};
+
 export const formatUkuran = (byte) => {
 	const n = Number(byte) || 0;
 	if (n >= 1024 ** 3) return `${(n / 1024 ** 3).toFixed(2)} GB`;

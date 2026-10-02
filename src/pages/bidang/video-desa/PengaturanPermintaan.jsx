@@ -7,7 +7,6 @@ const KOSONG = {
 	deskripsi: "",
 	orientasi: "lanskap",
 	maks_durasi_detik: "",
-	maks_per_desa: 2,
 	tutup_pada: "",
 };
 
@@ -38,7 +37,6 @@ const PengaturanPermintaan = ({ buka, awal, onTutup, onSimpan }) => {
 						deskripsi: awal.deskripsi || "",
 						orientasi: awal.orientasi || "bebas",
 						maks_durasi_detik: awal.maks_durasi_detik ?? "",
-						maks_per_desa: awal.maks_per_desa ?? 2,
 						tutup_pada: keInputWaktu(awal.tutup_pada),
 					}
 				: KOSONG
@@ -58,7 +56,6 @@ const PengaturanPermintaan = ({ buka, awal, onTutup, onSimpan }) => {
 				deskripsi: isi.deskripsi,
 				orientasi: isi.orientasi,
 				maks_durasi_detik: isi.maks_durasi_detik === "" ? null : Number(isi.maks_durasi_detik),
-				maks_per_desa: Number(isi.maks_per_desa),
 				tutup_pada: isi.tutup_pada ? new Date(isi.tutup_pada).toISOString() : null,
 			});
 			onTutup();
@@ -78,7 +75,7 @@ const PengaturanPermintaan = ({ buka, awal, onTutup, onSimpan }) => {
 			>
 				<div className="flex items-center justify-between border-b border-slate-200 px-5 py-4">
 					<h2 className="text-base font-semibold text-slate-900">
-						{awal ? "Pengaturan permintaan video" : "Permintaan video baru"}
+						{awal ? "Pengaturan kegiatan video" : "Kegiatan video baru"}
 					</h2>
 					<button type="button" onClick={onTutup} className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-700" aria-label="Tutup">
 						<X className="h-5 w-5" />
@@ -87,7 +84,7 @@ const PengaturanPermintaan = ({ buka, awal, onTutup, onSimpan }) => {
 
 				<div className="flex-1 space-y-4 overflow-y-auto px-5 py-4">
 					<div>
-						<Label keterangan="Tampil sebagai judul di halaman unggah desa.">Judul video</Label>
+						<Label keterangan="Tampil sebagai judul card di tautan Video Desa.">Judul video</Label>
 						<input value={isi.judul} onChange={ubah("judul")} required maxLength={255} placeholder="mis. Profil Potensi Desa untuk Videotron" className={kelasMasukan} />
 					</div>
 
@@ -114,19 +111,15 @@ const PengaturanPermintaan = ({ buka, awal, onTutup, onSimpan }) => {
 						</div>
 					</div>
 
-					<div className="grid grid-cols-2 gap-3">
+					<div>
 						<div>
-							<Label keterangan="Kosongkan bila bebas.">Durasi maks (detik)</Label>
-							<input type="number" min={5} max={3600} value={isi.maks_durasi_detik} onChange={ubah("maks_durasi_detik")} placeholder="mis. 60" className={kelasMasukan} />
-						</div>
-						<div>
-							<Label keterangan="Video ditolak tidak dihitung.">Video per desa</Label>
-							<input type="number" min={1} max={10} required value={isi.maks_per_desa} onChange={ubah("maks_per_desa")} className={kelasMasukan} />
+							<Label keterangan="Kosongkan bila bebas. Setiap desa mengirim 1 video untuk kegiatan ini.">Durasi maks (detik)</Label>
+							<input type="number" min={5} max={1800} value={isi.maks_durasi_detik} onChange={ubah("maks_durasi_detik")} placeholder="mis. 60" className={kelasMasukan} />
 						</div>
 					</div>
 
 					<div>
-						<Label keterangan="Setelah lewat, tautan menolak unggahan baru. Kosongkan bila tanpa batas.">Batas waktu unggah</Label>
+						<Label keterangan="Setelah lewat, card kegiatan ini hilang dari tautan desa. Kosongkan bila tanpa batas.">Batas waktu unggah</Label>
 						<input type="datetime-local" value={isi.tutup_pada} onChange={ubah("tutup_pada")} className={kelasMasukan} />
 					</div>
 				</div>
@@ -137,7 +130,7 @@ const PengaturanPermintaan = ({ buka, awal, onTutup, onSimpan }) => {
 					</button>
 					<button type="submit" disabled={menyimpan} className="inline-flex items-center gap-2 rounded-lg bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-800 disabled:bg-slate-300">
 						{menyimpan && <Loader2 className="h-4 w-4 animate-spin" />}
-						{awal ? "Simpan" : "Buat & dapatkan tautan"}
+						{awal ? "Simpan" : "Buat kegiatan"}
 					</button>
 				</div>
 			</form>
