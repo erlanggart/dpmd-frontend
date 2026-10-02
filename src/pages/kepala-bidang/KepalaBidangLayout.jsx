@@ -8,6 +8,7 @@ import { useConfirm } from "../../hooks/useConfirm.jsx";
 import { subscribeToPushNotifications } from "../../utils/pushNotifications";
 import { toast } from 'react-hot-toast';
 import api from "../../api";
+import { ambilToken } from "../../utils/tokenSesi";
 import ContactLottieIcon from "../../components/ContactLottieIcon";
 import ScheduleLottieIcon from "../../components/ScheduleLottieIcon";
 import './KepalaBidangLayout.css';
@@ -23,7 +24,7 @@ const KepalaBidangLayout = () => {
 	const { confirmDialog, showConfirm } = useConfirm();
 
 	// Check if user is logged in and has kepala bidang role
-	const token = localStorage.getItem("expressToken");
+	const token = ambilToken();
 
 	// Helper function to get bidang display name based on bidang_id
 	const getBidangDisplayName = (user) => {

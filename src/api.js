@@ -3,6 +3,7 @@ import axios from "axios";
 import { API_ENDPOINTS } from "./config/apiConfig";
 import { performFullLogout } from "./utils/sessionPersistence";
 import { simpanTokenBaru, perbaruiSesiKedaluwarsa } from "./utils/tokenRenewal";
+import { ambilToken } from "./utils/tokenSesi";
 
 // Flag to prevent multiple simultaneous logouts
 let isLoggingOut = false;
@@ -55,7 +56,7 @@ api.interceptors.request.use(
 		
 		if (!isPublicEndpoint) {
 			// Use single token (expressToken)
-			const token = localStorage.getItem("expressToken");
+			const token = ambilToken();
 				
 			// Skip VPN_ACCESS_TOKEN - don't send to backend
 			if (token && token !== 'VPN_ACCESS_TOKEN') {

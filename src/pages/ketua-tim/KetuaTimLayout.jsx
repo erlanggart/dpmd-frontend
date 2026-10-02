@@ -9,6 +9,7 @@ import { useConfirm } from "../../hooks/useConfirm.jsx";
 import { subscribeToPushNotifications } from "../../utils/pushNotifications";
 import toast from 'react-hot-toast';
 import api from "../../api";
+import { ambilToken } from "../../utils/tokenSesi";
 import ContactLottieIcon from "../../components/ContactLottieIcon";
 import ScheduleLottieIcon from "../../components/ScheduleLottieIcon";
 import './KetuaTimLayout.css';
@@ -24,7 +25,7 @@ const KetuaTimLayout = () => {
 	const { confirmDialog, showConfirm } = useConfirm();
 
 	// Check if user is logged in and has ketua_tim role
-	const token = localStorage.getItem("expressToken");
+	const token = ambilToken();
 
 	// Update user data when localStorage changes
 	React.useEffect(() => {

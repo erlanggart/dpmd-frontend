@@ -2,6 +2,7 @@
 import React, { createContext, useContext, useState, useEffect, useRef } from "react";
 import { clearAllSessionData, backupSessionToIndexedDB, restoreSessionFromIndexedDB, performFullLogout, clearLogoutFlag, clearApiResponseCache } from "../utils/sessionPersistence";
 import { resetDesaPermissionRefresh } from "../hooks/useDesaPermissions";
+import { setTokenMemori } from "../utils/tokenSesi";
 
 // 1. Membuat Context
 const AuthContext = createContext(null);
@@ -106,6 +107,9 @@ export const AuthProvider = ({ children }) => {
 	const [user, setUser] = useState(null);
 	const [expressToken, setExpressToken] = useState(null);
 	const [isCheckingSession, setIsCheckingSession] = useState(true);
+	// Disalin saat render (bukan di efek) supaya layout anak yang dirender pada
+	// putaran yang sama sudah melihat token ini lewat ambilToken().
+	setTokenMemori(expressToken);
 
 	// PROACTIVE SESSION CHECK - Runs once on mount
 	// Use ref to ensure this only runs once

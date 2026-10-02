@@ -10,6 +10,7 @@ import { useConfirm } from "../../hooks/useConfirm.jsx";
 import { subscribeToPushNotifications } from "../../utils/pushNotifications";
 import toast from 'react-hot-toast';
 import api from "../../api";
+import { ambilToken } from "../../utils/tokenSesi";
 import './PegawaiLayout.css';
 
 const PegawaiLayout = () => {
@@ -23,7 +24,7 @@ const PegawaiLayout = () => {
 	const { confirmDialog, showConfirm } = useConfirm();
 
 	// Check if user is logged in and has pegawai role
-	const token = localStorage.getItem("expressToken");
+	const token = ambilToken();
 
 	// Update user data when localStorage changes
 	React.useEffect(() => {

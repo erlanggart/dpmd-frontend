@@ -21,6 +21,7 @@ import { useConfirm } from "../hooks/useConfirm.jsx";
 import { subscribeToPushNotifications } from "../utils/pushNotifications";
 import toast from 'react-hot-toast';
 import api from "../api";
+import { ambilToken } from "../utils/tokenSesi";
 import { getAvatarUrl } from '../utils/avatarUtils';
 
 // ============================================
@@ -235,7 +236,7 @@ const DPMDStaffLayout = () => {
 	const { confirmDialog, showConfirm } = useConfirm();
 	const { isDesktop, isSidebarCollapsed, setIsSidebarCollapsed } = useResponsive();
 
-	const token = localStorage.getItem("expressToken");
+	const token = ambilToken();
 	const config = ROLE_CONFIG[roleType] || ROLE_CONFIG.pegawai;
 	// Tema netral (slate) — satu bahasa desain untuk sidebar, sheet mobile, dan
 	// halaman. Tidak ada warna per role/menu.

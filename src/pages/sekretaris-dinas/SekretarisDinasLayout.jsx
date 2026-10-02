@@ -8,6 +8,7 @@ import { useConfirm } from "../../hooks/useConfirm.jsx";
 import { subscribeToPushNotifications } from "../../utils/pushNotifications";
 import { toast } from 'react-hot-toast';
 import api from "../../api";
+import { ambilToken } from "../../utils/tokenSesi";
 import ContactLottieIcon from "../../components/ContactLottieIcon";
 import ScheduleLottieIcon from "../../components/ScheduleLottieIcon";
 
@@ -22,7 +23,7 @@ const SekretarisDinasLayout = () => {
 	const { confirmDialog, showConfirm } = useConfirm();
 
 	// Check if user is logged in and has sekretaris_dinas role
-	const token = localStorage.getItem("expressToken");
+	const token = ambilToken();
 
 	// Update user data when profile changes
 	React.useEffect(() => {
