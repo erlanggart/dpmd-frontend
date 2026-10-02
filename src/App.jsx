@@ -236,6 +236,9 @@ const DrivePage = lazy(() => import("./pages/bidang/drive/DrivePage"));
 const FormulirListPage = lazy(() => import("./pages/bidang/formulir/FormulirListPage"));
 const FormulirEditorPage = lazy(() => import("./pages/bidang/formulir/FormulirEditorPage"));
 const FormulirResponsPage = lazy(() => import("./pages/bidang/formulir/FormulirResponsPage"));
+const VideoDesaListPage = lazy(() => import("./pages/bidang/video-desa/VideoDesaListPage"));
+const VideoDesaDetailPage = lazy(() => import("./pages/bidang/video-desa/VideoDesaDetailPage"));
+const UnggahVideoDesaPage = lazy(() => import("./pages/public/UnggahVideoDesaPage"));
 const IsiFormulirPage = lazy(() => import("./pages/public/IsiFormulirPage"));
 const OutputInfrastrukturPage = lazy(() => import("./pages/bidang/sekretariat/prolap/OutputInfrastrukturPage"));
 const OutputKeuanganPage = lazy(() => import("./pages/bidang/sekretariat/prolap/OutputKeuanganPage"));
@@ -1035,6 +1038,8 @@ function App() {
                     Alamatnya sengaja pendek (/f/...) karena sering ditempel di
                     WhatsApp dan dibacakan lewat telepon. */}
                 <Route path="/f/:token" element={<IsiFormulirPage />} />
+                {/* Unggah video desa lewat tautan yang dibagikan bidang - No auth required. */}
+                <Route path="/v/:token" element={<UnggahVideoDesaPage />} />
 
                 {/* Editor & respons formulir. Satu alamat untuk semua bidang: bidang
                     pemiliknya ditentukan dari id formulir, bukan dari alamatnya.
@@ -1070,6 +1075,25 @@ function App() {
                       ]}
                     >
                       <FormulirResponsPage />
+                    </RoleProtectedRoute>
+                  }
+                />
+                {/* Detail permintaan Video Desa. Sama seperti formulir: satu alamat untuk
+                    semua bidang, pemiliknya ditentukan dari id. */}
+                <Route
+                  path="/video-desa/:id"
+                  element={
+                    <RoleProtectedRoute
+                      allowedRoles={[
+                        "pegawai",
+                        "kepala_bidang",
+                        "ketua_tim",
+                        "kepala_dinas",
+                        "sekretaris_dinas",
+                        "superadmin",
+                      ]}
+                    >
+                      <VideoDesaDetailPage />
                     </RoleProtectedRoute>
                   }
                 />
@@ -1246,6 +1270,7 @@ function App() {
                   <Route path="spked" element={<SpkedPage />} />
                   <Route path="spked/drive" element={<DrivePage bidangId={3} />} />
                   <Route path="spked/formulir" element={<FormulirListPage bidangId={3} />} />
+                  <Route path="spked/video-desa" element={<VideoDesaListPage bidangId={3} />} />
 
                   {/* KKD (Kekayaan dan Keuangan Desa) */}
                   <Route path="kkd" element={<KKDPage />} />
@@ -1337,6 +1362,7 @@ function App() {
                   <Route path="produk-hukum/:id" element={<ProdukHukumDetailPemdesPage backPath="/bidang/pmd/produk-hukum" />} />
                   <Route path="drive" element={<DrivePage bidangId={5} />} />
                   <Route path="formulir" element={<FormulirListPage bidangId={5} />} />
+                  <Route path="video-desa" element={<VideoDesaListPage bidangId={5} />} />
                 </Route>{" "}
 
                 {/* Routes KKD - Nested under /kkd */}
@@ -1368,6 +1394,7 @@ function App() {
                   <Route path="bp" element={<KkdBpDashboard />} />
                   <Route path="drive" element={<DrivePage bidangId={4} />} />
                   <Route path="formulir" element={<FormulirListPage bidangId={4} />} />
+                  <Route path="video-desa" element={<VideoDesaListPage bidangId={4} />} />
                 </Route>
                 {/* Routes Pemdes - Nested under /pemdes */}
                 <Route
@@ -1396,6 +1423,7 @@ function App() {
                   <Route path="produk-hukum/:id" element={<ProdukHukumDetailPemdesPage />} />
                   <Route path="drive" element={<DrivePage bidangId={6} />} />
                   <Route path="formulir" element={<FormulirListPage bidangId={6} />} />
+                  <Route path="video-desa" element={<VideoDesaListPage bidangId={6} />} />
                 </Route>
 
                 {/* Routes Sekretariat - Nested under /sekretariat (moved from /pegawai) */}
@@ -1456,6 +1484,7 @@ function App() {
                   {/* Arsip Barang — tujuan QR label ada di "arsip-barang/qr/:token" */}
                   <Route path="drive" element={<DrivePage bidangId={2} />} />
                   <Route path="formulir" element={<FormulirListPage bidangId={2} />} />
+                  <Route path="video-desa" element={<VideoDesaListPage bidangId={2} />} />
                   <Route path="arsip-barang" element={<ArsipBarangPage />} />
                   <Route path="arsip-barang/baru" element={<ArsipBarangFormPage />} />
                   <Route path="arsip-barang/qr/:token" element={<ArsipBarangQrPage />} />
@@ -1522,14 +1551,19 @@ function App() {
                   {/* Drive per bidang — superadmin melihat Drive bidang mana pun */}
                   <Route path="bidang/sekretariat/drive" element={<DrivePage bidangId={2} />} />
                   <Route path="bidang/sekretariat/formulir" element={<FormulirListPage bidangId={2} />} />
+                  <Route path="bidang/sekretariat/video-desa" element={<VideoDesaListPage bidangId={2} />} />
                   <Route path="bidang/spked/drive" element={<DrivePage bidangId={3} />} />
                   <Route path="bidang/spked/formulir" element={<FormulirListPage bidangId={3} />} />
+                  <Route path="bidang/spked/video-desa" element={<VideoDesaListPage bidangId={3} />} />
                   <Route path="bidang/kkd/drive" element={<DrivePage bidangId={4} />} />
                   <Route path="bidang/kkd/formulir" element={<FormulirListPage bidangId={4} />} />
+                  <Route path="bidang/kkd/video-desa" element={<VideoDesaListPage bidangId={4} />} />
                   <Route path="bidang/pmd/drive" element={<DrivePage bidangId={5} />} />
                   <Route path="bidang/pmd/formulir" element={<FormulirListPage bidangId={5} />} />
+                  <Route path="bidang/pmd/video-desa" element={<VideoDesaListPage bidangId={5} />} />
                   <Route path="bidang/pemdes/drive" element={<DrivePage bidangId={6} />} />
                   <Route path="bidang/pemdes/formulir" element={<FormulirListPage bidangId={6} />} />
+                  <Route path="bidang/pemdes/video-desa" element={<VideoDesaListPage bidangId={6} />} />
 
                   {/* Produk hukum tingkat kabupaten — tiap bidang mengelola miliknya sendiri.
                       Bidang Pemdes punya DUA: "produk-hukum" (kumpulan Perdes dari 416 desa)

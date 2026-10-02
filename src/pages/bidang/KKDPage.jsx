@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useBidangPath } from '../../hooks/useBidangPath';
 import { useAuth } from '../../context/AuthContext';
 import {
-  Landmark, Activity, Clock, DollarSign, HardDrive, ClipboardList,
+  Landmark, Activity, Clock, DollarSign, HardDrive, ClipboardList, Clapperboard,
   FileCheck, TrendingUp, ChevronRight, ArrowUpRight, RotateCcw,
 	Gavel,
 } from 'lucide-react';
@@ -357,6 +357,14 @@ const KKDPage = () => {
       icon: ClipboardList,
       route: getPath('/kkd/formulir'),
       stat: { value: 'Survei', label: 'pendataan & pendaftaran' },
+    },
+    {
+      id: 'video-desa', tone: 'slate',
+      title: 'Video Desa', short: 'VID',
+      desc: 'Minta video dari desa untuk videotron & media sosial lewat tautan',
+      icon: Clapperboard,
+      route: getPath('/kkd/video-desa'),
+      stat: { value: 'Video', label: 'videotron & medsos' },
     },
   ];
 

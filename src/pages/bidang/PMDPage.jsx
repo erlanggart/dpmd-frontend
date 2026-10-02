@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useBidangPath } from '../../hooks/useBidangPath';
 import { useAuth } from '../../context/AuthContext';
 import {
-  Users, Activity, Clock, HardDrive, ClipboardList, UserCheck, Scale,
+  Users, Activity, Clock, HardDrive, ClipboardList, Clapperboard, UserCheck, Scale,
   Building2, ChevronRight, ArrowUpRight, BarChart3, GitMerge, RotateCcw,
 	Gavel, UserPlus,
 } from 'lucide-react';
@@ -341,6 +341,14 @@ const PMDPage = () => {
       icon: ClipboardList,
       route: getPath('/bidang/pmd/formulir'),
       stat: { value: 'Survei', label: 'pendataan & pendaftaran' },
+    },
+    {
+      id: 'video-desa', tone: 'slate',
+      title: 'Video Desa', short: 'Video',
+      desc: 'Minta video dari desa untuk videotron & media sosial lewat tautan',
+      icon: Clapperboard,
+      route: getPath('/bidang/pmd/video-desa'),
+      stat: { value: 'Video', label: 'videotron & medsos' },
     },
   ];
 

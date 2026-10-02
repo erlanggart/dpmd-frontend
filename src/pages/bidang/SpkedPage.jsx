@@ -35,7 +35,7 @@ import {
 	ShieldCheck,
 	CalendarOff,
 	HardDrive,
-	ClipboardList,
+	ClipboardList, Clapperboard,
 	Gavel,
 	Handshake,
 	UserPlus,
@@ -113,7 +113,7 @@ const KELOMPOK_MODUL = [
 	{ judul: 'Pembinaan Desa', isi: ['bumdes', 'kerjasama'] },
 	{ judul: 'Bantuan Keuangan', isi: ['bankeu', 'bankeu-perubahan', 'lpj-provinsi'] },
 	{ judul: 'Akun Operator Desa', isi: ['akun-bankeu', 'akun-bumdes', 'akun-kerjasama'] },
-	{ judul: 'Alat Bidang', isi: ['hari-libur', 'produk-hukum', 'drive', 'formulir'] },
+	{ judul: 'Alat Bidang', isi: ['hari-libur', 'produk-hukum', 'drive', 'formulir', 'video-desa'] },
 ];
 
 const TABS = [
@@ -445,6 +445,13 @@ const SpkedPage = () => {
 			deskripsi: 'Susun formulir sendiri, bagikan tautannya, rekap jawabannya',
 			icon: ClipboardList,
 			aksi: () => navigate(getPath('/bidang/spked/formulir')),
+		},
+		{
+			id: 'video-desa',
+			judul: 'Video Desa',
+			deskripsi: 'Minta video dari desa untuk videotron & media sosial lewat tautan',
+			icon: Clapperboard,
+			aksi: () => navigate(getPath('/bidang/spked/video-desa')),
 		},
 	];
 

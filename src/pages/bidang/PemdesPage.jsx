@@ -10,7 +10,7 @@ import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useBidangPath } from '../../hooks/useBidangPath';
 import { useAuth } from '../../context/AuthContext';
-import { Landmark, Users, FileText, HardDrive, ClipboardList, MapPinned, Scale, ArrowUpRight, RotateCcw, Building2, Wallet, Gavel, UserPlus } from 'lucide-react';
+import { Landmark, Users, FileText, HardDrive, ClipboardList, Clapperboard, MapPinned, Scale, ArrowUpRight, RotateCcw, Building2, Wallet, Gavel, UserPlus } from 'lucide-react';
 import api from '../../api';
 import toast from 'react-hot-toast';
 import DaftarPegawaiBidang from '../../components/bidang/DaftarPegawaiBidang';
@@ -221,6 +221,15 @@ const PemdesPage = () => {
 				icon: ClipboardList,
 				route: getPath('/pemdes/formulir'),
 				angka: { nilai: null, label: 'survei & pendataan' },
+			},
+			{
+				id: 'video-desa',
+				accent: '#475569',
+				judul: 'Video Desa',
+				deskripsi: 'Minta video dari desa untuk videotron & media sosial lewat tautan',
+				icon: Clapperboard,
+				route: getPath('/pemdes/video-desa'),
+				angka: { nilai: null, label: 'videotron & medsos' },
 			},
 			{
 				id: 'musdesus',

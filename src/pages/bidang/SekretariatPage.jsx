@@ -16,7 +16,7 @@ import {
 	Newspaper,
 	RefreshCw,
 	ClipboardCheck,
-	ClipboardList,
+	ClipboardList, Clapperboard,
 	IdCard,
 	DollarSign,
 	HardDrive,
@@ -188,6 +188,14 @@ const UMPEG_FEATURES = [
 		description: 'Survei & pendataan, rekap jawaban otomatis',
 		icon: ClipboardList,
 		path: '/sekretariat/formulir',
+		accent: '#475569',
+	},
+	{
+		key: 'video-desa',
+		title: 'Video Desa',
+		description: 'Video dari desa untuk videotron & media sosial',
+		icon: Clapperboard,
+		path: '/sekretariat/video-desa',
 		accent: '#475569',
 	},
 ];
