@@ -1,10 +1,11 @@
 // Kesiapan kelembagaan: peran program, identitas legal, kelengkapan dokumen.
-import React, { useMemo } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import { HandHeart, BadgeCheck, FolderCheck } from 'lucide-react';
 import {
   DOKUMEN_INTI, berperan, adaIsi, jumlahLegalitas, kelasDokumen,
 } from './bumdesFilter';
 import { Kartu, Judul, Batang, PitaBertumpuk, Kosong } from './bumdesViz';
+import BumdesDaftarModal from './BumdesDaftarModal';
 import { RAMP, WARNA_TUNGGAL, nf, persenDari } from './bumdesFormat';
 
 const LABEL_DOKUMEN = {
@@ -17,25 +18,42 @@ const LABEL_DOKUMEN = {
   berita_acara: 'Berita Acara',
 };
 
-const BumdesKesiapan = ({ data, filter, onFilter }) => {
+/** Isi kolom apa adanya untuk ditampilkan di bawah nama desa, mis. jenis peran MBG. */
+const isiKolom = (kolom) => (d) => (adaIsi(d[kolom]) ? String(d[kolom]).trim() : null);
+
+const tanpaPeran = (d) =>
+  !berperan(d.ketahanan_pangan) && !berperan(d.desa_wisata) && !berperan(d.peran_mbg);
+
+const BumdesKesiapan = ({ data, filter, onFilter, onUbah }) => {
+  // Klik batang membuka daftar desanya. Menyaring seluruh halaman jadi tombol
+  // di dalam daftar itu, bukan efek samping klik — dulu klik langsung
+  // menyaring, batangnya melompat ke 100% dan nama desanya tidak terlihat.
+  const [daftar, setDaftar] = useState(null);
+  const tutupDaftar = useCallback(() => setDaftar(null), []);
+
+  const bukaDaftar = (judul, cocok, { rincian, saring } = {}) => setDaftar({
+    judul,
+    daftar: data.filter(cocok),
+    rincian,
+    onSaring: saring ? () => onFilter({ ...filter, ...saring }) : undefined,
+  });
+
   const s = useMemo(() => {
     const total = data.length;
     if (!total) return null;
 
     const program = [
-      { id: 'ketapang', label: 'Ketahanan pangan', n: data.filter((d) => berperan(d.ketahanan_pangan)).length },
-      { id: 'wisata', label: 'Desa wisata', n: data.filter((d) => berperan(d.desa_wisata)).length },
-      { id: 'mbg', label: 'Makan Bergizi Gratis', n: data.filter((d) => berperan(d.peran_mbg)).length },
-    ];
-    const tanpaPeran = data.filter(
-      (d) => !berperan(d.ketahanan_pangan) && !berperan(d.desa_wisata) && !berperan(d.peran_mbg)
-    ).length;
+      { id: 'ketapang', label: 'Ketahanan pangan', kolom: 'ketahanan_pangan' },
+      { id: 'wisata', label: 'Desa wisata', kolom: 'desa_wisata' },
+      { id: 'mbg', label: 'Makan Bergizi Gratis', kolom: 'peran_mbg' },
+    ].map((p) => ({ ...p, n: data.filter((d) => berperan(d[p.kolom])).length }));
+    const jumlahTanpaPeran = data.filter(tanpaPeran).length;
 
     const legal = [
-      { id: 'nib', label: 'NIB', n: data.filter((d) => adaIsi(d.nib)).length },
-      { id: 'npwp', label: 'NPWP', n: data.filter((d) => adaIsi(d.npwp)).length },
-      { id: 'lkpp', label: 'Terdaftar LKPP', n: data.filter((d) => adaIsi(d.lkpp)).length },
-    ];
+      { id: 'nib', label: 'NIB', kolom: 'nib' },
+      { id: 'npwp', label: 'NPWP', kolom: 'npwp' },
+      { id: 'lkpp', label: 'Terdaftar LKPP', kolom: 'lkpp' },
+    ].map((l) => ({ ...l, n: data.filter((d) => adaIsi(d[l.kolom])).length }));
     const legalLengkap = data.filter((d) => jumlahLegalitas(d) === 3).length;
     const legalKosong = data.filter((d) => jumlahLegalitas(d) === 0).length;
 
@@ -50,7 +68,9 @@ const BumdesKesiapan = ({ data, filter, onFilter }) => {
       sebagian: data.filter((d) => kelasDokumen(d) === 'sebagian').length,
       kosong: data.filter((d) => kelasDokumen(d) === 'kosong').length,
     };
-    return { total, program, tanpaPeran, legal, legalLengkap, legalKosong, dokumen, kelas };
+    return {
+      total, program, tanpaPeran: jumlahTanpaPeran, legal, legalLengkap, legalKosong, dokumen, kelas,
+    };
   }, [data]);
 
   if (!s) return <Kartu><Kosong /></Kartu>;
@@ -58,6 +78,17 @@ const BumdesKesiapan = ({ data, filter, onFilter }) => {
   const maksProgram = Math.max(1, ...s.program.map((p) => p.n), s.tanpaPeran);
   const maksLegal = Math.max(1, ...s.legal.map((l) => l.n));
   const maksDokumen = Math.max(1, ...s.dokumen.map((d) => d.n));
+
+  const KELAS_DOKUMEN = [
+    { id: 'lengkap', label: 'Lengkap 7 dokumen', n: s.kelas.lengkap, warna: RAMP[5] },
+    { id: 'sebagian', label: 'Sebagian', n: s.kelas.sebagian, warna: RAMP[1] },
+    { id: 'kosong', label: 'Belum ada', n: s.kelas.kosong, warna: '#f1f5f9' },
+  ];
+  const bukaKelasDokumen = (k) => bukaDaftar(
+    k.id === 'lengkap' ? k.label : `Dokumen: ${k.label.toLowerCase()}`,
+    (d) => kelasDokumen(d) === k.id,
+    { saring: { dokumen: k.id } },
+  );
 
   return (
     <div className="space-y-5">
@@ -74,10 +105,10 @@ const BumdesKesiapan = ({ data, filter, onFilter }) => {
                 maks={maksProgram}
                 warna={WARNA_TUNGGAL}
                 urutan={i}
-                judulHover={`${p.n} dari ${s.total} BUMDes berperan di ${p.label}`}
+                judulHover={`${p.n} dari ${s.total} BUMDes berperan di ${p.label} — klik untuk lihat desanya`}
                 aktifTersorot={filter.program === p.id}
-                onKlik={() => onFilter({
-                  ...filter, program: filter.program === p.id ? 'semua' : p.id,
+                onKlik={() => bukaDaftar(p.label, (d) => berperan(d[p.kolom]), {
+                  rincian: isiKolom(p.kolom), saring: { program: p.id },
                 })}
               />
             ))}
@@ -90,10 +121,10 @@ const BumdesKesiapan = ({ data, filter, onFilter }) => {
               maks={maksProgram}
               warna={RAMP[0]}
               urutan={3}
-              judulHover={`${s.tanpaPeran} BUMDes belum berperan di program mana pun`}
+              judulHover={`${s.tanpaPeran} BUMDes belum berperan di program mana pun — klik untuk lihat desanya`}
               aktifTersorot={filter.program === 'tanpa-peran'}
-              onKlik={() => onFilter({
-                ...filter, program: filter.program === 'tanpa-peran' ? 'semua' : 'tanpa-peran',
+              onKlik={() => bukaDaftar('Belum berperan di program mana pun', tanpaPeran, {
+                saring: { program: 'tanpa-peran' },
               })}
             />
           </div>
@@ -111,10 +142,10 @@ const BumdesKesiapan = ({ data, filter, onFilter }) => {
                 maks={maksLegal}
                 warna={WARNA_TUNGGAL}
                 urutan={i}
-                judulHover={`${l.n} dari ${s.total} BUMDes sudah punya ${l.label}`}
+                judulHover={`${l.n} dari ${s.total} BUMDes sudah punya ${l.label} — klik untuk lihat desanya`}
                 aktifTersorot={filter.legalitas === l.id}
-                onKlik={() => onFilter({
-                  ...filter, legalitas: filter.legalitas === l.id ? 'semua' : l.id,
+                onKlik={() => bukaDaftar(`Sudah punya ${l.label}`, (d) => adaIsi(d[l.kolom]), {
+                  rincian: isiKolom(l.kolom), saring: { legalitas: l.id },
                 })}
               />
             ))}
@@ -122,8 +153,8 @@ const BumdesKesiapan = ({ data, filter, onFilter }) => {
           <dl className="mt-5 grid grid-cols-2 gap-3">
             <button
               type="button"
-              onClick={() => onFilter({
-                ...filter, legalitas: filter.legalitas === 'lengkap' ? 'semua' : 'lengkap',
+              onClick={() => bukaDaftar('NIB, NPWP, dan LKPP lengkap', (d) => jumlahLegalitas(d) === 3, {
+                saring: { legalitas: 'lengkap' },
               })}
               className="rounded-lg bg-slate-50 px-3 py-2.5 text-left transition-colors hover:bg-slate-100"
             >
@@ -137,8 +168,8 @@ const BumdesKesiapan = ({ data, filter, onFilter }) => {
             </button>
             <button
               type="button"
-              onClick={() => onFilter({
-                ...filter, legalitas: filter.legalitas === 'belum' ? 'semua' : 'belum',
+              onClick={() => bukaDaftar('Belum punya NIB, NPWP, maupun LKPP', (d) => jumlahLegalitas(d) === 0, {
+                saring: { legalitas: 'belum' },
               })}
               className="rounded-lg bg-slate-50 px-3 py-2.5 text-left transition-colors hover:bg-slate-100"
             >
@@ -159,49 +190,21 @@ const BumdesKesiapan = ({ data, filter, onFilter }) => {
 
         <PitaBertumpuk
           total={s.total}
-          segmen={[
-            {
-              id: 'lengkap',
-              label: 'Lengkap 7 dokumen',
-              nilai: s.kelas.lengkap,
-              warna: RAMP[5],
-              onKlik: () => onFilter({
-                ...filter, dokumen: filter.dokumen === 'lengkap' ? 'semua' : 'lengkap',
-              }),
-            },
-            {
-              id: 'sebagian',
-              label: 'Sebagian',
-              nilai: s.kelas.sebagian,
-              warna: RAMP[1],
-              onKlik: () => onFilter({
-                ...filter, dokumen: filter.dokumen === 'sebagian' ? 'semua' : 'sebagian',
-              }),
-            },
-            {
-              id: 'kosong',
-              label: 'Belum ada',
-              nilai: s.kelas.kosong,
-              warna: '#f1f5f9',
-              onKlik: () => onFilter({
-                ...filter, dokumen: filter.dokumen === 'kosong' ? 'semua' : 'kosong',
-              }),
-            },
-          ]}
+          segmen={KELAS_DOKUMEN.map((k) => ({
+            id: k.id,
+            label: k.label,
+            nilai: k.n,
+            warna: k.warna,
+            onKlik: () => bukaKelasDokumen(k),
+          }))}
         />
 
         <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-3">
-          {[
-            { id: 'lengkap', label: 'Lengkap 7 dokumen', n: s.kelas.lengkap },
-            { id: 'sebagian', label: 'Sebagian', n: s.kelas.sebagian },
-            { id: 'kosong', label: 'Belum ada', n: s.kelas.kosong },
-          ].map((k) => (
+          {KELAS_DOKUMEN.map((k) => (
             <button
               key={k.id}
               type="button"
-              onClick={() => onFilter({
-                ...filter, dokumen: filter.dokumen === k.id ? 'semua' : k.id,
-              })}
+              onClick={() => bukaKelasDokumen(k)}
               className="rounded-lg px-3 py-2 text-left transition-colors hover:bg-slate-50"
             >
               <p className="text-[11px] text-slate-500">{k.label}</p>
@@ -225,11 +228,14 @@ const BumdesKesiapan = ({ data, filter, onFilter }) => {
               maks={maksDokumen}
               warna={WARNA_TUNGGAL}
               urutan={i}
-              judulHover={`${d.n} dari ${s.total} BUMDes sudah mengunggah ${d.label}`}
+              judulHover={`${d.n} dari ${s.total} BUMDes sudah mengunggah ${d.label} — klik untuk lihat desanya`}
+              onKlik={() => bukaDaftar(`Sudah mengunggah ${d.label}`, (b) => !!b.dokumen?.[d.id])}
             />
           ))}
         </div>
       </Kartu>
+
+      <BumdesDaftarModal buka={daftar} onClose={tutupDaftar} onUbah={onUbah} />
     </div>
   );
 };

@@ -263,7 +263,12 @@ const StatistikBumdes = ({ tersemat = false, bisaKelola: bolehKelola = false, li
 
         <BumdesEkonomi data={hasil} />
 
-        <BumdesKesiapan data={hasil} filter={filter} onFilter={setFilter} />
+        <BumdesKesiapan
+          data={hasil}
+          filter={filter}
+          onFilter={setFilter}
+          onUbah={bisaKelola ? bukaUbah : undefined}
+        />
 
         <BumdesDirectory
           data={hasil}
