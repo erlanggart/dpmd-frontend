@@ -54,6 +54,9 @@ const ROLE_GROUPS = [
 		label: "Instansi Eksternal",
 		roles: [
 			{ value: "bpjs", label: "BPJS Ketenagakerjaan" },
+			// Pendamping di luar DPMD. Tidak needs_entity: lingkupnya se-kabupaten,
+			// bukan satu desa atau satu kecamatan.
+			{ value: "tenaga_ahli", label: "Tenaga Ahli" },
 		],
 	},
 ];

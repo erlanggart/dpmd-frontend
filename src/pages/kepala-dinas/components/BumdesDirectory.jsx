@@ -14,8 +14,9 @@ import {
 
 import { LencanaPeringkat, LencanaStatus } from './BumdesLencana';
 import BumdesDetailModal from './BumdesDetailModal';
+import TombolEkspor from '../../../components/shared/TombolEkspor';
 import { nf, rupiahRingkas } from './bumdesFormat';
-import { omsetTerbaru } from './bumdesFilter';
+import { omsetTerbaru, tahapBadanHukum } from './bumdesFilter';
 
 const PER_HALAMAN = 12;
 
@@ -24,6 +25,46 @@ const PER_HALAMAN = 12;
 const teks = (v) => (v === null || v === undefined || String(v).trim() === '' ? '—' : String(v));
 
 /* ------------------------------------------------------------------ utama -- */
+
+/**
+ * Kolom yang ikut terunduh.
+ *
+ * Bukan seluruh 149 kolom tabel bumdes, dan bukan pula hanya enam kolom yang
+ * tampil di tabel. Yang dipilih adalah identitas (kecamatan/desa/nama), tahap
+ * pembinaan (status, badan hukum, pemeringkatan), dan angka ekonomi — tiga hal
+ * yang ditanyakan setiap kali data ini dibahas. Rincian seperti media sosial
+ * atau daftar berkas tidak ada gunanya di dalam sel spreadsheet.
+ *
+ * Angka dikirim MENTAH, tanpa "Rp" dan tanpa pemendekan "1,2 M": di Excel kolom
+ * ini dijumlahkan dan diurutkan, dan "Rp 1,2 M" adalah teks yang tidak bisa
+ * dihitung. Pemformatan itu urusan layar, bukan urusan berkas ekspor.
+ *
+ * Omset dan laba memakai TAHUN TERBARU yang diisi tiap BUM Desa, sama seperti
+ * tabel dan grafik di atasnya (omsetTerbaru di bumdesFilter.js). Karena tahunnya
+ * bisa berbeda antar baris, tahunnya ikut jadi kolom sendiri — tanpa itu satu
+ * kolom "Omset" diam-diam mencampur 2024 dan 2025.
+ */
+const KOLOM_EKSPOR = [
+  { label: 'Kecamatan', nilai: (d) => d.kecamatan },
+  { label: 'Desa', nilai: (d) => d.desa },
+  { label: 'Nama BUMDes', nilai: (d) => d.nama },
+  { label: 'Status', nilai: (d) => d.status },
+  { label: 'Tahun Pendirian', nilai: (d) => d.tahun_pendirian },
+  { label: 'Badan Hukum', nilai: (d) => tahapBadanHukum(d) },
+  { label: 'Pemeringkatan', nilai: (d) => d.pemeringkatan },
+  { label: 'NIB', nilai: (d) => d.nib },
+  { label: 'NPWP', nilai: (d) => d.npwp },
+  { label: 'Jenis Usaha Utama', nilai: (d) => d.jenis_usaha_utama || d.jenis_usaha },
+  { label: 'Tenaga Kerja', nilai: (d) => d.tenaga_kerja },
+  { label: 'Direktur', nilai: (d) => d.direktur },
+  { label: 'Aset (Rp)', nilai: (d) => d.aset },
+  { label: 'Omset (Rp)', nilai: (d) => omsetTerbaru(d) },
+  { label: 'Tahun Omset', nilai: (d) => d.tahun_omset_terbaru },
+  { label: 'Laba/SHU (Rp)', nilai: (d) => d.laba_terbaru ?? d.laba_2025 ?? d.laba_2024 },
+  { label: 'Kontribusi PADes (Rp)', nilai: (d) => d.pades_terbaru ?? d.pades_2025 },
+  { label: 'Penyertaan Modal (Rp)', nilai: (d) => d.total_penyertaan_modal },
+  { label: 'Jumlah Produk', nilai: (d) => d.jumlah_produk },
+];
 
 const KOLOM_URUT = [
   { key: 'nama', label: 'Nama BUMDes', tipe: 'teks' },
@@ -94,6 +135,18 @@ const BumdesDirectory = ({ data = [], adaFilter = false, onReset, onUbah, namaWi
             {adaFilter ? ' sesuai filter di atas' : ` se-${namaWilayah}`}. Klik satu baris untuk melihat rinciannya.
           </p>
         </div>
+
+        {/* Yang diekspor adalah `hasil` — baris yang sedang tersaring dan
+            terurut, bukan `data` mentah dan bukan pula satu halaman yang
+            kebetulan terlihat. Orang mengunduh untuk menindaklanjuti apa yang
+            baru saja disaringnya. */}
+        <TombolEkspor
+          kolom={KOLOM_EKSPOR}
+          baris={hasil}
+          namaBerkas="bumdes"
+          judul="Data BUMDes"
+          subjudul={`${nf.format(hasil.length)} BUM Desa${adaFilter ? ' (tersaring)' : ` se-${namaWilayah}`}`}
+        />
       </div>
 
       {/* Kosong */}

@@ -102,6 +102,7 @@ function HomeRedirect() {
       dinas_terkait: "/dinas/dashboard",
       verifikator_dinas: "/dinas/dashboard",
       bpjs: "/bpjs/dashboard",
+      tenaga_ahli: "/tenaga-ahli/ikhtisar",
     };
 
     const dashboardPath = roleDashboardMap[user.role] || "/dashboard";
@@ -164,6 +165,17 @@ const PosyanduComparisonPage = lazy(() => import("./pages/bidang/pmd/PosyanduCom
 const RtrwComparisonPage = lazy(() => import("./pages/bidang/pmd/RtrwComparisonPage"));
 const BpjsLayout = lazy(() => import("./layouts/BpjsLayout"));
 const BpjsDashboardPage = lazy(() => import("./pages/bpjs/BpjsDashboardPage"));
+// Tenaga Ahli: pendamping di luar DPMD, lihat & ekspor BUM Desa + Kerja Sama Desa.
+const TenagaAhliLayout = lazy(() => import("./layouts/TenagaAhliLayout"));
+const TenagaAhliIkhtisarPage = lazy(
+  () => import("./pages/tenaga-ahli/TenagaAhliIkhtisarPage"),
+);
+const TenagaAhliBumdesPage = lazy(
+  () => import("./pages/tenaga-ahli/TenagaAhliBumdesPage"),
+);
+const TenagaAhliKerjasamaPage = lazy(
+  () => import("./pages/tenaga-ahli/TenagaAhliKerjasamaPage"),
+);
 const DisposisiRouter = lazy(
   () => import("./pages/bidang/sekretariat/disposisi/DisposisiRouter"),
 );
@@ -748,6 +760,7 @@ const ThemeColorWrapper = ({ children }) => {
                 kecamatan: "/kecamatan/dashboard",
                 dinas_terkait: "/dinas/dashboard",
                 verifikator_dinas: "/dinas/dashboard",
+                tenaga_ahli: "/tenaga-ahli/ikhtisar",
               };
 
               const dashboardPath = roleDashboardMap[userRole] || "/dpmd/dashboard";
@@ -1752,6 +1765,27 @@ function App() {
                   <Route path="dashboard" element={<BpjsDashboardPage />} />
                   <Route path="rtrw-comparison" element={<RtrwComparisonPage />} />
                   <Route path="*" element={<Navigate to="dashboard" replace />} />
+                </Route>
+
+                {/* Rute Tenaga Ahli - lihat & ekspor BUM Desa + Kerja Sama Desa */}
+                {/* Tidak ada rute tulis di bawah sini, dan tidak ada menu yang
+                    disembunyikan: isi sidebar TenagaAhliLayout sama dengan daftar
+                    rute ini. Menambah halaman di sini berarti memperluas hak akses
+                    akun luar — periksa dulu rutenya di backend ikut mengizinkan
+                    role 'tenaga_ahli' (config/peranDpmd.js: PERAN_PEMANTAU_SPKED). */}
+                <Route
+                  path="/tenaga-ahli"
+                  element={
+                    <RoleProtectedRoute allowedRoles={["tenaga_ahli"]}>
+                      <TenagaAhliLayout />
+                    </RoleProtectedRoute>
+                  }
+                >
+                  <Route index element={<Navigate to="ikhtisar" replace />} />
+                  <Route path="ikhtisar" element={<TenagaAhliIkhtisarPage />} />
+                  <Route path="bumdes" element={<TenagaAhliBumdesPage />} />
+                  <Route path="kerjasama" element={<TenagaAhliKerjasamaPage />} />
+                  <Route path="*" element={<Navigate to="ikhtisar" replace />} />
                 </Route>
 
                 {/* Rute Core Dashboard - DPMD Internal Only */}

@@ -149,6 +149,8 @@ const LoginPage = () => {
 				navigate("/dinas/dashboard");
 			} else if (newUser.role === "bpjs") {
 				navigate("/bpjs/dashboard");
+			} else if (newUser.role === "tenaga_ahli") {
+				navigate("/tenaga-ahli/ikhtisar");
 			} else if (newUser.role === "superadmin") {
 				navigate("/superadmin/dashboard");
 			} else if (["pegawai", "ketua_tim", "kepala_bidang", "kepala_dinas", "sekretaris_dinas", "bendahara"].includes(newUser.role)) {

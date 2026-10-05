@@ -18,6 +18,7 @@ const ROLE_OPTIONS = [
 	{ value: "dinas_terkait", label: "Dinas Terkait" },
 	{ value: "verifikator_dinas", label: "Verifikator Dinas" },
 	{ value: "bpjs", label: "BPJS Ketenagakerjaan" },
+	{ value: "tenaga_ahli", label: "Tenaga Ahli (lihat & ekspor)" },
 ];
 
 const EditRoleModal = ({ isOpen, onClose, onRoleUpdated, userData }) => {

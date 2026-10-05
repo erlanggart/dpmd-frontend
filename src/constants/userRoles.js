@@ -18,6 +18,7 @@ export const ROLE_LABEL = {
 	dinas_terkait: 'Dinas Terkait',
 	verifikator_dinas: 'Verifikator Dinas',
 	bpjs: 'BPJS',
+	tenaga_ahli: 'Tenaga Ahli',
 };
 
 export const ROLE_DOT = {
@@ -34,6 +35,10 @@ export const ROLE_DOT = {
 	dinas_terkait: '#eda100',
 	verifikator_dinas: '#eb6834',
 	bpjs: '#0d9488',
+	// Magenta, bukan cyan seperti warna portalnya: #0891b2 sudah dipakai
+	// ketua_tim, dan dua titik berwarna sama tidak membedakan apa pun di daftar
+	// dua belas peran. Titik ini penanda pembeda, bukan tema halaman.
+	tenaga_ahli: '#db2777',
 };
 
 export const getRoleInfo = (role) => ({

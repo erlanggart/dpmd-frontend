@@ -27,6 +27,7 @@ import {
 	LuX,
 	LuTriangleAlert,
 	LuBadgeCheck,
+	LuUserCog,
 } from "react-icons/lu";
 import * as XLSX from 'xlsx';
 import api from "../../api";
@@ -57,6 +58,7 @@ const ROLE_DASHBOARD_MAP = {
 	dinas_terkait: "/dinas/dashboard",
 	verifikator_dinas: "/dinas/dashboard",
 	bpjs: "/bpjs/dashboard",
+	tenaga_ahli: "/tenaga-ahli/ikhtisar",
 };
 
 const PILIHAN_PER_HALAMAN = [10, 25, 50, 100];
@@ -290,6 +292,7 @@ const UserManagementPage = () => {
 		{ id: "dinas_terkait", label: "Dinas Terkait", role: "dinas_terkait", icon: LuBuilding2 },
 		{ id: "verifikator_dinas", label: "Verifikator Dinas", role: "verifikator_dinas", icon: LuBadgeCheck },
 		{ id: "bpjs", label: "BPJS", role: "bpjs", icon: LuShieldCheck },
+		{ id: "tenaga_ahli", label: "Tenaga Ahli", role: "tenaga_ahli", icon: LuUserCog },
 	], []);
 
 	// Fetch users — ambil SEMUA akun, halaman demi halaman.

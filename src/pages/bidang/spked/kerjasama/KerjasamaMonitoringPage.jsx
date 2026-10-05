@@ -32,9 +32,9 @@ import {
 } from 'recharts';
 import Swal from 'sweetalert2';
 import api from '../../../../api';
+import TombolEkspor from '../../../../components/shared/TombolEkspor';
 import {
 	LuChartPie,
-	LuDownload,
 	LuFileText,
 	LuLoader,
 	LuSearch,
@@ -218,33 +218,58 @@ const KerjasamaMonitoringPage = () => {
 		}
 	};
 
-	const unduhCsv = () => {
-		const kepala = ['No', 'Kecamatan', 'Desa', 'Tahun', 'Jenis', 'Mitra', 'Bidang', 'Sub-bidang', 'Dokumen lengkap'];
-		const isi = baris.map((b, i) =>
-			[
-				i + 1,
-				b.desa?.kecamatan?.nama || '',
-				b.desa?.nama || '',
-				b.tahun,
-				petaJenis.get(b.jenis)?.kode || b.jenis,
-				b.mitra,
-				petaBidang.get(b.bidang)?.label || b.bidang,
-				b.sub_bidang || '',
-				b.dokumen_lengkap ? 'ya' : 'belum',
-			]
-				.map((sel) => `"${String(sel).replace(/"/g, '""')}"`)
-				.join(';'),
-		);
-		const blob = new Blob([`\uFEFF${[kepala.join(';'), ...isi].join('\n')}`], {
-			type: 'text/csv;charset=utf-8;',
+	/**
+	 * Kolom ekspor. Label bidang dan kode jenis diterjemahkan dari peta meta —
+	 * yang terunduh harus berbunyi sama dengan yang terbaca di tabel, bukan
+	 * kunci internal seperti nomor bidang.
+	 */
+	const kolomEkspor = useMemo(
+		() => [
+			{ label: 'Kecamatan', nilai: (b) => b.desa?.kecamatan?.nama },
+			{ label: 'Desa', nilai: (b) => b.desa?.nama },
+			{ label: 'Tahun', nilai: (b) => b.tahun },
+			{ label: 'Jenis', nilai: (b) => petaJenis.get(b.jenis)?.kode || b.jenis },
+			{ label: 'Mitra', nilai: (b) => b.mitra },
+			{ label: 'Bidang', nilai: (b) => petaBidang.get(b.bidang)?.label || b.bidang },
+			{ label: 'Sub-bidang', nilai: (b) => b.sub_bidang },
+			{ label: 'Dokumen lengkap', nilai: (b) => (b.dokumen_lengkap ? 'Ya' : 'Belum') },
+		],
+		[petaJenis, petaBidang],
+	);
+
+	/**
+	 * Kumpulkan SELURUH hasil penyaringan, bukan satu halaman.
+	 *
+	 * Tombol sebelumnya bernama "Unduh halaman ini" dan memang hanya mengirim 25
+	 * baris yang sedang tampak. Itu nyaris tidak ada gunanya: orang mengunduh
+	 * untuk menghitung, dan menghitung di atas 25 dari ratusan baris menghasilkan
+	 * angka yang salah tanpa memberi tanda apa pun bahwa ia salah.
+	 *
+	 * Diambil berhalaman 200 — batas atas per_page di controller — dan berhenti
+	 * pada `total` dari meta, bukan pada "balasan kosong": satu galat jaringan di
+	 * tengah tidak boleh menyamar sebagai ujung data. Pembatas 60 putaran ada
+	 * supaya salah paham soal bentuk meta tidak berubah menjadi lingkaran tak
+	 * berujung yang membanjiri server.
+	 */
+	const ambilSemuaBaris = useCallback(async () => {
+		const params = {};
+		Object.entries(saring).forEach(([k, v]) => {
+			if (v !== '' && v !== null && v !== undefined) params[k] = v;
 		});
-		const url = URL.createObjectURL(blob);
-		const a = document.createElement('a');
-		a.href = url;
-		a.download = `kerjasama-desa-${new Date().toISOString().slice(0, 10)}.csv`;
-		a.click();
-		URL.revokeObjectURL(url);
-	};
+
+		const PER_HALAMAN = 200;
+		const terkumpul = [];
+		for (let h = 1; h <= 60; h += 1) {
+			const res = await api.get('/dpmd/kerjasama-desa', {
+				params: { ...params, page: h, per_page: PER_HALAMAN },
+			});
+			const isi = res.data?.data || [];
+			terkumpul.push(...isi);
+			const total = Number(res.data?.meta?.total ?? 0);
+			if (isi.length < PER_HALAMAN || (total && terkumpul.length >= total)) break;
+		}
+		return terkumpul;
+	}, [saring]);
 
 	if (memuat) {
 		return (
@@ -498,14 +523,16 @@ const KerjasamaMonitoringPage = () => {
 							)}
 						</h3>
 					</div>
-					<button
-						onClick={unduhCsv}
-						disabled={baris.length === 0}
-						className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3.5 py-2 text-[13px] font-semibold text-slate-700 transition-colors hover:bg-slate-50 disabled:opacity-50"
-					>
-						<LuDownload className="h-4 w-4" />
-						Unduh halaman ini
-					</button>
+					<TombolEkspor
+						kolom={kolomEkspor}
+						ambilBaris={ambilSemuaBaris}
+						jumlah={halamanMeta?.total ?? baris.length}
+						namaBerkas="kerjasama-desa"
+						judul="Monitoring Kerja Sama Desa"
+						subjudul={`${angka(halamanMeta?.total ?? baris.length)} transaksi kerja sama${
+							Object.values(saring).some(Boolean) ? ' (hasil penyaringan)' : ' se-Kabupaten Bogor'
+						}`}
+					/>
 				</div>
 
 				{memuatTabel ? (

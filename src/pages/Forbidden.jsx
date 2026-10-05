@@ -25,6 +25,7 @@ export default function Forbidden() {
 			dinas_terkait: "/dinas/dashboard",
 			verifikator_dinas: "/dinas/dashboard",
 			bpjs: "/bpjs/dashboard",
+			tenaga_ahli: "/tenaga-ahli/ikhtisar",
 		};
 
 		try {
