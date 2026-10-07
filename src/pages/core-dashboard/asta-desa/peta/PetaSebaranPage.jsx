@@ -202,7 +202,44 @@ const TombolKontrol = ({ judul, onClick, children, memuat = false }) => (
 );
 
 const PetaSebaranPage = () => {
-  const { titik, rekapSebaran, layer, kecamatan, memuat, galat, ambil } = useDataPeta();
+  const { titik, rekapSebaran, layer, kecamatan, memuat, galat, ambil, ambilSebaranDiam } = useDataPeta();
+
+  /**
+   * Server belum selesai menyusun titiknya.
+   *
+   * Penyusuran ±958 halaman berjalan di latar dan memakan belasan menit; selama
+   * itu `/sebaran-peta` membalas 200 dengan `titik: []` dan `rincian_siap:
+   * false`. Dulu keadaan ini tidak dibedakan dari "sudah selesai, memang tidak
+   * ada titik": penanda muat hanya tampil selama `memuat`, dan begitu
+   * permintaannya SUKSES dengan nol titik, penanda itu hilang dan yang tersisa
+   * peta berisi batas wilayah tanpa satu pun titik — tampak seperti data yang
+   * hilang, padahal hanya belum terbaca. Terjadi setiap kali backend di-restart,
+   * termasuk pada tiap deploy.
+   */
+  const belumSiap = Boolean(rekapSebaran && rekapSebaran.rincian_siap === false);
+
+  /**
+   * Selama belum siap, coba lagi sendiri tiap menit.
+   *
+   * Aman dari sisi beban: `ambilSemua` di backend memakai satu penyusuran per
+   * kunci (`inflight`) bahkan saat dipaksa, jadi permintaan berulang dijawab
+   * seketika dengan "belum siap" dan TIDAK memulai penyusuran kedua. Tanpa ini,
+   * pesan "halaman akan terisi sendiri" tidak benar — pengguna harus menunggu
+   * belasan menit lalu ingat untuk memuat ulang sendiri.
+   */
+  // Fungsi dari useDataPeta dirakit ulang pada SETIAP render, jadi ia tidak
+  // boleh menjadi dependensi efek di bawah: intervalnya akan dibuang dan
+  // dipasang ulang tiap render, dan tidak pernah sempat berbunyi.
+  const tanyaLagiRef = useRef(ambilSebaranDiam);
+  tanyaLagiRef.current = ambilSebaranDiam;
+
+  useEffect(() => {
+    if (!belumSiap) return undefined;
+    const t = setInterval(() => {
+      if (document.visibilityState === 'visible') tanyaLagiRef.current();
+    }, 60 * 1000);
+    return () => clearInterval(t);
+  }, [belumSiap]);
 
   // ── State tampilan ─────────────────────────────────────────────────────────
   const [panelTerbuka, setPanelTerbuka] = useState(true);
@@ -1105,6 +1142,28 @@ const PetaSebaranPage = () => {
           <div className="sembunyi-cetak absolute inset-0 z-20 flex items-center justify-center bg-slate-50/70 backdrop-blur-sm">
             <div className="rounded-2xl border border-slate-200 bg-white px-6 py-5 shadow-xl">
               <Memuat pesan="Menyusun titik sebaran…" tinggi="py-2" />
+            </div>
+          </div>
+        )}
+
+        {/* Permintaannya SUDAH selesai, tapi servernya belum punya titiknya.
+            Dibedakan dari penanda muat di atas: yang ini menjelaskan sebabnya
+            dan berapa lama, karena menunggu belasan menit tanpa keterangan
+            persis yang membuat peta ini terbaca sebagai rusak. */}
+        {!memuat && belumSiap && titik.length === 0 && (
+          <div className="sembunyi-cetak absolute inset-0 z-20 flex items-center justify-center bg-slate-50/70 p-4 backdrop-blur-sm">
+            <div className="max-w-md rounded-2xl border border-slate-200 bg-white px-6 py-5 text-center shadow-xl">
+              <Loader2 className="mx-auto h-6 w-6 animate-spin text-slate-400" />
+              <p className="mt-3 text-sm font-semibold text-slate-900">Titik sebaran sedang disiapkan server</p>
+              <p className="mt-1.5 text-xs leading-relaxed text-slate-500">
+                Server sedang membaca ±190.000 baris sensus dari ASTA DESA — sekitar 10–20 menit.
+                Batas wilayah di belakang sudah tergambar; titiknya menyusul.
+                Halaman ini mencoba sendiri tiap menit, jadi biarkan terbuka saja.
+              </p>
+              <p className="mt-2.5 text-[11px] leading-relaxed text-slate-400">
+                Ini terjadi setelah backend dijalankan ulang (termasuk tiap pembaruan aplikasi),
+                karena hasil pembacaannya disimpan di memori. Bukan tanda data hilang.
+              </p>
             </div>
           </div>
         )}

@@ -182,6 +182,26 @@ export const useDataPeta = () => {
     ambil: (paksa) => {
       bersihkanSimpananPeta();
       return Promise.all([sebaran.ambil(paksa), layer.ambil(paksa), kecamatan.ambil(paksa)]);
-    }
+    },
+
+    /**
+     * Hanya titik sebarannya, untuk menunggui penyusuran yang belum selesai.
+     *
+     * Dipisah dari `ambil` di atas karena tiga hal, dan ketiganya salah bila
+     * memakai `ambil`:
+     *
+     *   • Modenya WAJIB 'segar', bukan bawaan 'cache'. `ambil()` tanpa argumen
+     *     dijawab dari simpanan browser yang berumur 10 menit — pemeriksaan
+     *     tiap menit tidak akan pernah menyentuh server, dan keadaan "belum
+     *     siap" yang sudah tersimpan akan bertahan sepuluh menit penuh.
+     *     'segar' melewati simpanan browser tanpa mengirim force=1, jadi server
+     *     tetap boleh menjawab dari cache-nya sendiri dan tidak disuruh
+     *     menyusuri ulang.
+     *   • `diam: true` supaya tidak memasang keadaan "memuat" tiap siklus;
+     *     tanpa itu seluruh penanda di atas peta berkedip sekali semenit.
+     *   • Layer dan daftar kecamatan tidak ikut diambil ulang — keduanya sudah
+     *     ada dan tidak ada hubungannya dengan penyusuran yang ditunggu.
+     */
+    ambilSebaranDiam: () => sebaran.ambil('segar', { diam: true })
   };
 };
