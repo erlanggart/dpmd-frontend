@@ -24,6 +24,24 @@ const PER_HALAMAN = 12;
 
 const teks = (v) => (v === null || v === undefined || String(v).trim() === '' ? '—' : String(v));
 
+/**
+ * Jenis usaha untuk ditampilkan di tabel.
+ *
+ * Tiga kolom menyimpan hal yang mirip dan terisi tidak merata: `kategori_usaha`
+ * (centang kategori di formulir baru), `jenis_usaha` (teks gabungan hasil impor
+ * rekap lama), dan `jenis_usaha_utama` (satu kalimat bebas, mis. "Ternak ayam
+ * petelur"). Dipakai yang paling rapi lebih dulu supaya kolomnya tidak kosong
+ * untuk baris lama, dan usaha utama disebut terpisah karena ia bukan kategori
+ * melainkan keterangan.
+ */
+const jenisUsahaTampil = (d) => {
+	const kategori = Array.isArray(d.kategori_usaha) ? d.kategori_usaha.filter(Boolean) : [];
+	if (kategori.length) return kategori.join(', ');
+	if (d.jenis_usaha && String(d.jenis_usaha).trim()) return String(d.jenis_usaha).trim();
+	if (d.jenis_usaha_utama && String(d.jenis_usaha_utama).trim()) return String(d.jenis_usaha_utama).trim();
+	return '';
+};
+
 /* ------------------------------------------------------------------ utama -- */
 
 /**
@@ -54,7 +72,9 @@ const KOLOM_EKSPOR = [
   { label: 'Pemeringkatan', nilai: (d) => d.pemeringkatan },
   { label: 'NIB', nilai: (d) => d.nib },
   { label: 'NPWP', nilai: (d) => d.npwp },
+  { label: 'Kategori Usaha', nilai: (d) => jenisUsahaTampil(d) },
   { label: 'Jenis Usaha Utama', nilai: (d) => d.jenis_usaha_utama || d.jenis_usaha },
+  { label: 'Unit Usaha', nilai: (d) => (Array.isArray(d.unit_usaha) ? d.unit_usaha.join('; ') : null) },
   { label: 'Tenaga Kerja', nilai: (d) => d.tenaga_kerja },
   { label: 'Direktur', nilai: (d) => d.direktur },
   { label: 'Aset (Rp)', nilai: (d) => d.aset },
@@ -69,6 +89,9 @@ const KOLOM_EKSPOR = [
 const KOLOM_URUT = [
   { key: 'nama', label: 'Nama BUMDes', tipe: 'teks' },
   { key: 'kecamatan', label: 'Kecamatan', tipe: 'teks' },
+  // Diminta bidang SPKED: "BUMDes-nya menampilkan jenis usaha". Nilainya
+  // turunan (lihat jenisUsahaTampil), jadi dibaca lewat `nilai`, bukan d[key].
+  { key: 'jenis_usaha', label: 'Jenis Usaha', tipe: 'teks', nilai: jenisUsahaTampil },
   { key: 'aset', label: 'Aset', tipe: 'angka' },
   { key: 'omset_2025', label: 'Omset 2025', tipe: 'angka' },
   { key: 'laba_2025', label: 'Laba 2025', tipe: 'angka' },
@@ -91,8 +114,8 @@ const BumdesDirectory = ({ data = [], adaFilter = false, onReset, onUbah, namaWi
     const kolom = KOLOM_URUT.find((k) => k.key === urut.key) || KOLOM_URUT[0];
     const arah = urut.arah === 'asc' ? 1 : -1;
     return [...cocok].sort((a, b) => {
-      const va = a[kolom.key];
-      const vb = b[kolom.key];
+      const va = kolom.nilai ? kolom.nilai(a) : a[kolom.key];
+      const vb = kolom.nilai ? kolom.nilai(b) : b[kolom.key];
       if (kolom.tipe === 'angka') {
         // Nilai kosong selalu tenggelam ke bawah, pada kedua arah urutan.
         // Memakai -Infinity saja membuatnya justru naik ke atas saat menaik.
@@ -169,7 +192,7 @@ const BumdesDirectory = ({ data = [], adaFilter = false, onReset, onUbah, namaWi
         <>
           {/* Tabel — layar sedang ke atas */}
           <div className="hidden overflow-x-auto md:block">
-            <table className="w-full min-w-[860px] text-left text-sm">
+            <table className="w-full min-w-[1040px] text-left text-sm">
               <thead>
                 <tr className="border-b border-slate-200 bg-slate-50">
                   {KOLOM_URUT.map((k) => (
@@ -211,6 +234,19 @@ const BumdesDirectory = ({ data = [], adaFilter = false, onReset, onUbah, namaWi
                       <p className="mt-0.5 text-xs text-slate-500">{teks(d.desa)}</p>
                     </td>
                     <td className="px-4 py-3 text-slate-600">{teks(d.kecamatan)}</td>
+                    {/* Kategori usaha bisa panjang (satu BUM Desa boleh mencentang
+                        banyak kategori). Dipotong dua baris di sel, utuh di tooltip
+                        dan di modal detail. */}
+                    <td className="max-w-[220px] px-4 py-3 text-slate-600">
+                      <span className="line-clamp-2 text-[13px] leading-5" title={jenisUsahaTampil(d) || undefined}>
+                        {teks(jenisUsahaTampil(d))}
+                      </span>
+                      {d.jenis_usaha_utama && (
+                        <span className="mt-0.5 block truncate text-[11px] text-slate-400" title={d.jenis_usaha_utama}>
+                          Utama: {d.jenis_usaha_utama}
+                        </span>
+                      )}
+                    </td>
                     <td className="px-4 py-3 text-right tabular-nums text-slate-700">{rupiahRingkas(d.aset)}</td>
                     <td className="px-4 py-3 text-right tabular-nums text-slate-700">{rupiahRingkas(d.omset_2025)}</td>
                     <td className="px-4 py-3 text-right tabular-nums text-slate-700">{rupiahRingkas(d.laba_2025)}</td>
@@ -244,6 +280,11 @@ const BumdesDirectory = ({ data = [], adaFilter = false, onReset, onUbah, namaWi
                       <p className="mt-0.5 truncate text-xs text-slate-500">
                         {teks(d.desa)}, Kec. {teks(d.kecamatan)}
                       </p>
+                      {jenisUsahaTampil(d) && (
+                        <p className="mt-1 line-clamp-2 text-[11px] leading-4 text-slate-500">
+                          <span className="font-semibold text-slate-600">Usaha:</span> {jenisUsahaTampil(d)}
+                        </p>
+                      )}
                     </div>
                     <LencanaStatus status={d.status} />
                   </div>

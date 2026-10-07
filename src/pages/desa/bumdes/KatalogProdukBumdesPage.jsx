@@ -6,6 +6,12 @@
 //
 // Untuk akun operator yang hanya memegang BUMDes, halaman ini sekaligus
 // menjadi Dashboard (lihat DesaBerandaPage).
+//
+// `publik` dipakai halaman Pasar BUM Desa di landing page (tanpa login). Yang
+// berubah hanya dua hal: endpoint-nya yang tanpa auth, dan tautan "kelola/jual
+// produk" yang disembunyikan karena tamu tidak punya dasbor untuk dituju.
+// Katalognya sendiri SENGAJA komponen yang sama, bukan salinan — katalog publik
+// dan katalog di dalam aplikasi tidak boleh bisa menyimpang isi.
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import {
@@ -168,7 +174,7 @@ const Kartu = ({ judul, kanan, children, kelas = '' }) => (
 
 /* ───────────────────────────── Halaman ───────────────────────────── */
 
-const KatalogProdukBumdesPage = () => {
+const KatalogProdukBumdesPage = ({ publik = false }) => {
 	const [saring, setSaring] = useState({ q: '', kategori: '', kecamatan: '', jenis: '', unggulan: false });
 	const [cari, setCari] = useState('');
 	const [halaman, setHalaman] = useState(1);
@@ -192,7 +198,10 @@ const KatalogProdukBumdesPage = () => {
 			if (saring.kecamatan) params.kecamatan = saring.kecamatan;
 			if (saring.jenis) params.jenis = saring.jenis;
 			if (saring.unggulan) params.unggulan = '1';
-			const res = await api.get('/desa/bumdes/katalog-produk', { params });
+			const res = await api.get(
+				publik ? '/public/bumdes/katalog-produk' : '/desa/bumdes/katalog-produk',
+				{ params },
+			);
 			const d = res.data?.data || null;
 			setData(d);
 			setFotoBanner((lama) => lama || [...(d?.unggulan || []), ...(d?.produk || [])]);
@@ -201,7 +210,7 @@ const KatalogProdukBumdesPage = () => {
 		} finally {
 			setMemuat(false);
 		}
-	}, [saring, halaman]);
+	}, [saring, halaman, publik]);
 
 	useEffect(() => { muat(); }, [muat]);
 
@@ -243,12 +252,21 @@ const KatalogProdukBumdesPage = () => {
 			teks: 'Alam, budaya, dan kearifan lokal desa-desa di Bogor.',
 			tombol: 'Lihat paket wisata', aksi: () => ubahSaring({ jenis: 'wisata' }, true),
 		},
-		{
-			id: 'jual', latar: 'bg-gradient-to-r from-amber-700 to-orange-500', foto: foto.b,
-			kecil: 'Untuk BUM Desa', judul: 'Jual Produk BUM Desa Anda',
-			teks: 'Tambahkan foto, harga, dan nomor WhatsApp — gratis.',
-			tombol: 'Kelola produk', aksi: () => { window.location.href = '/desa/bumdes#produk'; },
-		},
+		// Banner "jual produk" menuju dasbor desa — tidak ada gunanya bagi tamu
+		// yang tidak punya akun, jadi di halaman publik diganti ajakan masuk.
+		publik
+			? {
+				id: 'masuk', latar: 'bg-gradient-to-r from-amber-700 to-orange-500', foto: foto.b,
+				kecil: 'Untuk BUM Desa', judul: 'BUM Desa Anda Ingin Berjualan di Sini?',
+				teks: 'Masuk dengan akun BUM Desa desa Anda, lalu tambahkan produk — gratis.',
+				tombol: 'Masuk ke aplikasi', aksi: () => { window.location.href = '/login'; },
+			}
+			: {
+				id: 'jual', latar: 'bg-gradient-to-r from-amber-700 to-orange-500', foto: foto.b,
+				kecil: 'Untuk BUM Desa', judul: 'Jual Produk BUM Desa Anda',
+				teks: 'Tambahkan foto, harga, dan nomor WhatsApp — gratis.',
+				tombol: 'Kelola produk', aksi: () => { window.location.href = '/desa/bumdes#produk'; },
+			},
 	];
 
 	const jumlahKategori = new Map((data?.kategori || []).map((k) => [k.nama, k.jumlah]));
@@ -307,7 +325,12 @@ const KatalogProdukBumdesPage = () => {
 			</div>
 
 			{/* ── Kategori ───────────────────────────────────────── */}
-			<Kartu judul="Kategori" kanan={<Link to="/desa/bumdes#produk" className="text-xs font-semibold text-emerald-700 hover:underline">+ Jual produk</Link>}>
+			<Kartu
+				judul="Kategori"
+				kanan={publik ? null : (
+					<Link to="/desa/bumdes#produk" className="text-xs font-semibold text-emerald-700 hover:underline">+ Jual produk</Link>
+				)}
+			>
 				<div className="grid grid-cols-4 sm:grid-cols-7 lg:grid-cols-[repeat(14,minmax(0,1fr))]">
 					{opsiKategori.map((nama) => {
 						const m = metaKategori(nama);
@@ -374,9 +397,11 @@ const KatalogProdukBumdesPage = () => {
 							<span className="flex h-14 w-14 items-center justify-center rounded-full bg-stone-100 text-stone-400"><Store className="h-6 w-6" /></span>
 							<p className="mt-3 font-semibold text-stone-800">{adaSaring ? 'Produk tidak ditemukan' : 'Belum ada produk'}</p>
 							<p className="mt-1 text-sm text-stone-500">{adaSaring ? 'Coba kata kunci atau kategori lain.' : 'Produk BUM Desa akan tampil di sini.'}</p>
-							{adaSaring
-								? <button type="button" onClick={reset} className="mt-4 rounded-lg border border-emerald-700 px-4 py-2 text-sm font-semibold text-emerald-700 hover:bg-emerald-50">Lihat semua produk</button>
-								: <Link to="/desa/bumdes#produk" className="mt-4 rounded-lg bg-emerald-700 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-800">Tambah produk</Link>}
+							{adaSaring ? (
+								<button type="button" onClick={reset} className="mt-4 rounded-lg border border-emerald-700 px-4 py-2 text-sm font-semibold text-emerald-700 hover:bg-emerald-50">Lihat semua produk</button>
+							) : publik ? null : (
+								<Link to="/desa/bumdes#produk" className="mt-4 rounded-lg bg-emerald-700 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-800">Tambah produk</Link>
+							)}
 						</div>
 					</Kartu>
 				) : (

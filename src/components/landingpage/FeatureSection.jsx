@@ -2,7 +2,7 @@ import React from "react";
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import { useInView } from "react-intersection-observer";
-import { FiUsers, FiDollarSign, FiMap, FiBriefcase, FiArrowRight } from "react-icons/fi";
+import { FiUsers, FiDollarSign, FiMap, FiBriefcase, FiArrowRight, FiShoppingBag } from "react-icons/fi";
 import FeatureCard from "./FeatureCard";
 
 const FeatureSection = () => {
@@ -107,6 +107,41 @@ const FeatureSection = () => {
 								className="flex-shrink-0 group inline-flex items-center gap-2.5 bg-white text-[rgb(var(--color-primary))] font-bold px-7 py-3.5 rounded-xl shadow-lg hover:shadow-2xl hover:scale-105 transition-all duration-300"
 							>
 								Lihat Bantuan Keuangan
+								<FiArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+							</Link>
+						</div>
+					</div>
+				</motion.div>
+
+				{/* CTA Pasar BUM Desa — etalase produk & wisata BUM Desa, bisa dilihat
+				    tanpa login seperti halaman Bantuan Keuangan di atas. */}
+				<motion.div
+					initial={{ opacity: 0, y: 30 }}
+					animate={inView ? { opacity: 1, y: 0 } : {}}
+					transition={{ duration: 0.7, delay: 0.6 }}
+					className="mt-6"
+				>
+					<div className="relative bg-gradient-to-r from-emerald-800 via-emerald-700 to-teal-600 rounded-3xl p-8 md:p-10 overflow-hidden shadow-xl">
+						<div className="absolute top-0 right-0 w-64 h-64 bg-white/5 rounded-full blur-[80px] -translate-y-1/3 translate-x-1/4" />
+						<div className="absolute bottom-0 left-0 w-48 h-48 bg-lime-300/10 rounded-full blur-[60px] translate-y-1/3 -translate-x-1/4" />
+						<div className="relative z-10 flex flex-col md:flex-row items-center justify-between gap-6">
+							<div className="text-center md:text-left">
+								<div className="inline-flex items-center gap-2 bg-white/15 rounded-full px-3 py-1 mb-3">
+									<FiShoppingBag className="w-3.5 h-3.5 text-lime-200" />
+									<span className="text-lime-100 text-xs font-semibold">Etalase Publik</span>
+								</div>
+								<h3 className="text-xl md:text-2xl font-bold text-white mb-2">
+									Pasar BUM Desa Kabupaten Bogor
+								</h3>
+								<p className="text-emerald-50/80 text-sm md:text-base max-w-lg">
+									Jelajahi produk unggulan dan paket wisata dari Badan Usaha Milik Desa se-Kabupaten Bogor. Pesan langsung ke BUM Desa penjualnya lewat WhatsApp.
+								</p>
+							</div>
+							<Link
+								to="/pasar-bumdes"
+								className="flex-shrink-0 group inline-flex items-center gap-2.5 bg-white text-emerald-800 font-bold px-7 py-3.5 rounded-xl shadow-lg hover:shadow-2xl hover:scale-105 transition-all duration-300"
+							>
+								Lihat Pasar BUM Desa
 								<FiArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
 							</Link>
 						</div>

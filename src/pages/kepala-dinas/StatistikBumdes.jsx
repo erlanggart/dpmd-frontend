@@ -18,6 +18,7 @@ import BumdesCharts from './components/BumdesCharts';
 import BumdesEkonomi from './components/BumdesEkonomi';
 import BumdesKesiapan from './components/BumdesKesiapan';
 import BumdesDirectory from './components/BumdesDirectory';
+import BumdesEksporPanel from './components/BumdesEksporPanel';
 import {
   FILTER_AWAL, adaFilterAktif, terapkanFilter, isAktif, beroperasi, tahapBadanHukum,
 } from './components/bumdesFilter';
@@ -231,6 +232,14 @@ const StatistikBumdes = ({ tersemat = false, bisaKelola: bolehKelola = false, li
             <FolderOpen className="h-4 w-4" />
             Kelola Dokumen
           </button>
+          {/* Ekspor seluruh data (Excel) dan seluruh berkas (ZIP). `hasil` =
+              baris yang sedang tersaring, supaya ekspor bisa mengikuti layar
+              alih-alih selalu menarik seluruh kabupaten. */}
+          <BumdesEksporPanel
+            ids={hasil.map((d) => d.id)}
+            total={semua.length}
+            adaFilter={adaFilterAktif(filter)}
+          />
           {memuatUbah && (
             <span className="inline-flex items-center gap-2 text-xs text-slate-500">
               <Loader2 className="h-3.5 w-3.5 animate-spin" />

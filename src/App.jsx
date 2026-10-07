@@ -316,6 +316,10 @@ const EventAttendancePublicPage = lazy(() => import("./pages/event/EventAttendan
 const CoreDashboardPublic = lazy(
   () => import("./pages/public/CoreDashboardPublic"),
 );
+// Pasar BUM Desa publik (tanpa login) — dibuka dari landing page.
+const PasarBumdesPublicPage = lazy(
+  () => import("./pages/PasarBumdesPublicPage"),
+);
 const AparaturDesaPage = lazy(
   () => import("./pages/desa/aparatur-desa/AparaturDesaPage"),
 );
@@ -1037,6 +1041,9 @@ function App() {
                   path="/bantuan-keuangan-perubahan"
                   element={<BankeuPerubahanPublicPage />}
                 />
+                {/* Pasar BUM Desa — etalase produk & wisata BUM Desa untuk umum,
+                    tanpa login. Sejajar dengan /bantuan-keuangan. */}
+                <Route path="/pasar-bumdes" element={<PasarBumdesPublicPage />} />
                 <Route
                   path="/public-dashboard"
                   element={<CoreDashboardPublic />}

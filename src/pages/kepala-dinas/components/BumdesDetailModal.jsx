@@ -231,6 +231,18 @@ const BumdesDetailModal = ({ item, onClose, onUbah }) => {
             catatan: [b.mitra, b.periode].filter(Boolean).join(' · '),
           })),
         },
+        {
+          // Tahun kegiatan ketahanan pangan. Berkasnya sendiri ada di tab
+          // Dokumen; di sini yang penting tahun berapa saja BUM Desa ini
+          // menerima kegiatannya — itu yang dicari saat data ini dibahas.
+          judul: 'Dokumen ketahanan pangan',
+          ikon: FileText,
+          baris: (item.riwayat?.dokumen_pangan || []).map((b) => ({
+            tahun: b.tahun,
+            catatan: b.keterangan || null,
+            teks: `${b.jumlah_berkas} dokumen`,
+          })),
+        },
       ].filter((r) => r.baris.length),
 
       keuangan: [
@@ -459,27 +471,32 @@ const BumdesDetailModal = ({ item, onClose, onUbah }) => {
                 )}
 
                 {/* Riwayat per tahun yang diisi desa lewat formulir baru */}
-                {d.riwayat.map((r) => (
-                  <section key={r.judul} className="rounded-xl border border-slate-200 bg-white p-4">
-                    <h3 className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-wider text-slate-400">
-                      <Wallet className="h-3.5 w-3.5" />
-                      {r.judul} per tahun
-                    </h3>
-                    <div className="mt-2 divide-y divide-slate-100">
-                      {r.baris.map((b, i) => (
-                        <div key={i} className="flex items-center gap-3 py-2">
-                          <span className="w-12 flex-shrink-0 rounded-md bg-slate-900 py-0.5 text-center text-[11px] font-bold tabular-nums text-white">
-                            {b.tahun || '—'}
-                          </span>
-                          <span className="min-w-0 flex-1 truncate text-xs text-slate-500">{b.catatan || ''}</span>
-                          <span className="flex-shrink-0 text-sm font-semibold tabular-nums text-slate-900">
-                            {adaAngka(b.nilai) ? rupiahRingkas(b.nilai) : '—'}
-                          </span>
-                        </div>
-                      ))}
-                    </div>
-                  </section>
-                ))}
+                {d.riwayat.map((r) => {
+                  // Sebagian riwayat bukan uang (mis. jumlah dokumen ketahanan
+                  // pangan), jadi kolom kanannya boleh berisi teks lewat `teks`.
+                  const IkonRiwayat = r.ikon || Wallet;
+                  return (
+                    <section key={r.judul} className="rounded-xl border border-slate-200 bg-white p-4">
+                      <h3 className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-wider text-slate-400">
+                        <IkonRiwayat className="h-3.5 w-3.5" />
+                        {r.judul} per tahun
+                      </h3>
+                      <div className="mt-2 divide-y divide-slate-100">
+                        {r.baris.map((b, i) => (
+                          <div key={i} className="flex items-center gap-3 py-2">
+                            <span className="w-12 flex-shrink-0 rounded-md bg-slate-900 py-0.5 text-center text-[11px] font-bold tabular-nums text-white">
+                              {b.tahun || '—'}
+                            </span>
+                            <span className="min-w-0 flex-1 truncate text-xs text-slate-500">{b.catatan || ''}</span>
+                            <span className="flex-shrink-0 text-sm font-semibold tabular-nums text-slate-900">
+                              {b.teks || (adaAngka(b.nilai) ? rupiahRingkas(b.nilai) : '—')}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    </section>
+                  );
+                })}
               </div>
             </div>
           </div>

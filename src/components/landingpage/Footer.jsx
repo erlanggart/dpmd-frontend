@@ -21,6 +21,9 @@ const Footer = () => {
 
 	const quickLinks = [
 		{ label: "Bantuan Keuangan", href: "/bantuan-keuangan" },
+		// Etalase produk BUM Desa — satu-satunya halaman BUMDes yang bisa dibuka
+		// tanpa login, jadi tidak diarahkan ke /login seperti tautan di bawahnya.
+		{ label: "Pasar BUM Desa", href: "/pasar-bumdes" },
 		{ label: "Data BUMDes", href: "/login" },
 		{ label: "Kelembagaan", href: "/login" },
 		{ label: "Produk Hukum", href: "/login" },

@@ -250,13 +250,45 @@ export const SEKSI_BUMDES = [
 	},
 
 	{
+		// Dokumen ketahanan pangan dipisah PER TAHUN (2026-10).
+		//
+		// Sebelumnya hanya ada tiga kolom berkas tunggal, sehingga BUM Desa yang
+		// menerima kegiatan ketahanan pangan lagi di tahun berikutnya harus
+		// menimpa berkas tahun sebelumnya — dokumen tahun lama hilang tanpa jejak.
 		id: 'pangan',
 		judul: 'Ketahanan Pangan',
-		keterangan: 'Unggah dokumen pendukung usaha ketahanan pangan BUM Desa (PDF/DOC/XLS atau foto, maks. 5 MB).',
+		keterangan: 'Pilih tahun kegiatan, unggah dokumennya, lalu simpan. Ulangi untuk tahun lain bila BUM Desa menerima kegiatan ketahanan pangan lebih dari sekali.',
 		kolom: [
-			{ jenis: 'berkas', label: 'Studi Kelayakan Usaha', kunci: 'StudiKelayakanUsaha', keterangan: 'Dokumen studi kelayakan usaha ketahanan pangan.' },
-			{ jenis: 'berkas', label: 'RAB (Rencana Anggaran Biaya)', kunci: 'RABKetahananPangan', keterangan: 'Rencana anggaran biaya kegiatan ketahanan pangan.' },
-			{ jenis: 'berkas', label: 'Dokumentasi Geotagging', kunci: 'DokumentasiGeotagging', keterangan: 'Foto lokasi usaha yang memuat titik koordinat (geotag).' },
+			{
+				jenis: 'daftarTahunan', label: 'Dokumen Ketahanan Pangan per Tahun', kunci: 'DokumenKetahananPangan', lebar: 'penuh',
+				keterangan: 'Satu baris untuk satu tahun kegiatan. Berkas: PDF/DOC/XLS atau foto, maks. 5 MB.',
+				tombolTambah: 'Tambah Tahun Ketahanan Pangan',
+				kolom: [
+					{ kunci: 'tahun', label: 'Tahun Kegiatan', jenis: 'tahun', wajib: true },
+					{ kunci: 'studi_kelayakan', label: 'Studi Kelayakan Usaha', jenis: 'berkas' },
+					{ kunci: 'rab', label: 'RAB (Rencana Anggaran Biaya)', jenis: 'berkas' },
+					{ kunci: 'geotagging', label: 'Dokumentasi Geotagging', jenis: 'berkas' },
+					{ kunci: 'keterangan', label: 'Keterangan (opsional)', jenis: 'teks', contoh: 'Contoh: bantuan provinsi, kolam lele 5 unit' },
+				],
+			},
+			// Berkas lama: tahunnya tidak pernah tercatat, jadi tidak dipindahkan
+			// ke daftar di atas — memindahkannya berarti mengarang tahun. Hanya
+			// tampil (dan hanya bisa dibaca) bila berkasnya memang ada.
+			{
+				jenis: 'berkas', label: 'Studi Kelayakan Usaha (tanpa tahun)', kunci: 'StudiKelayakanUsaha', hanyaBaca: true,
+				tampilBila: (d) => Boolean(d.StudiKelayakanUsaha),
+				keterangan: 'Berkas lama, diunggah sebelum dokumen dipisah per tahun. Unggah ulang ke daftar di atas bila tahunnya diketahui.',
+			},
+			{
+				jenis: 'berkas', label: 'RAB (tanpa tahun)', kunci: 'RABKetahananPangan', hanyaBaca: true,
+				tampilBila: (d) => Boolean(d.RABKetahananPangan),
+				keterangan: 'Berkas lama, diunggah sebelum dokumen dipisah per tahun.',
+			},
+			{
+				jenis: 'berkas', label: 'Dokumentasi Geotagging (tanpa tahun)', kunci: 'DokumentasiGeotagging', hanyaBaca: true,
+				tampilBila: (d) => Boolean(d.DokumentasiGeotagging),
+				keterangan: 'Berkas lama, diunggah sebelum dokumen dipisah per tahun.',
+			},
 		],
 	},
 
@@ -452,10 +484,20 @@ export const DEF_LAPORAN_PERTANGGUNGJAWABAN = {
 	],
 };
 
-/** Dokumen ketahanan pangan (kolom berkas biasa, diunggah lewat /upload-file). */
-export const DOKUMEN_KETAHANAN_PANGAN = SEKSI_BUMDES
-	.find((s) => s.id === 'pangan').kolom
-	.map((k) => ({ kunci: k.kunci, label: k.label }));
+/**
+ * Dokumen ketahanan pangan LAMA — tiga kolom berkas tunggal tanpa tahun.
+ *
+ * Masih ada karena berkasnya sudah tersimpan di produksi dan tidak boleh
+ * hilang dari pandangan. Unggahan BARU tidak lagi lewat sini, melainkan ke
+ * daftar bertahun `DokumenKetahananPangan` (lihat seksi 'pangan' di atas).
+ * Dipakai halaman untuk menyiapkan state berkas dan menyingkirkan kolom path
+ * dari payload simpan.
+ */
+export const DOKUMEN_KETAHANAN_PANGAN = [
+	{ kunci: 'StudiKelayakanUsaha', label: 'Studi Kelayakan Usaha' },
+	{ kunci: 'RABKetahananPangan', label: 'RAB Ketahanan Pangan' },
+	{ kunci: 'DokumentasiGeotagging', label: 'Dokumentasi Geotagging' },
+];
 
 /* ───────────────────── Daftar JSON: baca & turunkan ───────────────────── */
 
@@ -584,6 +626,9 @@ export const lengkapiDaftarDariKolomLama = (data) => {
 	}
 
 	if (kosong('LaporanPertanggungjawaban')) d.LaporanPertanggungjawaban = [];
+	// Tidak diturunkan dari tiga kolom berkas lama: tahunnya tidak pernah
+	// tercatat di sana, dan menebaknya berarti mengarang tahun kegiatan.
+	if (kosong('DokumenKetahananPangan')) d.DokumenKetahananPangan = [];
 
 	// Normalisasi: string JSON dari server → array/objek.
 	for (const [k, bentuk] of Object.entries(KOLOM_DAFTAR)) {
