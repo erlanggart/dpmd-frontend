@@ -234,6 +234,7 @@ const SensusTab = ({ ringkasan }) => {
   const [cari, setCari] = useState('');
   const [cariAktif, setCariAktif] = useState('');
   const [kecamatan, setKecamatan] = useState('');
+  const [desa, setDesa] = useState('');
   const [status, setStatus] = useState('');
   const [dari, setDari] = useState('');
   const [sampai, setSampai] = useState('');
@@ -249,11 +250,12 @@ const SensusTab = ({ ringkasan }) => {
       per_page: 25,
       ...(cariAktif ? { search: cariAktif } : {}),
       ...(kecamatan ? { kecamatan } : {}),
+      ...(desa ? { desa } : {}),
       ...(status ? { status } : {}),
       ...(dari ? { dari } : {}),
       ...(sampai ? { sampai } : {})
     }),
-    [halaman, cariAktif, kecamatan, status, dari, sampai]
+    [halaman, cariAktif, kecamatan, desa, status, dari, sampai]
   );
 
   const { data, meta, memuat, galat, ambil } = useAstaDesa('/sensus', params);
@@ -267,6 +269,7 @@ const SensusTab = ({ ringkasan }) => {
         {
           ...(cariAktif ? { search: cariAktif } : {}),
           ...(kecamatan ? { kecamatan } : {}),
+          ...(desa ? { desa } : {}),
           ...(status ? { status } : {}),
           ...(dari ? { dari } : {}),
           ...(sampai ? { sampai } : {}),
@@ -275,7 +278,7 @@ const SensusTab = ({ ringkasan }) => {
         },
         'segar'
       ).then((b) => b.data),
-    [cariAktif, kecamatan, status, dari, sampai, nomorLengkap]
+    [cariAktif, kecamatan, desa, status, dari, sampai, nomorLengkap]
   );
   const pengekspor = usePengekspor(ambilMuatan);
 
@@ -283,6 +286,23 @@ const SensusTab = ({ ringkasan }) => {
     () => (ringkasan?.per_kecamatan || []).map((k) => k.kecamatan),
     [ringkasan]
   );
+
+  // Desa disaring bertingkat: pilihannya baru muncul setelah satu kecamatan
+  // dipilih. Nama desa TIDAK unik se-kabupaten dan penyaring desa di backend
+  // mencocokkan nama saja, jadi daftar desa se-kabupaten akan memulangkan baris
+  // dari kecamatan lain yang kebetulan senama. Diurutkan abjad, bukan menurut
+  // jumlah seperti `per_desa` aslinya, karena di sini desanya dicari sendiri.
+  const daftarDesa = useMemo(() => {
+    if (!kecamatan) return [];
+    const nama = (ringkasan?.per_desa || [])
+      .filter((d) => d.kecamatan === kecamatan)
+      .map((d) => d.desa)
+      // "Tidak diketahui" adalah penanda yang dibuat backend untuk baris yang
+      // kolom desanya kosong, bukan nama desa yang ada. Menyaringnya akan
+      // mencocokkan teks itu ke kolom desa dan selalu memulangkan nol baris.
+      .filter((d) => d && d !== 'Tidak diketahui');
+    return Array.from(new Set(nama)).sort((a, b) => a.localeCompare(b, 'id'));
+  }, [ringkasan, kecamatan]);
   const daftarStatus = useMemo(
     () =>
       (ringkasan?.per_status || [])
@@ -291,13 +311,22 @@ const SensusTab = ({ ringkasan }) => {
     [ringkasan]
   );
 
-  const adaPenyaring = cariAktif || kecamatan || status || dari || sampai;
+  const adaPenyaring = cariAktif || kecamatan || desa || status || dari || sampai;
 
   const gantiPenyaring = (setter) => (nilai) => {
     setter(nilai);
     // Pindah penyaring SELALU kembali ke halaman 1. Tanpa ini, pembaca yang
     // sedang di halaman 12 lalu memilih satu kecamatan akan melihat tabel
     // kosong dan menyimpulkan kecamatannya tidak punya data.
+    setHalaman(1);
+  };
+
+  // Ganti kecamatan selalu melepas pilihan desa. Desa dari kecamatan sebelumnya
+  // tidak ada di kecamatan yang baru, jadi bila dibiarkan tabel akan kosong dan
+  // terbaca seperti kecamatan itu memang belum punya data.
+  const gantiKecamatan = (nilai) => {
+    setKecamatan(nilai);
+    setDesa('');
     setHalaman(1);
   };
 
@@ -346,6 +375,7 @@ const SensusTab = ({ ringkasan }) => {
                   setCari('');
                   setCariAktif('');
                   setKecamatan('');
+                  setDesa('');
                   setStatus('');
                   setDari('');
                   setSampai('');
@@ -365,13 +395,29 @@ const SensusTab = ({ ringkasan }) => {
             </span>
             <select
               value={kecamatan}
-              onChange={(e) => gantiPenyaring(setKecamatan)(e.target.value)}
+              onChange={(e) => gantiKecamatan(e.target.value)}
               className="min-w-0 flex-1 rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-medium text-slate-700 outline-none focus:border-slate-400 sm:max-w-[190px]"
             >
               <option value="">Semua kecamatan</option>
               {daftarKecamatan.map((k) => (
                 <option key={k} value={k}>
                   {k}
+                </option>
+              ))}
+            </select>
+            {/* Mati selama kecamatan belum dipilih — lihat alasan di `daftarDesa`.
+                Tetap dirender supaya baris penyaring tidak berubah-ubah bentuk. */}
+            <select
+              value={desa}
+              disabled={!kecamatan || daftarDesa.length === 0}
+              onChange={(e) => gantiPenyaring(setDesa)(e.target.value)}
+              title={kecamatan ? undefined : 'Pilih kecamatan dulu'}
+              className="min-w-0 flex-1 rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-medium text-slate-700 outline-none focus:border-slate-400 disabled:cursor-not-allowed disabled:bg-slate-50 disabled:text-slate-400 sm:max-w-[190px]"
+            >
+              <option value="">{kecamatan ? 'Semua desa' : 'Semua desa (pilih kecamatan)'}</option>
+              {daftarDesa.map((d) => (
+                <option key={d} value={d}>
+                  {d}
                 </option>
               ))}
             </select>
