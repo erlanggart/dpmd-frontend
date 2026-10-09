@@ -10,9 +10,16 @@
  * adalah "apakah ini orang yang saya cari", dan empat digit terakhir sudah
  * menjawabnya. Nomor utuhnya tetap ada di panel detail — satu klik jauhnya,
  * tetapi tidak terpampang di layar yang kebetulan sedang diproyeksikan.
+ *
+ * EKSPOR TIDAK LEWAT JALUR TABEL INI. Tabel meminta 25 baris berpaginasi dari
+ * ASTA DESA; ekspor meminta SELURUH baris yang cocok, dan untuk itu backend
+ * menyaring potret penyusuran penuh yang sudah ada di memorinya
+ * (`/sensus/ekspor`). Penyaring yang dikirim sama persis dengan yang sedang
+ * aktif di layar, jadi isi berkas selalu sama dengan yang sedang dibaca —
+ * hanya tanpa batas 25 baris per halaman.
  */
 
-import React, { useMemo, useState } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import {
   ChevronLeft,
   ChevronRight,
@@ -23,7 +30,10 @@ import {
   X
 } from 'lucide-react';
 import { Galat, Kosong, Lencana, Memuat, Panel } from './ui';
-import { useAstaDesa } from './useAstaDesa';
+import { ambilSekali, useAstaDesa } from './useAstaDesa';
+import { TombolEkspor } from './ekspor';
+import { usePengekspor } from './usePengekspor';
+import { eksporSensusExcel, eksporSensusPdf } from './eksporAstaDesa';
 import { angka, peringkatStatus, rapikanLabel, tanggalSingkat, warnaStatus } from './warna';
 
 /** "3271012345670001" -> "3271 •••• •••• 0001" */
@@ -228,6 +238,10 @@ const SensusTab = ({ ringkasan }) => {
   const [dari, setDari] = useState('');
   const [sampai, setSampai] = useState('');
   const [terpilih, setTerpilih] = useState(null);
+  // Bawaannya TERSAMAR. Berkas ekspor beredar lewat surel dan grup pesan, jauh
+  // dari halaman yang melahirkannya; nomor utuh hanya ikut bila yang mengunduh
+  // memang menyatakan membutuhkannya.
+  const [nomorLengkap, setNomorLengkap] = useState(false);
 
   const params = useMemo(
     () => ({
@@ -243,6 +257,27 @@ const SensusTab = ({ ringkasan }) => {
   );
 
   const { data, meta, memuat, galat, ambil } = useAstaDesa('/sensus', params);
+
+  // Penyaring yang sama dengan tabel, tanpa page/per_page: ekspor memang
+  // meminta seluruh baris yang cocok, bukan satu halaman.
+  const ambilMuatan = useCallback(
+    ({ paksa }) =>
+      ambilSekali(
+        '/sensus/ekspor',
+        {
+          ...(cariAktif ? { search: cariAktif } : {}),
+          ...(kecamatan ? { kecamatan } : {}),
+          ...(status ? { status } : {}),
+          ...(dari ? { dari } : {}),
+          ...(sampai ? { sampai } : {}),
+          ...(nomorLengkap ? { lengkap: 1 } : {}),
+          ...(paksa ? { abaikan_kesegaran: 1 } : {})
+        },
+        'segar'
+      ).then((b) => b.data),
+    [cariAktif, kecamatan, status, dari, sampai, nomorLengkap]
+  );
+  const pengekspor = usePengekspor(ambilMuatan);
 
   const daftarKecamatan = useMemo(
     () => (ringkasan?.per_kecamatan || []).map((k) => k.kecamatan),
@@ -369,6 +404,28 @@ const SensusTab = ({ ringkasan }) => {
                 onChange={(e) => gantiPenyaring(setSampai)(e.target.value)}
                 className="rounded-lg border border-slate-200 bg-white px-2.5 py-2 text-xs font-medium text-slate-700 outline-none focus:border-slate-400"
               />
+            </label>
+          </div>
+
+          <div className="flex flex-wrap items-start justify-between gap-3 border-t border-slate-100 pt-3">
+            <TombolEkspor
+              pengekspor={pengekspor}
+              onExcel={eksporSensusExcel}
+              onPdf={eksporSensusPdf}
+              keterangan={
+                adaPenyaring
+                  ? 'Seluruh baris yang cocok dengan penyaring di atas, disusul ke data terbaru'
+                  : 'Seluruh baris se-kabupaten, disusul ke data terbaru'
+              }
+            />
+            <label className="inline-flex cursor-pointer items-center gap-2 text-[11px] font-medium text-slate-600">
+              <input
+                type="checkbox"
+                checked={nomorLengkap}
+                onChange={(e) => setNomorLengkap(e.target.checked)}
+                className="h-3.5 w-3.5 rounded border-slate-300 text-slate-900 focus:ring-slate-400"
+              />
+              Sertakan NIK &amp; nomor KK lengkap
             </label>
           </div>
         </div>

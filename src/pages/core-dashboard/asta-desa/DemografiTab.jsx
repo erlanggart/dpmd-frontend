@@ -12,7 +12,7 @@
  * memperlihatkan "-1.204 orang".
  */
 
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   Bar,
   BarChart,
@@ -26,6 +26,10 @@ import { AlertTriangle, Baby, GraduationCap, HeartHandshake, Info, Users2 } from
 import { DaftarBatang, Galat, KartuAngka, Kosong, Legenda, Memuat, Panel, Tooltip1 } from './ui';
 import { GAYA_SUMBU, SERI, angka, persen, rapikanLabel } from './warna';
 import { FilterWilayah, GridKategori } from './KategoriSensus';
+import { TombolEkspor } from './ekspor';
+import { usePengekspor } from './usePengekspor';
+import { eksporDemografiExcel, eksporDemografiPdf, labelLingkup } from './eksporAstaDesa';
+import { ambilSekali } from './useAstaDesa';
 
 const WARNA_L = SERI[0];
 const WARNA_P = SERI[1];
@@ -252,10 +256,17 @@ const AnggotaKeluarga = ({ data, memuat, galat, onUlang, totalKeluarga }) => {
  * orang per orang) lalu satu tab per kelompok kolom sensus keluarga (rumah,
  * bantuan sosial, …) yang ditemukan backend dari data.
  *
- * Penyaring wilayah hanya berlaku untuk kategori sensus keluarga. Data anggota
- * datang dari `/sensus-anggotas` yang tidak membawa kecamatan/desa, jadi
- * bagian itu selalu se-kabupaten — dan halaman mengatakannya terang-terangan
- * alih-alih diam-diam menampilkan angka kabupaten di bawah judul desa.
+ * Penyaring wilayah berlaku untuk KEDUANYA sejak backend memetakan anggota ke
+ * keluarganya (`/sensus-anggotas` sendiri tidak membawa kecamatan/desa — hanya
+ * rujukan ke keluarga, dan jembatannya dibangun saat penyusuran `/sensuses`).
+ * Selama pemetaan itu belum siap, bagian anggota tetap se-kabupaten dan halaman
+ * mengatakannya terang-terangan lewat `per_wilayah_siap` — alih-alih diam-diam
+ * menampilkan angka kabupaten di bawah judul satu desa.
+ *
+ * EKSPOR MENGIKUTI PENYARING YANG SEDANG AKTIF. Satu klik menghasilkan rincian
+ * seluruh kecamatan dan seluruh desa pada lingkup itu; menyempitkan lingkupnya
+ * juga satu-satunya cara memperkecil berkasnya, dan itu disengaja — rincian
+ * sensus se-kabupaten per desa berjumlah ratusan ribu baris.
  */
 const DemografiTab = ({ data, memuat, galat, onUlang, totalKeluarga, kategori, filter, onFilter }) => {
   const [pilihan, setPilihan] = useState('anggota');
@@ -270,6 +281,19 @@ const DemografiTab = ({ data, memuat, galat, onUlang, totalKeluarga, kategori, f
 
   const aktif = daftar.find((k) => k.kode === pilihan);
   const adaFilter = filter?.kecamatan || filter?.desa;
+
+  // Muatan ekspor TIDAK diambil sebagai hook: ukurannya megabyte dan hanya
+  // dibutuhkan pada detik tombolnya ditekan. Penyaring halaman tidak ikut
+  // sebagai parameter — server mengirim seluruh wilayah sekali, lalu berkasnya
+  // yang dipotong di sisi ini, sehingga berpindah kecamatan tidak memicu
+  // permintaan baru berukuran sama.
+  const ambilMuatan = useCallback(
+    ({ paksa }) =>
+      ambilSekali('/demografi/wilayah', paksa ? { abaikan_kesegaran: 1 } : {}, 'segar').then((b) => b.data),
+    []
+  );
+  const pengekspor = usePengekspor(ambilMuatan);
+  const belumSiapKategori = Boolean(dk && dk.rincian_siap === false);
 
   const chip = (kode, label, jumlah) => {
     const terpilih = pilihan === kode;
@@ -294,6 +318,16 @@ const DemografiTab = ({ data, memuat, galat, onUlang, totalKeluarga, kategori, f
     <div className="space-y-4">
       <div className="space-y-3 rounded-2xl border border-slate-200 bg-white p-3 shadow-sm shadow-slate-900/[0.03] sm:p-4">
         <FilterWilayah wilayah={dk?.wilayah} filter={filter || {}} onUbah={onFilter} total={dk?.total_keluarga} />
+        <div className="flex flex-wrap items-start justify-between gap-3 border-t border-slate-100 pt-3">
+          <TombolEkspor
+            pengekspor={pengekspor}
+            onExcel={(d) => eksporDemografiExcel(d, filter || {})}
+            onPdf={(d) => eksporDemografiPdf(d, filter || {})}
+            nonaktif={belumSiapKategori}
+            alasanNonaktif="Server masih menyusun rincian per kecamatan/desa dari ASTA DESA. Ekspor terbuka sendiri begitu selesai — tidak perlu memuat ulang halaman."
+            keterangan={`Rincian per kecamatan & per desa, disusul ke data terbaru — ${labelLingkup(filter || {})}`}
+          />
+        </div>
         <nav className="-mx-1 flex gap-1.5 overflow-x-auto px-1 pb-0.5">
           {chip('anggota', 'Anggota Keluarga')}
           {daftar.map((k) => chip(k.kode, k.label, k.kolom.length))}
@@ -308,11 +342,22 @@ const DemografiTab = ({ data, memuat, galat, onUlang, totalKeluarga, kategori, f
 
       {pilihan === 'anggota' ? (
         <>
-          {adaFilter && (
+          {/* Hanya saat pemetaan anggota -> keluarga belum siap. Begitu siap,
+              angka di bawah memang angka wilayah yang dipilih dan keterangan ini
+              justru akan menyesatkan. */}
+          {adaFilter && data?.per_wilayah_siap === false && (
             <p className="flex items-start gap-2 rounded-xl bg-sky-50 px-3 py-2 text-xs leading-relaxed text-sky-800">
               <Info className="mt-0.5 h-3.5 w-3.5 flex-shrink-0" />
-              Data anggota keluarga belum bisa disaring per wilayah (sumbernya tidak membawa kecamatan/desa) — bagian ini
-              tetap menampilkan angka se-kabupaten.
+              Data anggota keluarga belum bisa disaring per wilayah — server masih memetakan setiap anggota ke
+              keluarganya. Bagian ini sementara menampilkan angka se-kabupaten, dan akan ikut tersaring sendiri begitu
+              pemetaannya selesai.
+            </p>
+          )}
+          {adaFilter && data?.per_wilayah_siap === true && data?.anggota_tanpa_wilayah > 0 && (
+            <p className="flex items-start gap-2 rounded-xl bg-slate-50 px-3 py-2 text-xs leading-relaxed text-slate-600">
+              <Info className="mt-0.5 h-3.5 w-3.5 flex-shrink-0 text-slate-400" />
+              {angka(data.anggota_tanpa_wilayah)} anggota keluarga belum bisa ditempatkan ke desa mana pun dan tidak
+              ikut terhitung di bagian ini.
             </p>
           )}
           <AnggotaKeluarga data={data} memuat={memuat} galat={galat} onUlang={onUlang} totalKeluarga={totalKeluarga} />

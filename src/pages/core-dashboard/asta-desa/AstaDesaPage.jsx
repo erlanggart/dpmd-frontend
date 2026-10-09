@@ -117,21 +117,28 @@ const AstaDesaPage = () => {
   // terbuka seharian. Pembaruannya diam-diam: tidak ada kedipan kerangka
   // pemuatan, dan kegagalan sesaat tidak mengosongkan angka yang sudah tampil.
   const ringkasan = useAstaDesa('/ringkasan', {}, { aktif: Boolean(siap), segarkanTiapMs: 60 * 1000 });
-  // Diperbarui diam-diam tiap 30 detik: server menjawab dari cache seketika,
-  // dan begitu penyusuran di latar selesai angkanya muncul sendiri tanpa
-  // pengguna perlu menekan apa pun.
-  const demografi = useAstaDesa('/demografi', {}, {
-    aktif: Boolean(siap) && tab === 'demografi',
-    segarkanTiapMs: 30 * 1000
-  });
-  // Profil keluarga per kategori sensus (rumah, bansos, …), bisa disaring per
-  // wilayah. Params tanpa kunci kosong supaya kunci cache-nya tetap stabil.
+  // Penyaring wilayah tab Demografi. Params tanpa kunci kosong supaya kunci
+  // cache-nya tetap stabil.
   const [filterWilayah, setFilterWilayah] = useState({});
-  const paramsKategori = useMemo(
+  const paramsWilayah = useMemo(
     () => Object.fromEntries(Object.entries(filterWilayah).filter(([, v]) => v)),
     [filterWilayah]
   );
-  const kategoriSensus = useAstaDesa('/demografi/kategori', paramsKategori, {
+
+  // Diperbarui diam-diam tiap 30 detik: server menjawab dari cache seketika,
+  // dan begitu penyusuran di latar selesai angkanya muncul sendiri tanpa
+  // pengguna perlu menekan apa pun.
+  //
+  // Penyaring wilayah ikut dikirim. Dulu tidak, karena `/sensus-anggotas` tidak
+  // membawa kecamatan/desa; sekarang backend menjembataninya lewat rujukan ke
+  // keluarga, dan selama jembatan itu belum siap ia membalas angka kabupaten
+  // beserta `per_wilayah_siap: false` — bukan diam-diam mengabaikan penyaring.
+  const demografi = useAstaDesa('/demografi', paramsWilayah, {
+    aktif: Boolean(siap) && tab === 'demografi',
+    segarkanTiapMs: 30 * 1000
+  });
+  // Profil keluarga per kategori sensus (rumah, bansos, …), penyaring yang sama.
+  const kategoriSensus = useAstaDesa('/demografi/kategori', paramsWilayah, {
     aktif: Boolean(siap) && tab === 'demografi',
     segarkanTiapMs: 30 * 1000
   });

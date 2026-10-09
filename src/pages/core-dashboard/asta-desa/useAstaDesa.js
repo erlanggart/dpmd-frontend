@@ -72,12 +72,32 @@ const muat = (jalur, params = {}, cara = 'cache') => {
       const pesan = err.response?.data?.message || err.message || 'Gagal memuat data Asta Desa';
       const galat = new Error(pesan);
       galat.status = err.response?.status;
+      // Badan respons ikut dibawa. Endpoint ekspor menolak dengan 409 beserta
+      // `kode` dan `kesiapan` — angka-angka yang membuat penolakannya bisa
+      // dijelaskan ke pembaca ("tertinggal 1.204 keluarga") alih-alih sekadar
+      // "gagal mengekspor".
+      galat.kode = err.response?.data?.kode || null;
+      galat.kesiapan = err.response?.data?.kesiapan || null;
       throw galat;
     });
 
   berjalan.set(kunci, p);
   return p;
 };
+
+/**
+ * Ambil satu endpoint SEKALI, di luar daur hidup komponen.
+ *
+ * Dipakai tombol ekspor. Muatan ekspor berukuran megabyte dan hanya dibutuhkan
+ * pada detik tombolnya ditekan — memasangnya sebagai hook berarti setiap
+ * pembaca yang membuka tab ikut mengunduhnya tanpa pernah meminta.
+ *
+ * Bawaannya 'segar': ekspor tidak boleh dilayani dari cache browser, sebab
+ * seluruh gunanya adalah memastikan berkasnya berisi data terbaru. Server tetap
+ * boleh menjawab dari cache-nya sendiri — di sanalah kesegaran diukur dan
+ * dilaporkan lewat `kesiapan`.
+ */
+export const ambilSekali = (jalur, params = {}, cara = 'segar') => muat(jalur, params, cara);
 
 /** Buang seluruh cache sisi browser (dipakai bersama tombol muat ulang). */
 export const bersihkanSimpanan = () => simpanan.clear();
