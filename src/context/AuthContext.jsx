@@ -374,7 +374,9 @@ export const AuthProvider = ({ children }) => {
 	// Memeriksa apakah user dapat memverifikasi kelembagaan & pengurus
 	// (superadmin, admin bidang PMD, atau kecamatan)
 	const canVerifyKelembagaan = () => {
-		return isSuperAdmin() || isAdminBidangPMD() || isKecamatan();
+		// Bendahara hanya bila ditempatkan di bidang Pemberdayaan Masyarakat (bidang_id = 5)
+		const isBendaharaPMD = user?.role === "bendahara" && user?.bidang_id === 5;
+		return isSuperAdmin() || isAdminBidangPMD() || isKecamatan() || isBendaharaPMD;
 	};
 
 	// Memeriksa apakah user dapat mengelola kelembagaan

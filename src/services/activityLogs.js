@@ -50,3 +50,11 @@ export const getAllActivityLogs = async (filters = {}) => {
     throw error;
   }
 };
+
+/**
+ * Get activity logs satu pengurus (terbaru lebih dulu)
+ */
+export const getPengurusActivityLogs = async (pengurusId) => {
+  const response = await api.get(`/kelembagaan/activity-logs/pengurus/${pengurusId}`);
+  return response.data;
+};

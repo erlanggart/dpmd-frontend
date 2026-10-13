@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import {
 	getPengurusById,
@@ -35,9 +35,23 @@ import {
 	FaUniversity,
 	FaTrash,
 	FaExchangeAlt,
+	FaIdCard,
+	FaVenusMars,
+	FaRing,
+	FaPrayingHands,
+	FaTint,
+	FaPen,
+	FaGraduationCap,
+	FaHistory,
+	FaEllipsisV,
+	FaToggleOn,
+	FaToggleOff,
 } from "react-icons/fa";
 import Swal from "sweetalert2";
 import TransferPengurusModal from "./TransferPengurusModal";
+import { PengurusTimeline, PengurusActivityLog } from "./PengurusAktivitas";
+import PengurusBpjsCard from "./PengurusBpjsCard";
+import { getPengurusActivityLogs } from "../../../services/activityLogs";
 
 const imageBaseUrl = import.meta.env.VITE_IMAGE_BASE_URL;
 
@@ -88,6 +102,92 @@ const getPengurusRoutePath = (isSuperAdmin, isAdminBidangPMD, pengurusId, action
 	return `/desa/pengurus/${pengurusId}${action ? `/${action}` : ""}`;
 };
 
+const formatTanggal = (v) =>
+	v ? new Date(v).toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" }) : "";
+
+const SECTION_TONES = {
+	purple: { head: "bg-purple-50/70", icon: "bg-violet-500" },
+	blue: { head: "bg-sky-50/70", icon: "bg-blue-500" },
+	amber: { head: "bg-amber-50/70", icon: "bg-amber-500" },
+	slate: { head: "bg-slate-50", icon: "bg-slate-500" },
+};
+
+const SectionCard = ({ icon: Icon, title, subtitle, tone, onEdit, editDisabled, children }) => (
+	<div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+		<div className={`flex items-center justify-between gap-3 px-5 py-4 ${SECTION_TONES[tone].head}`}>
+			<div className="flex items-center gap-3">
+				<div className={`w-10 h-10 rounded-xl flex items-center justify-center shadow-sm ${SECTION_TONES[tone].icon}`}>
+					<Icon className="text-white w-4 h-4" />
+				</div>
+				<div>
+					<h3 className="text-lg font-bold text-gray-900">{title}</h3>
+					{subtitle && <p className="text-xs text-gray-500">{subtitle}</p>}
+				</div>
+			</div>
+			{onEdit && (
+				<button
+					onClick={onEdit}
+					disabled={editDisabled}
+					className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-indigo-700 bg-white border border-indigo-200 rounded-lg hover:bg-indigo-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+					title={editDisabled ? "Fitur edit ditutup" : "Edit pengurus"}
+				>
+					<FaPen className="w-3 h-3" />
+					Edit
+				</button>
+			)}
+		</div>
+		<div className="p-5">{children}</div>
+	</div>
+);
+
+// Baris label kiri / nilai kanan
+const InfoField = ({ label, value, children }) => (
+	<div className="flex items-center gap-3 bg-gray-50 rounded-lg px-3 py-2.5 min-h-[44px]">
+		<span className="text-xs text-gray-500 w-32 flex-shrink-0">{label}</span>
+		<span className="text-sm text-gray-900 font-medium break-words min-w-0">{children ?? (value || "-")}</span>
+	</div>
+);
+
+// Item menu titik tiga di header
+const MenuItem = ({ icon: Icon, label, onClick, disabled, hint, danger }) => (
+	<button
+		type="button"
+		role="menuitem"
+		onClick={onClick}
+		disabled={disabled}
+		title={hint || undefined}
+		className={`w-full flex items-center gap-3 px-4 py-2 text-sm text-left transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
+			danger ? "text-red-600 hover:bg-red-50" : "text-gray-700 hover:bg-gray-50"
+		}`}
+	>
+		<Icon className="w-3.5 h-3.5 flex-shrink-0" />
+		<span className="flex-1">{label}</span>
+		{hint && <FaLock className="w-3 h-3 text-gray-400" />}
+	</button>
+);
+
+// Label di atas, nilai di bawah
+const StackedField = ({ label, value, mono }) => (
+	<div>
+		<p className="text-xs font-medium text-gray-600 mb-1.5">{label}</p>
+		<p className={`text-sm text-gray-900 bg-gray-50 rounded-lg px-3 py-2.5 ${mono ? "font-mono tracking-wider" : "font-medium"}`}>
+			{value || "-"}
+		</p>
+	</div>
+);
+
+const ProfileItem = ({ icon: Icon, label, value, iconClass = "bg-blue-50 text-blue-500" }) => (
+	<div className="flex items-start gap-3 min-w-0">
+		<div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${iconClass}`}>
+			<Icon className="w-3.5 h-3.5" />
+		</div>
+		<div className="min-w-0">
+			<p className="text-xs text-gray-500">{label}</p>
+			<p className="text-sm text-gray-900 font-medium break-words">{value || "-"}</p>
+		</div>
+	</div>
+);
+
 const PengurusDetailPage = () => {
 	const params = useParams();
 	const pengurusId = params.id;
@@ -104,6 +204,28 @@ const PengurusDetailPage = () => {
 	const [loading, setLoading] = useState(true);
 	const [updating, setUpdating] = useState(false);
 	const [showTransfer, setShowTransfer] = useState(false);
+	const [activityLogs, setActivityLogs] = useState(null); // null = sedang dimuat
+	const [menuOpen, setMenuOpen] = useState(false);
+	const menuRef = useRef(null);
+
+	// Tutup menu titik tiga saat klik di luar atau tekan Escape
+	useEffect(() => {
+		if (!menuOpen) return;
+		const onDown = (e) => {
+			if (menuRef.current && !menuRef.current.contains(e.target)) setMenuOpen(false);
+		};
+		const onKey = (e) => e.key === "Escape" && setMenuOpen(false);
+		document.addEventListener("mousedown", onDown);
+		document.addEventListener("keydown", onKey);
+		return () => {
+			document.removeEventListener("mousedown", onDown);
+			document.removeEventListener("keydown", onKey);
+		};
+	}, [menuOpen]);
+	const closeAnd = (fn) => () => {
+		setMenuOpen(false);
+		fn();
+	};
 
 	const isKecamatanUser = isKecamatan?.() ?? false;
 
@@ -215,6 +337,10 @@ const PengurusDetailPage = () => {
 		}
 
 		setLoading(true);
+		// Log aktivitas: gagal dimuat tidak boleh menggagalkan halaman
+		getPengurusActivityLogs(pengurusId)
+			.then((res) => setActivityLogs(res?.data || []))
+			.catch(() => setActivityLogs([]));
 		try {
 			const response = await getPengurusById(pengurusId);
 
@@ -435,13 +561,8 @@ const PengurusDetailPage = () => {
 
 		setUpdating(true);
 		try {
-			await updatePengurusVerifikasi(pengurusId, "ditolak", pengurus.desa_id, formValues);
-
-			setPengurus((prev) => ({
-				...prev,
-				status_verifikasi: "ditolak",
-				catatan_verifikasi: formValues,
-			}));
+			const res = await updatePengurusVerifikasi(pengurusId, "ditolak", pengurus.desa_id, formValues);
+			applyVerifikasiResult(res, { status_verifikasi: "ditolak", catatan_verifikasi: formValues });
 
 			await Swal.fire({
 				icon: "success",
@@ -462,17 +583,30 @@ const PengurusDetailPage = () => {
 		}
 	};
 
+	// Pakai baris terbaru dari server (verified_at, verifikator_nama ikut) + muat ulang log
+	const applyVerifikasiResult = (res, fallback) => {
+		const updated = res?.data?.data;
+		setPengurus((prev) => ({
+			...prev,
+			...fallback,
+			...(updated && {
+				status_verifikasi: updated.status_verifikasi,
+				catatan_verifikasi: updated.catatan_verifikasi,
+				verifikator_nama: updated.verifikator_nama,
+				verified_at: updated.verified_at,
+			}),
+		}));
+		getPengurusActivityLogs(pengurusId)
+			.then((r) => setActivityLogs(r?.data || []))
+			.catch(() => {});
+	};
+
 	// Helper: execute pengurus verification
 	const executePengurusVerification = async () => {
 		setUpdating(true);
 		try {
-			await updatePengurusVerifikasi(pengurusId, "verified", pengurus.desa_id);
-
-			setPengurus((prev) => ({
-				...prev,
-				status_verifikasi: "verified",
-				catatan_verifikasi: null,
-			}));
+			const res = await updatePengurusVerifikasi(pengurusId, "verified", pengurus.desa_id);
+			applyVerifikasiResult(res, { status_verifikasi: "verified", catatan_verifikasi: null });
 
 			await Swal.fire({
 				icon: "success",
@@ -504,9 +638,7 @@ const PengurusDetailPage = () => {
 		const missing = [];
 		if (!pengurus.nik) missing.push("NIK");
 		if (!pengurus.produk_hukum_id) missing.push("SK Pengangkatan");
-		if (!pengurus.telepon) missing.push("Nomor Telepon");
-		if (!pengurus.alamat) missing.push("Alamat");
-		if (!pengurus.tanggal_mulai_jabatan) missing.push("Tanggal Mulai Jabatan");
+		// Telepon, alamat, tanggal mulai jabatan: opsional untuk verifikasi
 
 		if (missing.length > 0) {
 			// Data tidak lengkap → hanya tampilkan info, tidak bisa verifikasi
@@ -679,6 +811,12 @@ const PengurusDetailPage = () => {
 		);
 	}
 
+	// Sama dengan aturan tombol Edit di header: desa tidak bisa edit pengurus yang sudah verified
+	const canManageActions = canManage && !isKecamatanUser; // Pindahkan, Aktif/Nonaktifkan
+	const canEditPengurus =
+		canManageActions &&
+		!(!(isSuperAdmin() || isAdminBidangPMD()) && pengurus.status_verifikasi === "verified");
+
 	return (
 		<div className="min-h-screen p-8">
 			{/* Breadcrumb */}
@@ -848,67 +986,7 @@ const PengurusDetailPage = () => {
 					</div>
 				</div>
 
-				<div className="flex gap-3">
-				{canManage && !isKecamatanUser && (
-					<div className="flex items-center space-x-3">
-						{/* Hide edit button for desa users when pengurus is verified */}
-						{!(!(isSuperAdmin() || isAdminBidangPMD()) && pengurus.status_verifikasi === "verified") && (
-							<button
-								onClick={handleEdit}
-								disabled={!isEditMode}
-								className={`flex items-center space-x-2 px-4 py-2 rounded-lg transition-colors ${
-									isEditMode
-										? "bg-indigo-600 text-white hover:bg-indigo-700"
-										: "bg-gray-300 text-gray-500 cursor-not-allowed"
-								}`}
-								title={!isEditMode ? "Fitur edit ditutup" : "Edit pengurus"}
-							>
-								<FaEdit className="text-sm" />
-								<span>Edit</span>
-							</button>
-						)}
-
-							<button
-								onClick={() => setShowTransfer(true)}
-								disabled={updating || !isEditMode}
-								className={`flex items-center space-x-2 px-4 py-2 rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
-									isEditMode
-										? "bg-purple-100 text-purple-700 hover:bg-purple-200"
-										: "bg-gray-300 text-gray-500"
-								}`}
-								title={!isEditMode ? "Fitur pindah pengurus ditutup" : "Pindahkan ke lembaga lain"}
-							>
-								<FaExchangeAlt className="text-sm" />
-								<span>Pindahkan</span>
-							</button>
-
-							<button
-								onClick={() =>
-									handleStatusUpdate(
-										pengurus.status_jabatan === "aktif" ? "selesai" : "aktif",
-									)
-								}
-								disabled={updating || !isEditMode}
-								className={`px-4 py-2 rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
-									!isEditMode
-										? "bg-gray-300 text-gray-500"
-										: pengurus.status_jabatan === "aktif"
-											? "bg-red-100 text-red-700 hover:bg-red-200"
-											: "bg-green-100 text-green-700 hover:bg-green-200"
-								}`}
-								title={!isEditMode ? "Fitur perubahan status ditutup" : ""}
-							>
-								{updating ? (
-									<span>Memproses...</span>
-								) : pengurus.status_jabatan === "aktif" ? (
-									<span>Nonaktifkan</span>
-								) : (
-									<span>Aktifkan</span>
-								)}
-							</button>
-						</div>
-					)}
-
+				<div className="flex items-center gap-3">
 					{/* Verification Button - kecamatan, admin PMD, dan superadmin */}
 					{canVerify && (
 						<button
@@ -948,16 +1026,58 @@ const PengurusDetailPage = () => {
 						</button>
 					)}
 
-					{isSuperAdmin() && (
-						<button
-							onClick={handleDeletePengurus}
-							disabled={updating}
-							className="flex items-center space-x-2 px-4 py-2 rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed bg-red-600 text-white hover:bg-red-700"
-							title="Hapus pengurus"
-						>
-							<FaTrash className="text-sm" />
-							<span>Hapus</span>
-						</button>
+					{/* Aksi lain dalam menu titik tiga */}
+					{(canManageActions || isSuperAdmin()) && (
+						<div className="relative" ref={menuRef}>
+							<button
+								type="button"
+								onClick={() => setMenuOpen((v) => !v)}
+								aria-haspopup="menu"
+								aria-expanded={menuOpen}
+								className="flex items-center justify-center w-10 h-10 rounded-lg border border-gray-200 bg-white text-gray-600 hover:bg-gray-50 transition-colors"
+								title="Aksi lainnya"
+							>
+								<FaEllipsisV className="w-4 h-4" />
+							</button>
+
+							{menuOpen && (
+								<div role="menu" className="absolute right-0 mt-2 w-56 bg-white rounded-xl border border-gray-200 shadow-lg py-1 z-30">
+									{canEditPengurus && (
+										<MenuItem
+											icon={FaEdit}
+											label="Edit"
+											onClick={closeAnd(handleEdit)}
+											disabled={!isEditMode}
+											hint={!isEditMode ? "Fitur edit ditutup" : null}
+										/>
+									)}
+									{canManageActions && (
+										<>
+											<MenuItem
+												icon={FaExchangeAlt}
+												label="Pindahkan"
+												onClick={closeAnd(() => setShowTransfer(true))}
+												disabled={updating || !isEditMode}
+												hint={!isEditMode ? "Fitur pindah pengurus ditutup" : null}
+											/>
+											<MenuItem
+												icon={pengurus.status_jabatan === "aktif" ? FaToggleOff : FaToggleOn}
+												label={pengurus.status_jabatan === "aktif" ? "Nonaktifkan" : "Aktifkan"}
+												onClick={closeAnd(() => handleStatusUpdate(pengurus.status_jabatan === "aktif" ? "selesai" : "aktif"))}
+												disabled={updating || !isEditMode}
+												hint={!isEditMode ? "Fitur perubahan status ditutup" : null}
+											/>
+										</>
+									)}
+									{isSuperAdmin() && (
+										<>
+											<div className="my-1 border-t border-gray-100" />
+											<MenuItem icon={FaTrash} label="Hapus" onClick={closeAnd(handleDeletePengurus)} disabled={updating} danger />
+										</>
+									)}
+								</div>
+							)}
+						</div>
 					)}
 				</div>
 			</div>
@@ -975,421 +1095,245 @@ const PengurusDetailPage = () => {
 			/>
 
 			{/* Main Content */}
-			<div>
-				<div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-					{/* Profile Card */}
-					<div className="lg:col-span-1 space-y-4">
-						<div className="bg-gradient-to-br from-blue-50 via-indigo-50 to-violet-50 rounded-2xl shadow-lg border-2 border-blue-100 p-6">
-							<div className="text-center">
-								<div className="relative inline-block">
+			<div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+				{/* Kartu Profil + Log Aktivitas */}
+				<div className="lg:col-span-1 space-y-5">
+					<div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+						{/* Header bergelombang */}
+						<div className="relative bg-gradient-to-br from-blue-100 via-indigo-50 to-sky-100 pt-6 pb-16">
+							{canEditPengurus && (
+								<button
+									onClick={handleEdit}
+									disabled={!isEditMode}
+									className="absolute top-3 right-3 z-10 inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-indigo-700 bg-white/90 border border-indigo-200 rounded-lg hover:bg-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+									title={!isEditMode ? "Fitur edit ditutup" : "Edit data pribadi"}
+								>
+									<FaPen className="w-3 h-3" />
+									Edit
+								</button>
+							)}
+							<svg className="absolute bottom-0 left-0 w-full h-12 text-white" viewBox="0 0 400 48" preserveAspectRatio="none" fill="currentColor">
+								<path d="M0 28 C 80 0, 160 48, 240 24 S 360 8, 400 20 V48 H0 Z" />
+							</svg>
+							<div className="relative flex justify-center">
+								<div className="relative">
 									{pengurus.avatar ? (
 										<img
 											src={`${imageBaseUrl}/${pengurus.avatar}`}
 											alt={pengurus.nama_lengkap}
-											className="w-40 h-40 rounded-2xl object-cover mx-auto border-4 border-white shadow-2xl ring-4 ring-blue-200"
+											className="w-32 h-32 rounded-full object-cover border-4 border-white shadow-lg"
 										/>
 									) : (
-										<div className="w-40 h-40 rounded-2xl bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center mx-auto border-4 border-white shadow-2xl ring-4 ring-blue-200">
+										<div className="w-32 h-32 rounded-full bg-gray-200 flex items-center justify-center border-4 border-white shadow-lg">
 											<FaUser className="text-gray-400 text-5xl" />
 										</div>
 									)}
-
-									<div
-										className={`absolute bottom-2 right-2 w-8 h-8 rounded-full border-4 border-white shadow-lg ${
-											pengurus.status_jabatan === "aktif"
-												? "bg-green-500"
-												: "bg-red-500"
+									<span
+										className={`absolute bottom-2 right-2 w-5 h-5 rounded-full border-4 border-white ${
+											pengurus.status_jabatan === "aktif" ? "bg-green-500" : "bg-red-500"
 										}`}
 										title={`Status: ${pengurus.status_jabatan}`}
-									></div>
-								</div>
-
-								<div className="mt-6">
-									<h2 className="text-2xl font-bold text-gray-900">
-										{pengurus.nama_lengkap}
-									</h2>
-									<p className="text-lg text-indigo-600 font-semibold mt-2">
-										{pengurus.jabatan}
-									</p>
-									<div className="mt-3">
-										<span
-											className={`inline-flex items-center gap-1.5 px-4 py-1.5 text-sm font-bold rounded-full shadow-md ${
-												pengurus.status_jabatan === "aktif"
-													? "bg-green-500 text-white"
-													: "bg-red-500 text-white"
-											}`}
-										>
-											<div className={`w-2 h-2 rounded-full ${
-												pengurus.status_jabatan === "aktif" ? "bg-white" : "bg-white"
-											}`}></div>
-											{pengurus.status_jabatan === "aktif"
-												? "Aktif"
-												: "Selesai"}
-										</span>
-									</div>
+									/>
 								</div>
 							</div>
 						</div>
-						{/* Contact Information */}
-						<div className="bg-gradient-to-br from-cyan-50 via-blue-50 to-indigo-50 rounded-2xl shadow-sm border-2 border-cyan-100 p-6">
-							<div className="flex items-center gap-3 mb-6">
-								<div className="w-10 h-10 bg-gradient-to-br from-cyan-500 to-blue-600 rounded-xl flex items-center justify-center shadow-lg">
-									<FaPhone className="text-white w-5 h-5" />
-								</div>
-								<h3 className="text-lg font-bold text-gray-900">Informasi Kontak</h3>
+
+						<div className="px-6 pb-6 -mt-10 relative">
+							<div className="text-center">
+								<h2 className="text-xl font-bold text-gray-900 uppercase tracking-wide">
+									{pengurus.nama_lengkap}
+								</h2>
+								<p className="text-indigo-600 font-medium uppercase text-sm mt-1">
+									{pengurus.jabatan}
+								</p>
+								<span
+									className={`inline-flex items-center gap-1.5 mt-3 px-4 py-1 text-sm font-semibold rounded-full text-white ${
+										pengurus.status_jabatan === "aktif" ? "bg-green-500" : "bg-red-500"
+									}`}
+								>
+									<span className="w-1.5 h-1.5 rounded-full bg-white" />
+									{pengurus.status_jabatan === "aktif" ? "Aktif" : "Selesai"}
+								</span>
 							</div>
 
-							<div className="space-y-4">
-								<div>
-									<label className="block text-sm font-semibold text-gray-800 mb-1.5">
-										No. Telepon
-									</label>
-									<p className="text-sm text-gray-900 bg-white/70 backdrop-blur-sm border-2 border-cyan-100 p-3 rounded-lg font-medium">
-										{pengurus.no_telepon || "-"}
-									</p>
+							<div className="mt-6 pt-5 border-t border-gray-100 space-y-4">
+								<div className="grid grid-cols-2 gap-3">
+									<ProfileItem icon={FaIdCard} label="NIK" value={pengurus.nik} />
+									<ProfileItem
+										icon={FaVenusMars}
+										label="Jenis Kelamin"
+										value={pengurus.jenis_kelamin?.replace(/_/g, "-")}
+										iconClass="bg-purple-50 text-purple-500"
+									/>
 								</div>
-
-								<div>
-									<label className="flex items-center text-sm font-semibold text-gray-800 mb-1.5">
-										<FaMapMarkerAlt className="mr-1.5" />
-										Alamat
-									</label>
-									<p className="text-sm text-gray-900 bg-white/70 backdrop-blur-sm border-2 border-cyan-100 p-3 rounded-lg leading-relaxed">
-										{pengurus.alamat || "-"}
-									</p>
+								<ProfileItem
+									icon={FaCalendarAlt}
+									label="Tempat, Tanggal Lahir"
+									value={[pengurus.tempat_lahir, formatTanggal(pengurus.tanggal_lahir)].filter(Boolean).join(", ")}
+								/>
+								<ProfileItem icon={FaRing} label="Status Perkawinan" value={pengurus.status_perkawinan} />
+								<ProfileItem icon={FaGraduationCap} label="Pendidikan" value={pengurus.pendidikan} />
+								<div className="grid grid-cols-2 gap-3">
+									<ProfileItem icon={FaPrayingHands} label="Agama" value={pengurus.agama} />
+									<ProfileItem icon={FaTint} label="Golongan Darah" value={pengurus.golongan_darah} />
 								</div>
-							</div>
-						</div>
-					</div>
-
-					{/* Details */}
-					<div className="lg:col-span-2 space-y-6">
-						{/* Personal Information */}
-						<div className="bg-gradient-to-br from-emerald-50 via-green-50 to-teal-50 rounded-2xl shadow-sm border-2 border-green-100 p-6">
-							<div className="flex items-center gap-3 mb-6">
-								<div className="w-10 h-10 bg-gradient-to-br from-green-500 to-emerald-600 rounded-xl flex items-center justify-center shadow-lg">
-									<FaUser className="text-white w-5 h-5" />
-								</div>
-								<h3 className="text-lg font-bold text-gray-900">Informasi Pribadi</h3>
-							</div>
-
-							<div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-								<div>
-									<label className="block text-sm font-medium text-gray-700 mb-1">
-										NIK
-									</label>
-									<p className="text-sm text-gray-900 bg-gray-50 p-2 rounded">
-										{pengurus.nik || "-"}
-									</p>
-								</div>
-
-								<div>
-									<label className="block text-sm font-medium text-gray-700 mb-1">
-										Jenis Kelamin
-									</label>
-									<p className="text-sm text-gray-900 bg-gray-50 p-2 rounded">
-										{pengurus.jenis_kelamin
-											? pengurus.jenis_kelamin.replace(/_/g, "-")
-											: "-"}
-									</p>
-								</div>
-
-								<div>
-									<label className="block text-sm font-medium text-gray-700 mb-1">
-										Tempat Lahir
-									</label>
-									<p className="text-sm text-gray-900 bg-gray-50 p-2 rounded">
-										{pengurus.tempat_lahir || "-"}
-									</p>
-								</div>
-
-								<div>
-									<label className="block text-sm font-medium text-gray-700 mb-1">
-										Tanggal Lahir
-									</label>
-									<p className="text-sm text-gray-900 bg-gray-50 p-2 rounded">
-										{pengurus.tanggal_lahir
-											? new Date(pengurus.tanggal_lahir).toLocaleDateString(
-													"id-ID",
-												)
-											: "-"}
-									</p>
-								</div>
-
-								<div>
-									<label className="block text-sm font-medium text-gray-700 mb-1">
-										Status Perkawinan
-									</label>
-									<p className="text-sm text-gray-900 bg-gray-50 p-2 rounded">
-										{pengurus.status_perkawinan || "-"}
-									</p>
-								</div>
-
-								<div>
-									<label className="block text-sm font-medium text-gray-700 mb-1">
-										Pendidikan
-									</label>
-									<p className="text-sm text-gray-900 bg-gray-50 p-2 rounded">
-										{pengurus.pendidikan || "-"}
-									</p>
-								</div>
-
-								<div>
-									<label className="block text-sm font-medium text-gray-700 mb-1">
-										Agama
-									</label>
-									<p className="text-sm text-gray-900 bg-gray-50 p-2 rounded">
-										{pengurus.agama || "-"}
-									</p>
-								</div>
-
-								<div>
-									<label className="block text-sm font-medium text-gray-700 mb-1">
-										Golongan Darah
-									</label>
-									<p className="text-sm text-gray-900 bg-gray-50 p-2 rounded">
-										{pengurus.golongan_darah || "-"}
-									</p>
-								</div>
-
 								{pengurus.nomor_buku_nikah && (
-									<div>
-										<label className="block text-sm font-medium text-gray-700 mb-1">
-											Nomor Buku Nikah
-										</label>
-										<p className="text-sm text-gray-900 bg-gray-50 p-2 rounded">
-											{pengurus.nomor_buku_nikah}
-										</p>
-									</div>
+									<ProfileItem icon={FaFileAlt} label="Nomor Buku Nikah" value={pengurus.nomor_buku_nikah} />
 								)}
 							</div>
-						</div>
 
-						{/* Position Information */}
-						<div className="bg-gradient-to-br from-purple-50 via-violet-50 to-indigo-50 rounded-2xl shadow-sm border-2 border-purple-100 p-6">
-							<div className="flex items-center gap-3 mb-6">
-								<div className="w-10 h-10 bg-gradient-to-br from-purple-500 to-indigo-600 rounded-xl flex items-center justify-center shadow-lg">
-									<FaCalendarAlt className="text-white w-5 h-5" />
+							{/* Kontak & Domisili */}
+							<div className="mt-6 bg-blue-50 rounded-xl p-4">
+								<div className="flex items-center gap-2 mb-3">
+									<div className="w-7 h-7 rounded-lg bg-blue-500 flex items-center justify-center">
+										<FaPhone className="text-white w-3.5 h-3.5" />
+									</div>
+									<h3 className="text-sm font-bold text-gray-900">Kontak &amp; Domisili</h3>
 								</div>
-								<h3 className="text-lg font-bold text-gray-900">Informasi Jabatan</h3>
-							</div>
-
-							<div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-								<div>
-									<label className="block text-sm font-medium text-gray-700 mb-1">
-										Tanggal Mulai Jabatan
-									</label>
-									<p className="text-sm text-gray-900 bg-gray-50 p-2 rounded">
-										{pengurus.tanggal_mulai_jabatan
-											? new Date(
-													pengurus.tanggal_mulai_jabatan,
-												).toLocaleDateString("id-ID")
-											: "-"}
-									</p>
-								</div>
-
-								<div>
-									<label className="block text-sm font-medium text-gray-700 mb-1">
-										Tanggal Akhir Jabatan
-									</label>
-									<p className="text-sm text-gray-900 bg-gray-50 p-2 rounded">
-										{pengurus.tanggal_akhir_jabatan
-											? new Date(
-													pengurus.tanggal_akhir_jabatan,
-												).toLocaleDateString("id-ID")
-											: "-"}
-									</p>
-								</div>
-
-								<div className="md:col-span-2">
-									<label className="block text-sm font-medium text-gray-700 mb-1">
-										Status Verifikasi
-									</label>
-									<div className="flex items-center space-x-2">
-										<span
-											className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-												pengurus.status_verifikasi === "verified"
-													? "bg-green-100 text-green-800"
-													: pengurus.status_verifikasi === "ditolak"
-														? "bg-red-100 text-red-800"
-														: "bg-yellow-100 text-yellow-800"
-											}`}
-										>
-											{pengurus.status_verifikasi === "verified"
-												? "Terverifikasi"
-												: pengurus.status_verifikasi === "ditolak"
-													? "Verifikasi Ditolak"
-													: "Belum Verifikasi"}
-										</span>
-									</div>
-								</div>
-
-								{/* Catatan Verifikasi */}
-								{pengurus.catatan_verifikasi && pengurus.status_verifikasi !== "verified" && (
-									<div className="md:col-span-2">
-										<div className="p-3 bg-amber-50 border border-amber-200 rounded-lg">
-											<p className="text-sm font-semibold text-amber-800 mb-1">📝 Catatan Verifikasi</p>
-											<p className="text-sm text-amber-700">{pengurus.catatan_verifikasi}</p>
-											{pengurus.verifikator_nama && (
-												<p className="text-xs text-amber-600 mt-2">
-													— {pengurus.verifikator_nama}
-													{pengurus.verified_at && `, ${new Date(pengurus.verified_at).toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" })}`}
-												</p>
-											)}
-										</div>
-									</div>
-								)}
-
-								{/* Ajukan Ulang Verifikasi - For desa when ditolak */}
-								{pengurus.status_verifikasi === "ditolak" && !isSuperAdmin() && !isAdminBidangPMD() && !isKecamatanUser && (
-									<div className="md:col-span-2">
-										<button
-											onClick={handleAjukanUlangPengurus}
-											disabled={updating}
-											className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium bg-blue-50 text-blue-700 hover:bg-blue-100 border border-blue-200 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
-										>
-											<svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-												<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-											</svg>
-											{updating ? "Memproses..." : "Ajukan Ulang Verifikasi"}
-										</button>
-										<p className="text-xs text-gray-500 mt-1">Klik setelah memperbaiki data sesuai catatan di atas</p>
-									</div>
-								)}
-							</div>
-						</div>
-
-						{/* Informasi Rekening */}
-							<div className="bg-gradient-to-br from-sky-50 via-blue-50 to-cyan-50 rounded-2xl shadow-sm border-2 border-sky-100 p-6">
-								<div className="flex items-center gap-3 mb-6">
-									<div className="w-10 h-10 bg-gradient-to-br from-sky-500 to-blue-600 rounded-xl flex items-center justify-center shadow-lg">
-										<FaUniversity className="text-white w-5 h-5" />
-									</div>
-									<div>
-										<h3 className="text-lg font-bold text-gray-900">Informasi Rekening</h3>
-										<p className="text-sm text-gray-600">Data rekening untuk keperluan insentif</p>
-									</div>
-								</div>
-								<div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-									<div>
-										<label className="block text-sm font-medium text-gray-700 mb-1">Nama Bank</label>
-										<p className="text-sm text-gray-900 bg-white/70 backdrop-blur-sm border-2 border-sky-100 p-3 rounded-lg font-medium">
-											{pengurus.nama_bank || "-"}
-										</p>
-									</div>
-									<div>
-										<label className="block text-sm font-medium text-gray-700 mb-1">Nomor Rekening</label>
-										<p className="text-sm text-gray-900 bg-white/70 backdrop-blur-sm border-2 border-sky-100 p-3 rounded-lg font-mono tracking-wider">
-											{pengurus.nomor_rekening || "-"}
-										</p>
-									</div>
-									<div>
-										<label className="block text-sm font-medium text-gray-700 mb-1">Nama Pemilik Rekening</label>
-										<p className="text-sm text-gray-900 bg-white/70 backdrop-blur-sm border-2 border-sky-100 p-3 rounded-lg font-medium">
-											{pengurus.nama_rekening || "-"}
-										</p>
-									</div>
+								<div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+									<ProfileItem icon={FaPhone} label="No. Telepon" value={pengurus.no_telepon} iconClass="bg-white text-blue-500" />
+									<ProfileItem icon={FaMapMarkerAlt} label="Alamat" value={pengurus.alamat} iconClass="bg-white text-blue-500" />
 								</div>
 							</div>
-
-						{/* SK Pengangkatan */}
-						<div className="bg-gradient-to-br from-amber-50 via-orange-50 to-yellow-50 rounded-2xl shadow-sm border-2 border-amber-100 p-6">
-							<div className="flex items-center gap-3 mb-6">
-								<div className="w-10 h-10 bg-gradient-to-br from-amber-500 to-orange-600 rounded-xl flex items-center justify-center shadow-lg">
-									<FaFileAlt className="text-white w-5 h-5" />
-								</div>
-								<div>
-									<h3 className="text-lg font-bold text-gray-900">SK Pengangkatan</h3>
-									<p className="text-sm text-gray-600">Produk hukum dasar jabatan</p>
-								</div>
-							</div>
-
-							{pengurus.produk_hukum ? (
-								<div className="p-5 rounded-xl bg-white/70 backdrop-blur-sm border-2 border-green-200 hover:shadow-lg transition-all duration-300">
-									<div className="flex items-start space-x-3">
-										<div className="mt-1 w-10 h-10 bg-gradient-to-br from-green-500 to-emerald-600 rounded-lg flex items-center justify-center flex-shrink-0 shadow-md">
-											<svg
-												className="w-6 h-6 text-white"
-												fill="none"
-												stroke="currentColor"
-												viewBox="0 0 24 24"
-											>
-												<path
-													strokeLinecap="round"
-													strokeLinejoin="round"
-													strokeWidth={2}
-													d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
-												/>
-											</svg>
-										</div>
-										<div className="flex-1">
-											<div className="space-y-3">
-												<div>
-													<p className="text-xs font-semibold text-green-700 mb-1">SK Terpilih</p>
-													<h4 className="font-bold text-gray-900 text-base mb-1">
-														Nomor {pengurus.produk_hukum.nomor} Tahun {pengurus.produk_hukum.tahun}
-													</h4>
-													<p className="text-gray-700 leading-relaxed text-sm">
-														{pengurus.produk_hukum.judul}
-													</p>
-												</div>
-
-												<div className="flex items-center justify-between pt-3 border-t-2 border-green-100">
-													<div className="text-xs">
-														<span className="font-semibold text-gray-700">Jenis:</span>{" "}
-														<span className="text-green-700 font-medium">{pengurus.produk_hukum.jenis}</span>
-													</div>
-													<button
-														onClick={() =>
-															navigate(
-																isSuperAdmin() || isAdminBidangPMD()
-																	? `/bidang/pmd/produk-hukum/${pengurus.produk_hukum_id}`
-																	: `/desa/produk-hukum/${pengurus.produk_hukum_id}`,
-															)
-														}
-														className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-green-600 to-emerald-600 text-white text-xs font-semibold rounded-lg hover:from-green-700 hover:to-emerald-700 transition-all duration-200 shadow-md hover:shadow-lg"
-													>
-														<FaExternalLinkAlt className="w-3 h-3" />
-														<span>Lihat Detail SK</span>
-													</button>
-												</div>
-											</div>
-										</div>
-									</div>
-								</div>
-							) : (
-								<div className="p-5 rounded-xl bg-white/70 backdrop-blur-sm border-2 border-yellow-200">
-									<div className="flex items-start space-x-3">
-										<div className="mt-1 w-10 h-10 bg-gradient-to-br from-yellow-500 to-amber-600 rounded-lg flex items-center justify-center flex-shrink-0 shadow-md">
-											<svg
-												className="w-6 h-6 text-white"
-												fill="none"
-												stroke="currentColor"
-												viewBox="0 0 24 24"
-											>
-												<path
-													strokeLinecap="round"
-													strokeLinejoin="round"
-													strokeWidth={2}
-													d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16c-.77.833.192 2.5 1.732 2.5z"
-												/>
-											</svg>
-										</div>
-										<div className="flex-1">
-											<h4 className="font-bold text-yellow-800 text-sm mb-1.5">
-												Belum Terhubung dengan SK Pengangkatan
-											</h4>
-											<p className="text-yellow-700 text-xs leading-relaxed">
-												Pengurus ini belum memiliki SK pengangkatan yang
-												terdaftar. Silakan hubungi admin untuk melengkapi
-												dokumen legal.
-											</p>
-										</div>
-									</div>
-								</div>
-							)}
 						</div>
 					</div>
+
+					<PengurusBpjsCard pengurusId={pengurusId} nik={pengurus.nik} />
+
+					<SectionCard
+						icon={FaHistory}
+						title="Log Aktivitas"
+						subtitle="Riwayat perubahan data pengurus"
+						tone="slate"
+					>
+						<PengurusActivityLog logs={activityLogs} />
+					</SectionCard>
+				</div>
+
+				{/* Detail */}
+				<div className="lg:col-span-2 space-y-5">
+					<div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-5">
+						<PengurusTimeline pengurus={pengurus} logs={activityLogs} />
+					</div>
+
+					<SectionCard
+						icon={FaFileAlt}
+						title="SK Pengangkatan"
+						subtitle="Produk hukum dasar jabatan"
+						tone="amber"
+					>
+						{pengurus.produk_hukum ? (
+							<div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 rounded-xl bg-green-50 border border-green-200">
+								<div>
+									<p className="text-xs font-semibold text-green-700 mb-1">SK Terpilih · {pengurus.produk_hukum.jenis}</p>
+									<h4 className="font-bold text-gray-900">
+										Nomor {pengurus.produk_hukum.nomor} Tahun {pengurus.produk_hukum.tahun}
+									</h4>
+									<p className="text-sm text-gray-700 mt-0.5">{pengurus.produk_hukum.judul}</p>
+								</div>
+								<button
+									onClick={() =>
+										navigate(
+											isSuperAdmin() || isAdminBidangPMD()
+												? `/bidang/pmd/produk-hukum/${pengurus.produk_hukum_id}`
+												: `/desa/produk-hukum/${pengurus.produk_hukum_id}`,
+										)
+									}
+									className="inline-flex items-center gap-2 px-4 py-2 bg-green-600 text-white text-xs font-semibold rounded-lg hover:bg-green-700 transition-colors flex-shrink-0"
+								>
+									<FaExternalLinkAlt className="w-3 h-3" />
+									<span>Lihat Detail SK</span>
+								</button>
+							</div>
+						) : (
+							<div className="p-4 rounded-xl bg-yellow-50 border border-yellow-200">
+								<h4 className="font-bold text-yellow-800 text-sm mb-1">
+									Belum Terhubung dengan SK Pengangkatan
+								</h4>
+								<p className="text-yellow-700 text-xs leading-relaxed">
+									Pengurus ini belum memiliki SK pengangkatan yang terdaftar. Silakan hubungi admin untuk
+									melengkapi dokumen legal.
+								</p>
+							</div>
+						)}
+					</SectionCard>
+
+					<SectionCard
+						icon={FaCalendarAlt}
+						title="Informasi Jabatan"
+						tone="purple"
+						onEdit={canEditPengurus ? handleEdit : null}
+						editDisabled={!isEditMode}
+					>
+						<div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+							<InfoField label="Jabatan" value={pengurus.jabatan} />
+							<InfoField label="Status Verifikasi">
+								<span
+									className={`inline-flex px-2.5 py-0.5 text-xs font-semibold rounded-full ${
+										pengurus.status_verifikasi === "verified"
+											? "bg-green-100 text-green-800"
+											: pengurus.status_verifikasi === "ditolak"
+												? "bg-red-100 text-red-800"
+												: "bg-yellow-100 text-yellow-800"
+									}`}
+								>
+									{pengurus.status_verifikasi === "verified"
+										? "Terverifikasi"
+										: pengurus.status_verifikasi === "ditolak"
+											? "Verifikasi Ditolak"
+											: "Belum Verifikasi"}
+								</span>
+							</InfoField>
+							<InfoField label="Tanggal Mulai Jabatan" value={formatTanggal(pengurus.tanggal_mulai_jabatan)} />
+							<InfoField label="Tanggal Akhir Jabatan" value={formatTanggal(pengurus.tanggal_akhir_jabatan)} />
+						</div>
+
+						{/* Catatan Verifikasi */}
+						{pengurus.catatan_verifikasi && pengurus.status_verifikasi !== "verified" && (
+							<div className="mt-4 p-3 bg-amber-50 border border-amber-200 rounded-lg">
+								<p className="text-sm font-semibold text-amber-800 mb-1">📝 Catatan Verifikasi</p>
+								<p className="text-sm text-amber-700">{pengurus.catatan_verifikasi}</p>
+								{pengurus.verifikator_nama && (
+									<p className="text-xs text-amber-600 mt-2">
+										— {pengurus.verifikator_nama}
+										{pengurus.verified_at && `, ${formatTanggal(pengurus.verified_at)}`}
+									</p>
+								)}
+							</div>
+						)}
+
+						{/* Ajukan Ulang Verifikasi - For desa when ditolak */}
+						{pengurus.status_verifikasi === "ditolak" && user?.role === "desa" && (
+							<div className="mt-4">
+								<button
+									onClick={handleAjukanUlangPengurus}
+									disabled={updating}
+									className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium bg-blue-50 text-blue-700 hover:bg-blue-100 border border-blue-200 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+								>
+									<svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+										<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+									</svg>
+									{updating ? "Memproses..." : "Ajukan Ulang Verifikasi"}
+								</button>
+								<p className="text-xs text-gray-500 mt-1">Klik setelah memperbaiki data sesuai catatan di atas</p>
+							</div>
+						)}
+					</SectionCard>
+
+					<SectionCard
+						icon={FaUniversity}
+						title="Informasi Rekening"
+						subtitle="Data rekening untuk keperluan insentif"
+						tone="blue"
+						onEdit={canEditPengurus ? handleEdit : null}
+						editDisabled={!isEditMode}
+					>
+						<div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+							<StackedField label="Nama Bank" value={pengurus.nama_bank} />
+							<StackedField label="Nomor Rekening" value={pengurus.nomor_rekening} mono />
+							<StackedField label="Nama Pemilik Rekening" value={pengurus.nama_rekening} />
+						</div>
+					</SectionCard>
 				</div>
 			</div>
 		</div>

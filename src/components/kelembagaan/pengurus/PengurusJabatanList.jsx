@@ -69,8 +69,8 @@ const VerifikasiBadge = ({ status }) => {
 
 // Baris satu pengurus
 const PengurusRow = ({ pengurus, user }) => {
-	const hasPhone = pengurus.telepon;
-	const hasPhone2 = pengurus.no_hp || pengurus.telepon2;
+	const hasPhone = pengurus.no_telepon;
+	const hasPhone2 = null; // ponytail: pengurus cuma punya satu kolom telepon (no_telepon)
 
 	return (
 		<div className="flex items-center gap-3 px-4 py-2.5 hover:bg-gray-50 transition-colors">
@@ -102,7 +102,7 @@ const PengurusRow = ({ pengurus, user }) => {
 						{hasPhone && (
 							<span className="flex items-center gap-1 text-xs text-gray-400">
 								<LuPhone className="w-3 h-3" />
-								{pengurus.telepon}
+								{pengurus.no_telepon}
 							</span>
 						)}
 						{hasPhone2 && (

@@ -197,3 +197,6 @@ export const getPengurusTransferTargets = (targetDesaId = null) =>
 
 export const transferPengurus = (id, payload) =>
 	api.put(`${transferPrefix()}/pengurus/${id}/transfer`, payload);
+
+// Status BPJS bulan berjalan (khusus Ketua RT/RW; selain itu eligible=false)
+export const getPengurusBpjs = (id) => api.get(`/kelembagaan/pengurus/${id}/bpjs`);

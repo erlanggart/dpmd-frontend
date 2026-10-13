@@ -1,13 +1,14 @@
-import React from "react";
-import { LuLoader } from "react-icons/lu";
+import React, { useState } from "react";
+import { LuLoader, LuChevronDown, LuUserCheck } from "react-icons/lu";
 
+// Warna per lembaga — samakan dengan ChartVerifikasiTahunan.jsx
 const COLORS = {
-  rw: { border: "#0f172a" },
-  rt: { border: "#334155" },
-  posyandu: { border: "#64748b" },
-  karangTaruna: { border: "#94a3b8" },
-  lpm: { border: "#b91c1c" },
-  pkk: { border: "#94a3b8" },
+  rw: { border: "#2563eb" },
+  rt: { border: "#0891b2" },
+  posyandu: { border: "#db2777" },
+  karangTaruna: { border: "#f59e0b" },
+  lpm: { border: "#7c3aed" },
+  pkk: { border: "#16a34a" },
 };
 
 const VERIFIKASI_KEYS = ["rw", "rt", "posyandu", "karangTaruna", "lpm", "pkk"];
@@ -30,6 +31,56 @@ const PersentaseBar = ({ label, verified, total, color }) => {
       <div className="w-12 text-right text-xs font-semibold" style={{ color }}>
         {pct}%
       </div>
+    </div>
+  );
+};
+
+const DaftarVerifikator = ({ verifikator }) => {
+  const [open, setOpen] = useState(false);
+
+  return (
+    <div className="mt-4 border border-slate-200 rounded-lg">
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        aria-expanded={open}
+        className="w-full flex items-center justify-between gap-2 px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50 rounded-lg transition-colors"
+      >
+        <span className="flex items-center gap-2">
+          <LuUserCheck className="w-4 h-4 text-indigo-600" />
+          Verifikator ({verifikator.length})
+        </span>
+        <LuChevronDown className={`w-4 h-4 transition-transform ${open ? "rotate-180" : ""}`} />
+      </button>
+
+      {open && (
+        <div className="border-t border-slate-200 px-4 py-2">
+          {verifikator.length === 0 ? (
+            <p className="text-sm text-slate-500 py-2 text-center">Belum ada data verifikasi.</p>
+          ) : (
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="text-xs text-slate-500">
+                  <th className="text-left font-medium py-2">Nama</th>
+                  <th className="text-right font-medium py-2 w-20">Lembaga</th>
+                  <th className="text-right font-medium py-2 w-20">Pengurus</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {verifikator.map((v) => (
+                  <tr key={v.nama ?? "_tanpa_nama"}>
+                    <td className={`py-2 ${v.nama ? "text-slate-800 font-medium" : "text-slate-400 italic"}`}>
+                      {v.nama || "Tidak tercatat (data lama)"}
+                    </td>
+                    <td className="py-2 text-right font-semibold text-slate-900">{v.lembaga}</td>
+                    <td className="py-2 text-right font-semibold text-slate-900">{v.pengurus}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </div>
+      )}
     </div>
   );
 };
@@ -90,6 +141,8 @@ const CapaianVerifikasiLembaga = ({ data, loading, error }) => {
           {grand_totals.persentase_verifikasi}%
         </div>
       </div>
+
+      <DaftarVerifikator verifikator={data.verifikator || []} />
     </div>
   );
 };

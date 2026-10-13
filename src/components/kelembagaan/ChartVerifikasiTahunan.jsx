@@ -20,10 +20,11 @@ ChartJS.register(
   Legend
 );
 
+// Warna per lembaga — samakan dengan CapaianVerifikasiLembaga.jsx
 const COLORS = {
-  rw: { border: "#0f172a", bg: "rgba(15, 23, 42, 0.15)" },
-  rt: { border: "#334155", bg: "rgba(51, 65, 85, 0.15)" },
-  posyandu: { border: "#64748b", bg: "rgba(100, 116, 139, 0.15)" },
+  rw: { border: "#2563eb" },
+  rt: { border: "#0891b2" },
+  posyandu: { border: "#db2777" },
 };
 
 const CHART_KEYS = ["rw", "rt", "posyandu"];
