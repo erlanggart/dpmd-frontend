@@ -11,10 +11,17 @@ import {
   LuFilter,
   LuSearch,
   LuShieldCheck,
+  LuUpload,
   LuX,
 } from "react-icons/lu";
 import * as XLSX from "xlsx";
 import api from "../../../api";
+import { useAuth } from "../../../context/AuthContext";
+import RtrwImportModal from "./RtrwImportModal";
+
+// Harus sama dengan RTRW_IMPORT_ROLES di routes/kelembagaan.routes.js — kalau
+// berbeda, tombol muncul untuk user yang nanti ditolak 403 oleh backend.
+const IMPORT_ROLES = ["superadmin", "pemerintahan_desa", "kepala_bidang", "kepala_dinas"];
 
 const STATUS_CONFIG = {
   all_three: {
@@ -911,6 +918,9 @@ const RtrwComparisonPage = () => {
   const [expandedDesa, setExpandedDesa] = useState(new Set());
   const [listModal, setListModal] = useState(null);
   const [exporting, setExporting] = useState(false);
+  const [showImport, setShowImport] = useState(false);
+  const { user } = useAuth();
+  const canImport = IMPORT_ROLES.includes(String(user?.role || "").trim().toLowerCase());
 
   useEffect(() => {
     fetchData();
@@ -1118,11 +1128,22 @@ const RtrwComparisonPage = () => {
 
   return (
     <div className="space-y-6 p-4 md:p-6">
-      <div>
-        <h1 className="text-2xl font-bold text-gray-900">Persandingan Data RT/RW</h1>
-        <p className="mt-1 text-gray-500">
-          Perbandingan Ketua RT/RW dari Database, penerima insentif ADD, dan peserta BPJS
-        </p>
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">Persandingan Data RT/RW</h1>
+          <p className="mt-1 text-gray-500">
+            Perbandingan Ketua RT/RW dari Database, penerima insentif ADD, dan peserta BPJS
+          </p>
+        </div>
+        {canImport && (
+          <button
+            onClick={() => setShowImport(true)}
+            className="flex items-center gap-1.5 rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 text-xs font-medium text-blue-700 transition-colors hover:bg-blue-100"
+          >
+            <LuUpload className="h-3.5 w-3.5" />
+            Import Excel
+          </button>
+        )}
       </div>
 
       <div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-5">
@@ -1218,6 +1239,13 @@ const RtrwComparisonPage = () => {
 
       {listModal && (
         <EmptyListModal title={listModal.title} list={listModal.list} onClose={() => setListModal(null)} />
+      )}
+
+      {showImport && (
+        <RtrwImportModal
+          onClose={() => setShowImport(false)}
+          onImported={fetchData}
+        />
       )}
 
       <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-5">
