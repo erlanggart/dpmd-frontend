@@ -358,12 +358,25 @@ const buildClassification = (data) => {
     .filter((r) => !r.adaDiMaster)
     .sort((a, b) => a.desaKode.localeCompare(b.desaKode) || String(a.nama).localeCompare(String(b.nama)));
 
+  // Peserta BPJS yang tidak bisa dipetakan ke desa mana pun di database, jadi
+  // tidak pernah muncul di persandingan. Baris ini tidak punya desa/kecamatan,
+  // jadi dua tingkat pengelompokan ClassifiedTable dipakai ulang:
+  // kecamatanNama -> sebab, desaKode/desaNama -> ID_PEGAWAI.
+  const bpjsUnmappable = (data?.bpjsUnmappable || []).map((r) => ({
+    ...r,
+    kecamatanNama: r.sebabLabel || "Tidak diketahui",
+    desaKode: r.idPegawai || "(kosong)",
+    desaNama: r.idPegawai || "(kosong)",
+    barisExcelLabel: r.barisExcel ? `Baris ${r.barisExcel}` : "",
+  }));
+
   return {
     dbBpjs, nikBerbeda, desaBerbeda, nikInvalid, bpjsNoDb, dbNoBpjs, dbNoBpjsAdd, dbNoBpjsNoAdd, bpjsCocokAdd,
     dbBpjsAktif, dbBpjsNonAktif,
     bpjsNoDbAktif, bpjsNoDbNonAktif,
     dbNoBpjsBaruAda, dbNoBpjsBaruTidak,
     statusAktif, statusNonAktif, statusBaru, statusSelisih,
+    bpjsUnmappable,
   };
 };
 
@@ -448,6 +461,27 @@ const TAB_DEFS = [
       { key: "nik", label: "NIK" },
       { key: "nikInvalidLabel", label: "Sebab" },
       { key: "kandidatNik", label: "Kandidat di Database (desa lain)" },
+    ],
+  },
+  {
+    id: "bpjs_unmappable",
+    label: "Tidak Terpetakan",
+    bucket: "bpjsUnmappable",
+    title: "Data BPJS Tidak Terpetakan",
+    description: "Peserta BPJS yang ID_PEGAWAI-nya tidak bisa dipetakan ke desa mana pun di database, sehingga tidak ikut terhitung di seluruh persandingan. Dikelompokkan per sebab, lalu per ID_PEGAWAI. Perlu perbaikan data di sumber BPJS.",
+    groupAllLabel: "Semua Sebab",
+    searchPlaceholder: "Cari nama, NIK, atau ID_PEGAWAI...",
+    columns: [
+      COL_DESA,
+      { key: "idPegawai", label: "ID_PEGAWAI" },
+      { key: "nama", label: "Nama" },
+      { key: "nik", label: "NIK" },
+      { key: "kpj", label: "KPJ" },
+      { key: "tglLahir", label: "Tgl Lahir" },
+      { key: "upah", label: "Upah", type: "currency", align: "right" },
+      { key: "barisExcelLabel", label: "Baris Excel" },
+      { key: "sebabLabel", label: "Sebab" },
+      { key: "petunjukLabel", label: "NIK ada di Database" },
     ],
   },
   {
@@ -681,6 +715,7 @@ const TAB_COLOR = {
   db_no_bpjs: "gray",
   bpjs_add: "indigo",
   bpjs_nik_invalid: "red",
+  bpjs_unmappable: "rose",
   db_bpjs_aktif: "green",
   db_bpjs_non_aktif: "green",
   bpjs_nodb_aktif: "amber",
@@ -702,6 +737,7 @@ const TAB_ACTIVE_CLASS = {
   gray: "border-gray-500 bg-gray-100 ring-1 ring-gray-300",
   indigo: "border-indigo-500 bg-indigo-50 ring-1 ring-indigo-300",
   sky: "border-sky-500 bg-sky-50 ring-1 ring-sky-300",
+  rose: "border-rose-500 bg-rose-50 ring-1 ring-rose-300",
 };
 
 const TAB_VALUE_CLASS = {
@@ -713,6 +749,7 @@ const TAB_VALUE_CLASS = {
   gray: "text-gray-700",
   indigo: "text-indigo-700",
   sky: "text-sky-700",
+  rose: "text-rose-700",
 };
 
 // Kartu tab dikelompokkan menjadi "kolam" (pool). mainTab = tab yang dibuka saat
@@ -743,6 +780,15 @@ const POOLS = [
     mainTab: "bpjs_no_db",
     subTabs: ["bpjs_no_db", "bpjs_add", "bpjs_nodb_aktif", "bpjs_nodb_non_aktif", "bpjs_nik_invalid"],
     count: (tc) => (tc.bpjs_no_db || 0) + (tc.bpjs_add || 0),
+  },
+  {
+    id: "bpjs_unmappable_pool",
+    label: "Data Tidak Terpetakan",
+    subtitle: "ID_PEGAWAI tak dikenal database — di luar seluruh perhitungan",
+    color: "rose",
+    mainTab: "bpjs_unmappable",
+    subTabs: [],
+    count: (tc) => tc.bpjs_unmappable || 0,
   },
   {
     id: "db_no_bpjs_pool",
@@ -1034,6 +1080,7 @@ const RtrwComparisonPage = () => {
     nik_berbeda: classification.nikBerbeda.length,
     desa_berbeda: classification.desaBerbeda.length,
     bpjs_nik_invalid: classification.nikInvalid.length,
+    bpjs_unmappable: classification.bpjsUnmappable.length,
     bpjs_no_db: classification.bpjsNoDb.length,
     db_no_bpjs: classification.dbNoBpjs.length,
     db_no_bpjs_no_add: classification.dbNoBpjsNoAdd.length,
@@ -1343,7 +1390,13 @@ const RtrwComparisonPage = () => {
           description={activeTabDef.description}
           rows={classification[activeTabDef.bucket]}
           columns={activeTabDef.columns}
-          kecamatanList={kecamatanList}
+          // Tab yang tidak berbasis wilayah (mis. Tidak Terpetakan) menurunkan
+          // daftar grupnya dari baris itu sendiri, bukan dari daftar kecamatan.
+          kecamatanList={activeTabDef.groupAllLabel
+            ? [...new Set((classification[activeTabDef.bucket] || []).map((row) => row.kecamatanNama))].sort()
+            : kecamatanList}
+          groupAllLabel={activeTabDef.groupAllLabel}
+          searchPlaceholder={activeTabDef.searchPlaceholder}
           filenameBase={activeTabDef.id}
           detailType={activeTabDef.detail}
         />
@@ -2069,7 +2122,10 @@ const renderClassifiedCell = (col, row) => {
   }
 };
 
-const ClassifiedTable = ({ title, description, rows, columns, kecamatanList, filenameBase, detailType }) => {
+const ClassifiedTable = ({ title, description, rows, columns, kecamatanList, filenameBase, detailType,
+  // Tab "Tidak Terpetakan" memakai tabel ini tapi datanya tidak punya desa;
+  // pengelompokan dua tingkatnya dipakai ulang untuk sebab -> ID_PEGAWAI.
+  groupAllLabel = "Semua Kecamatan", searchPlaceholder = "Cari desa, nama, atau NIK..." }) => {
   const [search, setSearch] = useState("");
   const [kecamatan, setKecamatan] = useState("");
   const [openKec, setOpenKec] = useState(() => new Set());
@@ -2234,7 +2290,7 @@ const ClassifiedTable = ({ title, description, rows, columns, kecamatanList, fil
             <LuSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
             <input
               type="text"
-              placeholder="Cari desa, nama, atau NIK..."
+              placeholder={searchPlaceholder}
               value={search}
               onChange={(event) => setSearch(event.target.value)}
               className="w-full rounded-lg border border-gray-300 py-2 pl-10 pr-4 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500"
@@ -2245,7 +2301,7 @@ const ClassifiedTable = ({ title, description, rows, columns, kecamatanList, fil
             onChange={(event) => setKecamatan(event.target.value)}
             className="rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500"
           >
-            <option value="">Semua Kecamatan</option>
+            <option value="">{groupAllLabel}</option>
             {kecamatanList.map((kec) => (
               <option key={kec} value={kec}>{kec}</option>
             ))}
