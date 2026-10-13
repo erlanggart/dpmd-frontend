@@ -18,6 +18,7 @@ import {
   AlertTriangle,
   BadgeCheck,
   CalendarDays,
+  Loader2,
   MapPin,
   Users,
   UserSquare2
@@ -127,8 +128,25 @@ const RingkasanTab = ({ data, memuat, galat, onUlang }) => {
   // populasi yang berbeda.
   const totalTerbaca = data.total_terbaca ?? total;
 
+  // Rincian (desa, petugas, koordinat, tren) hanya lahir dari penyusuran
+  // baris. Sebelum penyusuran pertama selesai, nilainya null — dan null yang
+  // ditulis sebagai "0" atau "0%" terbaca sebagai fakta ("tidak ada desa"),
+  // padahal artinya "belum dihitung".
+  const rincianMenyusul = data.rincian_siap === false;
+
   return (
     <div className="space-y-4">
+      {rincianMenyusul && (
+        <div role="status" className="flex items-start gap-3 rounded-2xl border border-sky-200 bg-sky-50/70 px-4 py-3">
+          <Loader2 className="mt-0.5 h-4 w-4 flex-shrink-0 animate-spin text-sky-500" />
+          <p className="text-xs leading-relaxed text-slate-700">
+            <span className="font-semibold text-slate-900">Rincian sedang disusun dari ASTA DESA.</span> Angka keluarga
+            terdata dan sebaran per kecamatan di bawah sudah resmi; jumlah desa, petugas, koordinat, dan laju harian
+            menyusul dalam beberapa menit. Halaman ini memperbarui sendiri — tidak perlu dimuat ulang.
+          </p>
+        </div>
+      )}
+
       {/*
         Peringatan ini hanya menyebut RINCIAN di bawahnya — rekap kecamatan,
         tren, produktivitas petugas — bukan angka "Keluarga Terdata" di atas.
@@ -178,25 +196,35 @@ const RingkasanTab = ({ data, memuat, galat, onUlang }) => {
           label="Kecamatan tercakup"
           nilai={data.total_kecamatan}
           warna={SERI[2]}
-          keterangan={`${angka(data.total_desa)} desa/kelurahan`}
+          keterangan={
+            data.total_desa === null || data.total_desa === undefined
+              ? 'Jumlah desa menyusul'
+              : `${angka(data.total_desa)} desa/kelurahan`
+          }
         />
         <KartuAngka
           icon={UserSquare2}
           label="Petugas mendata"
-          nilai={data.total_petugas}
+          nilai={data.total_petugas ?? '—'}
           warna={SERI[1]}
           keterangan={
             data.total_petugas
               ? `Rata-rata ${angka(Math.round(total / data.total_petugas))} keluarga/petugas`
-              : null
+              : rincianMenyusul
+                ? 'Menyusul'
+                : null
           }
         />
         <KartuAngka
           icon={BadgeCheck}
           label="Berkoordinat"
-          nilai={data.berkoordinat}
+          nilai={data.berkoordinat ?? '—'}
           warna={SERI[3]}
-          keterangan={`${persen(data.berkoordinat, totalTerbaca)} bisa dipetakan`}
+          keterangan={
+            data.berkoordinat === null || data.berkoordinat === undefined
+              ? 'Menyusul'
+              : `${persen(data.berkoordinat, totalTerbaca)} bisa dipetakan`
+          }
         />
         <KartuAngka
           icon={CalendarDays}
@@ -204,7 +232,9 @@ const RingkasanTab = ({ data, memuat, galat, onUlang }) => {
           nilai={laju ? laju.baru : '—'}
           warna={SERI[4]}
           keterangan={
-            laju?.selisih === null || laju?.selisih === undefined
+            rincianMenyusul
+              ? 'Menyusul'
+              : laju?.selisih === null || laju?.selisih === undefined
               ? 'Tidak ada pembanding periode sebelumnya'
               : `${laju.selisih >= 0 ? '+' : ''}${laju.selisih}% dari 30 hari sebelumnya`
           }
@@ -232,7 +262,9 @@ const RingkasanTab = ({ data, memuat, galat, onUlang }) => {
           </div>
         }
       >
-        {tren.length === 0 ? (
+        {tren.length === 0 && rincianMenyusul ? (
+          <Memuat pesan="Laju harian sedang disusun dari baris sensus — muncul sendiri begitu selesai." />
+        ) : tren.length === 0 ? (
           <Kosong pesan="Tidak ada tanggal pendataan yang bisa dibaca dari data sensus." />
         ) : (
           <div className="h-[260px] w-full">

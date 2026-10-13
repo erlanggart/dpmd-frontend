@@ -168,13 +168,17 @@ const AstaDesaPage = () => {
     return [
       { label: 'Keluarga terdata', value: angka(r.total_sensus) },
       { label: 'Kecamatan', value: angka(r.total_kecamatan) },
-      { label: 'Desa/kelurahan', value: angka(r.total_desa) },
+      // null = rincian belum disusun (lihat `rincian_siap`), BUKAN nol desa.
+      { label: 'Desa/kelurahan', value: r.total_desa == null ? 'menyusul' : angka(r.total_desa) },
       // Penyebutnya `total_terbaca`, BUKAN `total_sensus`. `total_sensus` kini
       // hitungan hidup dari server, sementara `berkoordinat` hanya bisa dihitung
       // dari baris yang benar-benar terbaca saat penyusuran. Membagi keduanya
       // berarti membandingkan dua populasi berbeda — persentasenya akan terus
       // terlihat turun tiap kali ada pendataan baru masuk.
-      { label: 'Berkoordinat', value: persen(r.berkoordinat, r.total_terbaca ?? r.total_sensus) }
+      {
+        label: 'Berkoordinat',
+        value: r.berkoordinat == null ? 'menyusul' : persen(r.berkoordinat, r.total_terbaca ?? r.total_sensus)
+      }
     ];
   }, [r]);
 
