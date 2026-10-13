@@ -54,6 +54,18 @@ export const clearLogoutFlag = () => {
  * ikut terbawa. Dipanggil saat logout DAN saat login.
  */
 export const clearApiResponseCache = async () => {
+  // Cadangan data Asta Desa (lihat pages/core-dashboard/asta-desa/useAstaDesa.js)
+  // ikut dibuang: isinya hanya agregat, tetapi tetap milik akun yang login.
+  // Awalannya ditulis ulang di sini, bukan diimpor, supaya modul sesi tidak
+  // ikut menarik kode halaman.
+  try {
+    Object.keys(localStorage)
+      .filter((k) => k.startsWith('dpmd:asta-desa:'))
+      .forEach((k) => localStorage.removeItem(k));
+  } catch {
+    // localStorage bisa diblokir; tidak ada yang perlu dibuang.
+  }
+
   if (typeof caches === 'undefined') return;
   try {
     const names = await caches.keys();

@@ -128,10 +128,14 @@ export const Galat = ({ pesan, onUlang }) => (
     <AlertTriangle className="h-7 w-7 text-amber-500" />
     <p className="mt-3 text-sm font-semibold text-slate-900">Data Asta Desa tidak bisa diambil</p>
     <p className="mt-1.5 max-w-lg text-sm leading-relaxed text-slate-600">{pesan}</p>
+    <p className="mt-1 text-xs text-slate-400">Halaman ini mencoba lagi sendiri — tidak perlu dimuat ulang.</p>
     {onUlang && (
       <button
         type="button"
-        onClick={() => onUlang(true)}
+        // 'segar', bukan paksa: mencoba lagi cukup menanyai server ulang.
+        // Paksa menyuruh server menyusuri ulang ratusan halaman ASTA DESA,
+        // dan itu tidak membuat permintaan yang ditolak menjadi diterima.
+        onClick={() => onUlang('segar')}
         className="mt-4 inline-flex items-center gap-2 rounded-lg bg-slate-900 px-3.5 py-2 text-xs font-semibold text-white transition-colors hover:bg-slate-800"
       >
         <RefreshCw className="h-3.5 w-3.5" />
@@ -140,6 +144,49 @@ export const Galat = ({ pesan, onUlang }) => (
     )}
   </div>
 );
+
+/**
+ * Pita "data tersimpan".
+ *
+ * Tampil saat angka di halaman berasal dari salinan terakhir yang berhasil,
+ * bukan dari ambil yang baru — karena server sedang menolak, atau karena
+ * pembaruannya masih berjalan. Angka lama tanpa keterangan itu menyesatkan;
+ * angka lama dengan jamnya tetap bisa dipakai.
+ */
+export const PitaBasi = ({ basi }) => {
+  if (!basi) return null;
+  const jam = new Date(basi.pada).toLocaleString('id-ID', {
+    day: 'numeric',
+    month: 'short',
+    hour: '2-digit',
+    minute: '2-digit'
+  });
+  const memperbarui = basi.memperbarui;
+  return (
+    <div
+      role="status"
+      className={`flex items-start gap-2.5 rounded-xl border px-3.5 py-2.5 text-xs leading-relaxed ${
+        memperbarui ? 'border-slate-200 bg-white text-slate-600' : 'border-amber-200 bg-amber-50/70 text-amber-900'
+      }`}
+    >
+      {memperbarui ? (
+        <Loader2 className="mt-0.5 h-3.5 w-3.5 flex-shrink-0 animate-spin text-slate-400" />
+      ) : (
+        <AlertTriangle className="mt-0.5 h-3.5 w-3.5 flex-shrink-0 text-amber-500" />
+      )}
+      <p>
+        {memperbarui ? (
+          <>Menampilkan data tersimpan ({jam}) sambil memperbarui…</>
+        ) : (
+          <>
+            <span className="font-semibold">Menampilkan data tersimpan ({jam}).</span>{' '}
+            {basi.pesan ? `${basi.pesan} ` : ''}Halaman ini memperbarui sendiri begitu server kembali menjawab.
+          </>
+        )}
+      </p>
+    </div>
+  );
+};
 
 /** Lencana kecil berlabel — warna selalu berdampingan dengan teksnya. */
 export const Lencana = ({ warna, anak, children }) => (

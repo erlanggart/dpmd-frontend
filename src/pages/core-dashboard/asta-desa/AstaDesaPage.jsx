@@ -35,7 +35,7 @@ import {
 } from 'lucide-react';
 import PageHeader from '../../../components/statistik/PageHeader';
 import { LEBAR_CORE } from '../lebarHalaman';
-import { Galat, Memuat, Panel } from './ui';
+import { Galat, Memuat, Panel, PitaBasi } from './ui';
 import { segarkanSemua, useAstaDesa } from './useAstaDesa';
 import { angka, persen } from './warna';
 import RingkasanTab from './RingkasanTab';
@@ -154,6 +154,14 @@ const AstaDesaPage = () => {
     setMenyegarkan(false);
   };
 
+  // Pita "data tersimpan" untuk data yang sedang dibaca di tab aktif. Status
+  // sambungan hanya ditampilkan bila ia sendiri yang gagal (bukan sekadar
+  // sedang diperbarui) — kalau tidak, pita itu berkedip tiap halaman dibuka.
+  const basi =
+    (tab === 'demografi' ? demografi.basi || kategoriSensus.basi : null) ||
+    ringkasan.basi ||
+    (status.basi && !status.basi.memperbarui ? status.basi : null);
+
   const r = ringkasan.data;
   const statHeader = useMemo(() => {
     if (!r) return [];
@@ -199,6 +207,8 @@ const AstaDesaPage = () => {
           <BelumDisetel />
         ) : (
           <>
+            <PitaBasi basi={basi} />
+
             {/* Tab. Di layar sempit berubah jadi baris yang bisa digeser
                 mendatar — bukan menyusut jadi teks mungil yang tak terbaca, dan
                 bukan menumpuk jadi enam baris yang mengusir isi halaman ke
