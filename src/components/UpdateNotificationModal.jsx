@@ -1,7 +1,7 @@
 import React, { useEffect } from 'react';
-import { RefreshCw, X, ShieldCheck } from 'lucide-react';
+import { RefreshCw, ShieldCheck } from 'lucide-react';
 
-const UpdateNotificationModal = ({ isOpen, onUpdate, onDismiss }) => {
+const UpdateNotificationModal = ({ isOpen, onUpdate }) => {
   // Inject animation keyframes on mount
   useEffect(() => {
     const styleId = 'update-modal-styles';
@@ -28,23 +28,15 @@ const UpdateNotificationModal = ({ isOpen, onUpdate, onDismiss }) => {
       className="fixed inset-0 flex items-center justify-center p-4"
       style={{ zIndex: 99999 }}
     >
-      {/* Backdrop */}
-      <div
-        className="absolute inset-0 bg-black/60 backdrop-blur-sm"
-        onClick={onDismiss}
-      />
+      {/* Backdrop — sengaja tidak bisa diklik untuk menutup: update wajib. */}
+      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
 
       {/* Modal */}
-      <div className="animate-update-scale-in relative mx-4 w-full max-w-sm overflow-hidden rounded-3xl bg-white shadow-2xl">
-        {/* Close */}
-        <button
-          onClick={onDismiss}
-          className="absolute right-3 top-3 z-10 flex h-9 w-9 items-center justify-center rounded-full text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600"
-          aria-label="Tutup"
-        >
-          <X className="h-5 w-5" />
-        </button>
-
+      <div
+        role="alertdialog"
+        aria-modal="true"
+        className="animate-update-scale-in relative mx-4 w-full max-w-sm overflow-hidden rounded-3xl bg-white shadow-2xl"
+      >
         {/* Ikon statis: lebih ringan daripada Lottie saat aplikasi baru dibuka */}
         <div className="flex justify-center bg-gradient-to-b from-blue-50 to-white pt-7">
           <div className="flex h-28 w-28 items-center justify-center rounded-[2rem] bg-gradient-to-br from-blue-500 to-cyan-400 text-white shadow-xl shadow-blue-500/20">
@@ -67,17 +59,13 @@ const UpdateNotificationModal = ({ isOpen, onUpdate, onDismiss }) => {
             Tenang, data login kamu tetap aman
           </span>
 
-          {/* Tombol */}
-          <div className="mt-6 flex gap-3">
-            <button
-              onClick={onDismiss}
-              className="flex-1 rounded-2xl bg-gray-100 px-4 py-3.5 text-sm font-semibold text-gray-600 transition-colors hover:bg-gray-200 active:bg-gray-300"
-            >
-              Nanti Aja
-            </button>
+          {/* Tombol — hanya satu. "Nanti Aja" dihapus: versi lama yang ditunda
+              berjam-jam membuat perbaikan yang sudah dirilis tidak sampai. */}
+          <div className="mt-6 flex">
             <button
               onClick={onUpdate}
-              className="flex flex-[1.4] items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-blue-500 to-blue-600 px-4 py-3.5 text-sm font-bold text-white shadow-lg shadow-blue-500/30 transition-all hover:from-blue-600 hover:to-blue-700 active:scale-[0.98]"
+              autoFocus
+              className="flex flex-1 items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-blue-500 to-blue-600 px-4 py-3.5 text-sm font-bold text-white shadow-lg shadow-blue-500/30 transition-all hover:from-blue-600 hover:to-blue-700 active:scale-[0.98]"
             >
               <RefreshCw className="h-4 w-4" />
               Update Sekarang

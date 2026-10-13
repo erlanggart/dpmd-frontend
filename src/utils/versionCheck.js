@@ -9,9 +9,12 @@
 
 const BUILD_HASH_KEY = 'app_build_hash';
 const LAST_UPDATE_KEY = 'app_last_update';
+// Sisa dari masa ketika update boleh ditunda ("Nanti Aja"). Update kini wajib:
+// versi lama yang bertahan berjam-jam berarti perbaikan yang sudah dirilis
+// tidak sampai ke perangkat yang paling membutuhkannya. Kuncinya hanya
+// dibersihkan, tidak lagi dibaca.
 const DISMISS_KEY = 'app_update_dismissed';
 const VERSION_CHECK_INTERVAL = 5 * 60 * 1000; // Check every 5 minutes
-const DISMISS_DURATION = 4 * 60 * 60 * 1000;  // Don't re-show for 4 hours after dismiss
 
 /**
  * Get the build hash that was injected into index.html at build time
@@ -91,33 +94,13 @@ export const forceUpdate = async () => {
 };
 
 /**
- * Dismiss the update notification for DISMISS_DURATION
- */
-export const dismissUpdate = () => {
-  localStorage.setItem(DISMISS_KEY, Date.now().toString());
-  console.log('[Version] Update dismissed for 4 hours');
-};
-
-/**
- * Check if update was recently dismissed
- */
-const isDismissed = () => {
-  const dismissedAt = localStorage.getItem(DISMISS_KEY);
-  if (!dismissedAt) return false;
-  const elapsed = Date.now() - parseInt(dismissedAt, 10);
-  return elapsed < DISMISS_DURATION;
-};
-
-/**
  * Compare local build hash with server's version.json
  * Returns true if server has a different (newer) build
  */
 export const checkForServerUpdate = async () => {
   try {
-    // Don't check if recently dismissed
-    if (isDismissed()) {
-      return false;
-    }
+    // Penundaan yang tersimpan dari versi lama tidak berlaku lagi.
+    localStorage.removeItem(DISMISS_KEY);
 
     // Don't check if just updated (within 30s grace period)
     const lastUpdate = localStorage.getItem(LAST_UPDATE_KEY);
