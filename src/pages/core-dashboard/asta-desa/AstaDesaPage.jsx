@@ -20,7 +20,7 @@
  * ringkas selalu kalah begitu ada yang mengklik "buka peta penuh".
  */
 
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import {
   ArrowUpRight,
@@ -116,7 +116,17 @@ const AstaDesaPage = () => {
   // cache 10 menit, jadi pembaruan ini ringan meski halamannya ditinggal
   // terbuka seharian. Pembaruannya diam-diam: tidak ada kedipan kerangka
   // pemuatan, dan kegagalan sesaat tidak mengosongkan angka yang sudah tampil.
-  const ringkasan = useAstaDesa('/ringkasan', {}, { aktif: Boolean(siap), segarkanTiapMs: 60 * 1000 });
+  //
+  // Selama rincian dimuat bertahap (`rincian_progres` ada) jedanya dipendekkan
+  // ke 15 detik supaya angka sementara terlihat bertambah; server menjawabnya
+  // dari baris yang sudah terbaca, tanpa memulai penyusuran baru.
+  const [bertahap, setBertahap] = useState(false);
+  const ringkasan = useAstaDesa('/ringkasan', {}, {
+    aktif: Boolean(siap),
+    segarkanTiapMs: bertahap ? 15 * 1000 : 60 * 1000
+  });
+  const adaProgres = Boolean(ringkasan.data?.rincian_progres);
+  useEffect(() => setBertahap(adaProgres), [adaProgres]);
   // Penyaring wilayah tab Demografi. Params tanpa kunci kosong supaya kunci
   // cache-nya tetap stabil.
   const [filterWilayah, setFilterWilayah] = useState({});

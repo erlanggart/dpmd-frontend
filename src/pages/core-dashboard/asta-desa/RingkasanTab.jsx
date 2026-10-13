@@ -132,10 +132,38 @@ const RingkasanTab = ({ data, memuat, galat, onUlang }) => {
   // baris. Sebelum penyusuran pertama selesai, nilainya null — dan null yang
   // ditulis sebagai "0" atau "0%" terbaca sebagai fakta ("tidak ada desa"),
   // padahal artinya "belum dihitung".
-  const rincianMenyusul = data.rincian_siap === false;
+  //
+  // `rincian_progres` ada = penyusuran sedang berjalan dan angka rincian di
+  // bawah adalah hitungan SEMENTARA dari baris yang sudah terbaca — tampil
+  // bertahap dan bertambah tiap pembaruan, bukan kosong sampai selesai.
+  const progres = data.rincian_progres || null;
+  const sementara = data.rincian_siap === false && Boolean(progres);
+  const rincianMenyusul = data.rincian_siap === false && !progres;
+  const tandaSementara = sementara ? ' · sementara' : '';
 
   return (
     <div className="space-y-4">
+      {sementara && (
+        <div role="status" className="rounded-2xl border border-sky-200 bg-sky-50/70 px-4 py-3">
+          <div className="flex items-start gap-3">
+            <Loader2 className="mt-0.5 h-4 w-4 flex-shrink-0 animate-spin text-sky-500" />
+            <p className="text-xs leading-relaxed text-slate-700">
+              <span className="font-semibold text-slate-900">
+                Rincian dimuat bertahap — {progres.persen}% ({angka(progres.terbaca)}
+                {progres.total ? ` dari ${angka(progres.total)}` : ''} keluarga terbaca).
+              </span>{' '}
+              Angka keluarga terdata di atas sudah resmi. Jumlah desa, petugas, koordinat, dan laju harian masih
+              bertambah dan menjadi utuh sendiri — tidak perlu dimuat ulang.
+            </p>
+          </div>
+          <div className="mt-2.5 h-1.5 overflow-hidden rounded-full bg-sky-100">
+            <div
+              className="h-full rounded-full bg-sky-500 transition-[width] duration-700"
+              style={{ width: `${Math.max(2, progres.persen)}%` }}
+            />
+          </div>
+        </div>
+      )}
       {rincianMenyusul && (
         <div role="status" className="flex items-start gap-3 rounded-2xl border border-sky-200 bg-sky-50/70 px-4 py-3">
           <Loader2 className="mt-0.5 h-4 w-4 flex-shrink-0 animate-spin text-sky-500" />
@@ -199,7 +227,7 @@ const RingkasanTab = ({ data, memuat, galat, onUlang }) => {
           keterangan={
             data.total_desa === null || data.total_desa === undefined
               ? 'Jumlah desa menyusul'
-              : `${angka(data.total_desa)} desa/kelurahan`
+              : `${angka(data.total_desa)} desa/kelurahan${tandaSementara}`
           }
         />
         <KartuAngka
@@ -208,7 +236,9 @@ const RingkasanTab = ({ data, memuat, galat, onUlang }) => {
           nilai={data.total_petugas ?? '—'}
           warna={SERI[1]}
           keterangan={
-            data.total_petugas
+            sementara
+              ? 'Sementara — masih bertambah'
+              : data.total_petugas
               ? `Rata-rata ${angka(Math.round(total / data.total_petugas))} keluarga/petugas`
               : rincianMenyusul
                 ? 'Menyusul'
@@ -223,7 +253,7 @@ const RingkasanTab = ({ data, memuat, galat, onUlang }) => {
           keterangan={
             data.berkoordinat === null || data.berkoordinat === undefined
               ? 'Menyusul'
-              : `${persen(data.berkoordinat, totalTerbaca)} bisa dipetakan`
+              : `${persen(data.berkoordinat, totalTerbaca)} bisa dipetakan${tandaSementara}`
           }
         />
         <KartuAngka
@@ -234,6 +264,8 @@ const RingkasanTab = ({ data, memuat, galat, onUlang }) => {
           keterangan={
             rincianMenyusul
               ? 'Menyusul'
+              : sementara
+              ? 'Sementara — masih bertambah'
               : laju?.selisih === null || laju?.selisih === undefined
               ? 'Tidak ada pembanding periode sebelumnya'
               : `${laju.selisih >= 0 ? '+' : ''}${laju.selisih}% dari 30 hari sebelumnya`
@@ -244,7 +276,9 @@ const RingkasanTab = ({ data, memuat, galat, onUlang }) => {
       {/* Tren */}
       <Panel
         judul="Laju pendataan"
-        keterangan={`Jumlah keluarga terdata per ${satuan}. Satuannya menyesuaikan rentang data.`}
+        keterangan={`Jumlah keluarga terdata per ${satuan}. Satuannya menyesuaikan rentang data.${
+          sementara ? ' Sementara — grafik bertambah selama data dimuat.' : ''
+        }`}
         aksi={
           <div className="flex rounded-lg bg-slate-100 p-0.5">
             {['hari', 'bulan', 'tahun'].map((s) => (

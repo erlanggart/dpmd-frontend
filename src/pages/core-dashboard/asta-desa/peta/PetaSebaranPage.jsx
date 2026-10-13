@@ -233,11 +233,17 @@ const PetaSebaranPage = () => {
   const tanyaLagiRef = useRef(ambilSebaranDiam);
   tanyaLagiRef.current = ambilSebaranDiam;
 
+  // Kemajuan penyusuran yang sedang berjalan. Selama ada, titik yang sudah
+  // terbaca SUDAH ikut tergambar (bertahap), jadi jedanya dipendekkan ke 20
+  // detik supaya peta terlihat terisi — server menjawab dari baris yang sudah
+  // terbaca tanpa memulai penyusuran baru.
+  const progresPeta = rekapSebaran?.rincian_progres || null;
+
   useEffect(() => {
     if (!belumSiap) return undefined;
     const t = setInterval(() => {
       if (document.visibilityState === 'visible') tanyaLagiRef.current();
-    }, 60 * 1000);
+    }, 20 * 1000);
     return () => clearInterval(t);
   }, [belumSiap]);
 
@@ -631,19 +637,36 @@ const PetaSebaranPage = () => {
   }, [layerUi]);
 
   // ── Gambar ulang titik setiap kali penyaringnya berubah ────────────────────
+  //
+  // Saat titik dimuat bertahap, server hanya MENAMBAH baris di ekor daftar,
+  // jadi daftar baru diawali persis oleh daftar lama. Dalam keadaan itu hanya
+  // ekornya yang ditambahkan — membangun ulang ratusan ribu fitur tiap 20
+  // detik akan membuat peta tersendat tepat saat orang mulai memakainya.
+  // Begitu bentuknya berbeda (penyaring berubah, data utuh menggantikan yang
+  // sementara), seluruhnya dibangun ulang seperti biasa.
+  const tergambarRef = useRef([]);
   useEffect(() => {
     const sumber = sumberTitikRef.current;
     if (!sumber) return;
-    sumber.clear();
-    sumber.addFeatures(
-      titikTersaring.map(
-        (t) =>
-          new Feature({
-            geometry: new Point(fromLonLat([Number(t.lng), Number(t.lat)])),
-            data: t
-          })
-      )
-    );
+    const keFitur = (t) =>
+      new Feature({
+        geometry: new Point(fromLonLat([Number(t.lng), Number(t.lat)])),
+        data: t
+      });
+    const lama = tergambarRef.current;
+    const n = lama.length;
+    const lanjutan =
+      n > 0 &&
+      titikTersaring.length > n &&
+      titikTersaring[0]?.id === lama[0]?.id &&
+      titikTersaring[n - 1]?.id === lama[n - 1]?.id;
+    if (lanjutan) {
+      sumber.addFeatures(titikTersaring.slice(n).map(keFitur));
+    } else {
+      sumber.clear();
+      sumber.addFeatures(titikTersaring.map(keFitur));
+    }
+    tergambarRef.current = titikTersaring;
   }, [titikTersaring]);
 
   // ── Daftar desa mengikuti kecamatan terpilih ───────────────────────────────
@@ -1146,6 +1169,34 @@ const PetaSebaranPage = () => {
           </div>
         )}
 
+        {/* Titik sedang dimuat bertahap: yang sudah terbaca sudah tergambar,
+            sisanya menyusul. Pita kecil di bawah, bukan lapisan penuh — peta
+            sudah bisa dipakai. */}
+        {belumSiap && progresPeta && titik.length > 0 && (
+          <div className="sembunyi-cetak pointer-events-none absolute inset-x-0 bottom-4 z-20 flex justify-center px-4">
+            <div
+              role="status"
+              className="w-full max-w-sm rounded-2xl border border-slate-200 bg-white/95 px-4 py-3 shadow-lg backdrop-blur"
+            >
+              <div className="flex items-center gap-2 text-xs text-slate-700">
+                <Loader2 className="h-3.5 w-3.5 flex-shrink-0 animate-spin text-sky-500" />
+                <span>
+                  <span className="font-semibold text-slate-900">Memuat titik bertahap — {progresPeta.persen}%</span>
+                  {progresPeta.total
+                    ? ` (${progresPeta.terbaca.toLocaleString('id-ID')} dari ${progresPeta.total.toLocaleString('id-ID')})`
+                    : ''}
+                </span>
+              </div>
+              <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-slate-100">
+                <div
+                  className="h-full rounded-full bg-sky-500 transition-[width] duration-700"
+                  style={{ width: `${Math.max(2, progresPeta.persen)}%` }}
+                />
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Permintaannya SUDAH selesai, tapi servernya belum punya titiknya.
             Dibedakan dari penanda muat di atas: yang ini menjelaskan sebabnya
             dan berapa lama, karena menunggu belasan menit tanpa keterangan
@@ -1156,13 +1207,12 @@ const PetaSebaranPage = () => {
               <Loader2 className="mx-auto h-6 w-6 animate-spin text-slate-400" />
               <p className="mt-3 text-sm font-semibold text-slate-900">Titik sebaran sedang disiapkan server</p>
               <p className="mt-1.5 text-xs leading-relaxed text-slate-500">
-                Server sedang membaca ±190.000 baris sensus dari ASTA DESA — sekitar 10–20 menit.
-                Batas wilayah di belakang sudah tergambar; titiknya menyusul.
-                Halaman ini mencoba sendiri tiap menit, jadi biarkan terbuka saja.
+                Server mulai membaca data sensus dari ASTA DESA. Titik akan muncul bertahap dalam beberapa
+                detik dan terus bertambah — biarkan halaman ini terbuka.
               </p>
               <p className="mt-2.5 text-[11px] leading-relaxed text-slate-400">
-                Ini terjadi setelah backend dijalankan ulang (termasuk tiap pembaruan aplikasi),
-                karena hasil pembacaannya disimpan di memori. Bukan tanda data hilang.
+                Hanya terjadi bila server belum pernah menyimpan hasil pembacaan sebelumnya. Bukan tanda data
+                hilang.
               </p>
             </div>
           </div>
