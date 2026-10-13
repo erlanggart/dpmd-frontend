@@ -141,6 +141,12 @@ const RingkasanTab = ({ data, memuat, galat, onUlang }) => {
   const rincianMenyusul = data.rincian_siap === false && !progres;
   const tandaSementara = sementara ? ' · sementara' : '';
 
+  // 30 hari terakhir: hitungan resmi dari basis data ASTA DESA bila ada
+  // (`laju_30_hari`, sama dengan cara panel mereka menghitung "Bulan Ini"),
+  // selain itu dari tren harian baris yang terbaca.
+  const lajuResmi = data.laju_30_hari || null;
+  const lajuTampil = lajuResmi || laju;
+
   return (
     <div className="space-y-4">
       {sementara && (
@@ -152,8 +158,9 @@ const RingkasanTab = ({ data, memuat, galat, onUlang }) => {
                 Rincian dimuat bertahap — {progres.persen}% ({angka(progres.terbaca)}
                 {progres.total ? ` dari ${angka(progres.total)}` : ''} keluarga terbaca).
               </span>{' '}
-              Angka keluarga terdata di atas sudah resmi. Jumlah desa, petugas, koordinat, dan laju harian masih
-              bertambah dan menjadi utuh sendiri — tidak perlu dimuat ulang.
+              Keluarga terdata, kecamatan, petugas mendata, dan 30 hari terakhir adalah angka resmi ASTA DESA.
+              Jumlah desa, berkoordinat, dan grafik laju harian masih bertambah dan menjadi utuh sendiri — tidak
+              perlu dimuat ulang.
             </p>
           </div>
           <div className="mt-2.5 h-1.5 overflow-hidden rounded-full bg-sky-100">
@@ -216,7 +223,7 @@ const RingkasanTab = ({ data, memuat, galat, onUlang }) => {
           keterangan={
             data.summary?.sensuses && data.summary.sensuses !== total
               ? `ASTA DESA melaporkan ${angka(data.summary.sensuses)}`
-              : 'Baris sensus terbaca'
+              : 'Hitungan langsung ASTA DESA'
           }
         />
         <KartuAngka
@@ -236,7 +243,7 @@ const RingkasanTab = ({ data, memuat, galat, onUlang }) => {
           nilai={data.total_petugas ?? '—'}
           warna={SERI[1]}
           keterangan={
-            sementara
+            sementara && !data.total_petugas_resmi
               ? 'Sementara — masih bertambah'
               : data.total_petugas
               ? `Rata-rata ${angka(Math.round(total / data.total_petugas))} keluarga/petugas`
@@ -259,16 +266,16 @@ const RingkasanTab = ({ data, memuat, galat, onUlang }) => {
         <KartuAngka
           icon={CalendarDays}
           label="30 hari terakhir"
-          nilai={laju ? laju.baru : '—'}
+          nilai={lajuTampil ? lajuTampil.baru : '—'}
           warna={SERI[4]}
           keterangan={
-            rincianMenyusul
+            !lajuResmi && rincianMenyusul
               ? 'Menyusul'
-              : sementara
+              : !lajuResmi && sementara
               ? 'Sementara — masih bertambah'
-              : laju?.selisih === null || laju?.selisih === undefined
+              : lajuTampil?.selisih === null || lajuTampil?.selisih === undefined
               ? 'Tidak ada pembanding periode sebelumnya'
-              : `${laju.selisih >= 0 ? '+' : ''}${laju.selisih}% dari 30 hari sebelumnya`
+              : `${lajuTampil.selisih >= 0 ? '+' : ''}${lajuTampil.selisih}% dari 30 hari sebelumnya`
           }
         />
       </div>
