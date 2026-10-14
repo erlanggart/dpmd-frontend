@@ -73,7 +73,7 @@ const ProfilCard = ({
 	produkHukumList = [],
 	onUpdatePenduduk,
 }) => {
-	const { isSuperAdmin, isAdminBidangPMD, isUserDesa, isKecamatan } = useAuth();
+	const { isSuperAdmin, isAdminBidangPMD, isUserDesa, isKecamatan, canVerifyKelembagaan } = useAuth();
 	const { isEditMode } = useEditMode();
 	const navigate = useNavigate();
 
@@ -238,8 +238,8 @@ const ProfilCard = ({
 							</button>
 						)}
 
-						{/* Verifikasi button — kecamatan, admin PMD, superadmin */}
-						{(isAdminBidangPMD() || isSuperAdmin() || isKecamatan?.()) && onToggleVerification && (
+						{/* Verifikasi button — kecamatan, admin PMD (termasuk bendahara bidang 5), superadmin */}
+						{(canVerifyKelembagaan?.() ?? (isAdminBidangPMD() || isSuperAdmin() || isKecamatan?.())) && onToggleVerification && (
 							<button
 								onClick={() => onToggleVerification(profil?.id, profil?.status_verifikasi)}
 								className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-white bg-blue-500 hover:bg-blue-600 rounded-lg transition-colors"
