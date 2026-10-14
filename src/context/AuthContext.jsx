@@ -339,24 +339,25 @@ export const AuthProvider = ({ children }) => {
 		return user?.role === "superadmin";
 	};
 
-	// Memeriksa apakah user adalah admin bidang pemberdayaan masyarakat
-	// (kepala_bidang atau pegawai dengan bidang_id === 5)
-	const isAdminBidangPMD = () => {
-		if (!user) return false;
-		
-		// Bidang Pemberdayaan Masyarakat memiliki bidang_id = 5
-		const isPMDBidang = user.bidang_id === 5;
-		
-		return (
-			(user.role === "kepala_bidang" && isPMDBidang) ||
-			(user.role === "pegawai" && isPMDBidang)
-		);
-	};
-
 	// Bendahara hanya dihitung staf bidang PMD bila ditempatkan di bidang
 	// Pemberdayaan Masyarakat (bidang_id = 5)
 	const isBendaharaPMD = () => {
 		return user?.role === "bendahara" && user?.bidang_id === 5;
+	};
+
+	// Memeriksa apakah user adalah admin bidang pemberdayaan masyarakat
+	// (kepala_bidang, pegawai, atau bendahara dengan bidang_id === 5)
+	const isAdminBidangPMD = () => {
+		if (!user) return false;
+
+		// Bidang Pemberdayaan Masyarakat memiliki bidang_id = 5
+		const isPMDBidang = user.bidang_id === 5;
+
+		return (
+			(user.role === "kepala_bidang" && isPMDBidang) ||
+			(user.role === "pegawai" && isPMDBidang) ||
+			isBendaharaPMD()
+		);
 	};
 
 	// Memeriksa apakah user adalah user desa
@@ -378,21 +379,21 @@ export const AuthProvider = ({ children }) => {
 	};
 
 	// Memeriksa apakah user dapat memverifikasi kelembagaan & pengurus
-	// (superadmin, admin bidang PMD, bendahara PMD, atau kecamatan)
+	// (superadmin, admin bidang PMD, atau kecamatan)
 	const canVerifyKelembagaan = () => {
-		return isSuperAdmin() || isAdminBidangPMD() || isKecamatan() || isBendaharaPMD();
+		return isSuperAdmin() || isAdminBidangPMD() || isKecamatan();
 	};
 
 	// Memeriksa apakah user dapat mengelola kelembagaan
-	// (superadmin, admin bidang PMD, bendahara PMD, atau user desa)
+	// (superadmin, admin bidang PMD, atau user desa)
 	const canManageKelembagaan = () => {
-		return isSuperAdmin() || isAdminBidangPMD() || isBendaharaPMD() || isUserDesa();
+		return isSuperAdmin() || isAdminBidangPMD() || isUserDesa();
 	};
 
 	// Staf bidang PMD yang boleh menyunting data lembaga & pengurus —
 	// tidak terikat kunci "sudah terverifikasi" seperti akun desa.
 	const canEditKelembagaan = () => {
-		return isSuperAdmin() || isAdminBidangPMD() || isBendaharaPMD();
+		return isSuperAdmin() || isAdminBidangPMD();
 	};
 
 	// Nilai yang akan dibagikan ke semua komponen
