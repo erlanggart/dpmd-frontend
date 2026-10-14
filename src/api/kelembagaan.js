@@ -72,6 +72,30 @@ export const kelembagaanApi = {
 			throw error;
 		}
 	},
+
+	// Tren verifikasi lembaga per hari, `hari` terakhir
+	getTrenVerifikasiHarian: async (hari = 30) => {
+		const response = await api.get("/kelembagaan/tren-verifikasi-harian", { params: { hari } });
+		return response.data;
+	},
+
+	// Capaian verifikasi tiap desa, dirinci per lembaga
+	getCapaianVerifikasiPerDesa: async () => {
+		const response = await api.get("/kelembagaan/capaian-verifikasi/per-desa");
+		return response.data;
+	},
+
+	// Desa yang punya permasalahan data kelembagaan / produk hukum
+	getPermasalahanDesa: async () => {
+		const response = await api.get("/kelembagaan/capaian-verifikasi/permasalahan");
+		return response.data;
+	},
+
+	// Rekap verifikator + riwayat verifikasi. hari=0 berarti seluruh waktu.
+	getAktivitasVerifikator: async (params) => {
+		const response = await api.get("/kelembagaan/capaian-verifikasi/aktivitas", { params });
+		return response.data;
+	},
 };
 
 export default kelembagaanApi;

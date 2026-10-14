@@ -158,6 +158,7 @@ const BeritaManagement = lazy(
 // Bidang apps
 const Kelembagaan = lazy(() => import("./pages/bidang/pmd/Kelembagaan"));
 const KelembagaanLainnyaPage = lazy(() => import("./pages/bidang/pmd/KelembagaanLainnyaPage"));
+const CapaianVerifikasiPage = lazy(() => import("./pages/bidang/pmd/CapaianVerifikasiPage"));
 const PengurusDashboardPage = lazy(() => import("./pages/bidang/pmd/PengurusDashboardPage"));
 const PengurusImportPage = lazy(() => import("./pages/bidang/pmd/PengurusImportPage"));
 const PosyanduComparisonPage = lazy(() => import("./pages/bidang/pmd/PosyanduComparisonPage"));
@@ -1343,6 +1344,7 @@ function App() {
                   <Route index element={<PMDPage />} />
                   <Route path="core-dashboard" element={<WelcomeDashboard />} />
                   <Route path="kelembagaan" element={<Kelembagaan />} />
+                  <Route path="kelembagaan/capaian-verifikasi" element={<CapaianVerifikasiPage />} />
                   <Route path="kelembagaan/lainnya" element={<KelembagaanLainnyaPage />} />
                   <Route path="kelembagaan/posyandu-comparison" element={<PosyanduComparisonPage />} />
                   <Route path="kelembagaan/rtrw-comparison" element={<RtrwComparisonPage />} />
@@ -1636,6 +1638,7 @@ function App() {
 
                   {/* PMD sub-routes */}
                   <Route path="bidang/pmd/kelembagaan" element={<Kelembagaan />} />
+                  <Route path="bidang/pmd/kelembagaan/capaian-verifikasi" element={<CapaianVerifikasiPage />} />
                   <Route path="bidang/pmd/kelembagaan/lainnya" element={<KelembagaanLainnyaPage />} />
                   <Route path="bidang/pmd/kelembagaan/posyandu-comparison" element={<PosyanduComparisonPage />} />
                   <Route path="bidang/pmd/kelembagaan/rtrw-comparison" element={<RtrwComparisonPage />} />
@@ -1826,6 +1829,10 @@ function App() {
                   <Route
                     path="statistik-kelembagaan"
                     element={<StatistikKelembagaan />}
+                  />
+                  <Route
+                    path="statistik-kelembagaan/capaian-verifikasi"
+                    element={<CapaianVerifikasiPage />}
                   />
                   <Route
                     path="statistik-profil-desa"
