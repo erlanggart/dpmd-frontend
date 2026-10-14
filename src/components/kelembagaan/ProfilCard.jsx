@@ -73,7 +73,7 @@ const ProfilCard = ({
 	produkHukumList = [],
 	onUpdatePenduduk,
 }) => {
-	const { isSuperAdmin, isAdminBidangPMD, isUserDesa, isKecamatan, canVerifyKelembagaan } = useAuth();
+	const { isSuperAdmin, isAdminBidangPMD, isUserDesa, isKecamatan, canVerifyKelembagaan, canEditKelembagaan } = useAuth();
 	const { isEditMode } = useEditMode();
 	const navigate = useNavigate();
 
@@ -81,11 +81,13 @@ const ProfilCard = ({
 	const getProdukHukumUrl = (id) =>
 		isAdmin ? `/pemdes/produk-hukum/${id}` : `/desa/produk-hukum/${id}`;
 
-	const showEditButton =
-		onEdit &&
-		(isSuperAdmin() ||
-			isAdminBidangPMD() ||
-			(isUserDesa() && isEditMode && profil?.status_verifikasi !== "verified"));
+	// Staf bidang PMD (termasuk bendahara bidang 5) menyunting kapan saja;
+	// desa hanya dalam mode edit dan selama datanya belum terverifikasi.
+	const canEditAsStaf = canEditKelembagaan?.() ?? (isSuperAdmin() || isAdminBidangPMD());
+	const canEditAsDesa =
+		isUserDesa() && isEditMode && profil?.status_verifikasi !== "verified";
+
+	const showEditButton = onEdit && (canEditAsStaf || canEditAsDesa);
 
 	const title = useMemo(() => {
 		if (type === "rt") return `RT ${profil?.nomor ?? "-"}`;
@@ -158,7 +160,7 @@ const ProfilCard = ({
 	const canEditPenduduk =
 		type === "rt" &&
 		!!onUpdatePenduduk &&
-		(isSuperAdmin() || isAdminBidangPMD() || (isUserDesa() && isEditMode));
+		(canEditAsStaf || (isUserDesa() && isEditMode));
 	const showRwInduk = type === "rt" && profil?.rw;
 	const showJumlahRT = type === "rw";
 

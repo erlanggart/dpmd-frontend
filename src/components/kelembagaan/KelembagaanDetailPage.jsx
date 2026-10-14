@@ -577,9 +577,10 @@ export default function KelembagaanDetailPage({
 
 		// Belum verified → CEK KELENGKAPAN DATA TERLEBIH DAHULU
 		const missing = [];
+		// Alamat tidak lagi jadi syarat verifikasi — banyak lembaga tidak
+		// punya alamat tersendiri, cukup SK dan kepengurusannya.
 		if (!detail?.produk_hukum_id) missing.push("SK Pembentukan Lembaga");
 		if (!pengurusCount || pengurusCount === 0) missing.push("Data Pengurus (minimal 1 orang)");
-		if (!detail?.alamat) missing.push("Alamat Kelembagaan");
 
 		if (missing.length > 0) {
 			// Data tidak lengkap → hanya tampilkan info, tidak bisa verifikasi

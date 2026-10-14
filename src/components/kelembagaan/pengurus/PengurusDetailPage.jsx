@@ -192,7 +192,7 @@ const PengurusDetailPage = () => {
 	const params = useParams();
 	const pengurusId = params.id;
 	const navigate = useNavigate();
-	const { user, isSuperAdmin, isAdminBidangPMD, canManageKelembagaan, isKecamatan, canVerifyKelembagaan } =
+	const { user, isSuperAdmin, isAdminBidangPMD, canManageKelembagaan, isKecamatan, canVerifyKelembagaan, canEditKelembagaan } =
 		useAuth();
 
 	const { isEditMode } = useEditMode();
@@ -236,6 +236,10 @@ const PengurusDetailPage = () => {
 
 	// Kecamatan, admin PMD, dan superadmin boleh verifikasi
 	const canVerify = canVerifyKelembagaan?.() ?? (isSuperAdmin() || isAdminBidangPMD());
+
+	// Staf bidang PMD (termasuk bendahara bidang 5) menyunting tanpa terhalang
+	// status terverifikasi, dan memakai rute halaman bidang
+	const canEditAsStaf = canEditKelembagaan?.() ?? (isSuperAdmin() || isAdminBidangPMD());
 
 	// Breadcrumb path helper: kecamatan selalu kembali ke halaman utama kelembagaan kecamatan
 	const bcPath = (adminPath, desaPath) => {
@@ -740,7 +744,7 @@ const PengurusDetailPage = () => {
 	};
 	const handleEdit = () => {
 		// Navigate to edit page using role-based routing
-		navigate(getPengurusRoutePath(isSuperAdmin(), isAdminBidangPMD(), pengurusId, "edit", isKecamatanUser));
+		navigate(getPengurusRoutePath(isSuperAdmin(), canEditAsStaf, pengurusId, "edit", isKecamatanUser));
 	};
 
 	const handleDeletePengurus = async () => {
@@ -815,7 +819,7 @@ const PengurusDetailPage = () => {
 	const canManageActions = canManage && !isKecamatanUser; // Pindahkan, Aktif/Nonaktifkan
 	const canEditPengurus =
 		canManageActions &&
-		!(!(isSuperAdmin() || isAdminBidangPMD()) && pengurus.status_verifikasi === "verified");
+		!(!canEditAsStaf && pengurus.status_verifikasi === "verified");
 
 	return (
 		<div className="min-h-screen p-8">
@@ -1234,7 +1238,7 @@ const PengurusDetailPage = () => {
 								<button
 									onClick={() =>
 										navigate(
-											isSuperAdmin() || isAdminBidangPMD()
+											canEditAsStaf
 												? `/bidang/pmd/produk-hukum/${pengurus.produk_hukum_id}`
 												: `/desa/produk-hukum/${pengurus.produk_hukum_id}`,
 										)

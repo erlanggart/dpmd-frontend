@@ -353,6 +353,12 @@ export const AuthProvider = ({ children }) => {
 		);
 	};
 
+	// Bendahara hanya dihitung staf bidang PMD bila ditempatkan di bidang
+	// Pemberdayaan Masyarakat (bidang_id = 5)
+	const isBendaharaPMD = () => {
+		return user?.role === "bendahara" && user?.bidang_id === 5;
+	};
+
 	// Memeriksa apakah user adalah user desa
 	const isUserDesa = () => {
 		return user?.role === "desa";
@@ -372,17 +378,21 @@ export const AuthProvider = ({ children }) => {
 	};
 
 	// Memeriksa apakah user dapat memverifikasi kelembagaan & pengurus
-	// (superadmin, admin bidang PMD, atau kecamatan)
+	// (superadmin, admin bidang PMD, bendahara PMD, atau kecamatan)
 	const canVerifyKelembagaan = () => {
-		// Bendahara hanya bila ditempatkan di bidang Pemberdayaan Masyarakat (bidang_id = 5)
-		const isBendaharaPMD = user?.role === "bendahara" && user?.bidang_id === 5;
-		return isSuperAdmin() || isAdminBidangPMD() || isKecamatan() || isBendaharaPMD;
+		return isSuperAdmin() || isAdminBidangPMD() || isKecamatan() || isBendaharaPMD();
 	};
 
 	// Memeriksa apakah user dapat mengelola kelembagaan
-	// (superadmin, admin bidang, atau user desa)
+	// (superadmin, admin bidang PMD, bendahara PMD, atau user desa)
 	const canManageKelembagaan = () => {
-		return isSuperAdmin() || isAdminBidangPMD() || isUserDesa();
+		return isSuperAdmin() || isAdminBidangPMD() || isBendaharaPMD() || isUserDesa();
+	};
+
+	// Staf bidang PMD yang boleh menyunting data lembaga & pengurus —
+	// tidak terikat kunci "sudah terverifikasi" seperti akun desa.
+	const canEditKelembagaan = () => {
+		return isSuperAdmin() || isAdminBidangPMD() || isBendaharaPMD();
 	};
 
 	// Nilai yang akan dibagikan ke semua komponen
@@ -398,11 +408,13 @@ export const AuthProvider = ({ children }) => {
 		// Role helpers
 		isSuperAdmin,
 		isAdminBidangPMD,
+		isBendaharaPMD,
 		isUserDesa,
 		isKecamatan,
 		isKelembagaanAdmin,
 		canVerifyKelembagaan,
 		canManageKelembagaan,
+		canEditKelembagaan,
 	};
 
 	return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

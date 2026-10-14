@@ -97,8 +97,10 @@ const PengurusEditPage = () => {
 		user?.role === "pemberdayaan_masyarakat" ||
 		(user?.role === "kepala_bidang" && user?.bidang_id === 5) ||
 		(user?.role === "pegawai" && user?.bidang_id === 5);
+	// Bendahara ikut menyunting bila ditempatkan di bidang PMD (bidang_id = 5)
+	const isBendaharaPMD = user?.role === "bendahara" && user?.bidang_id === 5;
 	const isUserDesa = user?.role === "desa";
-	const canEdit = isSuperAdmin || isAdminBidangPMD || isUserDesa;
+	const canEdit = isSuperAdmin || isAdminBidangPMD || isBendaharaPMD || isUserDesa;
 
 	// Determine base path based on role
 	const getBasePath = () => {
@@ -515,7 +517,7 @@ const PengurusEditPage = () => {
 	}
 
 	const basePath = getBasePath();
-	const isAdmin = isSuperAdmin || isAdminBidangPMD;
+	const isAdmin = isSuperAdmin || isAdminBidangPMD || isBendaharaPMD;
 
 	return (
 		<div className="min-h-screen bg-gray-50">

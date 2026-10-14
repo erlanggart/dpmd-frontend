@@ -16,8 +16,8 @@ const PengurusKelembagaan = ({
 	desaId,
 	onPengurusCountChange,
 }) => {
-	const { isSuperAdmin, isAdminBidangPMD } = useAuth();
-	const isAdmin = isSuperAdmin() || isAdminBidangPMD();
+	const { isSuperAdmin, isAdminBidangPMD, canEditKelembagaan } = useAuth();
+	const isAdmin = canEditKelembagaan?.() ?? (isSuperAdmin() || isAdminBidangPMD());
 
 	const [loading, setLoading] = useState(true);
 	const [showForm, setShowForm] = useState(false);
