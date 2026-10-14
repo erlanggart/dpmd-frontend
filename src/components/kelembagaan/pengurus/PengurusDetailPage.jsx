@@ -6,7 +6,9 @@ import {
 	updatePengurusVerifikasi,
 	ajukanUlangPengurusVerifikasi,
 	deletePengurus,
+	updatePengurus,
 } from "../../../services/pengurus";
+import { getJabatanList } from "../../../constants/jabatanMapping";
 import { getDesa } from "../../../services/api";
 import {
 	getRw,
@@ -112,7 +114,7 @@ const SECTION_TONES = {
 	slate: { head: "bg-slate-50", icon: "bg-slate-500" },
 };
 
-const SectionCard = ({ icon: Icon, title, subtitle, tone, onEdit, editDisabled, children }) => (
+const SectionCard = ({ icon: Icon, title, subtitle, tone, onEdit, editDisabled, editing, onSave, onCancel, saving, children }) => (
 	<div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
 		<div className={`flex items-center justify-between gap-3 px-5 py-4 ${SECTION_TONES[tone].head}`}>
 			<div className="flex items-center gap-3">
@@ -124,16 +126,20 @@ const SectionCard = ({ icon: Icon, title, subtitle, tone, onEdit, editDisabled, 
 					{subtitle && <p className="text-xs text-gray-500">{subtitle}</p>}
 				</div>
 			</div>
-			{onEdit && (
-				<button
-					onClick={onEdit}
-					disabled={editDisabled}
-					className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-indigo-700 bg-white border border-indigo-200 rounded-lg hover:bg-indigo-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-					title={editDisabled ? "Fitur edit ditutup" : "Edit pengurus"}
-				>
-					<FaPen className="w-3 h-3" />
-					Edit
-				</button>
+			{editing ? (
+				<TombolSimpanBatal onSave={onSave} onCancel={onCancel} saving={saving} />
+			) : (
+				onEdit && (
+					<button
+						onClick={onEdit}
+						disabled={editDisabled}
+						className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-indigo-700 bg-white border border-indigo-200 rounded-lg hover:bg-indigo-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+						title={editDisabled ? "Fitur edit ditutup" : "Edit pengurus"}
+					>
+						<FaPen className="w-3 h-3" />
+						Edit
+					</button>
+				)
 			)}
 		</div>
 		<div className="p-5">{children}</div>
@@ -176,6 +182,99 @@ const StackedField = ({ label, value, mono }) => (
 	</div>
 );
 
+// ===== Edit langsung per kotak =====
+// Pilihan isian disamakan dengan PengurusEditPage.jsx
+const OPSI = {
+	jenis_kelamin: [["Laki-laki", "Laki-laki"], ["Perempuan", "Perempuan"]],
+	status_perkawinan: [["BELUM MENIKAH", "Belum Menikah"], ["MENIKAH", "Menikah"], ["CERAI HIDUP", "Cerai Hidup"], ["CERAI MATI", "Cerai Mati"]],
+	pendidikan: ["SD", "SMP", "SMA/SMK", "D1", "D2", "D3", "S1", "S2", "S3"].map((v) => [v, v]),
+	agama: [["ISLAM", "Islam"], ["KRISTEN", "Kristen"], ["KATOLIK", "Katolik"], ["HINDU", "Hindu"], ["BUDDHA", "Buddha"], ["KONGHUCU", "Konghucu"]],
+	golongan_darah: [["A", "A"], ["B", "B"], ["AB", "AB"], ["O", "O"], ["TIDAK_DIKETAHUI", "Tidak diketahui"]],
+};
+
+// Field yang dikirim saat menyimpan tiap kotak; field lain tidak disentuh backend
+const FIELD_KOTAK = {
+	profil: ["nama_lengkap", "nik", "jenis_kelamin", "tempat_lahir", "tanggal_lahir", "status_perkawinan", "nomor_buku_nikah", "pendidikan", "agama", "golongan_darah", "no_telepon", "alamat"],
+	jabatan: ["jabatan", "tanggal_mulai_jabatan", "tanggal_akhir_jabatan"],
+	rekening: ["nama_bank", "nomor_rekening", "nama_rekening"],
+};
+
+// Nomor buku nikah hanya relevan untuk Ketua RT/RW yang menikah (aturan PengurusEditPage)
+const tampilBukuNikah = (d) =>
+	d.status_perkawinan === "MENIKAH" && ["KETUA RT", "KETUA RW"].includes((d.jabatan || "").toUpperCase());
+
+const nilaiAwal = (p, field) => {
+	const v = p[field];
+	if (field === "jenis_kelamin") {
+		const jk = String(v || "").replace(/_/g, "-").toUpperCase();
+		return jk === "LAKI-LAKI" ? "Laki-laki" : jk === "PEREMPUAN" ? "Perempuan" : "";
+	}
+	if (["tanggal_lahir", "tanggal_mulai_jabatan", "tanggal_akhir_jabatan"].includes(field)) {
+		return v ? String(v).slice(0, 10) : "";
+	}
+	if (["status_perkawinan", "agama"].includes(field)) return v ? String(v).toUpperCase() : "";
+	return v || "";
+};
+
+const kelasInput =
+	"w-full border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500";
+
+const FieldEdit = ({ label, wajib, className = "", children }) => (
+	<label className={`block ${className}`}>
+		<span className="block text-xs font-medium text-gray-600 mb-1">
+			{label}
+			{wajib && <span className="text-red-500"> *</span>}
+		</span>
+		{children}
+	</label>
+);
+
+const InputEdit = ({ name, draft, setDraft, ...rest }) => (
+	<input
+		value={draft[name]}
+		onChange={(e) => setDraft((d) => ({ ...d, [name]: e.target.value }))}
+		className={kelasInput}
+		{...rest}
+	/>
+);
+
+// Nilai lama yang tidak ada di pilihan tetap ditampilkan, supaya tidak terhapus diam-diam saat disimpan
+const SelectEdit = ({ name, draft, setDraft, opsi, kosong = "Pilih", catatanLuar = "" }) => {
+	const nilai = draft[name];
+	const daftar = nilai && !opsi.some(([v]) => v === nilai) ? [[nilai, `${nilai}${catatanLuar}`], ...opsi] : opsi;
+	return (
+		<select value={nilai} onChange={(e) => setDraft((d) => ({ ...d, [name]: e.target.value }))} className={kelasInput}>
+			<option value="">{kosong}</option>
+			{daftar.map(([v, l]) => (
+				<option key={v} value={v}>
+					{l}
+				</option>
+			))}
+		</select>
+	);
+};
+
+const TombolSimpanBatal = ({ onSave, onCancel, saving }) => (
+	<div className="flex items-center gap-2">
+		<button
+			type="button"
+			onClick={onCancel}
+			disabled={saving}
+			className="px-3 py-1.5 text-xs font-semibold text-gray-600 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50"
+		>
+			Batal
+		</button>
+		<button
+			type="button"
+			onClick={onSave}
+			disabled={saving}
+			className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 disabled:opacity-50"
+		>
+			{saving ? "Menyimpan..." : "Simpan"}
+		</button>
+	</div>
+);
+
 const ProfileItem = ({ icon: Icon, label, value, iconClass = "bg-blue-50 text-blue-500" }) => (
 	<div className="flex items-start gap-3 min-w-0">
 		<div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${iconClass}`}>
@@ -207,6 +306,9 @@ const PengurusDetailPage = () => {
 	const [activityLogs, setActivityLogs] = useState(null); // null = sedang dimuat
 	const [menuOpen, setMenuOpen] = useState(false);
 	const menuRef = useRef(null);
+	const [kotakEdit, setKotakEdit] = useState(null); // "profil" | "jabatan" | "rekening" | null
+	const [draft, setDraft] = useState({});
+	const [menyimpan, setMenyimpan] = useState(false);
 
 	// Tutup menu titik tiga saat klik di luar atau tekan Escape
 	useEffect(() => {
@@ -747,6 +849,80 @@ const PengurusDetailPage = () => {
 		navigate(getPengurusRoutePath(isSuperAdmin(), canEditAsStaf, pengurusId, "edit", isKecamatanUser));
 	};
 
+	// Edit langsung di kotaknya; halaman edit penuh tetap ada di menu titik tiga (foto & SK)
+	const mulaiEdit = (kotak) => {
+		const awal = {};
+		// jabatan ikut dimuat di kotak profil karena menentukan tampilnya nomor buku nikah
+		[...FIELD_KOTAK[kotak], "jabatan"].forEach((f) => (awal[f] = nilaiAwal(pengurus, f)));
+		setDraft(awal);
+		setKotakEdit(kotak);
+	};
+	const batalEdit = () => {
+		setKotakEdit(null);
+		setDraft({});
+	};
+
+	const simpanKotak = async () => {
+		const gagal = (text) => Swal.fire({ icon: "warning", title: "Periksa Isian", text });
+		if (kotakEdit === "profil") {
+			if (!draft.nama_lengkap.trim()) return gagal("Nama lengkap wajib diisi");
+			if (draft.nik && !/^\d{16}$/.test(draft.nik)) return gagal("NIK harus 16 digit angka");
+		}
+		if (kotakEdit === "jabatan" && !draft.jabatan.trim()) return gagal("Jabatan wajib diisi");
+		if (
+			kotakEdit === "jabatan" &&
+			draft.tanggal_mulai_jabatan &&
+			draft.tanggal_akhir_jabatan &&
+			draft.tanggal_akhir_jabatan < draft.tanggal_mulai_jabatan
+		) {
+			return gagal("Tanggal akhir jabatan tidak boleh sebelum tanggal mulai");
+		}
+
+		const fd = new FormData();
+		FIELD_KOTAK[kotakEdit].forEach((f) => {
+			// Buku nikah yang disembunyikan tidak dikirim, supaya nilai lamanya tidak terhapus
+			if (f === "nomor_buku_nikah" && !tampilBukuNikah(draft)) return;
+			fd.append(f, draft[f] === "TIDAK_DIKETAHUI" ? "" : draft[f] ?? "");
+		});
+
+		setMenyimpan(true);
+		try {
+			const res = await updatePengurus(pengurusId, fd, { multipart: true });
+			const updated = res?.data?.data;
+			if (updated) setPengurus((prev) => ({ ...prev, ...updated }));
+			batalEdit();
+			getPengurusActivityLogs(pengurusId)
+				.then((r) => setActivityLogs(r?.data || []))
+				.catch(() => {});
+			Swal.fire({
+				icon: "success",
+				title: "Tersimpan",
+				timer: 1500,
+				showConfirmButton: false,
+				toast: true,
+				position: "top-end",
+			});
+		} catch (error) {
+			Swal.fire({
+				icon: "error",
+				title: "Gagal Menyimpan",
+				text: error?.response?.data?.message || "Gagal memperbarui data pengurus",
+			});
+		} finally {
+			setMenyimpan(false);
+		}
+	};
+
+	// Satu kotak saja yang bisa diedit sekaligus
+	const propsEdit = (kotak) => ({
+		onEdit: canEditPengurus ? () => mulaiEdit(kotak) : null,
+		editDisabled: !isEditMode || (kotakEdit !== null && kotakEdit !== kotak),
+		editing: kotakEdit === kotak,
+		onSave: simpanKotak,
+		onCancel: batalEdit,
+		saving: menyimpan,
+	});
+
 	const handleDeletePengurus = async () => {
 		if (!isSuperAdmin()) return;
 
@@ -1049,7 +1225,7 @@ const PengurusDetailPage = () => {
 									{canEditPengurus && (
 										<MenuItem
 											icon={FaEdit}
-											label="Edit"
+											label="Edit Lengkap (foto & SK)"
 											onClick={closeAnd(handleEdit)}
 											disabled={!isEditMode}
 											hint={!isEditMode ? "Fitur edit ditutup" : null}
@@ -1105,16 +1281,22 @@ const PengurusDetailPage = () => {
 					<div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
 						{/* Header bergelombang */}
 						<div className="relative bg-gradient-to-br from-blue-100 via-indigo-50 to-sky-100 pt-6 pb-16">
-							{canEditPengurus && (
-								<button
-									onClick={handleEdit}
-									disabled={!isEditMode}
-									className="absolute top-3 right-3 z-10 inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-indigo-700 bg-white/90 border border-indigo-200 rounded-lg hover:bg-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-									title={!isEditMode ? "Fitur edit ditutup" : "Edit data pribadi"}
-								>
-									<FaPen className="w-3 h-3" />
-									Edit
-								</button>
+							{kotakEdit === "profil" ? (
+								<div className="absolute top-3 right-3 z-10">
+									<TombolSimpanBatal onSave={simpanKotak} onCancel={batalEdit} saving={menyimpan} />
+								</div>
+							) : (
+								canEditPengurus && (
+									<button
+										onClick={() => mulaiEdit("profil")}
+										disabled={!isEditMode || kotakEdit !== null}
+										className="absolute top-3 right-3 z-10 inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-indigo-700 bg-white/90 border border-indigo-200 rounded-lg hover:bg-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+										title={!isEditMode ? "Fitur edit ditutup" : "Edit data pribadi"}
+									>
+										<FaPen className="w-3 h-3" />
+										Edit
+									</button>
+								)
 							)}
 							<svg className="absolute bottom-0 left-0 w-full h-12 text-white" viewBox="0 0 400 48" preserveAspectRatio="none" fill="currentColor">
 								<path d="M0 28 C 80 0, 160 48, 240 24 S 360 8, 400 20 V48 H0 Z" />
@@ -1160,6 +1342,57 @@ const PengurusDetailPage = () => {
 								</span>
 							</div>
 
+							{kotakEdit === "profil" ? (
+								<div className="mt-6 pt-5 border-t border-gray-100 grid grid-cols-2 gap-3">
+									<FieldEdit label="Nama Lengkap" wajib className="col-span-2">
+										<InputEdit name="nama_lengkap" draft={draft} setDraft={setDraft} />
+									</FieldEdit>
+									<FieldEdit label="NIK" className="col-span-2">
+										<InputEdit name="nik" draft={draft} setDraft={setDraft} maxLength={16} inputMode="numeric" placeholder="16 digit angka" />
+									</FieldEdit>
+									<FieldEdit label="Jenis Kelamin">
+										<SelectEdit name="jenis_kelamin" draft={draft} setDraft={setDraft} opsi={OPSI.jenis_kelamin} />
+									</FieldEdit>
+									<FieldEdit label="Golongan Darah">
+										<SelectEdit name="golongan_darah" draft={draft} setDraft={setDraft} opsi={OPSI.golongan_darah} />
+									</FieldEdit>
+									<FieldEdit label="Tempat Lahir">
+										<InputEdit name="tempat_lahir" draft={draft} setDraft={setDraft} />
+									</FieldEdit>
+									<FieldEdit label="Tanggal Lahir">
+										<InputEdit name="tanggal_lahir" type="date" draft={draft} setDraft={setDraft} />
+									</FieldEdit>
+									<FieldEdit label="Status Perkawinan">
+										<SelectEdit name="status_perkawinan" draft={draft} setDraft={setDraft} opsi={OPSI.status_perkawinan} />
+									</FieldEdit>
+									<FieldEdit label="Agama">
+										<SelectEdit name="agama" draft={draft} setDraft={setDraft} opsi={OPSI.agama} />
+									</FieldEdit>
+									{tampilBukuNikah(draft) && (
+										<FieldEdit label="Nomor Buku Nikah (opsional)" className="col-span-2">
+											<InputEdit name="nomor_buku_nikah" draft={draft} setDraft={setDraft} />
+										</FieldEdit>
+									)}
+									<FieldEdit label="Pendidikan" className="col-span-2">
+										<SelectEdit name="pendidikan" draft={draft} setDraft={setDraft} opsi={OPSI.pendidikan} />
+									</FieldEdit>
+									<FieldEdit label="No. Telepon" className="col-span-2">
+										<InputEdit name="no_telepon" type="tel" draft={draft} setDraft={setDraft} placeholder="08xxxxxxxxxx" />
+									</FieldEdit>
+									<FieldEdit label="Alamat" className="col-span-2">
+										<textarea
+											value={draft.alamat}
+											onChange={(e) => setDraft((d) => ({ ...d, alamat: e.target.value }))}
+											rows={2}
+											className={kelasInput}
+										/>
+									</FieldEdit>
+									<p className="col-span-2 text-xs text-gray-400">
+										Foto profil diubah lewat menu ⋮ → Edit.
+									</p>
+								</div>
+							) : (
+							<>
 							<div className="mt-6 pt-5 border-t border-gray-100 space-y-4">
 								<div className="grid grid-cols-2 gap-3">
 									<ProfileItem icon={FaIdCard} label="NIK" value={pengurus.nik} />
@@ -1199,6 +1432,8 @@ const PengurusDetailPage = () => {
 									<ProfileItem icon={FaMapMarkerAlt} label="Alamat" value={pengurus.alamat} iconClass="bg-white text-blue-500" />
 								</div>
 							</div>
+							</>
+							)}
 						</div>
 					</div>
 
@@ -1266,9 +1501,28 @@ const PengurusDetailPage = () => {
 						icon={FaCalendarAlt}
 						title="Informasi Jabatan"
 						tone="purple"
-						onEdit={canEditPengurus ? handleEdit : null}
-						editDisabled={!isEditMode}
+						{...propsEdit("jabatan")}
 					>
+						{kotakEdit === "jabatan" ? (
+							<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+								<FieldEdit label="Jabatan" wajib className="md:col-span-2">
+									<SelectEdit
+										name="jabatan"
+										draft={draft}
+										setDraft={setDraft}
+										opsi={getJabatanList(getRouteType(pengurus.pengurusable_type)).map((j) => [j, j])}
+										kosong="Pilih jabatan"
+										catatanLuar=" (di luar pemetaan)"
+									/>
+								</FieldEdit>
+								<FieldEdit label="Tanggal Mulai Jabatan">
+									<InputEdit name="tanggal_mulai_jabatan" type="date" draft={draft} setDraft={setDraft} />
+								</FieldEdit>
+								<FieldEdit label="Tanggal Akhir Jabatan">
+									<InputEdit name="tanggal_akhir_jabatan" type="date" draft={draft} setDraft={setDraft} />
+								</FieldEdit>
+							</div>
+						) : (
 						<div className="grid grid-cols-1 md:grid-cols-2 gap-3">
 							<InfoField label="Jabatan" value={pengurus.jabatan} />
 							<InfoField label="Status Verifikasi">
@@ -1291,6 +1545,7 @@ const PengurusDetailPage = () => {
 							<InfoField label="Tanggal Mulai Jabatan" value={formatTanggal(pengurus.tanggal_mulai_jabatan)} />
 							<InfoField label="Tanggal Akhir Jabatan" value={formatTanggal(pengurus.tanggal_akhir_jabatan)} />
 						</div>
+						)}
 
 						{/* Catatan Verifikasi */}
 						{pengurus.catatan_verifikasi && pengurus.status_verifikasi !== "verified" && (
@@ -1329,14 +1584,27 @@ const PengurusDetailPage = () => {
 						title="Informasi Rekening"
 						subtitle="Data rekening untuk keperluan insentif"
 						tone="blue"
-						onEdit={canEditPengurus ? handleEdit : null}
-						editDisabled={!isEditMode}
+						{...propsEdit("rekening")}
 					>
-						<div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-							<StackedField label="Nama Bank" value={pengurus.nama_bank} />
-							<StackedField label="Nomor Rekening" value={pengurus.nomor_rekening} mono />
-							<StackedField label="Nama Pemilik Rekening" value={pengurus.nama_rekening} />
-						</div>
+						{kotakEdit === "rekening" ? (
+							<div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+								<FieldEdit label="Nama Bank">
+									<InputEdit name="nama_bank" draft={draft} setDraft={setDraft} />
+								</FieldEdit>
+								<FieldEdit label="Nomor Rekening">
+									<InputEdit name="nomor_rekening" draft={draft} setDraft={setDraft} inputMode="numeric" />
+								</FieldEdit>
+								<FieldEdit label="Nama Pemilik Rekening">
+									<InputEdit name="nama_rekening" draft={draft} setDraft={setDraft} />
+								</FieldEdit>
+							</div>
+						) : (
+							<div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+								<StackedField label="Nama Bank" value={pengurus.nama_bank} />
+								<StackedField label="Nomor Rekening" value={pengurus.nomor_rekening} mono />
+								<StackedField label="Nama Pemilik Rekening" value={pengurus.nama_rekening} />
+							</div>
+						)}
 					</SectionCard>
 				</div>
 			</div>
