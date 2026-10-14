@@ -25,6 +25,7 @@ import {
 import { useAuth } from "../../../context/AuthContext";
 import { useEditMode } from "../../../context/EditModeContext";
 import { getDesaKelembagaanAll } from "../../../api/kelembagaanApi";
+import { periksaPengurus, getJabatanList, getDisplayJabatan } from "../../../constants/jabatanMapping";
 import { FaChevronRight, FaHome } from "react-icons/fa";
 
 /**
@@ -48,6 +49,7 @@ const AdminKelembagaanDetailPage = () => {
 		color: "",
 	});
 	const [creatingLembaga, setCreatingLembaga] = useState(false);
+	const [hanyaBermasalah, setHanyaBermasalah] = useState(false);
 
 	// Check if user can toggle edit mode
 	const canToggleEdit = ["superadmin"].includes(user?.role);
@@ -428,6 +430,12 @@ const AdminKelembagaanDetailPage = () => {
 					)}
 				</div>
 
+				<RingkasanPenanda
+					kelembagaanList={kelembagaanList}
+					hanyaBermasalah={hanyaBermasalah}
+					onToggle={() => setHanyaBermasalah((v) => !v)}
+				/>
+
 				{/* Kelembagaan List */}
 				<div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
 					<div className="divide-y divide-gray-100">
@@ -439,6 +447,7 @@ const AdminKelembagaanDetailPage = () => {
 								desaId={desaId}
 								navigate={navigate}
 								onCreateClick={() => handleOpenModal(item)}
+								hanyaBermasalah={hanyaBermasalah}
 							/>
 						))}
 					</div>
@@ -493,30 +502,161 @@ const VerifBadge = ({ status }) => {
 	);
 };
 
-const KetuaBadge = ({ ketuaNama, jabatan = "Ketua" }) => {
-	if (ketuaNama) {
-		return (
-			<span className="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-medium rounded-full bg-emerald-50 text-emerald-700">
-				<LuUser className="w-2.5 h-2.5" /> {jabatan}: {ketuaNama}
-			</span>
-		);
-	}
+const NADA_CHIP = {
+	emerald: "bg-emerald-50 text-emerald-700",
+	amber: "bg-amber-50 text-amber-700",
+	red: "bg-red-50 text-red-700",
+	orange: "bg-orange-50 text-orange-700",
+	slate: "bg-slate-100 text-slate-500",
+};
+
+const Chip = ({ nada, icon: Icon, title, children }) => (
+	<span
+		title={title}
+		className={`inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-medium rounded-full ${NADA_CHIP[nada]} ${title ? "cursor-help" : ""}`}
+	>
+		<Icon className="w-2.5 h-2.5" /> {children}
+	</span>
+);
+
+// Lembaga perlu perhatian bila belum terverifikasi, ada pengurus belum terverifikasi/ditolak,
+// ketuanya tidak tepat satu, atau ada jabatan di luar pemetaan.
+const perluPerhatian = (type, lembaga) => {
+	const c = periksaPengurus(type, lembaga.pengurus);
 	return (
-		<span className="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-medium rounded-full bg-amber-50 text-amber-600">
-			<LuTriangleAlert className="w-2.5 h-2.5" /> Belum ada {jabatan}
-		</span>
+		lembaga.status_verifikasi !== "verified" ||
+		c.belumVerifikasi > 0 ||
+		c.ditolak > 0 ||
+		c.ketua.length !== 1 ||
+		c.jabatanLuar.length > 0
+	);
+};
+
+// Semua lembaga di halaman (termasuk RT di bawah RW) sebagai pasangan [type, lembaga]
+const semuaLembaga = (kelembagaanList) =>
+	kelembagaanList.flatMap((item) => {
+		if (!item.isCollection) return item.data ? [[item.type, item.data]] : [];
+		return (item.data || []).flatMap((l) =>
+			item.type === "rw" ? [["rw", l], ...(l.rts || []).map((rt) => ["rt", rt])] : [[item.type, l]]
+		);
+	});
+
+const PenandaLembaga = ({ type, lembaga }) => {
+	const c = periksaPengurus(type, lembaga.pengurus);
+	const ketuaLabel = getDisplayJabatan(getJabatanList(type)[0]);
+	return (
+		<div className="flex flex-wrap items-center gap-1">
+			<VerifBadge status={lembaga.status_verifikasi} />
+			{c.total === 0 ? (
+				<Chip nada="slate" icon={LuUsers}>Belum ada pengurus</Chip>
+			) : c.ketua.length === 0 ? (
+				<Chip nada="amber" icon={LuTriangleAlert}>Belum ada {ketuaLabel}</Chip>
+			) : c.ketua.length > 1 ? (
+				<Chip nada="red" icon={LuTriangleAlert} title={c.ketua.map((k) => k.nama).join("\n")}>
+					{ketuaLabel} ganda ({c.ketua.length})
+				</Chip>
+			) : (
+				<Chip nada="emerald" icon={LuUser}>
+					{ketuaLabel}: {c.ketua[0].nama}
+				</Chip>
+			)}
+			{c.belumVerifikasi > 0 && (
+				<Chip nada="amber" icon={LuUserCheck}>
+					{c.belumVerifikasi}/{c.total} pengurus belum diverifikasi
+				</Chip>
+			)}
+			{c.ditolak > 0 && (
+				<Chip nada="red" icon={LuX}>
+					{c.ditolak} pengurus ditolak
+				</Chip>
+			)}
+			{c.jabatanLuar.length > 0 && (
+				<Chip
+					nada="orange"
+					icon={LuCircleAlert}
+					title={c.jabatanLuar.map((p) => `${p.nama}: ${p.jabatan || "(kosong)"}`).join("\n")}
+				>
+					{c.jabatanLuar.length} jabatan di luar pemetaan
+				</Chip>
+			)}
+		</div>
+	);
+};
+
+const RingkasanPenanda = ({ kelembagaanList, hanyaBermasalah, onToggle }) => {
+	const r = {
+		lembagaBelum: 0,
+		lembagaDitolak: 0,
+		pengurusBelum: 0,
+		pengurusDitolak: 0,
+		tanpaKetua: 0,
+		ketuaGanda: 0,
+		jabatanLuar: 0,
+		perhatian: 0,
+	};
+	semuaLembaga(kelembagaanList).forEach(([type, l]) => {
+		const c = periksaPengurus(type, l.pengurus);
+		if (l.status_verifikasi === "ditolak") r.lembagaDitolak++;
+		else if (l.status_verifikasi !== "verified") r.lembagaBelum++;
+		r.pengurusBelum += c.belumVerifikasi;
+		r.pengurusDitolak += c.ditolak;
+		if (c.total > 0 && c.ketua.length === 0) r.tanpaKetua++;
+		if (c.ketua.length > 1) r.ketuaGanda++;
+		r.jabatanLuar += c.jabatanLuar.length;
+		if (perluPerhatian(type, l)) r.perhatian++;
+	});
+
+	const item = [
+		{ n: r.lembagaBelum, label: "lembaga belum terverifikasi", nada: "amber", icon: LuTriangleAlert },
+		{ n: r.lembagaDitolak, label: "lembaga ditolak", nada: "red", icon: LuX },
+		{ n: r.pengurusBelum, label: "pengurus belum terverifikasi", nada: "amber", icon: LuUserCheck },
+		{ n: r.pengurusDitolak, label: "pengurus ditolak", nada: "red", icon: LuX },
+		{ n: r.tanpaKetua, label: "lembaga tanpa ketua", nada: "amber", icon: LuUser },
+		{ n: r.ketuaGanda, label: "lembaga ketua ganda", nada: "red", icon: LuUsers },
+		{ n: r.jabatanLuar, label: "jabatan di luar pemetaan", nada: "orange", icon: LuCircleAlert },
+	].filter((x) => x.n > 0);
+
+	return (
+		<div className="mb-4 bg-white rounded-xl shadow-sm border border-gray-200 px-4 py-3 flex flex-wrap items-center justify-between gap-3">
+			<div className="flex flex-wrap items-center gap-2">
+				{item.length === 0 ? (
+					<span className="inline-flex items-center gap-1.5 text-sm font-medium text-emerald-700">
+						<LuShieldCheck className="w-4 h-4" /> Semua lembaga & pengurus sudah terverifikasi tanpa catatan
+					</span>
+				) : (
+					item.map(({ n, label, nada, icon: Icon }) => (
+						<span key={label} className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium ${NADA_CHIP[nada]}`}>
+							<Icon className="w-3.5 h-3.5" />
+							<b>{n.toLocaleString("id-ID")}</b> {label}
+						</span>
+					))
+				)}
+			</div>
+			{r.perhatian > 0 && (
+				<label className="inline-flex items-center gap-2 text-sm text-slate-700 cursor-pointer select-none">
+					<input type="checkbox" checked={hanyaBermasalah} onChange={onToggle} className="rounded border-slate-300" />
+					Hanya yang perlu perhatian ({r.perhatian})
+				</label>
+			)}
+		</div>
 	);
 };
 
 // Row-based kelembagaan item
-const KelembagaanRow = ({ item, basePath, desaId, navigate, onCreateClick }) => {
+const KelembagaanRow = ({ item, basePath, desaId, navigate, onCreateClick, hanyaBermasalah }) => {
 	const Icon = item.icon;
 	const colors = COLOR_MAP[item.color] || COLOR_MAP.slate;
 	const [expanded, setExpanded] = useState(true);
 
 	// For collections (RW, Posyandu, Lembaga Lainnya)
 	if (item.isCollection) {
-		const hasChildren = item.data && item.data.length > 0;
+		// RW tetap tampil bila salah satu RT-nya perlu perhatian
+		const bermasalah = (child) =>
+			perluPerhatian(item.type, child) ||
+			(item.type === "rw" && (child.rts || []).some((rt) => perluPerhatian("rt", rt)));
+		const jumlahPerhatian = (item.data || []).filter(bermasalah).length;
+		const children = hanyaBermasalah ? (item.data || []).filter(bermasalah) : item.data || [];
+		const hasChildren = children.length > 0;
 
 		return (
 			<div>
@@ -533,6 +673,11 @@ const KelembagaanRow = ({ item, basePath, desaId, navigate, onCreateClick }) => 
 							<h3 className="text-sm font-bold text-gray-900">{item.name}</h3>
 							<span className="text-xs text-gray-500">
 								{item.count} {item.type === "rw" ? `RW • ${item.totalRT} RT` : "terdaftar"}
+								{jumlahPerhatian > 0 && (
+									<span className="ml-2 text-amber-700 font-medium">
+										• {jumlahPerhatian} {item.type === "rw" ? "RW/RT" : "lembaga"} perlu perhatian
+									</span>
+								)}
 							</span>
 						</div>
 					</div>
@@ -553,9 +698,17 @@ const KelembagaanRow = ({ item, basePath, desaId, navigate, onCreateClick }) => 
 				{/* Children */}
 				{expanded && hasChildren && (
 					<div className="divide-y divide-gray-50">
-						{item.data.map((child) => {
+						{children.map((child) => {
 							if (item.type === "rw") {
-								return <RwRow key={child.id} rw={child} basePath={basePath} navigate={navigate} />;
+								return (
+									<RwRow
+										key={child.id}
+										rw={child}
+										basePath={basePath}
+										navigate={navigate}
+										hanyaBermasalah={hanyaBermasalah}
+									/>
+								);
 							}
 							// Posyandu or Lembaga Lainnya
 							return (
@@ -564,12 +717,12 @@ const KelembagaanRow = ({ item, basePath, desaId, navigate, onCreateClick }) => 
 									className="flex items-center justify-between px-5 py-2.5 pl-16 hover:bg-gray-50 cursor-pointer transition-colors"
 									onClick={() => navigate(`${basePath}/kelembagaan/${item.type}/${child.id}`)}
 								>
-									<div className="flex items-center gap-3 min-w-0">
+									<div className="flex flex-wrap items-center gap-x-3 gap-y-1 min-w-0">
 										<div className={`w-6 h-6 rounded flex items-center justify-center ${colors.icon}`}>
 											<Icon className="w-3 h-3" />
 										</div>
 										<span className="text-sm font-medium text-gray-800 truncate">{child.nama}</span>
-								<KetuaBadge ketuaNama={child.ketua_nama} jabatan="Ketua" />
+										<PenandaLembaga type={item.type} lembaga={child} />
 									</div>
 									<FaChevronRight className="w-3 h-3 text-gray-300 flex-shrink-0" />
 								</div>
@@ -581,7 +734,9 @@ const KelembagaanRow = ({ item, basePath, desaId, navigate, onCreateClick }) => 
 				{/* Empty state */}
 				{expanded && !hasChildren && (
 					<div className="px-5 py-4 pl-16 text-xs text-gray-400 italic">
-						Belum ada data. Klik "Kelola" untuk menambahkan.
+						{hanyaBermasalah && item.data?.length
+							? "Tidak ada yang perlu perhatian."
+							: 'Belum ada data. Klik "Kelola" untuk menambahkan.'}
 					</div>
 				)}
 			</div>
@@ -614,17 +769,19 @@ const KelembagaanRow = ({ item, basePath, desaId, navigate, onCreateClick }) => 
 		);
 	}
 
+	if (hanyaBermasalah && !perluPerhatian(item.type, item.data)) return null;
+
 	return (
 		<div
 			className="flex items-center justify-between px-5 py-3.5 hover:bg-gray-50 transition-colors cursor-pointer"
 			onClick={() => navigate(`${basePath}/kelembagaan/${item.type}/${item.id}`)}
 		>
-			<div className="flex items-center gap-3">
+			<div className="flex flex-wrap items-center gap-x-3 gap-y-1">
 				<div className={`w-8 h-8 rounded-lg flex items-center justify-center ${colors.icon}`}>
 					<Icon className="w-4 h-4" />
 				</div>
 				<span className="text-sm font-semibold text-gray-800">{item.name}</span>
-				<KetuaBadge ketuaNama={item.data?.ketua_nama} jabatan="Ketua" />
+				<PenandaLembaga type={item.type} lembaga={item.data} />
 			</div>
 			<FaChevronRight className="w-3 h-3 text-gray-300" />
 		</div>
@@ -632,8 +789,9 @@ const KelembagaanRow = ({ item, basePath, desaId, navigate, onCreateClick }) => 
 };
 
 // RW row with nested RT
-const RwRow = ({ rw, basePath, navigate }) => {
-	const rts = rw.rts || [];
+const RwRow = ({ rw, basePath, navigate, hanyaBermasalah }) => {
+	const semuaRt = rw.rts || [];
+	const rts = hanyaBermasalah ? semuaRt.filter((rt) => perluPerhatian("rt", rt)) : semuaRt;
 
 	return (
 		<div>
@@ -641,14 +799,14 @@ const RwRow = ({ rw, basePath, navigate }) => {
 				className="flex items-center justify-between px-5 py-2.5 pl-10 hover:bg-blue-50/50 cursor-pointer transition-colors"
 				onClick={() => navigate(`${basePath}/kelembagaan/rw/${rw.id}`)}
 			>
-				<div className="flex items-center gap-3 min-w-0">
+				<div className="flex flex-wrap items-center gap-x-3 gap-y-1 min-w-0">
 					<div className="w-6 h-6 rounded flex items-center justify-center bg-blue-100 text-blue-600">
 						<LuBuilding2 className="w-3 h-3" />
 					</div>
 					<span className="text-sm font-semibold text-gray-800">RW {rw.nomor}</span>
-					<KetuaBadge ketuaNama={rw.ketua_nama} jabatan="Ketua RW" />
-					{rts.length > 0 && (
-						<span className="text-[10px] font-medium text-gray-400">{rts.length} RT</span>
+					<PenandaLembaga type="rw" lembaga={rw} />
+					{semuaRt.length > 0 && (
+						<span className="text-[10px] font-medium text-gray-400">{semuaRt.length} RT</span>
 					)}
 				</div>
 				<FaChevronRight className="w-3 h-3 text-gray-300 flex-shrink-0" />
@@ -663,10 +821,10 @@ const RwRow = ({ rw, basePath, navigate }) => {
 							className="flex items-center justify-between px-5 py-2 pl-20 hover:bg-gray-50 cursor-pointer transition-colors"
 							onClick={() => navigate(`${basePath}/kelembagaan/rt/${rt.id}`)}
 						>
-							<div className="flex items-center gap-2.5 min-w-0">
+							<div className="flex flex-wrap items-center gap-x-2.5 gap-y-1 min-w-0">
 								<div className="w-1.5 h-1.5 rounded-full bg-gray-300 flex-shrink-0"></div>
 								<span className="text-xs font-medium text-gray-600">RT {rt.nomor}</span>
-							<KetuaBadge ketuaNama={rt.ketua_nama} jabatan="Ketua RT" />
+								<PenandaLembaga type="rt" lembaga={rt} />
 							</div>
 							<FaChevronRight className="w-2.5 h-2.5 text-gray-300 flex-shrink-0" />
 						</div>

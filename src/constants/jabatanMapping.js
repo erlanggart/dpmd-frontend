@@ -166,6 +166,26 @@ export const isValidJabatan = (kelembagaanType, jabatan) => {
 	return jabatanList.some(j => j.toUpperCase().trim() === upperJabatan);
 };
 
+// Bandingkan jabatan tanpa peduli huruf besar/kecil & spasi ganda ("KETUA POKJA II  PKK")
+const normalJabatan = (j) => (j || "").toUpperCase().replace(/\s+/g, " ").trim();
+
+/**
+ * Periksa pengurus aktif satu lembaga terhadap pemetaan jabatannya.
+ * Jabatan ketua = jabatan pertama di JABATAN_MAPPING (KETUA RW, KEPALA SATLINMAS, dst).
+ * @param {string} kelembagaanType - rw, rt, posyandu, karang-taruna, lpm, satlinmas, pkk, lembaga-lainnya
+ * @param {Array<{jabatan, nama, status_verifikasi}>} pengurus - pengurus aktif
+ */
+export const periksaPengurus = (kelembagaanType, pengurus = []) => {
+	const daftar = getJabatanList(kelembagaanType).map(normalJabatan);
+	return {
+		total: pengurus.length,
+		ketua: pengurus.filter((p) => normalJabatan(p.jabatan) === daftar[0]),
+		belumVerifikasi: pengurus.filter((p) => p.status_verifikasi !== "verified" && p.status_verifikasi !== "ditolak").length,
+		ditolak: pengurus.filter((p) => p.status_verifikasi === "ditolak").length,
+		jabatanLuar: pengurus.filter((p) => !daftar.includes(normalJabatan(p.jabatan))),
+	};
+};
+
 /**
  * Get color gradient untuk jabatan (untuk styling)
  * @param {string} jabatanName - Nama jabatan
