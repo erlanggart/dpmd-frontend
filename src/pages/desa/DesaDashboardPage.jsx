@@ -15,6 +15,7 @@ import {
 	LuWallet,
 } from "react-icons/lu";
 import api from "../../api";
+import PeringatanVerifikasiDitolak from "../../components/desa/PeringatanVerifikasiDitolak";
 
 const DEFAULT_COMPLETION = {
 	filled: 0,
@@ -138,6 +139,7 @@ const DesaDashboardPage = () => {
 		kelembagaan = {},
 		bankeu = {},
 		keuangan = {},
+		verifikasi_ditolak: verifikasiDitolak = null,
 	} = dashboardData || {};
 
 	const profileCompletion = profil.completion || DEFAULT_COMPLETION;
@@ -486,6 +488,10 @@ const DesaDashboardPage = () => {
 
 	return (
 		<div className="space-y-5">
+			{/* Ditaruh paling atas: ini satu-satunya tempat desa diberi tahu bahwa
+			    ada data yang ditolak beserta alasannya. */}
+			<PeringatanVerifikasiDitolak data={verifikasiDitolak} />
+
 			{/* Header */}
 			<section className="rounded-xl border border-slate-200 bg-white p-5 sm:p-6">
 				<div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
