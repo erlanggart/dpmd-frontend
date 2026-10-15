@@ -14,6 +14,10 @@ export const KODE_DINAS_PELIHAT = ['BPKAD', 'INSPEKTORAT'];
 // Harus sama dengan KODE_DINAS_LIHAT_SEMUA_PERUBAHAN di backend.
 export const KODE_DINAS_LIHAT_SEMUA = ['DLH', 'DLHK'];
 
+// Dinas yang akun dinas_terkait-nya boleh MELIHAT halaman Asta Desa (menu
+// /dinas/asta-desa). Harus sama dengan KODE_DINAS_LIHAT_ASTA_DESA di backend.
+export const KODE_DINAS_LIHAT_ASTA_DESA = ['BAPPERIDA'];
+
 const kodeDinas = (user) =>
   String(user?.dinas?.kode_dinas || user?.dinas?.singkatan || '').trim().toUpperCase();
 
@@ -24,6 +28,10 @@ export const isDinasLihatSemuaPerubahan = (user) => KODE_DINAS_LIHAT_SEMUA.inclu
 // Boleh membuka halaman /dinas/pelihat/bankeu-perubahan?
 export const canViewBankeuPerubahanPelihat = (user) =>
   isDinasPelihat(user) || isDinasLihatSemuaPerubahan(user);
+
+// Boleh membuka halaman /dinas/asta-desa? Verifikator dinas tidak termasuk.
+export const canViewAstaDesa = (user) =>
+  user?.role === 'dinas_terkait' && KODE_DINAS_LIHAT_ASTA_DESA.includes(kodeDinas(user));
 
 // Label dinas untuk judul halaman, mis. "BPKAD" atau "Inspektorat Daerah".
 export const namaDinasPelihat = (user) =>

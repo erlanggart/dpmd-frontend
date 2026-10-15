@@ -201,7 +201,7 @@ const TombolKontrol = ({ judul, onClick, children, memuat = false }) => (
   </button>
 );
 
-const PetaSebaranPage = () => {
+const PetaSebaranPage = ({ basePath = '/core-dashboard/asta-desa' }) => {
   const { titik, rekapSebaran, layer, kecamatan, memuat, galat, ambil, ambilSebaranDiam } = useDataPeta();
 
   /**
@@ -894,7 +894,7 @@ const PetaSebaranPage = () => {
         {/* Bilah atas: kembali, toggle panel, pencarian */}
         <header className="sembunyi-cetak pointer-events-none absolute left-6 right-6 top-6 z-40 flex items-center gap-3">
           <Link
-            to="/core-dashboard/asta-desa"
+            to={basePath}
             title="Kembali ke halaman Asta Desa"
             className="pointer-events-auto flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-2xl border border-white bg-white text-slate-600 shadow-2xl transition-all hover:text-slate-900 active:scale-95"
           >

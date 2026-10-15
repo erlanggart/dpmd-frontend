@@ -55,7 +55,7 @@ import LayerPesanTab from './LayerPesanTab';
  */
 const TAB = [
   { kunci: 'ringkasan', label: 'Ringkasan', ikon: Building2 },
-  { kunci: 'peta', label: 'Peta Sebaran', ikon: MapIcon, rute: '/core-dashboard/asta-desa/peta-sebaran' },
+  { kunci: 'peta', label: 'Peta Sebaran', ikon: MapIcon, rute: '/peta-sebaran' },
   { kunci: 'sensus', label: 'Data Sensus', ikon: Table2 },
   { kunci: 'demografi', label: 'Demografi', ikon: UsersRound },
   { kunci: 'pengguna', label: 'Petugas & Akun', ikon: Users },
@@ -98,7 +98,7 @@ ASTADESA_TOKEN=<token Sanctum milik akun super_admin>`}
   </Panel>
 );
 
-const AstaDesaPage = () => {
+const AstaDesaPage = ({ basePath = '/core-dashboard/asta-desa' }) => {
   const [tab, setTab] = useState('ringkasan');
   const [menyegarkan, setMenyegarkan] = useState(false);
 
@@ -244,7 +244,7 @@ const AstaDesaPage = () => {
                   // pembaca layar sebagai tautan.
                   if (t.rute) {
                     return (
-                      <Link key={t.kunci} to={t.rute} className={kelas}>
+                      <Link key={t.kunci} to={basePath + t.rute} className={kelas}>
                         <Ikon className="h-3.5 w-3.5" strokeWidth={2} />
                         {t.label}
                         <ArrowUpRight className="h-3 w-3 opacity-60" />

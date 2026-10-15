@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from "react";
-import { Outlet, useNavigate, NavLink } from "react-router-dom";
+import { Outlet, useNavigate, NavLink, useLocation } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { useUserProfile } from "../hooks/useUserProfile";
 import api from "../services/api";
@@ -22,9 +22,10 @@ import {
   LuKeyRound,
   LuPanelLeftClose,
   LuPanelLeft,
+  LuSatellite,
 } from "react-icons/lu";
 import MessageLottieIcon from "../components/MessageLottieIcon";
-import { isDinasPelihat, isDinasLihatSemuaPerubahan } from "../utils/dinasPelihat";
+import { isDinasPelihat, isDinasLihatSemuaPerubahan, canViewAstaDesa } from "../utils/dinasPelihat";
 
 // Menu items configuration for Dinas
 const menuItems = [
@@ -53,6 +54,14 @@ const menuItems = [
     icon: LuFolderArchive,
     // Hanya untuk akun dinas pelihat (BPKAD/Inspektorat) & DLH (lihat semua)
     forPelihatOnly: true,
+  },
+  {
+    id: "asta-desa",
+    label: "Asta Desa",
+    path: "/dinas/asta-desa",
+    icon: LuSatellite,
+    // Hanya untuk akun dinas di KODE_DINAS_LIHAT_ASTA_DESA (BAPPERIDA)
+    forAstaDesaOnly: true,
   },
   {
     id: "profil",
@@ -92,6 +101,8 @@ const DinasLayout = () => {
   const { logout } = useAuth();
   const userFromHook = useUserProfile();
   const navigate = useNavigate();
+  // Peta Sebaran Asta Desa mengisi seluruh area konten — tanpa padding, setinggi main.
+  const halamanPenuh = useLocation().pathname.startsWith("/dinas/asta-desa/peta-sebaran");
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
@@ -139,6 +150,7 @@ const DinasLayout = () => {
     // Pelihat: sidebar dipangkas ke Bantuan Keuangan Perubahan + ganti password
     if (isPelihat) return PELIHAT_MENU_IDS.includes(item.id);
     if (item.forPelihatOnly) return isLihatSemuaPerubahan;
+    if (item.forAstaDesaOnly) return canViewAstaDesa(user);
     if (item.id === 'bankeu-perubahan' && isLihatSemuaPerubahan) return false;
     // Profil Saya hanya untuk verifikator_dinas
     if (item.forVerifikatorOnly) {
@@ -327,7 +339,7 @@ const DinasLayout = () => {
       >
         {/* Page Content - Responsive */}
         <main className="flex-1 overflow-y-auto">
-          <div className="p-3 sm:p-4 md:p-6">
+          <div className={halamanPenuh ? "h-full" : "p-3 sm:p-4 md:p-6"}>
             <Outlet />
           </div>
         </main>

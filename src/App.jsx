@@ -14,7 +14,7 @@ import { Toaster, toast } from "react-hot-toast";
 import { useAuth } from "./context/AuthContext";
 import { useThemeColor } from "./hooks/useThemeColor";
 import { useDesaPermissions } from "./hooks/useDesaPermissions";
-import { isDinasPelihat, canViewBankeuPerubahanPelihat } from "./utils/dinasPelihat";
+import { isDinasPelihat, canViewBankeuPerubahanPelihat, canViewAstaDesa } from "./utils/dinasPelihat";
 import { DataCacheProvider } from "./context/DataCacheContext";
 import { EditModeProvider } from "./context/EditModeContext.jsx";
 import { AlertProvider } from "./components/AlertPopup";
@@ -653,6 +653,20 @@ const DinasPelihatRoute = ({ children }) => {
 
   if (user?.dinas && !canViewBankeuPerubahanPelihat(user)) {
     return <Navigate to="/dinas/dashboard" replace />;
+  }
+
+  return children || <Outlet />;
+};
+
+// Asta Desa versi dinas: hanya akun dinas_terkait BAPPERIDA (lihat
+// KODE_DINAS_LIHAT_ASTA_DESA). Sama seperti DinasPelihatRoute, selama identitas
+// dinas belum termuat halaman tetap dirender dan backend yang jadi penjaga
+// terakhir (/api/asta-desa menolak dinas lain).
+const DinasAstaDesaRoute = ({ children }) => {
+  const { user } = useAuth();
+
+  if (user?.role !== "dinas_terkait" || (user?.dinas && !canViewAstaDesa(user))) {
+    return <Navigate to="/dinas" replace />;
   }
 
   return children || <Outlet />;
@@ -1751,6 +1765,17 @@ function App() {
                     />
                     <Route path="profil" element={<VerifikatorProfilePage />} />
                     <Route path="pesan" element={<MessagingPage />} />
+                  </Route>
+                  {/* Asta Desa (lihat saja) — halaman yang sama dengan Core Dashboard */}
+                  <Route element={<DinasAstaDesaRoute />}>
+                    <Route
+                      path="asta-desa"
+                      element={<AstaDesaPage basePath="/dinas/asta-desa" />}
+                    />
+                    <Route
+                      path="asta-desa/peta-sebaran"
+                      element={<AstaDesaPetaPage basePath="/dinas/asta-desa" />}
+                    />
                   </Route>
                   <Route path="ganti-password" element={<DinasChangePasswordPage />} />
                 </Route>
