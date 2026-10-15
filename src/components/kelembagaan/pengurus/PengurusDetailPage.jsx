@@ -57,6 +57,12 @@ import { getPengurusActivityLogs } from "../../../services/activityLogs";
 
 const imageBaseUrl = import.meta.env.VITE_IMAGE_BASE_URL;
 
+const pesanError = (error, fallback) => {
+	const { message, error: alasan } = error?.response?.data || {};
+	if (message && alasan && alasan !== message) return `${message}\n\nAlasan: ${alasan}`;
+	return alasan || message || error?.message || fallback;
+};
+
 // Helper function to convert pengurusable_type (table name) to route type
 const getRouteType = (pengurusableType) => {
 	const mapping = {
@@ -533,7 +539,7 @@ const PengurusDetailPage = () => {
 					Swal.fire({
 						icon: "error",
 						title: "Gagal",
-						text: "Gagal mengubah status pengurus",
+						text: pesanError(error, "Gagal mengubah status pengurus"),
 					});
 				} finally {
 					setUpdating(false);
@@ -570,7 +576,7 @@ const PengurusDetailPage = () => {
 					Swal.fire({
 						icon: "error",
 						title: "Gagal",
-						text: "Gagal mengubah status pengurus",
+						text: pesanError(error, "Gagal mengubah status pengurus"),
 					});
 				} finally {
 					setUpdating(false);
@@ -608,7 +614,7 @@ const PengurusDetailPage = () => {
 				Swal.fire({
 					icon: "error",
 					title: "Gagal",
-					text: "Gagal mengubah status pengurus",
+					text: pesanError(error, "Gagal mengubah status pengurus"),
 				});
 			} finally {
 				setUpdating(false);
@@ -682,7 +688,7 @@ const PengurusDetailPage = () => {
 			Swal.fire({
 				icon: "error",
 				title: "Gagal",
-				text: error.response?.data?.message || "Gagal menunda verifikasi",
+				text: pesanError(error, "Gagal menunda verifikasi"),
 			});
 		} finally {
 			setUpdating(false);
@@ -726,7 +732,7 @@ const PengurusDetailPage = () => {
 			Swal.fire({
 				icon: "error",
 				title: "Gagal",
-				text: error.response?.data?.message || "Gagal memverifikasi pengurus",
+				text: pesanError(error, "Gagal memverifikasi pengurus"),
 			});
 		} finally {
 			setUpdating(false);
@@ -838,7 +844,7 @@ const PengurusDetailPage = () => {
 			Swal.fire({
 				icon: "error",
 				title: "Gagal",
-				text: error?.response?.data?.message || "Gagal mengajukan ulang verifikasi",
+				text: pesanError(error, "Gagal mengajukan ulang verifikasi"),
 			});
 		} finally {
 			setUpdating(false);
@@ -957,7 +963,7 @@ const PengurusDetailPage = () => {
 			Swal.fire({
 				icon: "error",
 				title: "Gagal",
-				text: error?.response?.data?.message || "Gagal menghapus pengurus",
+				text: pesanError(error, "Gagal menghapus pengurus"),
 			});
 		} finally {
 			setUpdating(false);
