@@ -292,7 +292,12 @@ const indeksUsia = (kelompok, labelDicari) =>
   kelompok.map((l, i) => (labelDicari.includes(l) ? i : -1)).filter((i) => i >= 0);
 
 /**
- * Satu baris rekap wilayah: keluarga, anggota, jenis kelamin, tiga kelompok usia.
+ * Satu baris rekap wilayah: keluarga, kepala keluarga, anggota, total jiwa,
+ * jenis kelamin, tiga kelompok usia.
+ *
+ * Kepala keluarga = keluarga terdata: `sensus_anggotas` tidak memuat kepala
+ * keluarga (ia tercatat di baris keluarganya), jadi total jiwa = kepala
+ * keluarga + anggota tercatat.
  *
  * `anggota` boleh null — artinya rincian anggota untuk wilayah itu belum bisa
  * dilacak (lihat `anggota.per_wilayah_siap` pada muatan). Yang ditulis
@@ -301,7 +306,7 @@ const indeksUsia = (kelompok, labelDicari) =>
  */
 const barisRekapWilayah = (w, kelompok) => {
   const a = w.anggota;
-  if (!a) return [w.total_keluarga, null, null, null, null, null, null, null, null, null, null];
+  if (!a) return [w.total_keluarga, w.total_keluarga, null, null, null, null, null, null, null, null, null, null, null];
 
   const anak = jumlah(indeksUsia(kelompok, KELOMPOK_ANAK).map((i) => a.usia[i]?.[3]));
   const produktif = jumlah(indeksUsia(kelompok, KELOMPOK_PRODUKTIF).map((i) => a.usia[i]?.[3]));
@@ -310,7 +315,9 @@ const barisRekapWilayah = (w, kelompok) => {
 
   return [
     w.total_keluarga,
+    w.total_keluarga,
     a.total,
+    w.total_keluarga + a.total,
     w.total_keluarga ? Math.round((a.total / w.total_keluarga) * 100) / 100 : 0,
     L,
     P,
@@ -325,7 +332,9 @@ const barisRekapWilayah = (w, kelompok) => {
 
 const KEPALA_REKAP = [
   'Keluarga terdata',
+  'Kepala keluarga',
   'Anggota tercatat',
+  'Total jiwa',
   'Anggota/keluarga',
   'Laki-laki',
   'Perempuan',
@@ -483,7 +492,9 @@ export const eksporDemografiExcel = async (data, filter = {}) => {
     ['Kecamatan tercakup', wKec.length],
     ['Desa/kelurahan tercakup', wDesa.length],
     ['Keluarga terdata', keluargaTersaring],
+    ['Kepala keluarga', keluargaTersaring],
     ['Anggota keluarga tercatat', siapAnggota ? anggotaTersaring : data.anggota.total],
+    ['Total jiwa (kepala keluarga + anggota)', siapAnggota ? keluargaTersaring + anggotaTersaring : null],
     ['Kolom sensus terbaca', data.kolom.length],
     [],
     ['DIEKSPOR TANGGAL', cap.tanggal],
@@ -520,7 +531,9 @@ export const eksporDemografiExcel = async (data, filter = {}) => {
   ringkasan.push(
     [],
     ['Keterangan kolom'],
-    ['Rasio JK', 'Jumlah laki-laki per 100 perempuan.'],
+    ['Kepala keluarga', 'Satu per keluarga terdata. TIDAK termasuk dalam "Anggota tercatat" — data anggota ASTA DESA hanya memuat anggota selain kepala keluarga.'],
+    ['Total jiwa', 'Kepala keluarga + anggota tercatat.'],
+    ['Rasio JK', 'Jumlah laki-laki per 100 perempuan (anggota tercatat saja).'],
     ['Usia 15–64', 'Usia produktif, mengikuti pengelompokan piramida usia di halaman Demografi.'],
     ['% (kategori)', 'Dari keluarga yang MENJAWAB kolom itu — jumlah seluruh nilai satu kolom = 100%.'],
     ['% (pilihan ganda)', 'Dari SELURUH keluarga di wilayah itu, sebab satu keluarga bisa memilih beberapa nilai.'],

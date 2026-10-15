@@ -22,7 +22,7 @@ import {
   XAxis,
   YAxis
 } from 'recharts';
-import { AlertTriangle, Baby, GraduationCap, HeartHandshake, Info, Users2 } from 'lucide-react';
+import { AlertTriangle, Baby, GraduationCap, HeartHandshake, Info, UserRound, Users2 } from 'lucide-react';
 import { DaftarBatang, Galat, KartuAngka, Kosong, Legenda, Memuat, Panel, Tooltip1 } from './ui';
 import { GAYA_SUMBU, SERI, angka, persen, rapikanLabel } from './warna';
 import { FilterWilayah, GridKategori } from './KategoriSensus';
@@ -107,7 +107,21 @@ const AnggotaKeluarga = ({ data, memuat, galat, onUlang, totalKeluarga }) => {
         </div>
       )}
 
-      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
+        {/* `sensus_anggotas` tidak memuat kepala keluarga (hubungan_kk hanya
+            Anak, Suami/Istri, Orang tua, …) — kepala keluarga tercatat di
+            baris keluarganya sendiri, satu per keluarga. */}
+        <KartuAngka
+          icon={UserRound}
+          label="Kepala keluarga"
+          nilai={totalKeluarga ?? null}
+          warna={SERI[4]}
+          keterangan={
+            totalKeluarga != null
+              ? `Di luar anggota tercatat · total ${angka(totalKeluarga + total)} jiwa`
+              : null
+          }
+        />
         <KartuAngka
           icon={Users2}
           label="Anggota tercatat"
@@ -281,6 +295,10 @@ const DemografiTab = ({ data, memuat, galat, onUlang, totalKeluarga, kategori, f
 
   const aktif = daftar.find((k) => k.kode === pilihan);
   const adaFilter = filter?.kecamatan || filter?.desa;
+  // Jumlah keluarga (= kepala keluarga) selingkup dengan angka anggota: ikut
+  // penyaring wilayah begitu anggota sudah terpeta ke wilayahnya.
+  const keluargaLingkup =
+    adaFilter && data?.per_wilayah_siap !== false ? dk?.total_keluarga ?? null : totalKeluarga ?? dk?.total_keluarga ?? null;
 
   // Muatan ekspor TIDAK diambil sebagai hook: ukurannya megabyte dan hanya
   // dibutuhkan pada detik tombolnya ditekan. Penyaring halaman tidak ikut
@@ -360,7 +378,7 @@ const DemografiTab = ({ data, memuat, galat, onUlang, totalKeluarga, kategori, f
               ikut terhitung di bagian ini.
             </p>
           )}
-          <AnggotaKeluarga data={data} memuat={memuat} galat={galat} onUlang={onUlang} totalKeluarga={totalKeluarga} />
+          <AnggotaKeluarga data={data} memuat={memuat} galat={galat} onUlang={onUlang} totalKeluarga={keluargaLingkup} />
         </>
       ) : kategori?.galat ? (
         <Galat pesan={kategori.galat} onUlang={kategori.ambil} />
