@@ -30,12 +30,15 @@ import { TombolEkspor } from './ekspor';
 import { usePengekspor } from './usePengekspor';
 import { eksporDemografiExcel, eksporDemografiPdf, labelLingkup } from './eksporAstaDesa';
 import { ambilSekali } from './useAstaDesa';
+import { useRincianWilayah } from './useRincianWilayah';
 
 const WARNA_L = SERI[0];
 const WARNA_P = SERI[1];
 
 /** Agregat anggota keluarga (usia, jenis kelamin, pendidikan, …). */
-const AnggotaKeluarga = ({ data, memuat, galat, onUlang, totalKeluarga }) => {
+const AnggotaKeluarga = ({ data, memuat, galat, onUlang, totalKeluarga, onPilih }) => {
+  // `mentah` = label asli dari server, dipakai mencocokkan rincian per wilayah.
+  const pilihSifat = (dim, judul) => (b) => onPilih?.({ tipe: 'sifat', dim, label: b.mentah ?? b.label, judul, sub: b.label });
   const piramida = useMemo(
     () =>
       (data?.piramida || []).map((k) => ({
@@ -57,19 +60,19 @@ const AnggotaKeluarga = ({ data, memuat, galat, onUlang, totalKeluarga }) => {
   }, [data?.per_jenis_kelamin]);
 
   const pendidikan = useMemo(
-    () => (data?.per_pendidikan || []).map((p) => ({ label: rapikanLabel(p.label), total: p.total })),
+    () => (data?.per_pendidikan || []).map((p) => ({ label: rapikanLabel(p.label), mentah: p.label, total: p.total })),
     [data?.per_pendidikan]
   );
   const pekerjaan = useMemo(
-    () => (data?.per_pekerjaan || []).map((p) => ({ label: rapikanLabel(p.label), total: p.total })),
+    () => (data?.per_pekerjaan || []).map((p) => ({ label: rapikanLabel(p.label), mentah: p.label, total: p.total })),
     [data?.per_pekerjaan]
   );
   const hubungan = useMemo(
-    () => (data?.per_hubungan || []).map((p) => ({ label: rapikanLabel(p.label), total: p.total })),
+    () => (data?.per_hubungan || []).map((p) => ({ label: rapikanLabel(p.label), mentah: p.label, total: p.total })),
     [data?.per_hubungan]
   );
   const disabilitas = useMemo(
-    () => (data?.per_disabilitas || []).map((p) => ({ label: rapikanLabel(p.label), total: p.total })),
+    () => (data?.per_disabilitas || []).map((p) => ({ label: rapikanLabel(p.label), mentah: p.label, total: p.total })),
     [data?.per_disabilitas]
   );
 
@@ -115,6 +118,7 @@ const AnggotaKeluarga = ({ data, memuat, galat, onUlang, totalKeluarga }) => {
           icon={UserRound}
           label="Kepala keluarga"
           nilai={totalKeluarga ?? null}
+          onClick={() => onPilih?.({ tipe: 'keluarga', judul: 'Kepala keluarga', sub: 'Jumlah kepala keluarga' })}
           warna={SERI[4]}
           keterangan={
             totalKeluarga != null
@@ -126,6 +130,7 @@ const AnggotaKeluarga = ({ data, memuat, galat, onUlang, totalKeluarga }) => {
           icon={Users2}
           label="Anggota tercatat"
           nilai={total}
+          onClick={() => onPilih?.({ tipe: 'anggota', judul: 'Anggota tercatat', sub: 'Anggota keluarga (di luar kepala keluarga)' })}
           keterangan={
             totalKeluarga ? `≈ ${(total / Math.max(1, totalKeluarga)).toFixed(1).replace('.', ',')} orang/keluarga` : null
           }
@@ -134,6 +139,7 @@ const AnggotaKeluarga = ({ data, memuat, galat, onUlang, totalKeluarga }) => {
           icon={Baby}
           label="Usia 0–14"
           nilai={anak}
+          onClick={() => onPilih?.({ tipe: 'usia', kelompok: ['0–4', '5–14'], judul: 'Kelompok usia', sub: 'Usia 0–14' })}
           warna={SERI[2]}
           keterangan={`${persen(anak, total)} dari seluruh anggota`}
         />
@@ -141,6 +147,9 @@ const AnggotaKeluarga = ({ data, memuat, galat, onUlang, totalKeluarga }) => {
           icon={HeartHandshake}
           label="Usia produktif 15–64"
           nilai={produktif}
+          onClick={() =>
+            onPilih?.({ tipe: 'usia', kelompok: ['15–24', '25–39', '40–54', '55–64'], judul: 'Kelompok usia', sub: 'Usia produktif 15–64' })
+          }
           warna={SERI[1]}
           keterangan={`${persen(produktif, total)} dari seluruh anggota`}
         />
@@ -148,6 +157,7 @@ const AnggotaKeluarga = ({ data, memuat, galat, onUlang, totalKeluarga }) => {
           icon={GraduationCap}
           label="Usia 65+"
           nilai={lansia}
+          onClick={() => onPilih?.({ tipe: 'usia', kelompok: ['65+'], judul: 'Kelompok usia', sub: 'Usia 65+' })}
           warna={SERI[3]}
           keterangan={`${persen(lansia, total)} dari seluruh anggota`}
         />
@@ -194,8 +204,30 @@ const AnggotaKeluarga = ({ data, memuat, galat, onUlang, totalKeluarga }) => {
                   {/* radius 4px hanya di ujung data (menjauhi garis nol) — ujung
                       yang menempel garis tengah dibiarkan lurus agar kedua sisi
                       bertemu rapat. */}
-                  <Bar dataKey="L" name="Laki-laki" fill={WARNA_L} radius={[4, 0, 0, 4]} barSize={14} />
-                  <Bar dataKey="P" name="Perempuan" fill={WARNA_P} radius={[0, 4, 4, 0]} barSize={14} />
+                  <Bar
+                    dataKey="L"
+                    name="Laki-laki"
+                    fill={WARNA_L}
+                    radius={[4, 0, 0, 4]}
+                    barSize={14}
+                    onClick={(d) => {
+                      const l = d?.payload?.label ?? d?.label;
+                      if (l) onPilih?.({ tipe: 'usia', kelompok: [l], sisi: 'L', judul: 'Piramida usia', sub: `Laki-laki usia ${l}` });
+                    }}
+                    style={{ cursor: 'pointer' }}
+                  />
+                  <Bar
+                    dataKey="P"
+                    name="Perempuan"
+                    fill={WARNA_P}
+                    radius={[0, 4, 4, 0]}
+                    barSize={14}
+                    onClick={(d) => {
+                      const l = d?.payload?.label ?? d?.label;
+                      if (l) onPilih?.({ tipe: 'usia', kelompok: [l], sisi: 'P', judul: 'Piramida usia', sub: `Perempuan usia ${l}` });
+                    }}
+                    style={{ cursor: 'pointer' }}
+                  />
                 </BarChart>
               </ResponsiveContainer>
             </div>
@@ -222,6 +254,7 @@ const AnggotaKeluarga = ({ data, memuat, galat, onUlang, totalKeluarga }) => {
               total={total}
               warna={(b) => (b.label === 'Laki-laki' ? WARNA_L : b.label === 'Perempuan' ? WARNA_P : '#cbd5e1')}
               batas={3}
+              onPilih={pilihSifat('jk', 'Jenis kelamin')}
             />
             {/* Rasio jenis kelamin: jumlah laki-laki per 100 perempuan. Satu
                 angka yang langsung bisa dibandingkan dengan angka BPS. */}
@@ -238,7 +271,7 @@ const AnggotaKeluarga = ({ data, memuat, galat, onUlang, totalKeluarga }) => {
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
         <Panel judul="Pendidikan terakhir" keterangan={`${pendidikan.length} kategori terbaca`}>
-          <DaftarBatang baris={pendidikan} total={total} warna={SERI[2]} batas={10} />
+          <DaftarBatang baris={pendidikan} total={total} warna={SERI[2]} batas={10} onPilih={pilihSifat('pendidikan', 'Pendidikan terakhir')} />
         </Panel>
         {/* Panel ketiga menyesuaikan kolom yang benar-benar ada. Per hari ini
             `sensus_anggotas` ASTA DESA TIDAK punya kolom pekerjaan tetapi punya
@@ -247,18 +280,18 @@ const AnggotaKeluarga = ({ data, memuat, galat, onUlang, totalKeluarga }) => {
             kolom pekerjaan, panelnya muncul sendiri tanpa perubahan kode. */}
         {pekerjaan.length > 0 ? (
           <Panel judul="Pekerjaan" keterangan="20 terbanyak">
-            <DaftarBatang baris={pekerjaan} total={total} warna={SERI[3]} batas={10} />
+            <DaftarBatang baris={pekerjaan} total={total} warna={SERI[3]} batas={10} onPilih={pilihSifat('pekerjaan', 'Pekerjaan')} />
           </Panel>
         ) : (
           <Panel
             judul="Disabilitas"
             keterangan={`${disabilitas.length} kategori terbaca`}
           >
-            <DaftarBatang baris={disabilitas} total={total} warna={SERI[3]} batas={10} />
+            <DaftarBatang baris={disabilitas} total={total} warna={SERI[3]} batas={10} onPilih={pilihSifat('disabilitas', 'Disabilitas')} />
           </Panel>
         )}
         <Panel judul="Hubungan dalam keluarga" keterangan={`${hubungan.length} kategori terbaca`}>
-          <DaftarBatang baris={hubungan} total={total} warna={SERI[4]} batas={10} />
+          <DaftarBatang baris={hubungan} total={total} warna={SERI[4]} batas={10} onPilih={pilihSifat('hubungan', 'Hubungan dalam keluarga')} />
         </Panel>
       </div>
     </div>
@@ -284,6 +317,8 @@ const AnggotaKeluarga = ({ data, memuat, galat, onUlang, totalKeluarga }) => {
  */
 const DemografiTab = ({ data, memuat, galat, onUlang, totalKeluarga, kategori, filter, onFilter }) => {
   const [pilihan, setPilihan] = useState('anggota');
+  // Pop-up rincian per wilayah untuk setiap grafik yang diklik.
+  const rincian = useRincianWilayah(filter || {});
   const dk = kategori?.data;
   const daftar = useMemo(() => dk?.kategori || [], [dk]);
 
@@ -298,7 +333,7 @@ const DemografiTab = ({ data, memuat, galat, onUlang, totalKeluarga, kategori, f
   // Jumlah keluarga (= kepala keluarga) selingkup dengan angka anggota: ikut
   // penyaring wilayah begitu anggota sudah terpeta ke wilayahnya.
   const keluargaLingkup =
-    adaFilter && data?.per_wilayah_siap !== false ? dk?.total_keluarga ?? null : totalKeluarga ?? dk?.total_keluarga ?? null;
+    adaFilter && data?.per_wilayah_siap === false ? totalKeluarga ?? null : dk?.total_keluarga ?? totalKeluarga ?? null;
 
   // Muatan ekspor TIDAK diambil sebagai hook: ukurannya megabyte dan hanya
   // dibutuhkan pada detik tombolnya ditekan. Penyaring halaman tidak ikut
@@ -334,6 +369,7 @@ const DemografiTab = ({ data, memuat, galat, onUlang, totalKeluarga, kategori, f
 
   return (
     <div className="space-y-4">
+      {rincian.modal}
       <div className="space-y-3 rounded-2xl border border-slate-200 bg-white p-3 shadow-sm shadow-slate-900/[0.03] sm:p-4">
         <FilterWilayah wilayah={dk?.wilayah} filter={filter || {}} onUbah={onFilter} total={dk?.total_keluarga} />
         <div className="flex flex-wrap items-start justify-between gap-3 border-t border-slate-100 pt-3">
@@ -378,7 +414,7 @@ const DemografiTab = ({ data, memuat, galat, onUlang, totalKeluarga, kategori, f
               ikut terhitung di bagian ini.
             </p>
           )}
-          <AnggotaKeluarga data={data} memuat={memuat} galat={galat} onUlang={onUlang} totalKeluarga={keluargaLingkup} />
+          <AnggotaKeluarga data={data} memuat={memuat} galat={galat} onUlang={onUlang} totalKeluarga={keluargaLingkup} onPilih={rincian.buka} />
         </>
       ) : kategori?.galat ? (
         <Galat pesan={kategori.galat} onUlang={kategori.ambil} />
@@ -400,6 +436,7 @@ const DemografiTab = ({ data, memuat, galat, onUlang, totalKeluarga, kategori, f
             kategori={aktif}
             totalKeluarga={dk.total_keluarga}
             indeksWarna={daftar.indexOf(aktif)}
+            onPilih={rincian.buka}
           />
         </>
       )}

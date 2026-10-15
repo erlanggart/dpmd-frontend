@@ -17,6 +17,7 @@
 import React, { useMemo, useState } from 'react';
 import { Hash, ListChecks, MapPin, Search, X } from 'lucide-react';
 import { DaftarBatang, Kosong } from './ui';
+import { KOSONG } from './RincianWilayah';
 import { SERI, TANGGA, angka, rapikanLabel } from './warna';
 
 const WARNA_KATEGORI = [SERI[0], SERI[2], SERI[1], SERI[3], SERI[4], TANGGA[3], TANGGA[1]];
@@ -79,14 +80,14 @@ export const FilterWilayah = ({ wilayah, filter, onUbah, total }) => {
   );
 };
 
-const KartuKolom = ({ kolom, totalKeluarga, warna }) => {
+const KartuKolom = ({ kolom, totalKeluarga, warna, onPilih }) => {
   const persenTerisi = totalKeluarga ? Math.round((kolom.terisi / totalKeluarga) * 100) : 0;
 
   const baris = useMemo(() => {
     if (!kolom.nilai) return [];
-    const isi = kolom.nilai.map((n) => ({ label: rapikanLabel(n.label), total: n.total }));
+    const isi = kolom.nilai.map((n) => ({ label: rapikanLabel(n.label), mentah: n.label, total: n.total }));
     if (kolom.jenis === 'pilihan_ganda' && totalKeluarga > kolom.terisi) {
-      isi.push({ label: 'Tidak ada / kosong', total: totalKeluarga - kolom.terisi });
+      isi.push({ label: 'Tidak ada / kosong', mentah: KOSONG, total: totalKeluarga - kolom.terisi });
     }
     return isi;
   }, [kolom, totalKeluarga]);
@@ -123,6 +124,13 @@ const KartuKolom = ({ kolom, totalKeluarga, warna }) => {
       </header>
 
       {kolom.jenis === 'angka' ? (
+        <button
+          type="button"
+          onClick={() => onPilih?.({ tipe: 'angka', kunci: kolom.kunci, judul: kolom.label, sub: 'Statistik per wilayah' })}
+          disabled={!onPilih}
+          title={onPilih ? 'Klik untuk rincian per wilayah' : undefined}
+          className="block w-full rounded-xl text-left enabled:hover:bg-slate-50/80"
+        >
         <dl className="grid grid-cols-2 gap-2">
           {[
             ['Rata-rata', kolom.statistik?.rata_rata],
@@ -136,12 +144,18 @@ const KartuKolom = ({ kolom, totalKeluarga, warna }) => {
             </div>
           ))}
         </dl>
+        </button>
       ) : (
         <DaftarBatang
           baris={baris}
           total={kolom.jenis === 'pilihan_ganda' ? totalKeluarga : kolom.terisi}
           warna={(b) => (b.label === 'Tidak ada / kosong' ? '#cbd5e1' : warna)}
           batas={8}
+          onPilih={
+            onPilih
+              ? (b) => onPilih({ tipe: 'kolom', kunci: kolom.kunci, nilai: b.mentah ?? b.label, judul: kolom.label, sub: b.label })
+              : undefined
+          }
         />
       )}
       {kolom.nilai && kolom.nilai.length > 8 && (
@@ -152,7 +166,7 @@ const KartuKolom = ({ kolom, totalKeluarga, warna }) => {
 };
 
 /** Grid kartu satu kategori + pencarian kolom. */
-export const GridKategori = ({ kategori, totalKeluarga, indeksWarna = 0 }) => {
+export const GridKategori = ({ kategori, totalKeluarga, indeksWarna = 0, onPilih }) => {
   const [cari, setCari] = useState('');
   const kolom = useMemo(() => {
     const q = cari.trim().toLowerCase();
@@ -179,7 +193,7 @@ export const GridKategori = ({ kategori, totalKeluarga, indeksWarna = 0 }) => {
       ) : (
         <div className="grid grid-cols-1 gap-3 md:grid-cols-2 2xl:grid-cols-3">
           {kolom.map((k) => (
-            <KartuKolom key={k.kunci} kolom={k} totalKeluarga={totalKeluarga} warna={warna} />
+            <KartuKolom key={k.kunci} kolom={k} totalKeluarga={totalKeluarga} warna={warna} onPilih={onPilih} />
           ))}
         </div>
       )}

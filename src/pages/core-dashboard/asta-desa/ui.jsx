@@ -35,8 +35,16 @@ export const Panel = ({ judul, keterangan, aksi, children, className = '', padat
  * Angkanya ditulis penuh, tidak diringkas. Halaman ini dipakai untuk melapor,
  * dan "7,8 rb keluarga" bukan angka yang bisa dimasukkan ke laporan.
  */
-export const KartuAngka = ({ icon: Icon, label, nilai, satuan, keterangan, warna = '#2a78d6' }) => (
-  <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm shadow-slate-900/[0.03]">
+export const KartuAngka = ({ icon: Icon, label, nilai, satuan, keterangan, warna = '#2a78d6', onClick }) => {
+  // Dengan `onClick` kartu menjadi tombol (mis. membuka rincian per wilayah).
+  const Wadah = onClick ? 'button' : 'div';
+  return (
+  <Wadah
+    {...(onClick ? { type: 'button', onClick, title: 'Klik untuk rincian per wilayah' } : {})}
+    className={`rounded-2xl border border-slate-200 bg-white p-4 text-left shadow-sm shadow-slate-900/[0.03] ${
+      onClick ? 'w-full cursor-pointer transition hover:border-slate-300 hover:shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-400' : ''
+    }`}
+  >
     <div className="flex items-start justify-between gap-3">
       <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500">{label}</p>
       {Icon && (
@@ -53,8 +61,9 @@ export const KartuAngka = ({ icon: Icon, label, nilai, satuan, keterangan, warna
       {satuan && <span className="ml-1 text-sm font-medium text-slate-400">{satuan}</span>}
     </p>
     {keterangan && <p className="mt-1 text-xs leading-relaxed text-slate-500">{keterangan}</p>}
-  </div>
-);
+  </Wadah>
+  );
+};
 
 /**
  * Daftar batang mendatar.
@@ -65,16 +74,18 @@ export const KartuAngka = ({ icon: Icon, label, nilai, satuan, keterangan, warna
  * Angkanya ditulis di ujung tiap batang — identitas tidak pernah bersandar pada
  * warna saja.
  */
-export const DaftarBatang = ({ baris, total, maks, warna = '#2a78d6', batas = 10, tampilkanPersen = true }) => {
+// `onPilih(baris)` opsional: tiap baris menjadi tombol (rincian per wilayah).
+export const DaftarBatang = ({ baris, total, maks, warna = '#2a78d6', batas = 10, tampilkanPersen = true, onPilih }) => {
   const tertinggi = maks || Math.max(1, ...baris.map((b) => b.total));
   const tampil = batas ? baris.slice(0, batas) : baris;
 
   if (!tampil.length) return <Kosong pesan="Belum ada data untuk ditampilkan." />;
 
   return (
-    <ol className="space-y-2.5">
+    <ol className={onPilih ? 'space-y-1' : 'space-y-2.5'}>
       {tampil.map((b, i) => (
         <li key={b.label ?? i}>
+          <BarisBatang onPilih={onPilih ? () => onPilih(b) : null}>
           <div className="flex items-baseline justify-between gap-3">
             <span className="min-w-0 truncate text-xs font-medium text-slate-700" title={b.label}>
               {b.label}
@@ -95,11 +106,26 @@ export const DaftarBatang = ({ baris, total, maks, warna = '#2a78d6', batas = 10
               }}
             />
           </div>
+          </BarisBatang>
         </li>
       ))}
     </ol>
   );
 };
+
+const BarisBatang = ({ onPilih, children }) =>
+  onPilih ? (
+    <button
+      type="button"
+      onClick={onPilih}
+      title="Klik untuk rincian per wilayah"
+      className="block w-full rounded-lg px-1.5 py-1 text-left transition-colors hover:bg-slate-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-300"
+    >
+      {children}
+    </button>
+  ) : (
+    children
+  );
 
 export const Memuat = ({ pesan = 'Memuat data Asta Desa…', tinggi = 'py-16' }) => (
   <div className={`flex flex-col items-center justify-center ${tinggi} text-center`}>
