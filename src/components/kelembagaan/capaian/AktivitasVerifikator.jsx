@@ -1,6 +1,8 @@
 import React, { useEffect, useState } from "react";
+import toast from "react-hot-toast";
 import { LuLoader, LuChevronLeft, LuChevronRight, LuX } from "react-icons/lu";
 import kelembagaanApi from "../../../api/kelembagaan";
+import TombolEkspor from "../../shared/TombolEkspor";
 
 const RENTANG = [
   { hari: 7, label: "7 hari" },
@@ -33,6 +35,16 @@ const formatWaktu = (ms) =>
     : "-";
 
 const LIMIT = 20;
+
+// Satu permintaan ekspor mengambil 100 baris — batas atas yang diterima
+// endpoint-nya (`limit` di-clamp ke 100 di summary.controller.js), jadi
+// meminta lebih hanya membuang perjalanan.
+const LIMIT_EKSPOR = 100;
+
+// Pagar batas: riwayat "Semua" bisa puluhan ribu baris, dan mengunduhnya
+// seratus-seratus lewat tab browser punya ujungnya. Yang terpotong dikatakan
+// lewat toast, bukan dibiarkan jadi berkas yang diam-diam tidak lengkap.
+const MAKS_BARIS_EKSPOR = 10000;
 
 const AktivitasVerifikator = ({ onDesaClick }) => {
   const [hari, setHari] = useState(30);
@@ -70,6 +82,62 @@ const AktivitasVerifikator = ({ onDesaClick }) => {
   const totalHalaman = data ? Math.max(1, Math.ceil(data.pagination.total / LIMIT)) : 1;
   const namaTerpilih = verifikator.find((v) => v.user_id === userId)?.nama;
 
+  const labelRentang = RENTANG.find((r) => r.hari === hari)?.label;
+  const subjudulRentang = hari === 0 ? "Seluruh waktu" : `${labelRentang} terakhir`;
+
+  const kolomVerifikator = [
+    { label: "Verifikator", nilai: (v) => v.nama || "Tanpa nama" },
+    { label: "Role", nilai: (v) => v.role },
+    { label: "Total Tindakan", nilai: (v) => v.total },
+    { label: "Lembaga", nilai: (v) => v.lembaga },
+    { label: "Pengurus", nilai: (v) => v.pengurus },
+    { label: "Diverifikasi", nilai: (v) => v.verified },
+    { label: "Ditolak", nilai: (v) => v.ditolak },
+    { label: "Dibatalkan", nilai: (v) => v.dibatalkan },
+    { label: "Hari Aktif", nilai: (v) => v.hari_aktif },
+    { label: "Rata-rata per Hari", nilai: (v) => (v.hari_aktif ? Number((v.total / v.hari_aktif).toFixed(1)) : "") },
+    { label: "Terakhir", nilai: (v) => formatWaktu(v.terakhir) },
+  ];
+
+  const kolomRiwayat = [
+    { label: "Waktu", nilai: (r) => formatWaktu(r.waktu) },
+    { label: "Verifikator", nilai: (r) => r.user_name },
+    { label: "Tindakan", nilai: (r) => STATUS[r.status]?.label || r.status },
+    { label: "Jenis", nilai: (r) => (r.jenis === "pengurus" ? "Pengurus" : "Lembaga") },
+    { label: "Nama", nilai: (r) => r.entity_name },
+    { label: "Lembaga", nilai: (r) => r.kelembagaan_nama || "" },
+    { label: "Jenis Lembaga", nilai: (r) => LABEL_TIPE[r.kelembagaan_type] || r.kelembagaan_type || "" },
+    { label: "Desa", nilai: (r) => r.desa || "" },
+    { label: "Kecamatan", nilai: (r) => r.kecamatan || "" },
+  ];
+
+  // Riwayat berhalaman di server, jadi yang di klien hanya 20 baris yang
+  // sedang terlihat. Ekspor mengumpulkan seluruh halaman dengan penyaring yang
+  // sama (rentang & verifikator terpilih) supaya berkasnya sesuai dengan
+  // jumlah yang tertulis di judul tabel, bukan sepotong halaman terakhir.
+  const ambilRiwayat = async () => {
+    const total = data?.pagination.total || 0;
+    const batas = Math.min(total, MAKS_BARIS_EKSPOR);
+    const hasil = [];
+
+    for (let page = 1; hasil.length < batas; page += 1) {
+      const res = await kelembagaanApi.getAktivitasVerifikator({
+        hari,
+        page,
+        limit: LIMIT_EKSPOR,
+        ...(userId ? { user_id: userId } : {}),
+      });
+      const baris = res.data?.riwayat || [];
+      if (baris.length === 0) break;
+      hasil.push(...baris);
+    }
+
+    if (total > batas) {
+      toast(`Dibatasi ${batas.toLocaleString("id-ID")} baris terbaru dari ${total.toLocaleString("id-ID")}.`);
+    }
+    return hasil.slice(0, batas);
+  };
+
   return (
     <div className="space-y-6">
       <div className="bg-white rounded-xl border border-slate-200 p-5">
@@ -80,20 +148,30 @@ const AktivitasVerifikator = ({ onDesaClick }) => {
               Seluruh tindakan verifikasi lembaga & pengurus. Klik baris untuk melihat riwayat verifikator tersebut.
             </p>
           </div>
-          <div className="inline-flex rounded-lg border border-slate-200 p-0.5">
-            {RENTANG.map((r) => (
-              <button
-                key={r.hari}
-                type="button"
-                onClick={() => gantiRentang(r.hari)}
-                aria-pressed={hari === r.hari}
-                className={`px-3 py-1 text-sm rounded-md font-medium transition-colors ${
-                  hari === r.hari ? "bg-slate-800 text-white" : "text-slate-600 hover:bg-slate-50"
-                }`}
-              >
-                {r.label}
-              </button>
-            ))}
+          <div className="flex flex-wrap items-center gap-2">
+            <div className="inline-flex rounded-lg border border-slate-200 p-0.5">
+              {RENTANG.map((r) => (
+                <button
+                  key={r.hari}
+                  type="button"
+                  onClick={() => gantiRentang(r.hari)}
+                  aria-pressed={hari === r.hari}
+                  className={`px-3 py-1 text-sm rounded-md font-medium transition-colors ${
+                    hari === r.hari ? "bg-slate-800 text-white" : "text-slate-600 hover:bg-slate-50"
+                  }`}
+                >
+                  {r.label}
+                </button>
+              ))}
+            </div>
+            <TombolEkspor
+              kolom={kolomVerifikator}
+              baris={verifikator}
+              namaBerkas="rekap-verifikator"
+              judul="Rekap Aktivitas Verifikator"
+              subjudul={subjudulRentang}
+              keterangan={false}
+            />
           </div>
         </div>
 
@@ -165,16 +243,26 @@ const AktivitasVerifikator = ({ onDesaClick }) => {
               <span className="ml-2 text-sm font-normal text-slate-500">({data.pagination.total} aktivitas)</span>
             )}
           </h3>
-          {userId && (
-            <button
-              type="button"
-              onClick={() => pilihVerifikator(userId)}
-              className="flex items-center gap-1.5 px-3 py-1 text-xs font-semibold text-indigo-700 bg-indigo-50 hover:bg-indigo-100 rounded-full"
-            >
-              {namaTerpilih || "Verifikator"}
-              <LuX className="w-3.5 h-3.5" />
-            </button>
-          )}
+          <div className="flex flex-wrap items-center gap-2">
+            {userId && (
+              <button
+                type="button"
+                onClick={() => pilihVerifikator(userId)}
+                className="flex items-center gap-1.5 px-3 py-1 text-xs font-semibold text-indigo-700 bg-indigo-50 hover:bg-indigo-100 rounded-full"
+              >
+                {namaTerpilih || "Verifikator"}
+                <LuX className="w-3.5 h-3.5" />
+              </button>
+            )}
+            <TombolEkspor
+              kolom={kolomRiwayat}
+              ambilBaris={ambilRiwayat}
+              jumlah={data?.pagination.total ?? 0}
+              namaBerkas={namaTerpilih ? `riwayat-verifikasi-${namaTerpilih}` : "riwayat-verifikasi"}
+              judul="Riwayat Verifikasi"
+              subjudul={[subjudulRentang, namaTerpilih && `Verifikator: ${namaTerpilih}`].filter(Boolean).join(" · ")}
+            />
+          </div>
         </div>
 
         <div className={`divide-y divide-slate-100 ${loading ? "opacity-50" : ""}`}>

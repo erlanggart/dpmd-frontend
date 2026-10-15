@@ -16,6 +16,7 @@ import TrenVerifikasiHarian from "../../../components/kelembagaan/capaian/TrenVe
 import AktivitasVerifikator from "../../../components/kelembagaan/capaian/AktivitasVerifikator";
 import CapaianPerDesa from "../../../components/kelembagaan/capaian/CapaianPerDesa";
 import PermasalahanDesa from "../../../components/kelembagaan/capaian/PermasalahanDesa";
+import TombolEkspor from "../../../components/shared/TombolEkspor";
 import { WARNA_LEMBAGA, persen } from "../../../components/kelembagaan/capaian/warnaLembaga";
 
 const TABS = [
@@ -64,12 +65,52 @@ const CapaianPerLembaga = ({ statistik, perDesa }) => {
   const { per_lembaga, grand_totals } = statistik;
   const tuntasTotal = perDesa ? hitungDesaTuntas(perDesa.desa) : null;
 
+  // Baris "Total" di tabel tidak diikutkan ke berkas: di Excel baris jumlah
+  // yang ikut tersaring atau terurut justru merusak hitungan penerimanya.
+  const barisEkspor = keys.map((key) => {
+    const t = per_lembaga[key]?.totals || {};
+    const tuntas = perDesa ? hitungDesaTuntas(perDesa.desa, key) : null;
+    return {
+      label: per_lembaga[key]?.label || key,
+      total: t.total || 0,
+      verified: t.verified || 0,
+      unverified: t.unverified || 0,
+      ditolak: t.ditolak || 0,
+      persen: persen(t.verified || 0, t.total || 0),
+      tuntas: tuntas?.tuntas ?? "",
+      punya: tuntas?.punya ?? "",
+    };
+  });
+
+  const kolomEkspor = [
+    { label: "Lembaga", nilai: (b) => b.label },
+    { label: "Total", nilai: (b) => b.total },
+    { label: "Terverifikasi", nilai: (b) => b.verified },
+    { label: "Belum", nilai: (b) => b.unverified },
+    { label: "Ditolak", nilai: (b) => b.ditolak },
+    { label: "Capaian (%)", nilai: (b) => b.persen },
+    { label: "Desa Tuntas", nilai: (b) => b.tuntas },
+    { label: "Desa Punya Lembaga", nilai: (b) => b.punya },
+  ];
+
   return (
     <div className="bg-white rounded-xl border border-slate-200 p-5">
-      <h3 className="text-lg font-bold text-slate-900">Capaian Verifikasi per Lembaga</h3>
-      <p className="text-sm text-slate-500 mb-4">
-        Rincian status verifikasi tiap jenis lembaga dan jumlah desa yang lembaganya sudah terverifikasi semua
-      </p>
+      <div className="flex flex-wrap items-start justify-between gap-3 mb-4">
+        <div>
+          <h3 className="text-lg font-bold text-slate-900">Capaian Verifikasi per Lembaga</h3>
+          <p className="text-sm text-slate-500">
+            Rincian status verifikasi tiap jenis lembaga dan jumlah desa yang lembaganya sudah terverifikasi semua
+          </p>
+        </div>
+        <TombolEkspor
+          kolom={kolomEkspor}
+          baris={barisEkspor}
+          namaBerkas="capaian-verifikasi-per-lembaga"
+          judul="Capaian Verifikasi per Lembaga"
+          subjudul={`Total ${grand_totals.total.toLocaleString("id-ID")} lembaga · ${grand_totals.persentase_verifikasi}% terverifikasi`}
+          keterangan={false}
+        />
+      </div>
       <div className="overflow-x-auto">
         <table className="w-full text-sm">
           <thead>

@@ -1,5 +1,6 @@
 import React, { useMemo, useState } from "react";
 import { LuSearch } from "react-icons/lu";
+import TombolEkspor from "../../shared/TombolEkspor";
 import { persen } from "./warnaLembaga";
 
 const STATUS_FILTER = [
@@ -9,6 +10,14 @@ const STATUS_FILTER = [
   { value: "tuntas", label: "Tuntas 100%" },
   { value: "kosong", label: "Belum ada lembaga" },
 ];
+
+// Label pendek untuk sel berkas ekspor; STATUS_FILTER terlalu panjang sebagai isi kolom.
+const LABEL_STATUS = {
+  tuntas: "Tuntas",
+  sebagian: "Sebagian",
+  belum: "Belum diverifikasi",
+  kosong: "Belum ada lembaga",
+};
 
 const URUTAN = [
   { value: "persen-desc", label: "Persentase tertinggi" },
@@ -89,16 +98,65 @@ const CapaianPerDesa = ({ data, onDesaClick }) => {
     return r;
   }, [rows, lembaga]);
 
+  const labelLembaga =
+    lembaga === "semua" ? "semua lembaga" : data.lembaga.find((l) => l.key === lembaga)?.label || lembaga;
+
+  // Tiap jenis lembaga jadi dua kolom (terverifikasi & total), bukan satu kolom
+  // "3/5": angka yang digabung jadi teks tidak bisa dijumlahkan maupun
+  // dijadikan pivot di Excel, dan itu alasan orang memintanya.
+  const kolomEkspor = useMemo(() => {
+    const kolom = [
+      { label: "Kecamatan", nilai: (d) => d.kecamatan },
+      { label: "Desa/Kelurahan", nilai: (d) => d.nama },
+      { label: "Status", nilai: (d) => (d.status_pemerintahan === "kelurahan" ? "Kelurahan" : "Desa") },
+    ];
+    data.lembaga.forEach((l) => {
+      kolom.push({ label: `${l.label} Terverifikasi`, nilai: (d) => d.lembaga[l.key].verified });
+      kolom.push({ label: `${l.label} Total`, nilai: (d) => d.lembaga[l.key].total });
+      kolom.push({
+        label: `${l.label} (%)`,
+        nilai: (d) => (d.lembaga[l.key].total ? persen(d.lembaga[l.key].verified, d.lembaga[l.key].total) : ""),
+      });
+    });
+    kolom.push(
+      { label: "Total Terverifikasi", nilai: (d) => d.verified },
+      { label: "Total Lembaga", nilai: (d) => d.total },
+      { label: "Capaian (%)", nilai: (d) => (d.total ? persen(d.verified, d.total) : "") },
+      { label: `Status Capaian (${labelLembaga})`, nilai: (d) => LABEL_STATUS[statusDesa(d, lembaga)] },
+    );
+    return kolom;
+  }, [data.lembaga, lembaga, labelLembaga]);
+
+  // Penyaring aktif ditulis ke berkas supaya lampiran yang beredar tidak
+  // disalahpahami sebagai data seluruh kabupaten.
+  const subjudulEkspor = [
+    kecamatan ? `Kecamatan ${kecamatanList.find(([id]) => id === kecamatan)?.[1] || kecamatan}` : "Seluruh kecamatan",
+    `Lembaga acuan: ${labelLembaga}`,
+    `Status: ${STATUS_FILTER.find((s) => s.value === status)?.label}`,
+    cari.trim() && `Pencarian: "${cari.trim()}"`,
+  ]
+    .filter(Boolean)
+    .join(" · ");
+
   const pilihan = "border border-slate-200 rounded-lg px-3 py-2 text-sm bg-white";
 
   return (
     <div className="bg-white rounded-xl border border-slate-200 p-5">
-      <div className="mb-4">
-        <h3 className="text-lg font-bold text-slate-900">Capaian Verifikasi per Desa</h3>
-        <p className="text-sm text-slate-500">
-          Persentase lembaga terverifikasi di tiap desa, dirinci per jenis lembaga
-          {onDesaClick && ". Klik nama desa untuk membuka data kelembagaannya"}.
-        </p>
+      <div className="flex flex-wrap items-start justify-between gap-3 mb-4">
+        <div>
+          <h3 className="text-lg font-bold text-slate-900">Capaian Verifikasi per Desa</h3>
+          <p className="text-sm text-slate-500">
+            Persentase lembaga terverifikasi di tiap desa, dirinci per jenis lembaga
+            {onDesaClick && ". Klik nama desa untuk membuka data kelembagaannya"}.
+          </p>
+        </div>
+        <TombolEkspor
+          kolom={kolomEkspor}
+          baris={rows}
+          namaBerkas="capaian-verifikasi-per-desa"
+          judul="Capaian Verifikasi per Desa"
+          subjudul={subjudulEkspor}
+        />
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-2 mb-3">

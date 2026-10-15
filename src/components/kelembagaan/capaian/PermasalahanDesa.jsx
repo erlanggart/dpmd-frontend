@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { LuLoader, LuSearch, LuChevronDown, LuArrowUpRight } from "react-icons/lu";
 import kelembagaanApi from "../../../api/kelembagaan";
+import TombolEkspor from "../../shared/TombolEkspor";
 
 // Urutan = urutan tampil. tingkat menentukan warna & prioritas pengurutan desa.
 const MASALAH = {
@@ -141,6 +142,41 @@ const PermasalahanDesa = ({ onDesaClick }) => {
       .sort((a, b) => (filter ? jumlahFilter(b) - jumlahFilter(a) : 0) || skor(b) - skor(a) || a.nama.localeCompare(b.nama));
   }, [data, cari, kecamatan, filter]);
 
+  // Satu kolom per jenis masalah, berisi angkanya (0 bila desa itu bersih dari
+  // masalah tersebut) — bukan daftar chip seperti di layar. Bentuk ini yang
+  // bisa disaring dan dijumlahkan penerima berkasnya per kecamatan.
+  const kolomEkspor = useMemo(
+    () => [
+      { label: "Kecamatan", nilai: (d) => d.kecamatan },
+      { label: "Desa/Kelurahan", nilai: (d) => d.nama },
+      { label: "Status", nilai: (d) => (d.status_pemerintahan === "kelurahan" ? "Kelurahan" : "Desa") },
+      { label: "Jenis Masalah", nilai: (d) => d.masalah.length },
+      ...KODE.map((kode) => ({
+        label: `${MASALAH[kode].label} (${MASALAH[kode].satuan})`,
+        nilai: (d) => d.masalah.find((m) => m.kode === kode)?.jumlah || 0,
+      })),
+      {
+        label: "Jenis Lembaga yang Belum Dibentuk",
+        nilai: (d) =>
+          (d.masalah.find((m) => m.kode === "belum_ada_lembaga")?.rincian || [])
+            .map((r) => r.label)
+            .join(", "),
+      },
+      { label: "Produk Hukum (dokumen)", nilai: (d) => d.produk_hukum.total },
+      { label: "SK Kepala Desa", nilai: (d) => d.produk_hukum.sk_kades },
+      { label: "RW tanpa RT", nilai: (d) => d.rw_tanpa_rt },
+    ],
+    []
+  );
+
+  const subjudulEkspor = [
+    kecamatan ? `Kecamatan ${kecamatanList.find(([id]) => id === kecamatan)?.[1] || kecamatan}` : "Seluruh kecamatan",
+    filter ? `Masalah: ${MASALAH[filter].label}` : "Semua jenis masalah",
+    cari.trim() && `Pencarian: "${cari.trim()}"`,
+  ]
+    .filter(Boolean)
+    .join(" · ");
+
   if (error) {
     return <div className="bg-red-50 border border-red-200 rounded-xl p-6 text-center text-sm text-red-600">{error}</div>;
   }
@@ -235,6 +271,14 @@ const PermasalahanDesa = ({ onDesaClick }) => {
                 </option>
               ))}
             </select>
+            <TombolEkspor
+              kolom={kolomEkspor}
+              baris={rows}
+              namaBerkas="permasalahan-data-desa"
+              judul="Permasalahan Data Desa"
+              subjudul={subjudulEkspor}
+              keterangan={false}
+            />
           </div>
         </div>
 

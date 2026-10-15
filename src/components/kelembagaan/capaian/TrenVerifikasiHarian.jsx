@@ -10,6 +10,7 @@ import {
 import { Bar } from "react-chartjs-2";
 import { LuLoader } from "react-icons/lu";
 import kelembagaanApi from "../../../api/kelembagaan";
+import TombolEkspor from "../../shared/TombolEkspor";
 import { WARNA_LEMBAGA } from "./warnaLembaga";
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, Tooltip, Legend);
@@ -55,6 +56,27 @@ const TrenVerifikasiHarian = () => {
   const hariPuncak = puncak > 0 ? data.tanggal[totalPerHari.indexOf(puncak)] : null;
   const hariIni = totalPerHari[totalPerHari.length - 1] || 0;
 
+  // Grafik batang bertumpuk ini tidak bisa dibaca angkanya satu per satu, jadi
+  // yang diekspor adalah tabel hariannya: satu baris per tanggal, satu kolom
+  // per lembaga. Tanggal ditulis apa adanya (YYYY-MM-DD) supaya bisa diurutkan
+  // dan dijadikan sumbu pivot di Excel, bukan "5 Okt" yang hanya enak dibaca.
+  const barisTren = data
+    ? data.tanggal.map((tgl, i) => ({
+        tanggal: tgl,
+        per: Object.fromEntries(keys.map((k) => [k, data.per_lembaga[k]?.data[i] || 0])),
+        total: totalPerHari[i] || 0,
+      }))
+    : [];
+
+  const kolomTren = [
+    { label: "Tanggal", nilai: (b) => b.tanggal },
+    ...keys.map((k) => ({
+      label: data?.per_lembaga[k]?.label || k,
+      nilai: (b) => b.per[k],
+    })),
+    { label: "Total", nilai: (b) => b.total },
+  ];
+
   const chartData = data && {
     labels: data.tanggal.map(formatTanggal),
     datasets: keys.map((k) => ({
@@ -96,20 +118,30 @@ const TrenVerifikasiHarian = () => {
           <h3 className="text-lg font-bold text-slate-900">Tren Verifikasi Harian</h3>
           <p className="text-sm text-slate-500">Jumlah lembaga yang diverifikasi kabupaten per hari</p>
         </div>
-        <div className="inline-flex rounded-lg border border-slate-200 p-0.5">
-          {RENTANG.map((r) => (
-            <button
-              key={r}
-              type="button"
-              onClick={() => setHari(r)}
-              aria-pressed={hari === r}
-              className={`px-3 py-1 text-sm rounded-md font-medium transition-colors ${
-                hari === r ? "bg-slate-800 text-white" : "text-slate-600 hover:bg-slate-50"
-              }`}
-            >
-              {r} hari
-            </button>
-          ))}
+        <div className="flex flex-wrap items-center gap-2">
+          <div className="inline-flex rounded-lg border border-slate-200 p-0.5">
+            {RENTANG.map((r) => (
+              <button
+                key={r}
+                type="button"
+                onClick={() => setHari(r)}
+                aria-pressed={hari === r}
+                className={`px-3 py-1 text-sm rounded-md font-medium transition-colors ${
+                  hari === r ? "bg-slate-800 text-white" : "text-slate-600 hover:bg-slate-50"
+                }`}
+              >
+                {r} hari
+              </button>
+            ))}
+          </div>
+          <TombolEkspor
+            kolom={kolomTren}
+            baris={barisTren}
+            namaBerkas={`tren-verifikasi-${hari}-hari`}
+            judul="Tren Verifikasi Harian"
+            subjudul={`${hari} hari terakhir · ${totalPeriode} lembaga diverifikasi`}
+            keterangan={false}
+          />
         </div>
       </div>
 
