@@ -1555,6 +1555,20 @@ export const AparaturDesaDetailPage = ({ backPath }) => {
 		}
 	};
 
+	// Tanggal lahir taksiran impor Dapur Desa ternyata memang sesuai KTP.
+	const konfirmasiTanggalLahir = async () => {
+		setSibuk(true);
+		try {
+			const response = await api.put(`/pemdes/aparatur-desa/${a.id}`, { konfirmasi_tanggal_lahir: true });
+			toast.success(response.data?.data?.nipd ? `Tanggal lahir dikonfirmasi — NIPD ${response.data.data.nipd}` : 'Tanggal lahir dikonfirmasi');
+			await muatRiwayat();
+		} catch (error) {
+			toast.error(error.response?.data?.message || 'Gagal mengonfirmasi tanggal lahir');
+		} finally {
+			setSibuk(false);
+		}
+	};
+
 	const simpanItem = (key, status, catatan) =>
 		ubahVerifikasi({ items: { [key]: { status, catatan } } }, { senyap: true });
 
@@ -1762,6 +1776,27 @@ export const AparaturDesaDetailPage = ({ backPath }) => {
 								<DetailField label="Usia" value={usia} />
 								<DetailField label="Pendidikan Terakhir" value={a.pendidikan_terakhir} />
 							</div>
+							{/* Tanggal lahir taksiran impor Dapur Desa: masuk ke 8 digit
+							    pertama NIPD, jadi NIPD ditahan sampai dikoreksi / dikonfirmasi. */}
+							{a.tanggal_lahir_taksiran && (
+								<div className="mt-4 flex flex-wrap items-start gap-3 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2.5">
+									<CalendarDays className="mt-0.5 h-4 w-4 shrink-0 text-amber-600" />
+									<p className="min-w-0 flex-1 text-xs text-amber-800">
+										<span className="font-semibold">Tanggal lahir masih taksiran arsip Dapur Desa.</span> NIPD tidak
+										diterbitkan sampai tanggalnya dikoreksi lewat Edit, atau dikonfirmasi bila memang sesuai KTP.
+									</p>
+									{bolehKelola && (
+										<button
+											type="button"
+											onClick={konfirmasiTanggalLahir}
+											disabled={sibuk}
+											className="shrink-0 rounded-lg bg-white px-2.5 py-1.5 text-xs font-semibold text-amber-800 ring-1 ring-amber-300 transition-colors hover:bg-amber-100 disabled:opacity-60"
+										>
+											Sesuai KTP
+										</button>
+									)}
+								</div>
+							)}
 							{verif('biodata')}
 						</DetailSection>
 
