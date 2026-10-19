@@ -2946,12 +2946,12 @@ const AparaturDesaPage = ({
 						</div>
 					</div>
 
-					<div className="flex items-center gap-2 sm:flex-col sm:items-end">
+					<div className="flex flex-wrap items-center gap-2 sm:flex-col sm:items-end">
 						<span className="inline-flex items-center gap-1.5 rounded-full bg-white/10 px-3 py-1 text-xs font-medium text-slate-300 ring-1 ring-white/15">
 							<Shield className="h-3.5 w-3.5" />
 							{variant.badge}
 						</span>
-						<div className="flex items-center gap-2">
+						<div className="flex flex-wrap items-center justify-end gap-2">
 							{lastUpdated && (
 								<span className="hidden items-center gap-1 text-xs text-slate-500 sm:inline-flex">
 									<CalendarDays className="h-3.5 w-3.5" />
@@ -2967,6 +2967,18 @@ const AparaturDesaPage = ({
 								<RefreshCw className={`h-4 w-4 ${busy ? 'animate-spin' : ''}`} />
 								Refresh
 							</button>
+							{/* Pintu tambah utama — terlihat di tab mana pun, supaya bidang
+							    tidak perlu mencari tombolnya di dalam tabel atau kecamatan. */}
+							{bolehKelola && (
+								<button
+									type="button"
+									onClick={() => bukaTambah(null)}
+									className="inline-flex items-center gap-2 rounded-xl bg-white px-3.5 py-2 text-sm font-semibold text-slate-900 transition-colors hover:bg-slate-100"
+								>
+									<Plus className="h-4 w-4" />
+									{jenis === 'bpd' ? 'Tambah Anggota BPD' : jenis === 'perangkat' ? 'Tambah Perangkat Desa' : 'Tambah Aparatur'}
+								</button>
+							)}
 						</div>
 					</div>
 				</div>

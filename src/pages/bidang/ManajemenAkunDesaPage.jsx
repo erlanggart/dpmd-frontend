@@ -1366,8 +1366,10 @@ const ManajemenAkunDesaPage = ({ modul = null, tersemat = false }) => {
 					tersemat ? "" : "sticky top-0 z-30 "
 				}-mx-4 border-y border-slate-200 bg-white/85 px-4 py-3 backdrop-blur-md sm:mx-0 sm:rounded-2xl sm:border sm:px-4 sm:shadow-sm`}
 			>
-				<div className="flex flex-col gap-2.5 lg:flex-row lg:items-center">
-					<div className="grid flex-1 gap-2.5 sm:grid-cols-2">
+				{/* Bertumpuk sampai xl: dengan Ekspor + Generate + Tambah, bilah
+				    kanan butuh ±30rem — di layar lg pemilih wilayah jadi gepeng. */}
+				<div className="flex flex-col gap-2.5 xl:flex-row xl:items-center">
+					<div className="grid min-w-0 flex-1 gap-2.5 sm:grid-cols-2">
 						<label className="relative block">
 							<span className="sr-only">Kecamatan</span>
 							<FiMapPin className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
@@ -1410,8 +1412,10 @@ const ManajemenAkunDesaPage = ({ modul = null, tersemat = false }) => {
 						</label>
 					</div>
 
-					<div className="flex gap-2.5 lg:w-[22rem]">
-						<div className="relative flex-1">
+					{/* Lebar mengikuti isi, bukan dipatok: jumlah tombolnya berbeda
+					    antara halaman penuh (1) dan halaman modul (3). */}
+					<div className="flex flex-wrap gap-2.5 sm:flex-nowrap xl:shrink-0">
+						<div className="relative min-w-[12rem] flex-1 xl:w-64 xl:flex-none">
 							<FiSearch className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
 							<input
 								type="text"
@@ -1460,7 +1464,7 @@ const ManajemenAkunDesaPage = ({ modul = null, tersemat = false }) => {
 							className="inline-flex shrink-0 items-center justify-center gap-2 rounded-xl bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-slate-800"
 						>
 							<FiPlus className="h-4 w-4" />
-							Tambah
+							Tambah Akun
 						</button>
 					</div>
 				</div>
