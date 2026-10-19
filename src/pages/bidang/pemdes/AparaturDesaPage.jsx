@@ -1225,208 +1225,153 @@ const DialogStatus = ({ aparatur, sibuk, onSimpan, onTutup }) => {
 };
 
 /**
- * Verifikasi per item: tiap kelompok data dan tiap berkas diputus sendiri —
- * sesuai atau tidak sesuai (dengan alasan yang dibaca desa).
+ * Verifikasi satu item, langsung di dalam kartunya — bukan pop-up.
  *
- * Daftar item & mana yang wajib dikirim server (item_verifikasi di detail),
- * jadi aturan ini tidak tersalin di dua tempat. Data dinyatakan valid — dan
- * NIPD diterbitkan — hanya bila semua item sesuai dan berkas wajib ada.
+ * Tiap kartu data (biodata, kepegawaian, BPJS) dan tiap baris berkas memuat
+ * keputusannya sendiri, jadi pemeriksa menilai tepat di samping data yang ia
+ * baca. Klik "Sesuai" langsung tersimpan; "Tidak sesuai" meminta alasan
+ * dulu karena alasan itulah yang dibaca desa.
+ *
+ * Daftar item berlaku & wajib datang dari server (aparatur.item_verifikasi).
+ * Item yang tidak berlaku (mis. BPJS tanpa nomor) tidak digambar.
  */
-const DialogVerifikasi = ({ aparatur, sibuk, onSimpan, onTutup }) => {
-	const daftar = aparatur.item_verifikasi || [];
-	const [keputusan, setKeputusan] = useState(() => {
-		const awal = {};
-		for (const item of daftar) {
-			const k = aparatur.verifikasi_item?.[item.key];
-			awal[item.key] = { status: k?.status || null, catatan: k?.catatan || '' };
-		}
-		return awal;
-	});
+const VerifikasiItem = ({ itemKey, aparatur, bolehKelola, onSimpan, ringkas = false }) => {
+	const item = (aparatur.item_verifikasi || []).find((i) => i.key === itemKey);
+	const k = aparatur.verifikasi_item?.[itemKey] || null;
+	const [menulis, setMenulis] = useState(false);
+	const [alasan, setAlasan] = useState(k?.catatan || '');
+	const [sibuk, setSibuk] = useState(false);
 
-	const ubah = (key, perubahan) => setKeputusan((isi) => ({ ...isi, [key]: { ...isi[key], ...perubahan } }));
-	const semuaSesuai = () =>
-		setKeputusan((isi) => {
-			const baru = { ...isi };
-			for (const item of daftar) if (item.ada && baru[item.key]?.status !== 'tidak_sesuai') baru[item.key] = { status: 'sesuai', catatan: '' };
-			return baru;
-		});
+	if (!item) return null;
 
-	const diperiksa = daftar.filter((item) => item.ada);
-	const tidakSesuai = diperiksa.filter((item) => keputusan[item.key]?.status === 'tidak_sesuai');
-	const belum = diperiksa.filter((item) => !keputusan[item.key]?.status);
-	const wajibHilang = daftar.filter((item) => item.wajib && !item.ada);
-	const kurangAlasan = tidakSesuai.some((item) => !String(keputusan[item.key]?.catatan || '').trim());
-	const adaKeputusan = Boolean(aparatur.status_verifikasi) || Object.keys(aparatur.verifikasi_item || {}).length > 0;
+	const simpan = async (status, catatan = null) => {
+		setSibuk(true);
+		const berhasil = await onSimpan(itemKey, status, catatan);
+		setSibuk(false);
+		if (berhasil) setMenulis(false);
+	};
 
-	const hasil =
-		tidakSesuai.length > 0
-			? { nada: 'border-rose-200 bg-rose-50 text-rose-700', teks: `${tidakSesuai.length} item tidak sesuai — data dikembalikan ke desa untuk dibetulkan.` }
-			: belum.length > 0
-				? { nada: 'border-slate-200 bg-slate-50 text-slate-600', teks: `${belum.length} item belum diperiksa. Keputusan yang sudah diisi tetap tersimpan.` }
-				: wajibHilang.length > 0
-					? { nada: 'border-amber-200 bg-amber-50 text-amber-800', teks: `${wajibHilang.map((i) => i.label).join(', ')} belum diunggah — data belum bisa dinyatakan valid.` }
-					: {
-							nada: 'border-emerald-200 bg-emerald-50 text-emerald-800',
-							teks: aparatur.nipd_info?.berhak
-								? aparatur.nipd_info?.kendala
-									? `Data valid, tetapi NIPD belum bisa terbit: ${aparatur.nipd_info.kendala}.`
-									: 'Data valid — NIPD 20 digit akan diterbitkan otomatis.'
-								: 'Data valid. Jabatan ini tidak mendapat NIPD (hanya didata).',
-						};
+	const rupa = !item.ada
+		? { teks: 'Belum diunggah', kelas: 'bg-amber-50 text-amber-700 ring-amber-200', Icon: Clock }
+		: k?.status === 'sesuai'
+			? { teks: 'Sesuai', kelas: 'bg-emerald-50 text-emerald-700 ring-emerald-200', Icon: CheckCircle2 }
+			: k?.status === 'tidak_sesuai'
+				? { teks: 'Tidak sesuai', kelas: 'bg-rose-50 text-rose-700 ring-rose-200', Icon: XCircle }
+				: { teks: 'Belum diperiksa', kelas: 'bg-white text-slate-500 ring-slate-200', Icon: Clock };
 
-	const kirim = () =>
-		onSimpan({
-			items: Object.fromEntries(
-				daftar.map((item) => [
-					item.key,
-					{ status: keputusan[item.key]?.status || null, catatan: keputusan[item.key]?.catatan || null },
-				])
-			),
-		});
+	const Chip = (
+		<span className={`inline-flex shrink-0 items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-semibold ring-1 ${rupa.kelas}`}>
+			<rupa.Icon className="h-3 w-3" />
+			{rupa.teks}
+		</span>
+	);
 
+	const Tombol = bolehKelola && item.ada && (
+		<div className="flex shrink-0 items-center gap-1">
+			<button
+				type="button"
+				disabled={sibuk}
+				onClick={() => (k?.status === 'sesuai' ? simpan(null) : simpan('sesuai'))}
+				title={k?.status === 'sesuai' ? 'Batalkan keputusan' : 'Tandai sesuai'}
+				className={`inline-flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-xs font-semibold transition-colors disabled:opacity-50 ${
+					k?.status === 'sesuai' ? 'bg-emerald-600 text-white shadow-sm' : 'bg-white text-emerald-700 ring-1 ring-emerald-200 hover:bg-emerald-50'
+				}`}
+			>
+				{sibuk ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <CheckCircle2 className="h-3.5 w-3.5" />}
+				{!ringkas && 'Sesuai'}
+			</button>
+			<button
+				type="button"
+				disabled={sibuk}
+				onClick={() => {
+					if (k?.status === 'tidak_sesuai' && !menulis) return simpan(null);
+					setAlasan(k?.catatan || '');
+					setMenulis((x) => !x);
+				}}
+				title={k?.status === 'tidak_sesuai' ? 'Batalkan keputusan' : 'Tandai tidak sesuai'}
+				className={`inline-flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-xs font-semibold transition-colors disabled:opacity-50 ${
+					k?.status === 'tidak_sesuai' || menulis ? 'bg-rose-600 text-white shadow-sm' : 'bg-white text-rose-700 ring-1 ring-rose-200 hover:bg-rose-50'
+				}`}
+			>
+				<XCircle className="h-3.5 w-3.5" />
+				{!ringkas && 'Tidak sesuai'}
+			</button>
+		</div>
+	);
+
+	const Alasan = (
+		<AnimatePresence initial={false}>
+			{menulis && (
+				<motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
+					<div className="mt-2 flex gap-2">
+						<input
+							autoFocus
+							value={alasan}
+							onChange={(event) => setAlasan(event.target.value)}
+							onKeyDown={(event) => {
+								if (event.key === 'Enter' && alasan.trim()) simpan('tidak_sesuai', alasan.trim());
+								if (event.key === 'Escape') setMenulis(false);
+							}}
+							placeholder="Alasan untuk desa, mis. tanggal lahir berbeda dengan KTP"
+							className={`${KELAS_INPUT} min-w-0 flex-1 bg-white`}
+						/>
+						<button
+							type="button"
+							disabled={sibuk || !alasan.trim()}
+							onClick={() => simpan('tidak_sesuai', alasan.trim())}
+							className="shrink-0 rounded-xl bg-rose-600 px-3 py-2 text-xs font-semibold text-white transition-colors hover:bg-rose-700 disabled:opacity-50"
+						>
+							Simpan
+						</button>
+					</div>
+				</motion.div>
+			)}
+		</AnimatePresence>
+	);
+
+	const Catatan = k?.status === 'tidak_sesuai' && k.catatan && !menulis && (
+		<p className="mt-1 text-xs text-rose-700">{k.catatan}</p>
+	);
+
+	// Baris berkas: chip + tombol ikon, menempel di kanan baris.
+	if (ringkas) {
+		return (
+			<div className="min-w-0">
+				<div className="flex items-center justify-end gap-2">
+					{Chip}
+					{Tombol}
+				</div>
+				{Alasan}
+				{Catatan}
+			</div>
+		);
+	}
+
+	// Kaki kartu data.
 	return (
 		<div
-			className="fixed inset-0 z-[90] flex items-end justify-center bg-slate-900/60 p-0 backdrop-blur-sm sm:items-center sm:p-4"
-			onClick={onTutup}
-			role="presentation"
+			className={`mt-4 rounded-xl border-t border-dashed px-3 pb-2.5 pt-3 transition-colors ${
+				k?.status === 'sesuai' ? 'border-emerald-300 bg-emerald-50/50' : k?.status === 'tidak_sesuai' ? 'border-rose-300 bg-rose-50/50' : 'border-slate-300 bg-white/60'
+			}`}
 		>
-			<motion.div
-				initial={{ opacity: 0, y: 24, scale: 0.98 }}
-				animate={{ opacity: 1, y: 0, scale: 1 }}
-				transition={{ type: 'spring', stiffness: 320, damping: 30 }}
-				className="flex max-h-[92vh] w-full max-w-2xl flex-col overflow-hidden rounded-t-3xl bg-white shadow-2xl sm:rounded-2xl"
-				onClick={(event) => event.stopPropagation()}
-				role="dialog"
-				aria-modal="true"
-				aria-label="Verifikasi per item"
-			>
-				<div className="flex items-start justify-between gap-3 border-b border-slate-100 px-5 py-4">
-					<div className="min-w-0">
-						<h3 className="text-base font-semibold text-slate-900">Verifikasi per item</h3>
-						<p className="mt-0.5 truncate text-sm text-slate-500">
-							{aparatur.nama_lengkap} · {aparatur.jabatan}
-						</p>
-					</div>
-					<button
-						type="button"
-						onClick={semuaSesuai}
-						className="shrink-0 rounded-lg border border-emerald-200 px-3 py-1.5 text-xs font-semibold text-emerald-700 transition-colors hover:bg-emerald-50"
-					>
-						Tandai semua sesuai
-					</button>
+			<div className="flex flex-wrap items-center justify-between gap-2">
+				<div className="flex min-w-0 items-center gap-2">
+					<BadgeCheck className="h-4 w-4 shrink-0 text-slate-400" />
+					<span className="truncate text-xs font-semibold text-slate-700">
+						Verifikasi {item.label.toLowerCase()}
+						{item.wajib && <span className="ml-1 text-[10px] font-bold uppercase tracking-wide text-brand-600">wajib</span>}
+					</span>
+					{Chip}
 				</div>
-
-				<div className="flex-1 space-y-2 overflow-y-auto px-5 py-4">
-					{daftar.map((item) => {
-						const k = keputusan[item.key] || {};
-						const url = item.jenis === 'berkas' ? berkasUrl(aparatur[item.key]) : null;
-						return (
-							<div
-								key={item.key}
-								className={`rounded-xl border p-3 transition-colors ${
-									k.status === 'sesuai'
-										? 'border-emerald-200 bg-emerald-50/40'
-										: k.status === 'tidak_sesuai'
-											? 'border-rose-200 bg-rose-50/40'
-											: 'border-slate-200'
-								}`}
-							>
-								<div className="flex flex-wrap items-center gap-3">
-									<span
-										className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${
-											item.jenis === 'berkas' ? 'bg-amber-50 text-amber-600' : 'bg-slate-100 text-slate-600'
-										}`}
-									>
-										{item.jenis === 'berkas' ? <Paperclip className="h-4 w-4" /> : <IdCard className="h-4 w-4" />}
-									</span>
-									<div className="min-w-0 flex-1">
-										<p className="text-sm font-semibold text-slate-900">
-											{item.label}
-											{item.wajib && <span className="ml-1.5 text-[10px] font-bold uppercase tracking-wide text-brand-600">wajib</span>}
-										</p>
-										<p className="truncate text-xs text-slate-500">
-											{!item.ada ? (
-												<span className="font-medium text-amber-700">Belum diunggah</span>
-											) : url ? (
-												<a href={url} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 font-medium text-slate-700 hover:underline">
-													<ExternalLink className="h-3 w-3" />
-													Buka berkas
-												</a>
-											) : (
-												item.keterangan || 'Periksa isian pada halaman detail'
-											)}
-										</p>
-									</div>
-									<div className="grid w-full grid-cols-2 gap-1 rounded-lg bg-slate-100 p-1 sm:w-auto">
-										{[
-											['sesuai', 'Sesuai', 'bg-emerald-600'],
-											['tidak_sesuai', 'Tidak sesuai', 'bg-rose-600'],
-										].map(([nilai, teks, nada]) => (
-											<button
-												key={nilai}
-												type="button"
-												disabled={!item.ada}
-												onClick={() => ubah(item.key, { status: k.status === nilai ? null : nilai })}
-												className={`rounded-md px-3 py-1.5 text-xs font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-40 ${
-													k.status === nilai ? `${nada} text-white shadow-sm` : 'text-slate-600 hover:bg-white'
-												}`}
-											>
-												{teks}
-											</button>
-										))}
-									</div>
-								</div>
-								<AnimatePresence initial={false}>
-									{k.status === 'tidak_sesuai' && (
-										<motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
-											<input
-												value={k.catatan || ''}
-												onChange={(event) => ubah(item.key, { catatan: event.target.value })}
-												placeholder="Alasan untuk desa (wajib), mis. tanggal lahir berbeda dengan KTP"
-												className={`mt-2.5 ${KELAS_INPUT}`}
-											/>
-										</motion.div>
-									)}
-								</AnimatePresence>
-							</div>
-						);
-					})}
-				</div>
-
-				<div className="space-y-3 border-t border-slate-100 px-5 py-4">
-					<p className={`rounded-xl border px-3 py-2 text-sm ${hasil.nada}`}>{hasil.teks}</p>
-					<div className="flex gap-2">
-						<button
-							type="button"
-							onClick={onTutup}
-							disabled={sibuk}
-							className="flex-1 rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-50 disabled:opacity-60"
-						>
-							Tutup
-						</button>
-						<button
-							type="button"
-							onClick={kirim}
-							disabled={sibuk || kurangAlasan}
-							title={kurangAlasan ? 'Tulis alasan untuk setiap item yang tidak sesuai' : undefined}
-							className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-slate-900 px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-slate-800 disabled:opacity-60"
-						>
-							{sibuk ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
-							Simpan keputusan
-						</button>
-					</div>
-					{adaKeputusan && (
-						<button
-							type="button"
-							onClick={() => onSimpan({ status: 'batal' })}
-							disabled={sibuk}
-							className="w-full rounded-xl px-4 py-1.5 text-xs font-medium text-slate-500 transition-colors hover:bg-slate-50 disabled:opacity-60"
-						>
-							Batalkan semua keputusan (NIPD ikut dicabut)
-						</button>
-					)}
-				</div>
-			</motion.div>
+				{Tombol}
+			</div>
+			{k?.oleh && k?.status && (
+				<p className="mt-1 text-[11px] text-slate-400">
+					{k.oleh} · {formatWaktu(k.pada)}
+				</p>
+			)}
+			{Alasan}
+			{Catatan}
 		</div>
 	);
 };
@@ -1452,10 +1397,10 @@ const DetailSection = ({ title, icon: Icon, children, className = '' }) => (
 );
 
 /** Satu baris berkas: tautan bila ada, keterangan jujur bila belum diunggah. */
-const BarisBerkas = ({ label, nama }) => {
+const BarisBerkas = ({ label, nama, verifikasi }) => {
 	const url = berkasUrl(nama);
 	return (
-		<div className="flex items-center justify-between gap-3 py-2">
+		<div className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-x-3 gap-y-1 py-2.5 sm:grid-cols-[minmax(0,1fr)_auto_auto] sm:items-center">
 			<span className="min-w-0 truncate text-sm text-slate-700">{label}</span>
 			{url ? (
 				<a
@@ -1470,6 +1415,8 @@ const BarisBerkas = ({ label, nama }) => {
 			) : (
 				<span className="flex-shrink-0 text-xs text-slate-400">Belum diunggah</span>
 			)}
+			{/* Keputusan verifikasi berkas ini — di baris yang sama dengan berkasnya. */}
+			{verifikasi && <div className="col-span-2 sm:col-span-1">{verifikasi}</div>}
 		</div>
 	);
 };
@@ -1484,7 +1431,6 @@ export const AparaturDesaDetailPage = ({ backPath }) => {
 	const [menyunting, setMenyunting] = useState(false);
 	const [sibuk, setSibuk] = useState(false);
 	const [fotoBesar, setFotoBesar] = useState(false);
-	const [dialogVerifikasi, setDialogVerifikasi] = useState(false);
 	const [dialogStatus, setDialogStatus] = useState(false);
 
 	useEffect(() => {
@@ -1548,24 +1494,51 @@ export const AparaturDesaDetailPage = ({ backPath }) => {
 	};
 
 	// payload: { items } untuk keputusan per item, atau { status: 'batal' }.
-	const ubahVerifikasi = async (payload) => {
+	// Mengembalikan true bila tersimpan, supaya kartu bisa menutup isian alasannya.
+	const ubahVerifikasi = async (payload, { senyap = false } = {}) => {
 		setSibuk(true);
+		const statusSebelum = a.status_verifikasi;
 		try {
 			const response = await api.post(`/pemdes/aparatur-desa/${a.id}/verifikasi`, payload);
-			serap({
-				...(response.data?.data || {}),
-				dpmd_verified_nama: payload?.status === 'batal' ? null : user?.name,
-			});
-			toast.success(response.data?.message || 'Status verifikasi diperbarui');
+			const baru = response.data?.data || {};
+			serap({ ...baru, dpmd_verified_nama: payload?.status === 'batal' ? null : user?.name });
+			// Tiap klik item tidak perlu toast berpesan panjang; yang diumumkan
+			// hanya perubahan status ringkas (valid / dikembalikan / dibatalkan).
+			if (!senyap || baru.status_verifikasi !== statusSebelum) toast.success(response.data?.message || 'Status verifikasi diperbarui');
+			else toast.success('Keputusan disimpan', { duration: 1500 });
 			if (response.data?.peringatan) toast(response.data.peringatan, { icon: '⚠️', duration: 6000 });
-			setDialogVerifikasi(false);
-			muatRiwayat();
+			await muatRiwayat();
+			return true;
 		} catch (error) {
 			toast.error(error.response?.data?.message || 'Gagal memperbarui verifikasi');
+			return false;
 		} finally {
 			setSibuk(false);
 		}
 	};
+
+	const simpanItem = (key, status, catatan) =>
+		ubahVerifikasi({ items: { [key]: { status, catatan } } }, { senyap: true });
+
+	// Semua item yang ada isinya & belum ditolak → sesuai, dalam satu kiriman.
+	const tandaiSemuaSesuai = () =>
+		ubahVerifikasi({
+			items: Object.fromEntries(
+				(a.item_verifikasi || [])
+					.filter((item) => item.ada && a.verifikasi_item?.[item.key]?.status !== 'tidak_sesuai')
+					.map((item) => [item.key, { status: 'sesuai' }])
+			),
+		});
+
+	const batalkanVerifikasi = () => {
+		if (!window.confirm('Batalkan semua keputusan verifikasi? NIPD yang sudah terbit ikut dicabut.')) return;
+		ubahVerifikasi({ status: 'batal' });
+	};
+
+	// Satu pemanggil untuk semua kartu — kartu cukup menyebut kunci itemnya.
+	const verif = (key, ringkas = false) => (
+		<VerifikasiItem key={`${key}-${a.updated_at}`} itemKey={key} aparatur={a} bolehKelola={bolehKelola} onSimpan={simpanItem} ringkas={ringkas} />
+	);
 
 	if (memuat) {
 		return (
@@ -1628,13 +1601,25 @@ export const AparaturDesaDetailPage = ({ backPath }) => {
 										{a.status === 'Aktif' ? <XCircle className="h-4 w-4" /> : <CheckCircle2 className="h-4 w-4" />}
 										{a.status === 'Aktif' ? 'Nonaktifkan' : 'Aktifkan'}
 									</button>
+									{/* Verifikasi dilakukan di tiap kartu; di sini hanya jalan pintas. */}
 									<button
-										onClick={() => setDialogVerifikasi(true)}
-										className="flex items-center gap-2 rounded-xl bg-emerald-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-emerald-700"
+										onClick={tandaiSemuaSesuai}
+										disabled={sibuk}
+										title="Tandai semua item yang ada isinya sebagai sesuai"
+										className="flex items-center gap-2 rounded-xl bg-emerald-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-emerald-700 disabled:opacity-60"
 									>
-										<BadgeCheck className="h-4 w-4" />
-										Verifikasi
+										{sibuk ? <Loader2 className="h-4 w-4 animate-spin" /> : <BadgeCheck className="h-4 w-4" />}
+										Semua sesuai
 									</button>
+									{(a.status_verifikasi || Object.keys(a.verifikasi_item || {}).length > 0) && (
+										<button
+											onClick={batalkanVerifikasi}
+											disabled={sibuk}
+											className="rounded-xl px-3 py-2 text-xs font-medium text-slate-500 transition-colors hover:bg-white hover:text-slate-800 disabled:opacity-60"
+										>
+											Batalkan verifikasi
+										</button>
+									)}
 								</>
 						)}
 					</div>
@@ -1739,6 +1724,7 @@ export const AparaturDesaDetailPage = ({ backPath }) => {
 								<DetailField label="Usia" value={usia} />
 								<DetailField label="Pendidikan Terakhir" value={a.pendidikan_terakhir} />
 							</div>
+							{verif('biodata')}
 						</DetailSection>
 
 						<DetailSection title="Jabatan & Lokasi Tugas" icon={MapPin}>
@@ -1775,6 +1761,7 @@ export const AparaturDesaDetailPage = ({ backPath }) => {
 						<div className="mt-3 border-t border-slate-200 pt-3">
 							<DetailField label="Keterangan" value={a.keterangan} />
 						</div>
+						{verif('jabatan_sk')}
 					</DetailSection>
 
 					<div className="grid gap-4 md:grid-cols-2">
@@ -1783,6 +1770,7 @@ export const AparaturDesaDetailPage = ({ backPath }) => {
 								<DetailField label="No. BPJS Kesehatan" value={a.bpjs_kesehatan_nomor} />
 								<DetailField label="No. BPJS Ketenagakerjaan" value={a.bpjs_ketenagakerjaan_nomor} />
 							</div>
+							{verif('bpjs')}
 						</DetailSection>
 
 						<DetailSection title="Dasar Hukum" icon={Scale}>
@@ -1805,7 +1793,7 @@ export const AparaturDesaDetailPage = ({ backPath }) => {
 					<DetailSection title={`Berkas (${jumlahBerkas} dari ${BERKAS.length} terunggah)`} icon={Paperclip}>
 						<div className="divide-y divide-slate-200">
 							{BERKAS.map((b) => (
-								<BarisBerkas key={b.kunci} label={b.label} nama={a[b.kunci]} />
+								<BarisBerkas key={b.kunci} label={b.label} nama={a[b.kunci]} verifikasi={verif(b.kunci, true)} />
 							))}
 						</div>
 					</DetailSection>
@@ -1854,14 +1842,6 @@ export const AparaturDesaDetailPage = ({ backPath }) => {
 				/>
 			)}
 
-			{dialogVerifikasi && (
-				<DialogVerifikasi
-					aparatur={a}
-					sibuk={sibuk}
-					onSimpan={ubahVerifikasi}
-					onTutup={() => setDialogVerifikasi(false)}
-				/>
-			)}
 		</div>
 	);
 };
@@ -2010,6 +1990,116 @@ const RingkasanAparatur = ({ jenis, stats, statsLoading }) => {
 					)}
 				</>
 			)}
+		</section>
+	);
+};
+
+// ============================================================
+// Capaian verifikasi (setara Capaian Verifikasi di kelembagaan)
+// ============================================================
+// Warna bermakna, bukan kategori: hijau = sudah, kuning = menunggu, merah =
+// dikembalikan ke desa. Sama dengan ringkasan status kelembagaan.
+const WARNA_VERIFIKASI = { terverifikasi: '#16a34a', belum: '#eab308', ditolak: '#e11d48' };
+
+const CapaianVerifikasiAparatur = ({ stats, loading }) => {
+	const [semua, setSemua] = useState(false);
+	const v = stats?.verifikasi;
+	const daftar = stats?.verifikasi_per_kecamatan || [];
+
+	if (loading && !stats) {
+		return <div className="h-64 animate-pulse rounded-2xl border border-slate-200 bg-white" />;
+	}
+	if (!v) return null;
+
+	const donat = [
+		{ key: 'terverifikasi', name: 'Terverifikasi', value: v.terverifikasi },
+		{ key: 'belum', name: 'Belum diverifikasi', value: v.belum },
+		{ key: 'ditolak', name: 'Dikembalikan ke desa', value: v.ditolak },
+	];
+	const tampil = semua ? daftar : daftar.slice(0, 8);
+
+	return (
+		<section className="grid gap-4 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm lg:grid-cols-3">
+			<div className="lg:col-span-2">
+				<div className="mb-1 flex items-start justify-between gap-3">
+					<div>
+						<h3 className="text-base font-bold text-slate-900">Capaian Verifikasi per Kecamatan</h3>
+						<p className="text-xs text-slate-500">Aparatur yang datanya dinyatakan valid oleh Bidang Pemdes</p>
+					</div>
+					{daftar.length > 8 && (
+						<button
+							type="button"
+							onClick={() => setSemua((x) => !x)}
+							className="shrink-0 rounded-lg bg-slate-100 px-3 py-1.5 text-xs font-semibold text-slate-700 transition-colors hover:bg-slate-200"
+						>
+							{semua ? 'Ringkas' : `Semua ${daftar.length} kecamatan`}
+						</button>
+					)}
+				</div>
+				<div className="mt-3 divide-y divide-slate-100">
+					{tampil.map((k) => {
+						const persen = k.total ? Math.round((k.terverifikasi / k.total) * 100) : 0;
+						return (
+							<div key={k.id} className="flex items-center gap-3 py-2">
+								<div className="w-36 shrink-0 truncate text-sm font-medium text-slate-700" title={k.nama}>
+									{k.nama}
+								</div>
+								<div className="flex h-2.5 flex-1 overflow-hidden rounded-full bg-slate-100">
+									<div className="h-full transition-all duration-700" style={{ width: `${pct(k.terverifikasi, k.total)}%`, backgroundColor: WARNA_VERIFIKASI.terverifikasi }} />
+									<div className="h-full transition-all duration-700" style={{ width: `${pct(k.ditolak, k.total)}%`, backgroundColor: WARNA_VERIFIKASI.ditolak }} />
+								</div>
+								<div className="w-20 text-right text-sm tabular-nums">
+									<span className="font-bold text-slate-900">{fmt(k.terverifikasi)}</span>
+									<span className="text-slate-400">/{fmt(k.total)}</span>
+								</div>
+								<div className="w-11 text-right text-xs font-semibold tabular-nums text-emerald-700">{persen}%</div>
+							</div>
+						);
+					})}
+				</div>
+				<div className="mt-2 flex items-center gap-3 border-t-2 border-slate-200 pt-3">
+					<div className="w-36 shrink-0 text-sm font-bold text-slate-900">Total kabupaten</div>
+					<div className="h-2.5 flex-1 overflow-hidden rounded-full bg-slate-100">
+						<div className="h-full rounded-full bg-slate-800 transition-all duration-700" style={{ width: `${v.persen}%` }} />
+					</div>
+					<div className="w-20 text-right text-sm tabular-nums">
+						<span className="font-bold text-slate-900">{fmt(v.terverifikasi)}</span>
+						<span className="text-slate-400">/{fmt(v.total)}</span>
+					</div>
+					<div className="w-11 text-right text-xs font-bold tabular-nums text-slate-900">{v.persen}%</div>
+				</div>
+			</div>
+
+			<div className="flex flex-col items-center border-t border-slate-100 pt-4 lg:border-l lg:border-t-0 lg:pl-4 lg:pt-0">
+				<h3 className="self-start text-base font-bold text-slate-900">Status Verifikasi</h3>
+				<p className="self-start text-xs text-slate-500">Komposisi seluruh aparatur terdata</p>
+				<div className="relative mt-3 h-44 w-44">
+					<PieChart width={176} height={176}>
+						<Pie data={donat} dataKey="value" innerRadius={54} outerRadius={80} paddingAngle={v.total ? 2 : 0} stroke="#fff" strokeWidth={2}>
+							{donat.map((d) => (
+								<Cell key={d.key} fill={WARNA_VERIFIKASI[d.key]} />
+							))}
+						</Pie>
+						<RechartsTooltip
+							formatter={(nilai, nama) => [`${fmt(nilai)} orang (${pct(nilai, v.total)}%)`, nama]}
+							contentStyle={{ borderRadius: 12, border: '1px solid #e2e8f0', fontSize: 12 }}
+						/>
+					</PieChart>
+					<div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
+						<span className="text-2xl font-bold text-slate-900">{v.persen}%</span>
+						<span className="text-[11px] text-slate-500">terverifikasi</span>
+					</div>
+				</div>
+				<div className="mt-3 w-full space-y-1.5">
+					{donat.map((d) => (
+						<div key={d.key} className="flex items-center gap-2.5 text-sm">
+							<span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ backgroundColor: WARNA_VERIFIKASI[d.key] }} />
+							<span className="flex-1 text-slate-600">{d.name}</span>
+							<span className="font-semibold tabular-nums text-slate-900">{fmt(d.value)}</span>
+						</div>
+					))}
+				</div>
+			</div>
 		</section>
 	);
 };
@@ -2634,10 +2724,14 @@ const SARINGAN_WILAYAH = [
 	{ id: 'belum-verifikasi', label: 'Ada yang belum diverifikasi' },
 ];
 
-/** Batang tipis rasio terisi — warnanya ikut tingkat kelengkapan. */
+/**
+ * Batang tipis rasio terverifikasi. Hijau penuh hanya di 100%; di bawahnya
+ * hijau muda — bukan merah, karena "belum diverifikasi" itu antrean kerja
+ * bidang, bukan kesalahan desa.
+ */
 const BatangTerisi = ({ terisi, total }) => {
 	const persen = total > 0 ? Math.round((terisi / total) * 100) : 0;
-	const nada = persen === 100 ? 'bg-emerald-500' : persen >= 60 ? 'bg-amber-500' : 'bg-rose-500';
+	const nada = persen === 100 ? 'bg-emerald-500' : 'bg-emerald-300';
 	return (
 		<div className="flex items-center gap-2">
 			<div className="h-1.5 w-full overflow-hidden rounded-full bg-slate-100">
@@ -2929,6 +3023,13 @@ const WilayahTab = ({ refreshKey = 0, jenis, detailBasePath, onLoadingChange, on
 						const jumlahDesa = kecamatan.desa.length;
 						const terisi = kecamatan.desa.filter((desa) => desa.aparatur.length > 0).length;
 						const orang = kecamatan.desa.reduce((total, desa) => total + desa.aparatur.length, 0);
+						// Progres = orang terverifikasi, bukan desa terisi: "terisi"
+						// cuma berarti ada datanya, belum tentu benar.
+						const terverifikasi = kecamatan.desa.reduce(
+							(total, desa) => total + desa.aparatur.filter((a) => a.status_verifikasi === 'terverifikasi').length,
+							0
+						);
+						const semuaValid = orang > 0 && terverifikasi === orang && terisi === jumlahDesa;
 						return (
 							<div key={kecamatan.id} className="overflow-hidden rounded-2xl border border-slate-200 bg-white">
 								<button
@@ -2942,19 +3043,23 @@ const WilayahTab = ({ refreshKey = 0, jenis, detailBasePath, onLoadingChange, on
 									<span className="min-w-0">
 										<span className="block truncate text-sm font-semibold text-slate-900">Kecamatan {kecamatan.nama}{kecamatan.kode && <span className="ml-2 font-mono text-[11px] font-medium text-slate-400">{String(kecamatan.kode).split(".")[2]}</span>}</span>
 										<span className="block text-xs text-slate-500">
-											{fmt(terisi)}/{fmt(jumlahDesa)} desa terisi · {fmt(orang)} orang
+											{fmt(terisi)}/{fmt(jumlahDesa)} desa terisi · {fmt(terverifikasi)}/{fmt(orang)} orang terverifikasi
 										</span>
 									</span>
 									<span className="col-span-2 sm:col-span-1">
-										<BatangTerisi terisi={terisi} total={jumlahDesa} />
+										<BatangTerisi terisi={terverifikasi} total={orang} />
 									</span>
-									{jumlahDesa - terisi > 0 ? (
+									{semuaValid ? (
+										<span className="hidden shrink-0 rounded-full bg-emerald-50 px-2 py-0.5 text-[11px] font-medium text-emerald-700 sm:inline-flex">
+											Semua terverifikasi
+										</span>
+									) : jumlahDesa - terisi > 0 ? (
 										<span className="hidden shrink-0 rounded-full bg-amber-50 px-2 py-0.5 text-[11px] font-medium text-amber-700 sm:inline-flex">
-											{fmt(jumlahDesa - terisi)} kosong
+											{fmt(jumlahDesa - terisi)} desa kosong
 										</span>
 									) : (
-										<span className="hidden shrink-0 rounded-full bg-emerald-50 px-2 py-0.5 text-[11px] font-medium text-emerald-700 sm:inline-flex">
-											Lengkap
+										<span className="hidden shrink-0 rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-medium text-slate-600 sm:inline-flex">
+											{fmt(orang - terverifikasi)} belum diverifikasi
 										</span>
 									)}
 								</button>
@@ -3399,6 +3504,14 @@ const AparaturDesaPage = ({
 					</div>
 				)}
 			</header>
+
+			{/* Capaian verifikasi berlaku untuk kedua mode baca, jadi berdiri di
+			    luar tab — tapi tidak di tab akun, yang urusannya lain. */}
+			{activeTab !== 'akun' && (
+				<div className="mb-4">
+					<CapaianVerifikasiAparatur stats={stats} loading={statsLoading} />
+				</div>
+			)}
 
 			{activeTab === 'akun' ? (
 				// Akun operator memakai halaman akun desa bersama, dikunci ke modul
