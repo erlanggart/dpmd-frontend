@@ -1,5 +1,6 @@
-import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useMemo, useRef, useCallback, lazy, Suspense } from 'react';
 import SelectBox from '../../../components/ui/SelectBox';
+import AparaturDesaForm from '../../../components/aparatur-desa/AparaturDesaForm';
 import { jenjangKey } from '../../../utils/jenjangPendidikan';
 import {
 	Users,
@@ -32,12 +33,19 @@ import {
 	Pencil,
 	Save,
 	BadgeCheck,
+	Plus,
+	UserCog,
+	AlertTriangle,
 } from 'lucide-react';
 import { PieChart, Pie, Cell, Tooltip as RechartsTooltip } from 'recharts';
 import { useParams, useNavigate } from 'react-router-dom';
 import api from '../../../api';
 import { useAuth } from '../../../context/AuthContext';
 import toast from 'react-hot-toast';
+
+// Halaman akun operator ikut dimuat malas: hanya staf yang membuka tab Akun
+// Operator yang perlu membayarnya.
+const ManajemenAkunDesaPage = lazy(() => import('../ManajemenAkunDesaPage'));
 
 // ============================================================
 // Palet chart (tervalidasi CVD — jangan diganti asal)
@@ -660,31 +668,6 @@ const LightboxFoto = ({ src, alt, onClose }) => {
 const bolehKelolaAparatur = (user) =>
 	user?.role === 'superadmin' || Number(user?.bidang_id) === 6;
 
-// Daftar kolom yang boleh diperbaiki bidang — cerminan daftar putih di server.
-// Berkas dan BPJS tidak ada di sini: unggahan tetap kewenangan desa.
-const KOLOM_EDIT = [
-	{ key: 'nama_lengkap', label: 'Nama Lengkap', lebar: 'sm:col-span-2' },
-	{ key: 'jabatan', label: 'Jabatan', lebar: 'sm:col-span-2' },
-	{ key: 'nipd', label: 'NIPD' },
-	{ key: 'niap', label: 'NIAP' },
-	{ key: 'tempat_lahir', label: 'Tempat Lahir' },
-	{ key: 'tanggal_lahir', label: 'Tanggal Lahir', tipe: 'date' },
-	{
-		key: 'jenis_kelamin',
-		label: 'Jenis Kelamin',
-		tipe: 'pilihan',
-		opsi: [['Laki_laki', 'Laki-laki'], ['Perempuan', 'Perempuan']],
-	},
-	{ key: 'agama', label: 'Agama' },
-	{ key: 'pendidikan_terakhir', label: 'Pendidikan Terakhir' },
-	{ key: 'pangkat_golongan', label: 'Pangkat / Golongan' },
-	{ key: 'tanggal_pengangkatan', label: 'Tgl. Pengangkatan', tipe: 'date' },
-	{ key: 'nomor_sk_pengangkatan', label: 'No. SK Pengangkatan' },
-	{ key: 'tanggal_pemberhentian', label: 'Tgl. Pemberhentian', tipe: 'date' },
-	{ key: 'nomor_sk_pemberhentian', label: 'No. SK Pemberhentian' },
-	{ key: 'keterangan', label: 'Keterangan', lebar: 'sm:col-span-2' },
-];
-
 const nilaiForm = (nilai, tipe) => {
 	if (nilai === null || nilai === undefined) return '';
 	return tipe === 'date' ? String(nilai).slice(0, 10) : String(nilai);
@@ -693,35 +676,158 @@ const nilaiForm = (nilai, tipe) => {
 const KELAS_INPUT =
 	'w-full rounded-xl border border-slate-200 px-3 py-2 text-sm text-slate-900 focus:border-slate-400 focus:outline-none';
 
-const FormEdit = ({ form, onUbah }) => (
-	<div className="grid gap-3 px-5 pb-6 sm:grid-cols-2 sm:px-6">
-		{KOLOM_EDIT.map((kolom) => (
-			<label key={kolom.key} className={`block ${kolom.lebar || ''}`}>
-				<span className="mb-1 block text-xs font-medium text-slate-500">{kolom.label}</span>
-				{kolom.tipe === 'pilihan' ? (
-					<select
-						value={form[kolom.key]}
-						onChange={(event) => onUbah(kolom.key, event.target.value)}
-						className={KELAS_INPUT}
-					>
-						{kolom.opsi.map(([nilai, teks]) => (
-							<option key={nilai} value={nilai}>
-								{teks}
-							</option>
-						))}
-					</select>
-				) : (
-					<input
-						type={kolom.tipe === 'date' ? 'date' : 'text'}
-						value={form[kolom.key]}
-						onChange={(event) => onUbah(kolom.key, event.target.value)}
-						className={KELAS_INPUT}
-					/>
-				)}
-			</label>
-		))}
-	</div>
-);
+const MULTIPART = { headers: { 'Content-Type': 'multipart/form-data' } };
+
+/**
+ * Isian lengkap oleh bidang — tambah untuk desa terpilih, atau ubah satu orang.
+ *
+ * Formulirnya SAMA dengan milik desa (AparaturDesaForm), termasuk unggah berkas
+ * dan BPJS, jadi bidang tidak pernah mengisi lebih sedikit atau lebih banyak
+ * kolom daripada desa. Server menulisnya atas nama desa tujuan.
+ *
+ * `desa` = { id, nama, kecamatan_id, kecamatan } bila desanya sudah dipilih
+ * dari luar (mode per wilayah). Tanpa `desa` dan tanpa `aparatur`, panel ini
+ * meminta kecamatan & desa dulu.
+ */
+const PanelIsianAparatur = ({ desa: desaAwal, aparatur, onTutup, onTersimpan }) => {
+	const mengubah = Boolean(aparatur);
+	const perluPilihDesa = !mengubah && !desaAwal;
+	const [kecamatanList, setKecamatanList] = useState([]);
+	const [desaList, setDesaList] = useState([]);
+	const [kecamatanId, setKecamatanId] = useState('');
+	const [desaId, setDesaId] = useState('');
+	const [produkHukum, setProdukHukum] = useState([]);
+
+	const desaTujuanId = mengubah ? String(aparatur.desa_id ?? aparatur.desas?.id ?? '') : desaAwal ? String(desaAwal.id) : desaId;
+	const desaTujuanNama = mengubah
+		? aparatur.desas?.nama
+		: desaAwal
+			? desaAwal.nama
+			: desaList.find((item) => String(item.id) === String(desaId))?.nama;
+
+	useEffect(() => {
+		const onKey = (event) => {
+			if (event.key === 'Escape') onTutup();
+		};
+		document.addEventListener('keydown', onKey);
+		const overflowSemula = document.body.style.overflow;
+		document.body.style.overflow = 'hidden';
+		return () => {
+			document.removeEventListener('keydown', onKey);
+			document.body.style.overflow = overflowSemula;
+		};
+	}, [onTutup]);
+
+	useEffect(() => {
+		if (!perluPilihDesa) return;
+		api.get('/kecamatans')
+			.then((response) => setKecamatanList(response.data?.data || []))
+			.catch((error) => console.error('Failed to fetch kecamatan:', error));
+	}, [perluPilihDesa]);
+
+	useEffect(() => {
+		setDesaList([]);
+		setDesaId('');
+		if (!kecamatanId) return;
+		api.get(`/desas/kecamatan/${kecamatanId}`)
+			.then((response) => setDesaList(response.data?.data || []))
+			.catch((error) => console.error('Failed to fetch desa:', error));
+	}, [kecamatanId]);
+
+	// Pilihan SK pengangkatan = produk hukum milik desa tujuan saja.
+	useEffect(() => {
+		setProdukHukum([]);
+		if (!desaTujuanId) return;
+		let batal = false;
+		api.get('/pemdes/produk-hukum', { params: { desa_id: desaTujuanId, limit: 100 } })
+			.then((response) => { if (!batal) setProdukHukum(response.data?.data || []); })
+			.catch((error) => console.error('Failed to fetch produk hukum desa:', error));
+		return () => { batal = true; };
+	}, [desaTujuanId]);
+
+	const simpan = async (formData) => {
+		try {
+			const response = mengubah
+				? await api.post(`/pemdes/aparatur-desa/${aparatur.id}/lengkap`, formData, MULTIPART)
+				: await api.post(`/pemdes/aparatur-desa?desa_id=${desaTujuanId}`, formData, MULTIPART);
+			toast.success(mengubah ? 'Perubahan disimpan' : `Aparatur ditambahkan ke Desa ${desaTujuanNama || ''}`.trim());
+			onTersimpan?.(response.data?.data);
+		} catch (error) {
+			toast.error(error.response?.data?.message || 'Gagal menyimpan data aparatur');
+		}
+	};
+
+	return (
+		// z-[90]: bilah navigasi bawah layout pegawai memakai z-50.
+		<div className="fixed inset-0 z-[90] flex flex-col bg-slate-900/60 backdrop-blur-sm" role="dialog" aria-modal="true">
+			<div className="flex shrink-0 items-center justify-between gap-3 border-b border-slate-200 bg-white px-4 py-3 sm:px-6">
+				<div className="min-w-0">
+					<p className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">
+						{mengubah ? 'Ubah data aparatur' : 'Tambah aparatur'}
+					</p>
+					<h2 className="truncate text-sm font-semibold text-slate-900 sm:text-base">
+						{mengubah ? aparatur.nama_lengkap : desaTujuanNama ? `Desa ${desaTujuanNama}` : 'Pilih desa tujuan'}
+						{!mengubah && desaAwal?.kecamatan && (
+							<span className="font-normal text-slate-500"> · Kec. {desaAwal.kecamatan}</span>
+						)}
+					</h2>
+				</div>
+				<button
+					type="button"
+					onClick={onTutup}
+					aria-label="Tutup"
+					className="rounded-lg p-2 text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-700"
+				>
+					<X className="h-5 w-5" />
+				</button>
+			</div>
+
+			<div className="flex-1 overflow-y-auto bg-slate-50">
+				<div className="mx-auto max-w-4xl space-y-4 p-4 sm:p-6">
+					{perluPilihDesa && (
+						<div className="grid gap-3 rounded-xl border border-slate-200 bg-white p-4 sm:grid-cols-2">
+							<SelectBox
+								label="Kecamatan"
+								value={kecamatanId}
+								onChange={setKecamatanId}
+								placeholder="Pilih kecamatan"
+								emptyText="Kecamatan tidak ditemukan"
+								options={kecamatanList.map((kecamatan) => ({
+									value: String(kecamatan.id || kecamatan.id_kecamatan),
+									label: kecamatan.nama || kecamatan.name,
+								}))}
+							/>
+							<SelectBox
+								label="Desa"
+								value={desaId}
+								onChange={setDesaId}
+								disabled={!kecamatanId}
+								placeholder={kecamatanId ? 'Pilih desa' : 'Pilih kecamatan dulu'}
+								emptyText="Desa tidak ditemukan"
+								options={desaList.map((desa) => ({ value: String(desa.id), label: desa.nama }))}
+							/>
+						</div>
+					)}
+
+					{desaTujuanId ? (
+						<AparaturDesaForm
+							// Ganti desa = formulir baru; isian desa sebelumnya tidak terbawa.
+							key={desaTujuanId}
+							onSubmit={simpan}
+							initialData={aparatur || null}
+							produkHukumList={produkHukum}
+							onCancel={onTutup}
+						/>
+					) : (
+						<div className="rounded-xl border border-dashed border-slate-300 bg-white px-4 py-12 text-center text-sm text-slate-500">
+							Pilih kecamatan dan desa tujuan untuk mulai mengisi.
+						</div>
+					)}
+				</div>
+			</div>
+		</div>
+	);
+};
 
 /** Ringkasan keputusan verifikasi. Tombolnya ada di bilah atas halaman. */
 const PanelVerifikasi = ({ aparatur }) => {
@@ -1014,7 +1120,6 @@ export const AparaturDesaDetailPage = ({ backPath }) => {
 	const [a, setA] = useState(null);
 	const [memuat, setMemuat] = useState(true);
 	const [menyunting, setMenyunting] = useState(false);
-	const [form, setForm] = useState(null);
 	const [sibuk, setSibuk] = useState(false);
 	const [fotoBesar, setFotoBesar] = useState(false);
 	const [dialogVerifikasi, setDialogVerifikasi] = useState(false);
@@ -1051,24 +1156,17 @@ export const AparaturDesaDetailPage = ({ backPath }) => {
 		}
 	};
 
-	const mulaiSunting = () => {
-		setForm(Object.fromEntries(KOLOM_EDIT.map((kolom) => [kolom.key, nilaiForm(a[kolom.key], kolom.tipe)])));
-		setMenyunting(true);
-	};
-
-	const simpan = async () => {
-		setSibuk(true);
-		try {
-			const response = await api.put(`/pemdes/aparatur-desa/${a.id}`, form);
-			serap(response.data?.data || {});
-			setMenyunting(false);
-			toast.success('Perubahan disimpan');
-			muatRiwayat();
-		} catch (error) {
-			toast.error(error.response?.data?.message || 'Gagal menyimpan perubahan');
-		} finally {
-			setSibuk(false);
-		}
+	// Balasan simpan lengkap membawa relasi desa & produk hukum, tapi bukan
+	// riwayat — jadi tetap ditimpakan lalu riwayatnya diambil menyusul.
+	const selesaiSunting = (baru) => {
+		// `desas` di balasan tanpa kecamatan — digabung, bukan ditimpa.
+		setA((sebelumnya) => ({
+			...(sebelumnya || {}),
+			...(baru || {}),
+			desas: { ...(sebelumnya?.desas || {}), ...(baru?.desas || {}) },
+		}));
+		setMenyunting(false);
+		muatRiwayat();
 	};
 
 	const ubahStatus = async (perubahan) => {
@@ -1144,30 +1242,11 @@ export const AparaturDesaDetailPage = ({ backPath }) => {
 						Kembali
 					</button>
 
-					<div className="flex gap-2">
-						{menyunting ? (
-							<>
-								<button
-									onClick={() => setMenyunting(false)}
-									disabled={sibuk}
-									className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-50 disabled:opacity-60"
-								>
-									Batal
-								</button>
-								<button
-									onClick={simpan}
-									disabled={sibuk}
-									className="flex items-center gap-2 rounded-xl bg-slate-900 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-slate-800 disabled:opacity-60"
-								>
-									{sibuk ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
-									Simpan
-								</button>
-							</>
-						) : (
-							bolehKelola && (
+					<div className="flex flex-wrap gap-2">
+						{bolehKelola && (
 								<>
 									<button
-										onClick={mulaiSunting}
+										onClick={() => setMenyunting(true)}
 										className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-50"
 									>
 										<Pencil className="h-4 w-4" />
@@ -1192,7 +1271,6 @@ export const AparaturDesaDetailPage = ({ backPath }) => {
 										Verifikasi
 									</button>
 								</>
-							)
 						)}
 					</div>
 				</div>
@@ -1267,9 +1345,6 @@ export const AparaturDesaDetailPage = ({ backPath }) => {
 					    yang masih kosong. Menyembunyikan kolom kosong membuat pembaca
 					    tidak bisa membedakan "tidak ada kolomnya" dari "belum diisi" —
 					    padahal justru yang belum diisi itulah yang perlu ditagih. */}
-					{menyunting ? (
-					<FormEdit form={form} onUbah={(kunci, nilai) => setForm((isi) => ({ ...isi, [kunci]: nilai }))} />
-					) : (
 					<div className="space-y-4 px-5 pb-6 sm:px-6">
 					<div className="grid gap-4 md:grid-cols-2">
 						<DetailSection title="Data Pribadi" icon={UserCircle}>
@@ -1360,7 +1435,6 @@ export const AparaturDesaDetailPage = ({ backPath }) => {
 						</div>
 					</DetailSection>
 					</div>
-					)}
 
 					<div className="border-t border-slate-200 p-5 sm:p-6">
 						<PanelVerifikasi aparatur={a} />
@@ -1377,6 +1451,14 @@ export const AparaturDesaDetailPage = ({ backPath }) => {
 
 			{fotoBesar && foto && (
 				<LightboxFoto src={foto} alt={a.nama_lengkap} onClose={() => setFotoBesar(false)} />
+			)}
+
+			{menyunting && (
+				<PanelIsianAparatur
+					aparatur={a}
+					onTutup={() => setMenyunting(false)}
+					onTersimpan={selesaiSunting}
+				/>
 			)}
 
 			{dialogStatus && (
@@ -1548,7 +1630,7 @@ const RingkasanAparatur = ({ jenis, stats, statsLoading }) => {
 	);
 };
 
-const DatabaseTab = ({ refreshKey = 0, jenis, stats, detailBasePath, onLoadingChange, onUpdated }) => {
+const DatabaseTab = ({ refreshKey = 0, jenis, stats, statsLoading, detailBasePath, onLoadingChange, onUpdated, onTambah }) => {
 	const navigate = useNavigate();
 	const bukaDetail = (idAparatur) => navigate(`${detailBasePath}/${idAparatur}`);
 	const [loading, setLoading] = useState(true);
@@ -1739,6 +1821,10 @@ const DatabaseTab = ({ refreshKey = 0, jenis, stats, detailBasePath, onLoadingCh
 
 	return (
 		<div className="space-y-5">
+			{/* Statistik hanya milik mode ini. Dulu ringkasannya berdiri di atas
+			    kedua tab, sehingga berpindah tab nyaris tidak mengubah layar. */}
+			<RingkasanAparatur jenis={jenis} stats={stats} statsLoading={statsLoading} />
+
 			{/* ---------- Toolbar ---------- */}
 			<section className="sticky top-2 z-20 rounded-2xl border border-slate-200 bg-white/95 p-3 shadow-sm backdrop-blur">
 				<div className="flex flex-col gap-3 lg:flex-row lg:items-center">
@@ -1789,6 +1875,16 @@ const DatabaseTab = ({ refreshKey = 0, jenis, stats, detailBasePath, onLoadingCh
 						>
 							<RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
 						</button>
+						{onTambah && (
+							<button
+								type="button"
+								onClick={() => onTambah(null)}
+								className="inline-flex items-center gap-2 rounded-xl bg-slate-900 px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-slate-800"
+							>
+								<Plus className="h-4 w-4" />
+								<span className="hidden sm:inline">Tambah</span>
+							</button>
+						)}
 					</div>
 				</div>
 
@@ -2128,45 +2224,174 @@ const DatabaseTab = ({ refreshKey = 0, jenis, stats, detailBasePath, onLoadingCh
 // ============================================================
 // Tab: Per Wilayah
 // ============================================================
-// Pohon Kecamatan → Desa → aparatur. Urutan jabatan (kepala desa dulu, lalu
-// sekdes, dst) dihitung server bersama penyaringnya, jadi di sini tinggal
-// digambar — mode tabel dan mode ini tidak bisa berbeda isi.
-const BarisAparatur = ({ person, nomor, onClick }) => (
-	<button
-		type="button"
-		onClick={onClick}
-		className="flex w-full items-center gap-3 rounded-xl px-3 py-2 text-left transition-colors hover:bg-white"
-	>
-		<span className="w-5 shrink-0 text-right text-xs tabular-nums text-slate-400">{nomor}</span>
-		<Avatar person={person} className="h-9 w-9 text-xs" />
-		<span className="min-w-0 flex-1">
-			<span className="flex items-center gap-1.5 text-sm font-semibold text-slate-900">
-				<span className="truncate">{person.nama_lengkap}</span>
-				{/* Cap ikon untuk layar sempit; badge bertulisan muncul di kanan mulai sm. */}
-				<span className="sm:hidden">
+// Peta kelengkapan isian: Kecamatan → Desa → aparatur. Pertanyaan yang dijawab
+// mode ini berbeda dari mode tabel — bukan "siapa saja orangnya", melainkan
+// "desa mana yang sudah terisi, siapa pimpinannya, dan mana yang masih kosong".
+// Server ikut mengirim desa tanpa aparatur, supaya yang kosong kelihatan dan
+// bisa langsung diisikan. Urutan jabatan dihitung server.
+const POLA_PIMPINAN = {
+	perangkat: /kepala\s*desa|^\s*kades\b/i,
+	bpd: /^\s*ketua\b(?!.*wakil)/i,
+};
+
+/** Kepala desa (atau ketua BPD) aktif — orang pertama yang dicari di desa. */
+const pimpinanDesa = (desa, jenis) => {
+	const pola = POLA_PIMPINAN[jenis === 'bpd' ? 'bpd' : 'perangkat'];
+	return desa.aparatur.find((orang) => orang.status === 'Aktif' && pola.test(orang.jabatan || '')) || null;
+};
+
+const SARINGAN_WILAYAH = [
+	{ id: 'semua', label: 'Semua desa' },
+	{ id: 'kosong', label: 'Belum ada data' },
+	{ id: 'belum-verifikasi', label: 'Ada yang belum diverifikasi' },
+];
+
+/** Batang tipis rasio terisi — warnanya ikut tingkat kelengkapan. */
+const BatangTerisi = ({ terisi, total }) => {
+	const persen = total > 0 ? Math.round((terisi / total) * 100) : 0;
+	const nada = persen === 100 ? 'bg-emerald-500' : persen >= 60 ? 'bg-amber-500' : 'bg-rose-500';
+	return (
+		<div className="flex items-center gap-2">
+			<div className="h-1.5 w-full overflow-hidden rounded-full bg-slate-100">
+				<div className={`h-full rounded-full ${nada}`} style={{ width: `${persen}%` }} />
+			</div>
+			<span className="w-9 shrink-0 text-right text-[11px] font-semibold tabular-nums text-slate-600">{persen}%</span>
+		</div>
+	);
+};
+
+const BarisAparatur = ({ person, nomor, onBuka, onUbah }) => (
+	<div className="group flex items-center gap-1 rounded-xl transition-colors hover:bg-white">
+		<button type="button" onClick={onBuka} className="flex min-w-0 flex-1 items-center gap-3 px-3 py-2 text-left">
+			<span className="w-5 shrink-0 text-right text-xs tabular-nums text-slate-400">{nomor}</span>
+			<Avatar person={person} className="h-9 w-9 text-xs" />
+			<span className="min-w-0 flex-1">
+				<span className="flex items-center gap-1.5 text-sm font-semibold text-slate-900">
+					<span className="truncate">{person.nama_lengkap}</span>
 					<TandaVerifikasi status={person.status_verifikasi} />
 				</span>
-			</span>
-			<span className="mt-0.5 flex flex-wrap items-center gap-x-2 text-xs text-slate-500">
-				<span className="truncate">{person.jabatan}</span>
-				<span className="shrink-0 text-slate-400">
-					NIPD <span className="tabular-nums text-slate-600">{person.nipd || '-'}</span>
+				<span className="mt-0.5 flex flex-wrap items-center gap-x-2 text-xs text-slate-500">
+					<span className="truncate">{person.jabatan}</span>
+					<span className="shrink-0 text-slate-400">
+						NIPD <span className="tabular-nums text-slate-600">{person.nipd || '-'}</span>
+					</span>
 				</span>
 			</span>
-		</span>
-		<span className="hidden shrink-0 sm:inline-flex">
-			<BadgeVerifikasi status={person.status_verifikasi} />
-		</span>
-		<StatusBadge status={person.status} />
-	</button>
+			<StatusBadge status={person.status} />
+		</button>
+		{onUbah && (
+			<button
+				type="button"
+				onClick={onUbah}
+				title="Ubah data"
+				aria-label={`Ubah data ${person.nama_lengkap}`}
+				className="mr-1.5 shrink-0 rounded-lg p-2 text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-900"
+			>
+				<Pencil className="h-4 w-4" />
+			</button>
+		)}
+	</div>
 );
 
-const WilayahTab = ({ refreshKey = 0, jenis, detailBasePath, onLoadingChange, onUpdated }) => {
+const KartuDesa = ({ desa, jenis, terbuka, onToggle, onBuka, onTambah, onUbah }) => {
+	const kosong = desa.aparatur.length === 0;
+	const pimpinan = pimpinanDesa(desa, jenis);
+	const belumVerifikasi = desa.aparatur.length - desa.aparatur.filter((orang) => orang.status_verifikasi === 'terverifikasi').length;
+	const labelPimpinan = jenis === 'bpd' ? 'Ketua BPD' : 'Kepala Desa';
+
+	return (
+		<div className={`overflow-hidden rounded-xl border bg-white ${kosong ? 'border-amber-200' : 'border-slate-200'}`}>
+			<div className="flex items-center gap-2 px-3 py-2.5">
+				<button
+					type="button"
+					onClick={kosong ? undefined : onToggle}
+					disabled={kosong}
+					className="flex min-w-0 flex-1 items-center gap-3 text-left disabled:cursor-default"
+				>
+					<ChevronDown
+						className={`h-3.5 w-3.5 shrink-0 transition-transform ${kosong ? 'text-slate-200' : 'text-slate-400'} ${
+							terbuka ? '' : '-rotate-90'
+						}`}
+					/>
+					<span className="min-w-0 flex-1">
+						<span className="block truncate text-sm font-semibold text-slate-900">{desa.nama}</span>
+						{kosong ? (
+							<span className="mt-0.5 inline-flex items-center gap-1 text-xs font-medium text-amber-700">
+								<AlertTriangle className="h-3.5 w-3.5" />
+								Belum ada data {jenis === 'bpd' ? 'BPD' : 'perangkat'}
+							</span>
+						) : (
+							<span className="mt-0.5 block truncate text-xs text-slate-500">
+								{labelPimpinan}:{' '}
+								{pimpinan ? (
+									<span className="font-medium text-slate-700">{pimpinan.nama_lengkap}</span>
+								) : (
+									<span className="font-medium text-rose-600">belum tercatat</span>
+								)}
+							</span>
+						)}
+					</span>
+					{!kosong && (
+						<span className="hidden shrink-0 text-right sm:block">
+							<span className="block text-sm font-semibold tabular-nums text-slate-900">
+								{fmt(desa.aktif)}
+								<span className="font-normal text-slate-400">/{fmt(desa.total)}</span>
+							</span>
+							<span className="block text-[11px] text-slate-500">aktif</span>
+						</span>
+					)}
+					{!kosong && (
+						<span
+							className={`hidden shrink-0 rounded-full px-2 py-0.5 text-[11px] font-medium md:inline-flex ${
+								belumVerifikasi === 0 ? 'bg-emerald-50 text-emerald-700' : 'bg-slate-100 text-slate-600'
+							}`}
+						>
+							{belumVerifikasi === 0 ? 'Semua terverifikasi' : `${fmt(belumVerifikasi)} belum diverifikasi`}
+						</span>
+					)}
+				</button>
+
+				{onTambah && (
+					<button
+						type="button"
+						onClick={onTambah}
+						title={`Tambah aparatur Desa ${desa.nama}`}
+						className={`inline-flex shrink-0 items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-medium transition-colors ${
+							kosong
+								? 'bg-slate-900 text-white hover:bg-slate-800'
+								: 'border border-slate-200 text-slate-600 hover:bg-slate-50'
+						}`}
+					>
+						<Plus className="h-3.5 w-3.5" />
+						{kosong ? 'Isi sekarang' : <span className="hidden sm:inline">Tambah</span>}
+					</button>
+				)}
+			</div>
+
+			{terbuka && !kosong && (
+				<div className="space-y-0.5 border-t border-slate-100 bg-slate-50/70 p-1.5">
+					{desa.aparatur.map((person, index) => (
+						<BarisAparatur
+							key={person.id}
+							person={person}
+							nomor={index + 1}
+							onBuka={() => onBuka(person.id)}
+							onUbah={onUbah ? () => onUbah(person.id) : undefined}
+						/>
+					))}
+				</div>
+			)}
+		</div>
+	);
+};
+
+const WilayahTab = ({ refreshKey = 0, jenis, detailBasePath, onLoadingChange, onUpdated, onTambah, onUbah }) => {
 	const navigate = useNavigate();
 	const bukaDetail = (idAparatur) => navigate(`${detailBasePath}/${idAparatur}`);
 	const [loading, setLoading] = useState(true);
 	const [data, setData] = useState([]);
 	const [cari, setCari] = useState('');
+	const [saringan, setSaringan] = useState('semua');
 	const [kecamatanTerbuka, setKecamatanTerbuka] = useState(() => new Set());
 	const [desaTerbuka, setDesaTerbuka] = useState(() => new Set());
 
@@ -2192,31 +2417,45 @@ const WilayahTab = ({ refreshKey = 0, jenis, detailBasePath, onLoadingChange, on
 		return () => { batal = true; };
 	}, [jenis, refreshKey, onLoadingChange, onUpdated]);
 
+	// Angka kabupaten dihitung dari data mentah — tidak ikut berubah oleh saringan.
+	const ringkasan = useMemo(() => {
+		const semuaDesa = data.flatMap((kecamatan) => kecamatan.desa);
+		const orang = semuaDesa.reduce((total, desa) => total + desa.total, 0);
+		const terverifikasi = semuaDesa.reduce((total, desa) => total + (desa.terverifikasi || 0), 0);
+		const terisi = semuaDesa.filter((desa) => desa.total > 0).length;
+		const tanpaPimpinan = semuaDesa.filter((desa) => desa.total > 0 && !pimpinanDesa(desa, jenis)).length;
+		return { desa: semuaDesa.length, terisi, kosong: semuaDesa.length - terisi, orang, terverifikasi, tanpaPimpinan };
+	}, [data, jenis]);
+
 	// Penyaringan di sisi klien: seluruh pohon sudah ada di memori, jadi tidak
 	// ada gunanya bolak-balik ke server untuk mengetik kata kunci.
 	const kata = cari.trim().toLowerCase();
 	const hasil = useMemo(() => {
-		if (!kata) return data;
 		const cocok = (teks) => String(teks || '').toLowerCase().includes(kata);
+		const lolosSaringan = (desa) => {
+			if (saringan === 'kosong') return desa.aparatur.length === 0;
+			if (saringan === 'belum-verifikasi') return desa.aparatur.some((orang) => orang.status_verifikasi !== 'terverifikasi');
+			return true;
+		};
 		return data
 			.map((kecamatan) => {
-				if (cocok(kecamatan.nama)) return kecamatan;
+				const kecamatanCocok = !kata || cocok(kecamatan.nama);
 				const desa = kecamatan.desa
-					.map((item) =>
-						cocok(item.nama)
-							? item
-							: { ...item, aparatur: item.aparatur.filter((a) => cocok(a.nama_lengkap) || cocok(a.jabatan)) }
-					)
-					.filter((item) => item.aparatur.length > 0);
+					.filter(lolosSaringan)
+					.map((item) => {
+						if (kecamatanCocok || cocok(item.nama)) return item;
+						const aparatur = item.aparatur.filter((a) => cocok(a.nama_lengkap) || cocok(a.jabatan));
+						return aparatur.length ? { ...item, aparatur } : null;
+					})
+					.filter(Boolean);
 				return desa.length ? { ...kecamatan, desa } : null;
 			})
 			.filter(Boolean);
-	}, [data, kata]);
+	}, [data, kata, saringan]);
 
 	// Sedang mencari = semua yang lolos saring dibuka; kalau tidak, hasilnya
 	// cuma tumpukan baris tertutup yang harus diklik satu per satu.
 	const sedangMencari = kata.length > 0;
-	const jumlahOrang = (kecamatan) => kecamatan.desa.reduce((total, desa) => total + desa.aparatur.length, 0);
 
 	const toggle = (setter) => (id) =>
 		setter((sebelumnya) => {
@@ -2228,97 +2467,123 @@ const WilayahTab = ({ refreshKey = 0, jenis, detailBasePath, onLoadingChange, on
 	const toggleKecamatan = toggle(setKecamatanTerbuka);
 	const toggleDesa = toggle(setDesaTerbuka);
 
-	const totalDesa = hasil.reduce((total, kecamatan) => total + kecamatan.desa.length, 0);
-	const totalOrang = hasil.reduce((total, kecamatan) => total + jumlahOrang(kecamatan), 0);
+	const angkaRingkas = [
+		{ label: 'Desa terisi', nilai: `${fmt(ringkasan.terisi)}/${fmt(ringkasan.desa)}`, hint: `${pct(ringkasan.terisi, ringkasan.desa)}% desa` },
+		{ label: 'Belum ada data', nilai: fmt(ringkasan.kosong), hint: 'desa perlu diisi', nada: ringkasan.kosong ? 'text-amber-600' : 'text-slate-900' },
+		{
+			label: jenis === 'bpd' ? 'Tanpa ketua BPD' : 'Tanpa kepala desa',
+			nilai: fmt(ringkasan.tanpaPimpinan),
+			hint: 'dari desa yang terisi',
+			nada: ringkasan.tanpaPimpinan ? 'text-rose-600' : 'text-slate-900',
+		},
+		{ label: 'Terverifikasi', nilai: fmt(ringkasan.terverifikasi), hint: `dari ${fmt(ringkasan.orang)} orang` },
+	];
 
 	return (
 		<div className="space-y-3">
-			<div className="flex flex-col gap-3 rounded-2xl border border-slate-200 bg-white p-4 sm:flex-row sm:items-center sm:justify-between">
-				<div className="relative w-full sm:max-w-sm">
-					<Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-					<input
-						value={cari}
-						onChange={(event) => setCari(event.target.value)}
-						placeholder="Cari nama, jabatan, desa, atau kecamatan…"
-						className="w-full rounded-xl border border-slate-200 py-2.5 pl-10 pr-3 text-sm text-slate-900 placeholder:text-slate-400 focus:border-slate-400 focus:outline-none"
-					/>
+			<section className="rounded-2xl border border-slate-200 bg-white p-4">
+				<div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+					{angkaRingkas.map((item) => (
+						<div key={item.label} className="rounded-xl bg-slate-50 px-3.5 py-3">
+							<p className="text-[11px] font-semibold uppercase tracking-wider text-slate-500">{item.label}</p>
+							<p className={`mt-1 text-xl font-bold tabular-nums ${item.nada || 'text-slate-900'}`}>
+								{loading ? '…' : item.nilai}
+							</p>
+							<p className="text-[11px] text-slate-500">{item.hint}</p>
+						</div>
+					))}
 				</div>
-				<p className="text-xs text-slate-500">
-					<span className="font-semibold tabular-nums text-slate-700">{fmt(hasil.length)}</span> kecamatan ·{' '}
-					<span className="font-semibold tabular-nums text-slate-700">{fmt(totalDesa)}</span> desa ·{' '}
-					<span className="font-semibold tabular-nums text-slate-700">{fmt(totalOrang)}</span> orang
-				</p>
-			</div>
+
+				<div className="mt-4 flex flex-col gap-3 border-t border-slate-100 pt-4 lg:flex-row lg:items-center lg:justify-between">
+					<div className="relative w-full lg:max-w-sm">
+						<Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+						<input
+							value={cari}
+							onChange={(event) => setCari(event.target.value)}
+							placeholder="Cari nama, jabatan, desa, atau kecamatan…"
+							className="w-full rounded-xl border border-slate-200 py-2.5 pl-10 pr-3 text-sm text-slate-900 placeholder:text-slate-400 focus:border-slate-400 focus:outline-none"
+						/>
+					</div>
+					<div className="flex flex-wrap gap-1 rounded-xl bg-slate-100 p-1">
+						{SARINGAN_WILAYAH.map((item) => (
+							<button
+								key={item.id}
+								type="button"
+								onClick={() => setSaringan(item.id)}
+								className={`rounded-lg px-3 py-1.5 text-xs font-medium transition-colors ${
+									saringan === item.id ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-900'
+								}`}
+							>
+								{item.label}
+							</button>
+						))}
+					</div>
+				</div>
+			</section>
 
 			{loading ? (
 				<TableSkeleton rows={8} />
 			) : hasil.length === 0 ? (
 				<div className="rounded-2xl border border-slate-200 bg-white py-16 text-center">
 					<UserCircle className="mx-auto h-10 w-10 text-slate-300" />
-					<p className="mt-3 text-sm font-medium text-slate-900">Tidak ada data</p>
-					<p className="mt-1 text-sm text-slate-500">Coba ubah kata kunci pencarian.</p>
+					<p className="mt-3 text-sm font-medium text-slate-900">Tidak ada desa yang cocok</p>
+					<p className="mt-1 text-sm text-slate-500">Coba ubah kata kunci atau saringan.</p>
 				</div>
 			) : (
 				<div className="space-y-2">
 					{hasil.map((kecamatan) => {
-						const bukaKecamatan = sedangMencari || kecamatanTerbuka.has(kecamatan.id);
+						const bukaKecamatan = sedangMencari || saringan !== 'semua' || kecamatanTerbuka.has(kecamatan.id);
+						const jumlahDesa = kecamatan.desa.length;
+						const terisi = kecamatan.desa.filter((desa) => desa.aparatur.length > 0).length;
+						const orang = kecamatan.desa.reduce((total, desa) => total + desa.aparatur.length, 0);
 						return (
 							<div key={kecamatan.id} className="overflow-hidden rounded-2xl border border-slate-200 bg-white">
 								<button
 									type="button"
 									onClick={() => toggleKecamatan(kecamatan.id)}
-									className="flex w-full items-center gap-3 px-4 py-3.5 text-left transition-colors hover:bg-slate-50"
+									className="grid w-full grid-cols-[auto_minmax(0,1fr)] items-center gap-x-3 gap-y-2 px-4 py-3.5 text-left transition-colors hover:bg-slate-50 sm:grid-cols-[auto_minmax(0,1fr)_12rem_auto]"
 								>
 									<ChevronDown
 										className={`h-4 w-4 shrink-0 text-slate-400 transition-transform ${bukaKecamatan ? '' : '-rotate-90'}`}
 									/>
-									<MapPin className="h-4 w-4 shrink-0 text-slate-400" />
-									<span className="min-w-0 flex-1 truncate text-sm font-semibold text-slate-900">
-										Kecamatan {kecamatan.nama}
+									<span className="min-w-0">
+										<span className="block truncate text-sm font-semibold text-slate-900">Kecamatan {kecamatan.nama}</span>
+										<span className="block text-xs text-slate-500">
+											{fmt(terisi)}/{fmt(jumlahDesa)} desa terisi · {fmt(orang)} orang
+										</span>
 									</span>
-									<span className="shrink-0 text-xs text-slate-500">
-										{fmt(kecamatan.desa.length)} desa · {fmt(jumlahOrang(kecamatan))} orang
+									<span className="col-span-2 sm:col-span-1">
+										<BatangTerisi terisi={terisi} total={jumlahDesa} />
 									</span>
+									{jumlahDesa - terisi > 0 ? (
+										<span className="hidden shrink-0 rounded-full bg-amber-50 px-2 py-0.5 text-[11px] font-medium text-amber-700 sm:inline-flex">
+											{fmt(jumlahDesa - terisi)} kosong
+										</span>
+									) : (
+										<span className="hidden shrink-0 rounded-full bg-emerald-50 px-2 py-0.5 text-[11px] font-medium text-emerald-700 sm:inline-flex">
+											Lengkap
+										</span>
+									)}
 								</button>
 
 								{bukaKecamatan && (
-									<div className="space-y-1.5 border-t border-slate-100 bg-slate-50/70 p-2.5">
-										{kecamatan.desa.map((desa) => {
-											const bukaDesa = sedangMencari || desaTerbuka.has(desa.id);
-											return (
-												<div key={desa.id} className="overflow-hidden rounded-xl border border-slate-200 bg-white">
-													<button
-														type="button"
-														onClick={() => toggleDesa(desa.id)}
-														className="flex w-full items-center gap-3 px-3.5 py-2.5 text-left transition-colors hover:bg-slate-50"
-													>
-														<ChevronDown
-															className={`h-3.5 w-3.5 shrink-0 text-slate-400 transition-transform ${bukaDesa ? '' : '-rotate-90'}`}
-														/>
-														<Building2 className="h-4 w-4 shrink-0 text-slate-400" />
-														<span className="min-w-0 flex-1 truncate text-sm font-medium text-slate-800">
-															{desa.nama}
-														</span>
-														<span className="shrink-0 text-xs tabular-nums text-slate-500">
-															{fmt(desa.aparatur.length)} orang
-														</span>
-													</button>
-
-													{bukaDesa && (
-														<div className="space-y-0.5 border-t border-slate-100 bg-slate-50/70 p-1.5">
-															{desa.aparatur.map((person, index) => (
-																<BarisAparatur
-																	key={person.id}
-																	person={person}
-																	nomor={index + 1}
-																	onClick={() => bukaDetail(person.id)}
-																/>
-															))}
-														</div>
-													)}
-												</div>
-											);
-										})}
+									<div className="grid gap-1.5 border-t border-slate-100 bg-slate-50/70 p-2.5 xl:grid-cols-2 xl:items-start">
+										{kecamatan.desa.map((desa) => (
+											<KartuDesa
+												key={desa.id}
+												desa={desa}
+												jenis={jenis}
+												terbuka={sedangMencari || desaTerbuka.has(desa.id)}
+												onToggle={() => toggleDesa(desa.id)}
+												onBuka={bukaDetail}
+												onTambah={
+													onTambah
+														? () => onTambah({ id: desa.id, nama: desa.nama, kecamatan_id: kecamatan.id, kecamatan: kecamatan.nama })
+														: undefined
+												}
+												onUbah={onUbah}
+											/>
+										))}
 									</div>
 								)}
 							</div>
@@ -2571,13 +2836,21 @@ const TAB_DEFINITIONS = [
 		id: 'wilayah',
 		label: 'Per Wilayah',
 		icon: MapPin,
-		desc: 'Dikelompokkan per kecamatan lalu per desa, urut jabatan.',
+		desc: 'Kelengkapan isian tiap kecamatan dan desa, termasuk desa yang belum terisi.',
 	},
 	{
 		id: 'database',
 		label: 'Tabel & Statistik',
 		icon: Database,
-		desc: 'Data aparatur yang tersimpan di aplikasi DPMD.',
+		desc: 'Statistik kabupaten dan tabel seluruh aparatur dengan penyaring.',
+	},
+	{
+		id: 'akun',
+		label: 'Akun Operator',
+		icon: UserCog,
+		desc: 'Akun petugas desa yang ditugaskan untuk fitur Aparatur Desa.',
+		// Hanya staf yang berwenang mengelola; pengunjung Core Dashboard tidak.
+		khususPengelola: true,
 	},
 ];
 
@@ -2587,11 +2860,17 @@ const AparaturDesaPage = ({
 	// Halaman ini dipasang di beberapa layout dengan awalan URL berbeda, jadi
 	// alamat halaman detailnya ikut diantar dari rute — bukan ditebak di sini.
 	detailBasePath = '/bidang/pemdes/aparatur',
-	allowedTabs = ['wilayah', 'database'],
+	allowedTabs = ['wilayah', 'database', 'akun'],
 	initialTab,
 }) => {
+	const { user } = useAuth();
+	// Menambah, mengubah, dan mengurus akun operator hanya untuk halaman bidang
+	// Pemdes. Core Dashboard memakai komponen yang sama untuk membaca saja.
+	const bolehKelola = mode === 'pemdes' && bolehKelolaAparatur(user);
 	const variant = { ...(PAGE_VARIANTS[mode] || PAGE_VARIANTS.pemdes), ...(JENIS_VARIANTS[jenis] || {}) };
-	const filteredTabs = TAB_DEFINITIONS.filter((tab) => allowedTabs.includes(tab.id));
+	const filteredTabs = TAB_DEFINITIONS.filter(
+		(tab) => allowedTabs.includes(tab.id) && (!tab.khususPengelola || bolehKelola)
+	);
 	const tabs = filteredTabs.length > 0 ? filteredTabs : TAB_DEFINITIONS;
 	const fallbackTab = tabs[0]?.id || 'database';
 	const defaultTab = initialTab && tabs.some((tab) => tab.id === initialTab) ? initialTab : fallbackTab;
@@ -2623,6 +2902,30 @@ const AparaturDesaPage = ({
 
 	const handleUpdated = useCallback((date) => setLastUpdated(date), []);
 	const handleLoading = useCallback((value) => setBusy(value), []);
+
+	// Panel isian: { desa } untuk tambah, { aparatur } untuk ubah, {} untuk
+	// tambah dengan memilih desa dulu.
+	const [panel, setPanel] = useState(null);
+	const [memuatUbah, setMemuatUbah] = useState(false);
+	const bukaTambah = useCallback((desa) => setPanel({ desa: desa || null }), []);
+	// Baris per wilayah hanya membawa kolom ringkas; formulir butuh baris utuh
+	// (berkas, BPJS, produk hukum), jadi diambil ulang dulu.
+	const bukaUbah = useCallback(async (idAparatur) => {
+		setMemuatUbah(true);
+		try {
+			const response = await api.get(`/pemdes/aparatur-desa/${idAparatur}`);
+			setPanel({ aparatur: response.data?.data });
+		} catch (error) {
+			toast.error(error.response?.data?.message || 'Gagal memuat data untuk diubah');
+		} finally {
+			setMemuatUbah(false);
+		}
+	}, []);
+	const tutupPanel = useCallback(() => setPanel(null), []);
+	const selesaiSimpan = useCallback(() => {
+		setPanel(null);
+		setRefreshKey((key) => key + 1);
+	}, []);
 
 	return (
 		<div className="min-h-screen bg-slate-50 p-4 pt-20 sm:p-6 lg:pt-6">
@@ -2692,24 +2995,73 @@ const AparaturDesaPage = ({
 				)}
 			</header>
 
-			<RingkasanAparatur jenis={jenis} stats={stats} statsLoading={statsLoading} />
+			{activeTab === 'akun' ? (
+				// Akun operator memakai halaman akun desa bersama, dikunci ke modul
+				// "aparatur-desa": hanya hak akses Aparatur Desa yang diberikan, dan
+				// "desa ini sudah punya operator?" dihitung untuk fitur ini saja.
+				<section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+					<Suspense
+						fallback={
+							<div className="flex items-center justify-center gap-3 py-24 text-sm text-slate-500">
+								<Loader2 className="h-4 w-4 animate-spin" />
+								Memuat akun operator…
+							</div>
+						}
+					>
+						<ManajemenAkunDesaPage tersemat modul="aparatur-desa" />
+					</Suspense>
+				</section>
+			) : (
+				<div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_20rem] lg:items-start">
+					<div className="min-w-0">
+						{activeTab === 'wilayah' && (
+							<WilayahTab
+								refreshKey={refreshKey}
+								jenis={jenis}
+								detailBasePath={detailBasePath}
+								onLoadingChange={handleLoading}
+								onUpdated={handleUpdated}
+								onTambah={bolehKelola ? bukaTambah : undefined}
+								onUbah={bolehKelola ? bukaUbah : undefined}
+							/>
+						)}
 
-			<div className="mt-4 grid gap-4 lg:grid-cols-[minmax(0,1fr)_20rem] lg:items-start">
-				<div className="min-w-0">
-					{activeTab === 'wilayah' && (
-						<WilayahTab refreshKey={refreshKey} jenis={jenis} detailBasePath={detailBasePath} onLoadingChange={handleLoading} onUpdated={handleUpdated} />
-					)}
+						{activeTab === 'database' && (
+							<DatabaseTab
+								refreshKey={refreshKey}
+								jenis={jenis}
+								stats={stats}
+								statsLoading={statsLoading}
+								detailBasePath={detailBasePath}
+								onLoadingChange={handleLoading}
+								onUpdated={handleUpdated}
+								onTambah={bolehKelola ? bukaTambah : undefined}
+							/>
+						)}
+					</div>
 
-					{activeTab === 'database' && (
-						<DatabaseTab refreshKey={refreshKey} jenis={jenis} stats={stats} detailBasePath={detailBasePath} onLoadingChange={handleLoading} onUpdated={handleUpdated} />
-					)}
+					<aside className="space-y-4 lg:sticky lg:top-6">
+						<PanelNotifikasi jenis={jenis} detailBasePath={detailBasePath} />
+						<AktivitasAparatur jenis={jenis} detailBasePath={detailBasePath} />
+					</aside>
 				</div>
+			)}
 
-				<aside className="space-y-4 lg:sticky lg:top-6">
-					<PanelNotifikasi jenis={jenis} detailBasePath={detailBasePath} />
-					<AktivitasAparatur jenis={jenis} detailBasePath={detailBasePath} />
-				</aside>
-			</div>
+			{memuatUbah && (
+				<div className="fixed bottom-6 left-1/2 z-[80] inline-flex -translate-x-1/2 items-center gap-2 rounded-full bg-slate-900 px-4 py-2 text-sm text-white shadow-lg">
+					<Loader2 className="h-4 w-4 animate-spin" />
+					Memuat data untuk diubah…
+				</div>
+			)}
+
+			{panel && (
+				<PanelIsianAparatur
+					desa={panel.desa}
+					aparatur={panel.aparatur}
+					onTutup={tutupPanel}
+					onTersimpan={selesaiSimpan}
+				/>
+			)}
 		</div>
 	);
 };

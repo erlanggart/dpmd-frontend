@@ -108,6 +108,7 @@ const aparaturSchema = z.object({
 	nama_lengkap: z.string().min(1, "Nama lengkap wajib diisi"),
 	jabatan: z.string().min(1, "Jabatan wajib diisi"),
 	nipd: emptyToUndef(z.string().optional()),
+	niap: emptyToUndef(z.string().optional()),
 	tempat_lahir: z.string().min(1, "Tempat lahir wajib diisi"),
 	tanggal_lahir: z.string().min(1, "Tanggal lahir wajib diisi"),
 	jenis_kelamin: z.enum(["Laki-laki", "Perempuan"]),
@@ -463,6 +464,9 @@ const AparaturDesaForm = ({
 				<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
 					<Field label="NIPD">
 						<input {...register("nipd")} className={inputCls} placeholder="Masukkan NIPD" />
+					</Field>
+					<Field label="NIAP">
+						<input {...register("niap")} className={inputCls} placeholder="Masukkan NIAP" />
 					</Field>
 					<Field label="Pangkat/Golongan">
 						<input {...register("pangkat_golongan")} className={inputCls} placeholder="Masukkan pangkat/golongan" />
