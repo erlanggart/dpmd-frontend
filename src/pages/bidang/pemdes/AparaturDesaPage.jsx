@@ -180,8 +180,17 @@ const ChipKodeLokasi = ({ kodeDesa, gelap = false }) => {
 // ============================================================
 // Blok UI kecil
 // ============================================================
-const StatCard = ({ label, value, hint, icon: Icon, iconClass, share, barClass }) => (
-	<div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm transition-shadow hover:shadow-md">
+const StatCard = ({ label, value, hint, icon: Icon, iconClass, share, barClass, onClick }) => (
+	<div
+		role={onClick ? 'button' : undefined}
+		tabIndex={onClick ? 0 : undefined}
+		onClick={onClick}
+		onKeyDown={onClick ? (event) => (event.key === 'Enter' || event.key === ' ') && onClick() : undefined}
+		title={onClick ? 'Klik untuk melihat datanya' : undefined}
+		className={`rounded-2xl border border-slate-200 bg-white p-4 shadow-sm transition-all hover:shadow-md ${
+			onClick ? 'cursor-pointer hover:-translate-y-0.5 hover:border-slate-300' : ''
+		}`}
+	>
 		<div className="flex items-start justify-between gap-3">
 			<div className="min-w-0">
 				<p className="text-[11px] font-semibold uppercase tracking-wider text-brand-600">{label}</p>
@@ -235,6 +244,7 @@ const BarList = ({
 	maxRows = 8,
 	otherLabel = 'Lainnya',
 	labelClass = 'w-24 sm:w-32',
+	onPilih,
 }) => {
 	const rows = useMemo(() => {
 		if (!items.length) return [];
@@ -255,12 +265,18 @@ const BarList = ({
 				const value = Number(row.value ?? 0);
 				const share = pct(value, sum);
 				const fill = row.isOther ? '#94a3b8' : ramp ? ramp[index % ramp.length] : color;
+				// Baris "Lainnya" gabungan beberapa nilai — tidak bisa dibuka satu daftar.
+				const bisaDiklik = onPilih && !row.isOther && value > 0;
 
 				return (
 					<div
 						key={row.name}
-						title={`${row.name}: ${fmt(value)} orang (${share}%)`}
-						className="group flex items-center gap-3 rounded-lg px-1.5 py-1 transition-colors hover:bg-slate-50"
+						role={bisaDiklik ? 'button' : undefined}
+						tabIndex={bisaDiklik ? 0 : undefined}
+						onClick={bisaDiklik ? () => onPilih(row) : undefined}
+						onKeyDown={bisaDiklik ? (event) => event.key === 'Enter' && onPilih(row) : undefined}
+						title={`${row.name}: ${fmt(value)} orang (${share}%)${bisaDiklik ? ' — klik untuk melihat datanya' : ''}`}
+						className={`group flex items-center gap-3 rounded-lg px-1.5 py-1 transition-colors hover:bg-slate-50 ${bisaDiklik ? 'cursor-pointer' : ''}`}
 					>
 						<span className={`${labelClass} shrink-0 truncate text-xs font-medium text-slate-600`} title={row.name}>
 							{row.name}
@@ -283,7 +299,7 @@ const BarList = ({
 };
 
 /** Batang tegak — cocok untuk deret yang berurut seperti rentang usia. */
-const BarVertikal = ({ items = [], ramp = AGE_RAMP }) => {
+const BarVertikal = ({ items = [], ramp = AGE_RAMP, onPilih }) => {
 	if (!items.length) return <EmptyChart />;
 
 	const max = Math.max(1, ...items.map((item) => Number(item.value ?? 0)));
@@ -298,11 +314,16 @@ const BarVertikal = ({ items = [], ramp = AGE_RAMP }) => {
 				{items.map((item, index) => {
 					const nilai = Number(item.value ?? 0);
 					return (
-						<div key={item.name} className="flex h-full flex-1 flex-col justify-end gap-1.5">
+						<div
+							key={item.name}
+							role={onPilih && nilai > 0 ? 'button' : undefined}
+							onClick={onPilih && nilai > 0 ? () => onPilih(item) : undefined}
+							className={`group flex h-full flex-1 flex-col justify-end gap-1.5 ${onPilih && nilai > 0 ? 'cursor-pointer' : ''}`}
+						>
 							<span className="text-center text-xs font-semibold tabular-nums text-slate-700">{fmt(nilai)}</span>
 							<div
-								title={`${item.name}: ${fmt(nilai)} orang (${pct(nilai, jumlah)}%)`}
-								className="rounded-t-lg transition-[height] duration-500"
+								title={`${item.name}: ${fmt(nilai)} orang (${pct(nilai, jumlah)}%)${onPilih ? ' — klik untuk melihat datanya' : ''}`}
+								className="rounded-t-lg transition-[height,filter] duration-500 group-hover:brightness-110"
 								style={{
 									height: `${Math.max((nilai / max) * 100, nilai > 0 ? 2 : 0)}%`,
 									backgroundColor: ramp[index % ramp.length],
@@ -326,7 +347,7 @@ const BarVertikal = ({ items = [], ramp = AGE_RAMP }) => {
 };
 
 /** Rekap jabatan sebagai kartu — angkanya yang dibaca, bukan perbandingannya. */
-const KomposisiJabatan = ({ items = [] }) => {
+const KomposisiJabatan = ({ items = [], onPilih }) => {
 	if (!items.length) return <EmptyChart />;
 
 	const jumlah = items.reduce((total, item) => total + Number(item.value ?? 0), 0);
@@ -336,7 +357,13 @@ const KomposisiJabatan = ({ items = [] }) => {
 			{items.map((item) => (
 				<div
 					key={item.name}
-					className="rounded-xl border border-slate-200 p-3 transition-colors hover:border-slate-300 hover:bg-slate-50"
+					role={onPilih ? 'button' : undefined}
+					tabIndex={onPilih ? 0 : undefined}
+					onClick={onPilih ? () => onPilih(item) : undefined}
+					onKeyDown={onPilih ? (event) => event.key === 'Enter' && onPilih(item) : undefined}
+					className={`rounded-xl border border-slate-200 p-3 transition-all hover:border-slate-300 hover:bg-slate-50 ${
+						onPilih ? 'cursor-pointer hover:-translate-y-0.5 hover:shadow-sm' : ''
+					}`}
 				>
 					<p className="text-xl font-bold leading-none tabular-nums text-slate-900">{fmt(item.value)}</p>
 					<p className="mt-1.5 text-[11px] font-medium leading-snug text-slate-600" title={item.name}>
@@ -349,11 +376,11 @@ const KomposisiJabatan = ({ items = [] }) => {
 	);
 };
 
-const GenderDonut = ({ lakiLaki = 0, perempuan = 0 }) => {
+const GenderDonut = ({ lakiLaki = 0, perempuan = 0, onPilih }) => {
 	const total = Number(lakiLaki) + Number(perempuan);
 	const data = [
-		{ name: 'Laki-laki', value: Number(lakiLaki) },
-		{ name: 'Perempuan', value: Number(perempuan) },
+		{ name: 'Laki-laki', value: Number(lakiLaki), kunci: 'Laki_laki' },
+		{ name: 'Perempuan', value: Number(perempuan), kunci: 'Perempuan' },
 	];
 
 	if (total === 0) return <EmptyChart />;
@@ -374,6 +401,8 @@ const GenderDonut = ({ lakiLaki = 0, perempuan = 0 }) => {
 						dataKey="value"
 						stroke="#ffffff"
 						strokeWidth={2}
+						onClick={onPilih ? (irisan) => onPilih(irisan?.payload || irisan) : undefined}
+						style={onPilih ? { cursor: 'pointer' } : undefined}
 					>
 						{GENDER_COLORS.map((color) => (
 							<Cell key={color} fill={color} />
@@ -392,7 +421,12 @@ const GenderDonut = ({ lakiLaki = 0, perempuan = 0 }) => {
 
 			<div className="w-full max-w-sm space-y-2">
 				{data.map((item, index) => (
-					<div key={item.name} className="flex items-center gap-3 rounded-lg px-2 py-1.5 hover:bg-slate-50">
+					<div
+						key={item.name}
+						role={onPilih ? 'button' : undefined}
+						onClick={onPilih ? () => onPilih(item) : undefined}
+						className={`flex items-center gap-3 rounded-lg px-2 py-1.5 hover:bg-slate-50 ${onPilih ? 'cursor-pointer' : ''}`}
+					>
 						<span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ backgroundColor: GENDER_COLORS[index] }} />
 						<span className="flex-1 text-sm text-slate-600">{item.name}</span>
 						<span className="text-sm font-semibold tabular-nums text-slate-900">{fmt(item.value)}</span>
@@ -1243,6 +1277,9 @@ const VerifikasiItem = ({ itemKey, aparatur, bolehKelola, onSimpan, ringkas = fa
 	const [sibuk, setSibuk] = useState(false);
 
 	if (!item) return null;
+	// Baris berkas sudah bertuliskan "Belum diunggah" — chip yang sama tidak
+	// perlu diulang di sebelahnya.
+	if (ringkas && !item.ada) return null;
 
 	const simpan = async (status, catatan = null) => {
 		setSibuk(true);
@@ -1397,21 +1434,21 @@ const DetailSection = ({ title, icon: Icon, children, className = '' }) => (
 );
 
 /** Satu baris berkas: tautan bila ada, keterangan jujur bila belum diunggah. */
-const BarisBerkas = ({ label, nama, verifikasi }) => {
+const BarisBerkas = ({ label, nama, verifikasi, onBuka }) => {
 	const url = berkasUrl(nama);
 	return (
 		<div className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-x-3 gap-y-1 py-2.5 sm:grid-cols-[minmax(0,1fr)_auto_auto] sm:items-center">
 			<span className="min-w-0 truncate text-sm text-slate-700">{label}</span>
 			{url ? (
-				<a
-					href={url}
-					target="_blank"
-					rel="noreferrer"
-					className="inline-flex flex-shrink-0 items-center gap-1.5 text-xs font-semibold text-slate-900 underline-offset-2 hover:underline"
+				// Pratinjau di pop-up — tidak meninggalkan halaman pemeriksaan.
+				<button
+					type="button"
+					onClick={() => onBuka?.({ label, nama })}
+					className="inline-flex flex-shrink-0 items-center gap-1.5 rounded-lg px-2 py-1 text-xs font-semibold text-slate-900 transition-colors hover:bg-white"
 				>
-					<ExternalLink className="h-3.5 w-3.5" />
-					Buka
-				</a>
+					<Eye className="h-3.5 w-3.5" />
+					Lihat
+				</button>
 			) : (
 				<span className="flex-shrink-0 text-xs text-slate-400">Belum diunggah</span>
 			)}
@@ -1431,6 +1468,7 @@ export const AparaturDesaDetailPage = ({ backPath }) => {
 	const [menyunting, setMenyunting] = useState(false);
 	const [sibuk, setSibuk] = useState(false);
 	const [fotoBesar, setFotoBesar] = useState(false);
+	const [pratinjau, setPratinjau] = useState(null); // { label, nama } berkas yang sedang dilihat
 	const [dialogStatus, setDialogStatus] = useState(false);
 
 	useEffect(() => {
@@ -1793,7 +1831,7 @@ export const AparaturDesaDetailPage = ({ backPath }) => {
 					<DetailSection title={`Berkas (${jumlahBerkas} dari ${BERKAS.length} terunggah)`} icon={Paperclip}>
 						<div className="divide-y divide-slate-200">
 							{BERKAS.map((b) => (
-								<BarisBerkas key={b.kunci} label={b.label} nama={a[b.kunci]} verifikasi={verif(b.kunci, true)} />
+								<BarisBerkas key={b.kunci} label={b.label} nama={a[b.kunci]} verifikasi={verif(b.kunci, true)} onBuka={setPratinjau} />
 							))}
 						</div>
 					</DetailSection>
@@ -1820,6 +1858,10 @@ export const AparaturDesaDetailPage = ({ backPath }) => {
 				</aside>
 				</div>
 			</div>
+
+			{pratinjau && (
+				<PratinjauBerkas label={pratinjau.label} nama={pratinjau.nama} onTutup={() => setPratinjau(null)} />
+			)}
 
 			{fotoBesar && foto && (
 				<LightboxFoto src={foto} alt={a.nama_lengkap} onClose={() => setFotoBesar(false)} />
@@ -1859,7 +1901,7 @@ const EMPTY_FILTERS = { search: '', kecamatan_id: '', desa_id: '', jabatan: '', 
 // Berdiri di luar tab: angka se-kabupaten tidak berubah oleh mode yang sedang
 // dibuka, jadi menyembunyikannya saat pindah ke mode per wilayah cuma memaksa
 // orang bolak-balik untuk melihat angka yang sama.
-const RingkasanAparatur = ({ jenis, stats, statsLoading }) => {
+const RingkasanAparatur = ({ jenis, stats, statsLoading, onBuka }) => {
 	const [showSummary, setShowSummary] = useState(true);
 
 	// Ejaan jenjang dari dua sumber data disatukan jadi satu label sebelum
@@ -1868,8 +1910,11 @@ const RingkasanAparatur = ({ jenis, stats, statsLoading }) => {
 		const peta = new Map();
 		for (const item of stats?.pendidikan || []) {
 			const { label, order } = jenjangKey(item.name);
-			const sebelumnya = peta.get(label) || { name: label, value: 0, order };
+			// `values` = ejaan mentah dalam satu jenjang — dipakai saat batangnya
+			// diklik, supaya daftar yang muncul memuat semua ejaan itu.
+			const sebelumnya = peta.get(label) || { name: label, value: 0, order, values: [] };
 			sebelumnya.value += Number(item.value ?? 0);
+			sebelumnya.values.push(item.name);
 			peta.set(label, sebelumnya);
 		}
 		return [...peta.values()].sort((a, b) => b.order - a.order);
@@ -1914,6 +1959,7 @@ const RingkasanAparatur = ({ jenis, stats, statsLoading }) => {
 										hint={stats.desa_count ? `Tersebar di ${fmt(stats.desa_count)} desa` : null}
 										icon={Users}
 										iconClass="bg-slate-100 text-brand-600"
+										onClick={onBuka && (() => onBuka({}, 'Semua aparatur'))}
 									/>
 									{!jenis && (
 										<>
@@ -1923,7 +1969,8 @@ const RingkasanAparatur = ({ jenis, stats, statsLoading }) => {
 												icon={Building2}
 												iconClass="bg-slate-100 text-slate-600"
 												share={pct(stats.total_pemdes, total)}
-												barClass="bg-slate-1000"
+												barClass="bg-slate-500"
+												onClick={onBuka && (() => onBuka({ jenis: 'perangkat' }, 'Perangkat desa'))}
 											/>
 											<StatCard
 												label="BPD"
@@ -1932,6 +1979,7 @@ const RingkasanAparatur = ({ jenis, stats, statsLoading }) => {
 												iconClass="bg-slate-100 text-brand-600"
 												share={pct(stats.total_bpd, total)}
 												barClass="bg-slate-800"
+												onClick={onBuka && (() => onBuka({ jenis: 'bpd' }, 'BPD'))}
 											/>
 										</>
 									)}
@@ -1943,6 +1991,7 @@ const RingkasanAparatur = ({ jenis, stats, statsLoading }) => {
 										iconClass="bg-emerald-50 text-emerald-600"
 										share={pct(stats.aktif, total)}
 										barClass="bg-emerald-500"
+										onClick={onBuka && (() => onBuka({ status: 'Aktif' }, 'Aparatur aktif'))}
 									/>
 								</div>
 
@@ -1953,7 +2002,7 @@ const RingkasanAparatur = ({ jenis, stats, statsLoading }) => {
 										subtitle="Komposisi laki-laki dan perempuan"
 										className="lg:col-span-2"
 									>
-										<GenderDonut lakiLaki={stats.laki_laki} perempuan={stats.perempuan} />
+										<GenderDonut lakiLaki={stats.laki_laki} perempuan={stats.perempuan} onPilih={onBuka && ((item) => onBuka({ jenis_kelamin: item.kunci }, item.name))} />
 									</ChartCard>
 
 									<ChartCard
@@ -1961,7 +2010,7 @@ const RingkasanAparatur = ({ jenis, stats, statsLoading }) => {
 										subtitle="Sebaran umur aparatur saat ini"
 										className="lg:col-span-3"
 									>
-										<BarVertikal items={stats.rentang_usia || []} />
+										<BarVertikal items={stats.rentang_usia || []} onPilih={onBuka && ((item) => onBuka({ usia: item.name }, `Usia ${item.name} tahun`))} />
 									</ChartCard>
 
 									<ChartCard
@@ -1969,7 +2018,7 @@ const RingkasanAparatur = ({ jenis, stats, statsLoading }) => {
 										subtitle="Urut susunan jabatan, ejaan disatukan"
 										className="lg:col-span-5"
 									>
-										<KomposisiJabatan items={stats.jabatan || []} />
+										<KomposisiJabatan items={stats.jabatan || []} onPilih={onBuka && ((item) => onBuka({ jabatan_baku: item.name }, item.name))} />
 									</ChartCard>
 
 									<ChartCard
@@ -1979,6 +2028,7 @@ const RingkasanAparatur = ({ jenis, stats, statsLoading }) => {
 									>
 										<BarList
 											items={pendidikanChart}
+											onPilih={onBuka && ((item) => onBuka({ pendidikan: (item.values || []).join(',') }, `Pendidikan ${item.name}`))}
 											color={EDU_COLOR}
 											maxRows={9}
 											labelClass="w-32 sm:w-52 lg:w-64"
@@ -1995,13 +2045,251 @@ const RingkasanAparatur = ({ jenis, stats, statsLoading }) => {
 };
 
 // ============================================================
+// Pop-up data di balik grafik
+// ============================================================
+// Klik batang, irisan, atau kartu → daftar orang yang dihitungnya. Penyaring
+// yang dipakai sama dengan endpoint daftar (bangunWhere di server), jadi
+// jumlah di pop-up selalu sama dengan angka grafiknya.
+const PopupDataAparatur = ({ judul, filter, jenis, detailBasePath, onTutup }) => {
+	const navigate = useNavigate();
+	const [data, setData] = useState([]);
+	const [meta, setMeta] = useState({ totalItems: 0, totalPages: 1 });
+	const [halaman, setHalaman] = useState(1);
+	const [cari, setCari] = useState('');
+	const [kata, setKata] = useState('');
+	const [memuat, setMemuat] = useState(true);
+
+	useEffect(() => {
+		const t = setTimeout(() => {
+			setKata(cari.trim());
+			setHalaman(1);
+		}, 350);
+		return () => clearTimeout(t);
+	}, [cari]);
+
+	useEffect(() => {
+		const onKey = (event) => event.key === 'Escape' && onTutup();
+		document.addEventListener('keydown', onKey);
+		const semula = document.body.style.overflow;
+		document.body.style.overflow = 'hidden';
+		return () => {
+			document.removeEventListener('keydown', onKey);
+			document.body.style.overflow = semula;
+		};
+	}, [onTutup]);
+
+	useEffect(() => {
+		let batal = false;
+		setMemuat(true);
+		const params = { ...(jenis ? { jenis } : {}), ...filter, page: halaman, limit: 20, ...(kata ? { search: kata } : {}) };
+		api.get('/pemdes/aparatur-desa', { params })
+			.then((response) => {
+				if (batal) return;
+				setData(response.data?.data || []);
+				setMeta(response.data?.meta || { totalItems: 0, totalPages: 1 });
+			})
+			.catch((error) => {
+				console.error('Failed to fetch data pop-up:', error);
+				if (!batal) toast.error('Gagal memuat data');
+			})
+			.finally(() => !batal && setMemuat(false));
+		return () => { batal = true; };
+	}, [filter, jenis, halaman, kata]);
+
+	return (
+		<motion.div
+			className="fixed inset-0 z-[90] flex items-end justify-center bg-slate-900/60 p-0 backdrop-blur-sm sm:items-center sm:p-4"
+			initial={{ opacity: 0 }}
+			animate={{ opacity: 1 }}
+			onClick={onTutup}
+			role="presentation"
+		>
+			<motion.div
+				initial={{ opacity: 0, y: 28, scale: 0.98 }}
+				animate={{ opacity: 1, y: 0, scale: 1 }}
+				transition={{ type: 'spring', stiffness: 320, damping: 30 }}
+				onClick={(event) => event.stopPropagation()}
+				role="dialog"
+				aria-modal="true"
+				aria-label={judul}
+				className="flex max-h-[88vh] w-full max-w-3xl flex-col overflow-hidden rounded-t-3xl bg-white shadow-2xl sm:rounded-2xl"
+			>
+				<div className="flex items-start gap-3 border-b border-slate-100 px-5 py-4">
+					<span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-slate-900 text-white">
+						<Users className="h-5 w-5" />
+					</span>
+					<div className="min-w-0 flex-1">
+						<h3 className="truncate text-base font-semibold text-slate-900">{judul}</h3>
+						<p className="text-xs text-slate-500">
+							{memuat ? 'Memuat…' : `${fmt(meta.totalItems)} aparatur`}
+							{kata && ` · cocok dengan "${kata}"`}
+						</p>
+					</div>
+					<button type="button" onClick={onTutup} aria-label="Tutup" className="rounded-lg p-2 text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-700">
+						<X className="h-5 w-5" />
+					</button>
+				</div>
+
+				<div className="border-b border-slate-100 px-5 py-3">
+					<div className="relative">
+						<Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+						<input
+							value={cari}
+							onChange={(event) => setCari(event.target.value)}
+							placeholder="Cari nama atau jabatan di daftar ini…"
+							className="w-full rounded-xl border border-slate-200 bg-slate-50 py-2.5 pl-10 pr-3 text-sm focus:border-slate-400 focus:bg-white focus:outline-none"
+						/>
+					</div>
+				</div>
+
+				<div className="flex-1 overflow-y-auto">
+					{memuat && data.length === 0 ? (
+						<TableSkeleton rows={6} />
+					) : data.length === 0 ? (
+						<p className="py-16 text-center text-sm text-slate-500">Tidak ada data.</p>
+					) : (
+						<ul className={`divide-y divide-slate-100 transition-opacity ${memuat ? 'opacity-50' : ''}`}>
+							{data.map((orang) => (
+								<li key={orang.id}>
+									<button
+										type="button"
+										onClick={() => navigate(`${detailBasePath}/${orang.id}`)}
+										className="flex w-full items-center gap-3 px-5 py-3 text-left transition-colors hover:bg-slate-50"
+									>
+										<Avatar person={orang} className="h-10 w-10 text-sm" />
+										<span className="min-w-0 flex-1">
+											<span className="flex items-center gap-1.5 text-sm font-semibold text-slate-900">
+												<span className="truncate">{orang.nama_lengkap}</span>
+												<TandaVerifikasi status={orang.status_verifikasi} />
+											</span>
+											<span className="block truncate text-xs text-slate-500">
+												{orang.jabatan} · Ds. {orang.desas?.nama || '-'} · Kec. {orang.desas?.kecamatans?.nama || '-'}
+											</span>
+										</span>
+										<span className="hidden shrink-0 sm:block">
+											<BadgeVerifikasi status={orang.status_verifikasi} />
+										</span>
+										<StatusBadge status={orang.status} />
+									</button>
+								</li>
+							))}
+						</ul>
+					)}
+				</div>
+
+				{meta.totalPages > 1 && (
+					<div className="flex items-center justify-between gap-3 border-t border-slate-100 px-5 py-3 text-xs text-slate-500">
+						<span>
+							Halaman <span className="font-semibold text-slate-800">{halaman}</span> dari {fmt(meta.totalPages)}
+						</span>
+						<div className="flex gap-1">
+							<button
+								type="button"
+								onClick={() => setHalaman((h) => Math.max(1, h - 1))}
+								disabled={halaman <= 1 || memuat}
+								className="rounded-lg border border-slate-200 p-1.5 text-slate-600 transition-colors hover:bg-slate-50 disabled:opacity-40"
+								aria-label="Halaman sebelumnya"
+							>
+								<ChevronLeft className="h-4 w-4" />
+							</button>
+							<button
+								type="button"
+								onClick={() => setHalaman((h) => Math.min(meta.totalPages, h + 1))}
+								disabled={halaman >= meta.totalPages || memuat}
+								className="rounded-lg border border-slate-200 p-1.5 text-slate-600 transition-colors hover:bg-slate-50 disabled:opacity-40"
+								aria-label="Halaman berikutnya"
+							>
+								<ChevronRight className="h-4 w-4" />
+							</button>
+						</div>
+					</div>
+				)}
+			</motion.div>
+		</motion.div>
+	);
+};
+
+/**
+ * Pratinjau berkas di pop-up — gambar ditampilkan langsung, PDF disematkan.
+ * Tab baru tetap tersedia sebagai pilihan, bukan satu-satunya jalan.
+ */
+const PratinjauBerkas = ({ label, nama, onTutup }) => {
+	const url = berkasUrl(nama);
+	const ext = String(nama || '').split('.').pop().toLowerCase();
+	const gambar = ['jpg', 'jpeg', 'png', 'webp', 'gif'].includes(ext);
+	const pdf = ext === 'pdf';
+
+	useEffect(() => {
+		const onKey = (event) => event.key === 'Escape' && onTutup();
+		document.addEventListener('keydown', onKey);
+		const semula = document.body.style.overflow;
+		document.body.style.overflow = 'hidden';
+		return () => {
+			document.removeEventListener('keydown', onKey);
+			document.body.style.overflow = semula;
+		};
+	}, [onTutup]);
+
+	return (
+		<motion.div
+			className="fixed inset-0 z-[100] flex flex-col bg-slate-950/90 backdrop-blur-sm"
+			initial={{ opacity: 0 }}
+			animate={{ opacity: 1 }}
+			onClick={onTutup}
+			role="presentation"
+		>
+			<div className="flex shrink-0 items-center justify-between gap-3 px-4 py-3 text-white sm:px-6" onClick={(event) => event.stopPropagation()}>
+				<div className="min-w-0">
+					<p className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">Pratinjau berkas</p>
+					<p className="truncate text-sm font-semibold">{label}</p>
+				</div>
+				<div className="flex shrink-0 items-center gap-2">
+					<a
+						href={url}
+						target="_blank"
+						rel="noreferrer"
+						className="inline-flex items-center gap-1.5 rounded-lg bg-white/10 px-3 py-2 text-xs font-semibold ring-1 ring-white/15 transition-colors hover:bg-white/20"
+					>
+						<ExternalLink className="h-3.5 w-3.5" />
+						<span className="hidden sm:inline">Tab baru</span>
+					</a>
+					<button type="button" onClick={onTutup} aria-label="Tutup" className="rounded-lg bg-white/10 p-2 ring-1 ring-white/15 transition-colors hover:bg-white/20">
+						<X className="h-5 w-5" />
+					</button>
+				</div>
+			</div>
+			<motion.div
+				initial={{ opacity: 0, scale: 0.97 }}
+				animate={{ opacity: 1, scale: 1 }}
+				className="flex min-h-0 flex-1 items-center justify-center px-4 pb-4 sm:px-6 sm:pb-6"
+				onClick={(event) => event.stopPropagation()}
+			>
+				{gambar ? (
+					<img src={url} alt={label} className="max-h-full max-w-full rounded-xl object-contain shadow-2xl" />
+				) : pdf ? (
+					<iframe src={url} title={label} className="h-full w-full max-w-5xl rounded-xl bg-white shadow-2xl" />
+				) : (
+					<div className="rounded-2xl bg-white p-8 text-center">
+						<FileText className="mx-auto h-10 w-10 text-slate-300" />
+						<p className="mt-3 text-sm text-slate-600">Jenis berkas ini tidak bisa dipratinjau.</p>
+						<a href={url} target="_blank" rel="noreferrer" className="mt-3 inline-block text-sm font-semibold text-slate-900 underline">
+							Buka di tab baru
+						</a>
+					</div>
+				)}
+			</motion.div>
+		</motion.div>
+	);
+};
+
+// ============================================================
 // Capaian verifikasi (setara Capaian Verifikasi di kelembagaan)
 // ============================================================
 // Warna bermakna, bukan kategori: hijau = sudah, kuning = menunggu, merah =
 // dikembalikan ke desa. Sama dengan ringkasan status kelembagaan.
 const WARNA_VERIFIKASI = { terverifikasi: '#16a34a', belum: '#eab308', ditolak: '#e11d48' };
 
-const CapaianVerifikasiAparatur = ({ stats, loading }) => {
+const CapaianVerifikasiAparatur = ({ stats, loading, onBuka }) => {
 	const [semua, setSemua] = useState(false);
 	const v = stats?.verifikasi;
 	const daftar = stats?.verifikasi_per_kecamatan || [];
@@ -2040,7 +2328,7 @@ const CapaianVerifikasiAparatur = ({ stats, loading }) => {
 					{tampil.map((k) => {
 						const persen = k.total ? Math.round((k.terverifikasi / k.total) * 100) : 0;
 						return (
-							<div key={k.id} className="flex items-center gap-3 py-2">
+							<div key={k.id} role="button" tabIndex={0} title="Klik untuk melihat aparatur kecamatan ini" onClick={() => onBuka?.({ kecamatan_id: k.id }, `Kecamatan ${k.nama}`)} onKeyDown={(event) => event.key === "Enter" && onBuka?.({ kecamatan_id: k.id }, `Kecamatan ${k.nama}`)} className="-mx-1.5 flex cursor-pointer items-center gap-3 rounded-lg px-1.5 py-2 transition-colors hover:bg-slate-50">
 								<div className="w-36 shrink-0 truncate text-sm font-medium text-slate-700" title={k.nama}>
 									{k.nama}
 								</div>
@@ -2092,7 +2380,7 @@ const CapaianVerifikasiAparatur = ({ stats, loading }) => {
 				</div>
 				<div className="mt-3 w-full space-y-1.5">
 					{donat.map((d) => (
-						<div key={d.key} className="flex items-center gap-2.5 text-sm">
+						<div key={d.key} role="button" onClick={() => onBuka?.({ verifikasi: d.key }, d.name)} className="-mx-1.5 flex cursor-pointer items-center gap-2.5 rounded-lg px-1.5 py-1 text-sm transition-colors hover:bg-slate-50">
 							<span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ backgroundColor: WARNA_VERIFIKASI[d.key] }} />
 							<span className="flex-1 text-slate-600">{d.name}</span>
 							<span className="font-semibold tabular-nums text-slate-900">{fmt(d.value)}</span>
@@ -2104,7 +2392,7 @@ const CapaianVerifikasiAparatur = ({ stats, loading }) => {
 	);
 };
 
-const DatabaseTab = ({ refreshKey = 0, jenis, stats, statsLoading, detailBasePath, onLoadingChange, onUpdated, onTambah }) => {
+const DatabaseTab = ({ refreshKey = 0, jenis, stats, statsLoading, detailBasePath, onLoadingChange, onUpdated, onTambah, onBuka }) => {
 	const navigate = useNavigate();
 	const bukaDetail = (idAparatur) => navigate(`${detailBasePath}/${idAparatur}`);
 	const [loading, setLoading] = useState(true);
@@ -2297,7 +2585,7 @@ const DatabaseTab = ({ refreshKey = 0, jenis, stats, statsLoading, detailBasePat
 		<div className="space-y-5">
 			{/* Statistik hanya milik mode ini. Dulu ringkasannya berdiri di atas
 			    kedua tab, sehingga berpindah tab nyaris tidak mengubah layar. */}
-			<RingkasanAparatur jenis={jenis} stats={stats} statsLoading={statsLoading} />
+			<RingkasanAparatur jenis={jenis} stats={stats} statsLoading={statsLoading} onBuka={onBuka} />
 
 			{/* ---------- Toolbar ---------- */}
 			<section className="sticky top-2 z-20 rounded-2xl border border-slate-200 bg-white/95 p-3 shadow-sm backdrop-blur">
@@ -3405,6 +3693,11 @@ const AparaturDesaPage = ({
 	// tambah dengan memilih desa dulu.
 	const [panel, setPanel] = useState(null);
 	const [memuatUbah, setMemuatUbah] = useState(false);
+
+	// Pop-up data di balik grafik: { filter, judul }.
+	const [popup, setPopup] = useState(null);
+	const bukaPopup = useCallback((filter, judul) => setPopup({ filter, judul }), []);
+	const tutupPopup = useCallback(() => setPopup(null), []);
 	const bukaTambah = useCallback((desa) => setPanel({ desa: desa || null }), []);
 	// Baris per wilayah hanya membawa kolom ringkas; formulir butuh baris utuh
 	// (berkas, BPJS, produk hukum), jadi diambil ulang dulu.
@@ -3509,7 +3802,7 @@ const AparaturDesaPage = ({
 			    luar tab — tapi tidak di tab akun, yang urusannya lain. */}
 			{activeTab !== 'akun' && (
 				<div className="mb-4">
-					<CapaianVerifikasiAparatur stats={stats} loading={statsLoading} />
+					<CapaianVerifikasiAparatur stats={stats} loading={statsLoading} onBuka={bukaPopup} />
 				</div>
 			)}
 
@@ -3554,6 +3847,7 @@ const AparaturDesaPage = ({
 								onLoadingChange={handleLoading}
 								onUpdated={handleUpdated}
 								onTambah={bolehKelola ? bukaTambah : undefined}
+								onBuka={bukaPopup}
 							/>
 						)}
 					</div>
@@ -3570,6 +3864,16 @@ const AparaturDesaPage = ({
 					<Loader2 className="h-4 w-4 animate-spin" />
 					Memuat data untuk diubah…
 				</div>
+			)}
+
+			{popup && (
+				<PopupDataAparatur
+					judul={popup.judul}
+					filter={popup.filter}
+					jenis={jenis}
+					detailBasePath={detailBasePath}
+					onTutup={tutupPopup}
+				/>
 			)}
 
 			{panel && (
