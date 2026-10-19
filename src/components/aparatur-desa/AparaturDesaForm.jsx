@@ -1,18 +1,14 @@
-import React, {
-	useState,
-	useEffect,
-	useCallback,
-	
-} from "react";
+import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { useForm, Controller, useController } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useDropzone } from "react-dropzone";
+import { motion, AnimatePresence } from "framer-motion";
 
 import {
-	Trash2, User, Briefcase, Shield, FileText, Upload, Heart,
-	AlertCircle, Loader2, Camera, CreditCard, Users, GraduationCap,
-	Calendar, Hash, MapPin, ChevronDown
+	User, Briefcase, Shield, FileText, Upload, AlertCircle, Loader2, Camera,
+	CreditCard, Users, GraduationCap, Check, ChevronDown, ExternalLink, RefreshCw,
+	Save, X,
 } from "lucide-react";
 import SearchableProdukHukumSelect from "../shared/SearchableProdukHukumSelect";
 
@@ -137,135 +133,430 @@ const aparaturSchema = z.object({
 	file_ijazah_terakhir: z.any().optional(),
 });
 
-/* ---------- Section wrapper ---------- */
-const Section = ({ icon: Icon, title, color = "teal", children }) => {
-	const colors = {
-		teal: "border-slate-500 bg-slate-50 text-slate-700",
-		blue: "border-slate-500 bg-slate-50 text-slate-700",
-		purple: "border-slate-500 bg-slate-50 text-slate-700",
-		amber: "border-amber-500 bg-amber-50 text-amber-700",
-	};
+const FILE_KEYS = [
+	"file_bpjs_kesehatan",
+	"file_bpjs_ketenagakerjaan",
+	"file_pas_foto",
+	"file_ktp",
+	"file_kk",
+	"file_akta_kelahiran",
+	"file_ijazah_terakhir",
+];
+
+// Berkas selain pas foto — pas foto punya tempat sendiri di kartu biodata.
+const BERKAS_LAMPIRAN = [
+	{ name: "file_ktp", label: "KTP", icon: CreditCard },
+	{ name: "file_kk", label: "Kartu Keluarga", icon: Users },
+	{ name: "file_akta_kelahiran", label: "Akta Kelahiran", icon: FileText },
+	{ name: "file_ijazah_terakhir", label: "Ijazah Terakhir", icon: GraduationCap },
+	{ name: "file_bpjs_kesehatan", label: "Kartu BPJS Kesehatan", icon: Shield },
+	{ name: "file_bpjs_ketenagakerjaan", label: "Kartu BPJS Ketenagakerjaan", icon: Shield },
+];
+
+/**
+ * Susunan seksi beserta kolom wajibnya. Satu daftar ini menggerakkan tiga hal
+ * sekaligus — penghitung di kepala kartu, navigasi samping, dan bilah progres
+ * di bawah — jadi ketiganya tidak mungkin menghitung angka yang berbeda.
+ */
+const SEKSI = [
+	{
+		id: "seksi-biodata",
+		judul: "Biodata",
+		keterangan: "Identitas diri dan jabatan",
+		icon: User,
+		wajib: ["nama_lengkap", "jabatan", "tempat_lahir", "tanggal_lahir", "jenis_kelamin", "pendidikan_terakhir", "agama", "status"],
+	},
+	{
+		id: "seksi-kepegawaian",
+		judul: "Kepegawaian",
+		keterangan: "Nomor induk, SK, dan masa tugas",
+		icon: Briefcase,
+		wajib: ["nomor_sk_pengangkatan", "tanggal_pengangkatan"],
+		opsional: ["nipd", "niap", "pangkat_golongan", "produk_hukum_id"],
+	},
+	{
+		id: "seksi-bpjs",
+		judul: "BPJS",
+		keterangan: "Jaminan kesehatan dan ketenagakerjaan",
+		icon: Shield,
+		wajib: [],
+		opsional: ["bpjs_kesehatan_nomor", "bpjs_ketenagakerjaan_nomor"],
+	},
+	{
+		id: "seksi-lampiran",
+		judul: "Lampiran",
+		keterangan: "Pindaian dokumen pendukung",
+		icon: FileText,
+		wajib: [],
+		opsional: BERKAS_LAMPIRAN.map((b) => b.name),
+	},
+];
+const SEMUA_WAJIB = SEKSI.flatMap((s) => s.wajib);
+
+const terisi = (nilai) =>
+	nilai instanceof File || nilai instanceof Blob || (nilai !== null && nilai !== undefined && String(nilai).trim() !== "");
+
+const LABEL_KOLOM = {
+	nama_lengkap: "Nama lengkap",
+	jabatan: "Jabatan",
+	tempat_lahir: "Tempat lahir",
+	tanggal_lahir: "Tanggal lahir",
+	jenis_kelamin: "Jenis kelamin",
+	pendidikan_terakhir: "Pendidikan terakhir",
+	agama: "Agama",
+	status: "Status",
+	tanggal_pengangkatan: "Tanggal pengangkatan",
+	nomor_sk_pengangkatan: "Nomor SK pengangkatan",
+};
+
+const naikMasuk = {
+	hidden: { opacity: 0, y: 16 },
+	show: (i = 0) => ({ opacity: 1, y: 0, transition: { duration: 0.4, delay: i * 0.06, ease: [0.22, 1, 0.36, 1] } }),
+};
+
+/* ---------- Kartu seksi ---------- */
+const KartuSeksi = ({ seksi, nomor, isi, total, children }) => {
+	const Icon = seksi.icon;
+	const lengkap = total > 0 && isi === total;
 	return (
-		<div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
-			<div className={`flex items-center gap-2 px-5 py-3 border-l-4 ${colors[color]}`}>
-				<Icon className="w-4.5 h-4.5" />
-				<h3 className="font-semibold text-sm">{title}</h3>
+		<motion.section
+			id={seksi.id}
+			variants={naikMasuk}
+			initial="hidden"
+			animate="show"
+			custom={nomor}
+			className="scroll-mt-6 overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-[0_1px_2px_rgba(15,23,42,0.04),0_8px_24px_-12px_rgba(15,23,42,0.08)]"
+		>
+			<header className="flex items-center gap-3.5 border-b border-slate-100 px-5 py-4 sm:px-6">
+				<span className="relative flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-slate-900 text-white shadow-sm">
+					<Icon className="h-[18px] w-[18px]" />
+					<span className="absolute -right-1.5 -top-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-white text-[10px] font-bold text-slate-900 ring-1 ring-slate-200">
+						{nomor + 1}
+					</span>
+				</span>
+				<div className="min-w-0 flex-1">
+					<h3 className="text-[15px] font-semibold tracking-tight text-slate-900">{seksi.judul}</h3>
+					<p className="text-xs text-slate-500">{seksi.keterangan}</p>
+				</div>
+				{total > 0 && (
+					<motion.span
+						key={lengkap ? "lengkap" : "proses"}
+						initial={{ scale: 0.85, opacity: 0 }}
+						animate={{ scale: 1, opacity: 1 }}
+						className={`inline-flex shrink-0 items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-semibold tabular-nums ${
+							lengkap ? "bg-emerald-50 text-emerald-700" : "bg-slate-100 text-slate-600"
+						}`}
+					>
+						{lengkap && <Check className="h-3.5 w-3.5" />}
+						{isi}/{total} {seksi.wajib.length ? "wajib" : "terisi"}
+					</motion.span>
+				)}
+			</header>
+			<div className="p-5 sm:p-6">{children}</div>
+		</motion.section>
+	);
+};
+
+const INPUT_CLS =
+	"h-11 w-full rounded-xl border border-slate-200 bg-white px-3.5 text-sm text-slate-900 shadow-[0_1px_2px_rgba(15,23,42,0.04)] transition-all placeholder:text-slate-400 hover:border-slate-300 focus:border-slate-900 focus:outline-none focus:ring-4 focus:ring-slate-900/[0.06]";
+const GALAT_CLS = " border-rose-300 bg-rose-50/40 focus:border-rose-500 focus:ring-rose-500/10";
+
+/**
+ * <select> bergaya. Berdiri di tingkat modul, bukan di dalam formulir: komponen
+ * yang didefinisikan di dalam render dipasang ulang tiap ketikan (watch() memicu
+ * render ulang), dan pilihan yang sedang dibuka tertutup sendiri.
+ */
+const KotakPilih = ({ daftar, galat, children }) => (
+	<div className="relative">
+		<select {...daftar} className={`${INPUT_CLS} cursor-pointer appearance-none pr-10${galat ? GALAT_CLS : ""}`}>
+			{children}
+		</select>
+		<ChevronDown className="pointer-events-none absolute right-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+	</div>
+);
+
+/* ---------- Field wrapper ---------- */
+const Field = ({ label, required, error, hint, className = "", children }) => (
+	<div className={className}>
+		<label className="mb-1.5 flex items-baseline justify-between gap-2 text-[13px] font-medium text-slate-700">
+			<span>
+				{label}
+				{required && <span className="ml-0.5 text-brand-600">*</span>}
+			</span>
+			{hint && <span className="text-[11px] font-normal text-slate-400">{hint}</span>}
+		</label>
+		{children}
+		<AnimatePresence initial={false}>
+			{error && (
+				<motion.p
+					initial={{ opacity: 0, height: 0, y: -4 }}
+					animate={{ opacity: 1, height: "auto", y: 0 }}
+					exit={{ opacity: 0, height: 0 }}
+					className="mt-1.5 flex items-center gap-1 overflow-hidden text-xs font-medium text-rose-600"
+				>
+					<AlertCircle className="h-3.5 w-3.5 shrink-0" />
+					{error}
+				</motion.p>
+			)}
+		</AnimatePresence>
+	</div>
+);
+
+/* ---------- Pilihan bersegmen (jenis kelamin, status) ---------- */
+const Segmen = ({ control, name, opsi, idGrup }) => (
+	<Controller
+		control={control}
+		name={name}
+		render={({ field: { value, onChange } }) => (
+			<div className="relative grid h-11 grid-cols-2 rounded-xl border border-slate-200 bg-slate-50 p-1">
+				{opsi.map(([nilai, teks, nada]) => {
+					const aktif = value === nilai;
+					return (
+						<button
+							key={nilai}
+							type="button"
+							onClick={() => onChange(nilai)}
+							className={`relative z-10 rounded-lg text-sm font-medium transition-colors ${
+								aktif ? "text-white" : "text-slate-500 hover:text-slate-800"
+							}`}
+						>
+							{aktif && (
+								<motion.span
+									layoutId={`segmen-${idGrup}`}
+									transition={{ type: "spring", stiffness: 500, damping: 38 }}
+									className={`absolute inset-0 -z-10 rounded-lg shadow-sm ${nada || "bg-slate-900"}`}
+								/>
+							)}
+							{teks}
+						</button>
+					);
+				})}
 			</div>
-			<div className="p-5">{children}</div>
+		)}
+	/>
+);
+
+/* ---------- Pratinjau berkas yang baru dipilih ---------- */
+const usePratinjau = (nilai) => {
+	const [url, setUrl] = useState(null);
+	useEffect(() => {
+		if (!(nilai instanceof File) || !nilai.type?.startsWith("image/")) {
+			setUrl(null);
+			return undefined;
+		}
+		const objek = URL.createObjectURL(nilai);
+		setUrl(objek);
+		return () => URL.revokeObjectURL(objek);
+	}, [nilai]);
+	return url;
+};
+
+/* ---------- Pas foto ---------- */
+const PasFoto = ({ control, existingFilename, nama }) => {
+	const { field } = useController({ control, name: "file_pas_foto" });
+	const pratinjau = usePratinjau(field.value);
+	const [rusak, setRusak] = useState(false);
+	const src = pratinjau || (!rusak && fileUrl(existingFilename)) || null;
+
+	const onDrop = useCallback((berkas) => berkas[0] && field.onChange(berkas[0]), [field]);
+	const { getRootProps, getInputProps, isDragActive } = useDropzone({
+		onDrop,
+		multiple: false,
+		accept: { "image/*": [] },
+	});
+
+	const inisial =
+		String(nama || "")
+			.trim()
+			.split(/\s+/)
+			.slice(0, 2)
+			.map((kata) => kata[0] || "")
+			.join("")
+			.toUpperCase() || null;
+
+	return (
+		<div className="flex flex-col items-center gap-3">
+			<motion.div
+				{...getRootProps()}
+				whileHover={{ scale: 1.03 }}
+				whileTap={{ scale: 0.98 }}
+				className={`group relative h-36 w-36 cursor-pointer overflow-hidden rounded-[2rem] ring-4 transition-shadow ${
+					isDragActive ? "ring-slate-900/30" : "ring-slate-100"
+				} bg-gradient-to-br from-slate-100 to-slate-200 shadow-inner`}
+			>
+				<input {...getInputProps()} />
+				<AnimatePresence mode="wait">
+					{src ? (
+						<motion.img
+							key={src}
+							src={src}
+							alt="Pas foto"
+							onError={() => setRusak(true)}
+							initial={{ opacity: 0, scale: 1.08 }}
+							animate={{ opacity: 1, scale: 1 }}
+							exit={{ opacity: 0 }}
+							className="h-full w-full object-cover object-top"
+						/>
+					) : (
+						<motion.div
+							key="kosong"
+							initial={{ opacity: 0 }}
+							animate={{ opacity: 1 }}
+							className="flex h-full w-full flex-col items-center justify-center text-slate-400"
+						>
+							{inisial ? (
+								<span className="text-3xl font-bold text-slate-500">{inisial}</span>
+							) : (
+								<User className="h-12 w-12" strokeWidth={1.5} />
+							)}
+						</motion.div>
+					)}
+				</AnimatePresence>
+				<div className="absolute inset-x-0 bottom-0 flex items-center justify-center gap-1.5 bg-gradient-to-t from-slate-950/80 to-transparent pb-2.5 pt-8 text-[11px] font-semibold text-white opacity-0 transition-opacity group-hover:opacity-100">
+					<Camera className="h-3.5 w-3.5" />
+					{src ? "Ganti foto" : "Unggah foto"}
+				</div>
+			</motion.div>
+			<div className="text-center">
+				<p className="text-xs font-semibold text-slate-700">Pas Foto</p>
+				<p className="text-[11px] text-slate-400">
+					{field.value instanceof File ? field.value.name : "JPG/PNG, maks. 2 MB"}
+				</p>
+			</div>
 		</div>
 	);
 };
 
-/* ---------- Field wrapper ---------- */
-const Field = ({ label, required, error, children }) => (
-	<div>
-		<label className="block text-sm font-medium text-slate-700 mb-1.5">
-			{label}
-			{required && <span className="text-rose-500 ml-0.5">*</span>}
-		</label>
-		{children}
-		{error && (
-			<p className="mt-1 text-xs text-rose-500 flex items-center gap-1">
-				<AlertCircle className="w-3 h-3 flex-shrink-0" />
-				{error}
-			</p>
-		)}
-	</div>
-);
-
-/* ---------- File input ---------- */
-const FileInput = ({
-	control,
-	name,
-	label,
-	existingFilename,
-	isImage = false,
-	icon: IconComp = FileText,
-}) => {
+/* ---------- Ubin berkas ---------- */
+const UbinBerkas = ({ control, name, label, existingFilename, icon: Icon }) => {
 	const { field } = useController({ control, name });
-	const [fileName, setFileName] = useState(field.value?.name || "");
+	const baru = field.value instanceof File ? field.value : null;
 
-	const onDrop = useCallback(
-		(acceptedFiles) => {
-			if (acceptedFiles.length > 0) {
-				field.onChange(acceptedFiles[0]);
-				setFileName(acceptedFiles[0].name);
-			}
-		},
-		[field]
-	);
+	const onDrop = useCallback((berkas) => berkas[0] && field.onChange(berkas[0]), [field]);
+	const { getRootProps, getInputProps, isDragActive } = useDropzone({ onDrop, multiple: false });
 
-	const { getRootProps, getInputProps, isDragActive } = useDropzone({
-		onDrop,
-		multiple: false,
-	});
+	const keadaan = baru ? "baru" : existingFilename ? "ada" : "kosong";
+	const RUPA = {
+		baru: { chip: "Siap diunggah", nadaChip: "bg-sky-50 text-sky-700", kartu: "border-sky-200 bg-sky-50/40", ikon: "bg-sky-600 text-white" },
+		ada: { chip: "Terunggah", nadaChip: "bg-emerald-50 text-emerald-700", kartu: "border-emerald-200 bg-white", ikon: "bg-emerald-600 text-white" },
+		kosong: { chip: "Belum ada", nadaChip: "bg-slate-100 text-slate-500", kartu: "border-dashed border-slate-300 bg-white", ikon: "bg-slate-100 text-slate-500" },
+	}[keadaan];
 
 	return (
-		<div>
-			<label className="block text-sm font-medium text-slate-700 mb-1.5">{label}</label>
-			{existingFilename && (
-				<div className="flex items-center gap-3 mb-2 p-2 bg-slate-50 rounded-lg border border-slate-100">
-					{isImage ? (
-						<img
-							src={fileUrl(existingFilename) || "/user-default.svg"}
-							alt="preview"
-							className="h-10 w-10 object-cover rounded-lg border border-slate-200"
-							onError={(e) => (e.currentTarget.src = "/user-default.svg")}
-						/>
-					) : (
-						<div className="h-10 w-10 bg-slate-100 rounded-lg flex items-center justify-center">
-							<IconComp className="w-5 h-5 text-slate-600" />
-						</div>
-					)}
-					<span className="text-xs text-slate-500 flex-1 truncate">{existingFilename}</span>
+		<motion.div
+			layout
+			{...getRootProps()}
+			whileHover={{ y: -2 }}
+			className={`group relative flex cursor-pointer items-center gap-3 rounded-2xl border p-3.5 transition-colors ${RUPA.kartu} ${
+				isDragActive ? "border-slate-900 bg-slate-50 ring-4 ring-slate-900/5" : "hover:border-slate-400"
+			}`}
+		>
+			<input {...getInputProps()} />
+			<span className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl transition-colors ${RUPA.ikon}`}>
+				{keadaan === "kosong" ? <Icon className="h-5 w-5" /> : <Check className="h-5 w-5" />}
+			</span>
+			<span className="min-w-0 flex-1">
+				<span className="block truncate text-sm font-semibold text-slate-900">{label}</span>
+				<span className="mt-0.5 block truncate text-[11px] text-slate-500">
+					{baru ? baru.name : existingFilename ? existingFilename : isDragActive ? "Lepaskan di sini…" : "Seret berkas atau klik"}
+				</span>
+			</span>
+			<span className="flex shrink-0 flex-col items-end gap-1.5">
+				<span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${RUPA.nadaChip}`}>{RUPA.chip}</span>
+				{keadaan === "ada" ? (
 					<a
 						href={fileUrl(existingFilename) || "#"}
 						target="_blank"
 						rel="noopener noreferrer"
-						className="text-xs font-medium text-slate-600 hover:text-slate-900 hover:underline"
+						onClick={(event) => event.stopPropagation()}
+						className="inline-flex items-center gap-1 text-[11px] font-semibold text-slate-600 hover:text-slate-900 hover:underline"
 					>
+						<ExternalLink className="h-3 w-3" />
 						Lihat
 					</a>
-				</div>
-			)}
-			<div
-				{...getRootProps()}
-				className={`border-2 border-dashed rounded-xl p-4 text-center cursor-pointer transition-all ${
-					isDragActive
-						? "border-slate-500 bg-slate-50"
-						: fileName
-						? "border-slate-300 bg-slate-50/50"
-						: "border-slate-200 hover:border-slate-300 hover:bg-slate-50"
-				}`}
-			>
-				<input {...getInputProps()} />
-				{fileName ? (
-					<div className="flex items-center justify-center gap-2 text-sm text-slate-700">
-						<FileText className="w-4 h-4" />
-						<span className="truncate max-w-[200px]">{fileName}</span>
-					</div>
+				) : keadaan === "baru" ? (
+					<button
+						type="button"
+						onClick={(event) => {
+							event.stopPropagation();
+							field.onChange(undefined);
+						}}
+						className="inline-flex items-center gap-1 text-[11px] font-semibold text-slate-500 hover:text-rose-600"
+					>
+						<X className="h-3 w-3" />
+						Batal
+					</button>
 				) : (
-					<div className="flex flex-col items-center gap-1">
-						<Upload className="w-5 h-5 text-slate-400" />
-						<span className="text-xs text-slate-400">Seret file atau klik untuk memilih</span>
-					</div>
+					<Upload className="h-4 w-4 text-slate-300 transition-colors group-hover:text-slate-600" />
 				)}
-			</div>
-		</div>
+			</span>
+			{keadaan === "ada" && (
+				<span className="pointer-events-none absolute right-3.5 top-1/2 hidden -translate-y-1/2 items-center gap-1 rounded-lg bg-slate-900 px-2 py-1 text-[10px] font-semibold text-white opacity-0 shadow transition-opacity group-hover:opacity-100 sm:inline-flex">
+					<RefreshCw className="h-3 w-3" />
+					Ganti
+				</span>
+			)}
+		</motion.div>
 	);
 };
+
+/* ---------- Navigasi seksi ---------- */
+const NavigasiSeksi = ({ hitungan, aktif, onPilih }) => (
+	<nav className="sticky top-6 space-y-1.5">
+		<p className="px-3 pb-1 text-[10.5px] font-bold uppercase tracking-[0.14em] text-slate-400">Bagian formulir</p>
+		{SEKSI.map((seksi, index) => {
+			const { isi, total } = hitungan[seksi.id];
+			const lengkap = total > 0 && isi === total;
+			const sedang = aktif === seksi.id;
+			return (
+				<button
+					key={seksi.id}
+					type="button"
+					onClick={() => onPilih(seksi.id)}
+					className={`relative flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left transition-colors ${
+						sedang ? "text-slate-900" : "text-slate-500 hover:bg-white/70 hover:text-slate-800"
+					}`}
+				>
+					{sedang && (
+						<motion.span
+							layoutId="nav-seksi-aktif"
+							transition={{ type: "spring", stiffness: 420, damping: 36 }}
+							className="absolute inset-0 -z-0 rounded-xl bg-white shadow-sm ring-1 ring-slate-200"
+						/>
+					)}
+					<span
+						className={`relative flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-[11px] font-bold transition-colors ${
+							lengkap ? "bg-emerald-500 text-white" : sedang ? "bg-slate-900 text-white" : "bg-slate-200 text-slate-600"
+						}`}
+					>
+						{lengkap ? <Check className="h-3.5 w-3.5" /> : index + 1}
+					</span>
+					<span className="relative min-w-0 flex-1">
+						<span className="block text-sm font-semibold">{seksi.judul}</span>
+						<span className="block text-[11px] tabular-nums text-slate-400">
+							{total ? `${isi} dari ${total} ${seksi.wajib.length ? "wajib" : "terisi"}` : "Opsional"}
+						</span>
+					</span>
+				</button>
+			);
+		})}
+	</nav>
+);
 
 const AparaturDesaForm = ({
 	onSubmit,
 	initialData,
 	produkHukumList,
 	onCancel,
+	// Navigasi seksi di samping — untuk tampilan lebar (panel layar penuh).
+	denganNavigasi = false,
 }) => {
 	const {
 		register,
 		handleSubmit,
 		control,
 		watch,
+		setFocus,
 		formState: { errors, isSubmitting },
 		reset,
 	} = useForm({
@@ -305,15 +596,7 @@ const AparaturDesaForm = ({
 		});
 
 		// Remove file fields from default values so RHF doesn't treat existing filenames as values to submit
-		[
-			"file_bpjs_kesehatan",
-			"file_bpjs_ketenagakerjaan",
-			"file_pas_foto",
-			"file_ktp",
-			"file_kk",
-			"file_akta_kelahiran",
-			"file_ijazah_terakhir",
-		].forEach((k) => {
+		FILE_KEYS.forEach((k) => {
 			if (k in defaultValues) delete defaultValues[k];
 		});
 		reset(defaultValues);
@@ -325,16 +608,7 @@ const AparaturDesaForm = ({
 	// Build FormData on submit: only append files if they are actual File objects
 	const buildAndSubmit = async (values) => {
 		const fd = new FormData();
-
-		const fileKeys = new Set([
-			"file_bpjs_kesehatan",
-			"file_bpjs_ketenagakerjaan",
-			"file_pas_foto",
-			"file_ktp",
-			"file_kk",
-			"file_akta_kelahiran",
-			"file_ijazah_terakhir",
-		]);
+		const fileKeys = new Set(FILE_KEYS);
 
 		// Append non-file fields
 		Object.entries(values).forEach(([key, val]) => {
@@ -347,11 +621,7 @@ const AparaturDesaForm = ({
 		// Append only actual files
 		fileKeys.forEach((k) => {
 			const v = values[k];
-			if (
-				v &&
-				typeof v === "object" &&
-				(v instanceof File || v instanceof Blob)
-			) {
+			if (v && typeof v === "object" && (v instanceof File || v instanceof Blob)) {
 				fd.append(k, v);
 			}
 		});
@@ -371,228 +641,312 @@ const AparaturDesaForm = ({
 		}
 	};
 
-	const inputCls = "w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-slate-500 focus:border-transparent transition-all";
-	const selectCls = `${inputCls} appearance-none`;
+	// ── Kelengkapan per seksi ──────────────────────────────────────────────
+	const nilai = watch();
+	const hitungan = useMemo(() => {
+		const hasil = {};
+		for (const seksi of SEKSI) {
+			const kolom = seksi.wajib.length ? seksi.wajib : seksi.opsional || [];
+			const isi = kolom.filter((k) => terisi(nilai[k]) || (k.startsWith("file_") && initialData?.[k])).length;
+			hasil[seksi.id] = { isi, total: kolom.length };
+		}
+		return hasil;
+	}, [nilai, initialData]);
+	const wajibTerisi = SEMUA_WAJIB.filter((k) => terisi(nilai[k])).length;
+	const persenWajib = Math.round((wajibTerisi / SEMUA_WAJIB.length) * 100);
 
-	return (
-		<form
-			onSubmit={handleSubmit(buildAndSubmit)}
-			className="space-y-5"
-			aria-busy={isSubmitting}
-		>
-			{/* Error summary */}
-			{Object.keys(errors).length > 0 && (
-				<div className="rounded-xl border border-rose-200 bg-rose-50 p-4 flex items-start gap-3">
-					<AlertCircle className="w-5 h-5 text-rose-500 flex-shrink-0 mt-0.5" />
-					<div className="text-sm text-rose-700">
-						<p className="font-semibold mb-1">Periksa kembali isian berikut:</p>
-						<ul className="list-disc list-inside space-y-0.5">
-							{Object.entries(errors).map(([key, err]) => (
-								<li key={key}>{err?.message || key}</li>
-							))}
-						</ul>
+	// Seksi yang sedang terlihat — menggerakkan sorotan navigasi samping.
+	const [seksiAktif, setSeksiAktif] = useState(SEKSI[0].id);
+	useEffect(() => {
+		if (!denganNavigasi) return undefined;
+		const pengamat = new IntersectionObserver(
+			(entri) => {
+				const terlihat = entri.filter((e) => e.isIntersecting).sort((a, b) => a.boundingClientRect.top - b.boundingClientRect.top);
+				if (terlihat[0]) setSeksiAktif(terlihat[0].target.id);
+			},
+			{ rootMargin: "-15% 0px -60% 0px" }
+		);
+		SEKSI.forEach((s) => {
+			const el = document.getElementById(s.id);
+			if (el) pengamat.observe(el);
+		});
+		return () => pengamat.disconnect();
+	}, [denganNavigasi]);
+
+	const lompatKe = (id) => {
+		setSeksiAktif(id);
+		document.getElementById(id)?.scrollIntoView({ behavior: "smooth", block: "start" });
+	};
+
+	const sibuk = isSubmitting || submitLock;
+	const daftarGalat = Object.entries(errors);
+
+	const inputCls = INPUT_CLS;
+	const galatCls = (kunci) => (errors[kunci] ? GALAT_CLS : "");
+
+	const isiFormulir = (
+		<div className="min-w-0 space-y-5">
+			{/* Ringkasan galat — tiap butir bisa diklik untuk langsung ke kolomnya */}
+			<AnimatePresence>
+				{daftarGalat.length > 0 && (
+					<motion.div
+						initial={{ opacity: 0, y: -8, height: 0 }}
+						animate={{ opacity: 1, y: 0, height: "auto" }}
+						exit={{ opacity: 0, height: 0 }}
+						className="overflow-hidden"
+					>
+						<div className="flex items-start gap-3 rounded-2xl border border-rose-200 bg-gradient-to-br from-rose-50 to-white p-4">
+							<span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-rose-100 text-rose-600">
+								<AlertCircle className="h-5 w-5" />
+							</span>
+							<div className="min-w-0 text-sm text-rose-700">
+								<p className="font-semibold">Masih ada {daftarGalat.length} isian yang perlu dibetulkan</p>
+								<div className="mt-2 flex flex-wrap gap-1.5">
+									{daftarGalat.map(([kunci]) => (
+										<button
+											key={kunci}
+											type="button"
+											onClick={() => setFocus(kunci)}
+											className="rounded-lg bg-white px-2.5 py-1 text-xs font-medium text-rose-700 ring-1 ring-rose-200 transition-colors hover:bg-rose-100"
+										>
+											{LABEL_KOLOM[kunci] || kunci}
+										</button>
+									))}
+								</div>
+							</div>
+						</div>
+					</motion.div>
+				)}
+			</AnimatePresence>
+
+			{/* 1 · Biodata */}
+			<KartuSeksi seksi={SEKSI[0]} nomor={0} {...hitungan[SEKSI[0].id]}>
+				<div className="grid gap-6 md:grid-cols-[9rem_minmax(0,1fr)]">
+					<PasFoto control={control} existingFilename={initialData?.file_pas_foto} nama={nilai.nama_lengkap} />
+					<div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+						<Field label="Nama Lengkap" required error={errors.nama_lengkap?.message} className="sm:col-span-2">
+							<input {...register("nama_lengkap")} className={`${inputCls} text-[15px] font-medium${galatCls("nama_lengkap")}`} placeholder="Nama sesuai KTP" />
+						</Field>
+						<Field label="Jabatan" required error={errors.jabatan?.message} className="sm:col-span-2">
+							<KotakPilih daftar={register("jabatan")} galat={Boolean(errors.jabatan)}>
+								<option value="">Pilih jabatan</option>
+								<OpsiTersimpan nilai={nilai.jabatan} dikenal={SEMUA_JABATAN} />
+								{OPSI_JABATAN.map((g) => (
+									<optgroup key={g.grup} label={g.grup}>
+										{g.nilai.map((v) => (
+											<option key={v} value={v}>
+												{v}
+											</option>
+										))}
+									</optgroup>
+								))}
+							</KotakPilih>
+						</Field>
+						<Field label="Tempat Lahir" required error={errors.tempat_lahir?.message}>
+							<input {...register("tempat_lahir")} className={`${inputCls}${galatCls("tempat_lahir")}`} placeholder="Kota / kabupaten" />
+						</Field>
+						<Field label="Tanggal Lahir" required error={errors.tanggal_lahir?.message}>
+							<input type="date" {...register("tanggal_lahir")} className={`${inputCls}${galatCls("tanggal_lahir")}`} />
+						</Field>
 					</div>
 				</div>
-			)}
 
-			{/* Biodata */}
-			<Section icon={User} title="Biodata Aparatur" color="teal">
-				<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-					<Field label="Nama Lengkap" required error={errors.nama_lengkap?.message}>
-						<input {...register("nama_lengkap")} className={inputCls} placeholder="Masukkan nama lengkap" />
-					</Field>
-					<Field label="Jabatan" required error={errors.jabatan?.message}>
-						<select {...register("jabatan")} className={selectCls}>
-							<option value="">Pilih Jabatan</option>
-							<OpsiTersimpan nilai={watch("jabatan")} dikenal={SEMUA_JABATAN} />
-							{OPSI_JABATAN.map((g) => (
-								<optgroup key={g.grup} label={g.grup}>
-									{g.nilai.map((v) => (
-										<option key={v} value={v}>
-											{v}
-										</option>
-									))}
-								</optgroup>
-							))}
-						</select>
-					</Field>
-					<Field label="Tempat Lahir" required error={errors.tempat_lahir?.message}>
-						<input {...register("tempat_lahir")} className={inputCls} placeholder="Masukkan tempat lahir" />
-					</Field>
-					<Field label="Tanggal Lahir" required error={errors.tanggal_lahir?.message}>
-						<input type="date" {...register("tanggal_lahir")} className={inputCls} />
-					</Field>
+				<div className="mt-5 grid grid-cols-1 gap-4 border-t border-slate-100 pt-5 sm:grid-cols-2">
 					<Field label="Jenis Kelamin" required error={errors.jenis_kelamin?.message}>
-						<select {...register("jenis_kelamin")} className={selectCls}>
-							<option value="Laki-laki">Laki-laki</option>
-							<option value="Perempuan">Perempuan</option>
-						</select>
+						<Segmen
+							control={control}
+							name="jenis_kelamin"
+							idGrup="jk"
+							opsi={[["Laki-laki", "Laki-laki"], ["Perempuan", "Perempuan"]]}
+						/>
+					</Field>
+					<Field label="Status" required error={errors.status?.message}>
+						<Segmen
+							control={control}
+							name="status"
+							idGrup="status"
+							opsi={[["Aktif", "Aktif", "bg-emerald-600"], ["Tidak Aktif", "Tidak Aktif", "bg-rose-600"]]}
+						/>
 					</Field>
 					<Field label="Pendidikan Terakhir" required error={errors.pendidikan_terakhir?.message}>
-						<select {...register("pendidikan_terakhir")} className={selectCls}>
-							<option value="">Pilih Pendidikan</option>
-							<OpsiTersimpan nilai={watch("pendidikan_terakhir")} dikenal={OPSI_PENDIDIKAN} />
+						<KotakPilih daftar={register("pendidikan_terakhir")} galat={Boolean(errors.pendidikan_terakhir)}>
+							<option value="">Pilih pendidikan</option>
+							<OpsiTersimpan nilai={nilai.pendidikan_terakhir} dikenal={OPSI_PENDIDIKAN} />
 							{OPSI_PENDIDIKAN.map((v) => (
 								<option key={v} value={v}>
 									{v}
 								</option>
 							))}
-						</select>
+						</KotakPilih>
 					</Field>
 					<Field label="Agama" required error={errors.agama?.message}>
-						<select {...register("agama")} className={selectCls}>
-							<option value="">Pilih Agama</option>
-							<OpsiTersimpan nilai={watch("agama")} dikenal={OPSI_AGAMA} />
+						<KotakPilih daftar={register("agama")} galat={Boolean(errors.agama)}>
+							<option value="">Pilih agama</option>
+							<OpsiTersimpan nilai={nilai.agama} dikenal={OPSI_AGAMA} />
 							{OPSI_AGAMA.map((v) => (
 								<option key={v} value={v}>
 									{v}
 								</option>
 							))}
-						</select>
-					</Field>
-					<Field label="Status" required error={errors.status?.message}>
-						<select {...register("status")} className={selectCls}>
-							<option value="Aktif">Aktif</option>
-							<option value="Tidak Aktif">Tidak Aktif</option>
-						</select>
+						</KotakPilih>
 					</Field>
 				</div>
-			</Section>
+			</KartuSeksi>
 
-			{/* Kepegawaian */}
-			<Section icon={Briefcase} title="Informasi Kepegawaian" color="blue">
-				<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-					<Field label="NIPD">
-						<input {...register("nipd")} className={inputCls} placeholder="Masukkan NIPD" />
+			{/* 2 · Kepegawaian */}
+			<KartuSeksi seksi={SEKSI[1]} nomor={1} {...hitungan[SEKSI[1].id]}>
+				<div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+					<Field label="NIPD" hint="opsional">
+						<input {...register("nipd")} className={inputCls} placeholder="Nomor induk perangkat" />
 					</Field>
-					<Field label="NIAP">
-						<input {...register("niap")} className={inputCls} placeholder="Masukkan NIAP" />
+					<Field label="NIAP" hint="opsional">
+						<input {...register("niap")} className={inputCls} placeholder="Nomor induk aparatur" />
 					</Field>
-					<Field label="Pangkat/Golongan">
-						<input {...register("pangkat_golongan")} className={inputCls} placeholder="Masukkan pangkat/golongan" />
+					<Field label="Pangkat / Golongan" hint="opsional">
+						<input {...register("pangkat_golongan")} className={inputCls} placeholder="Contoh: II/a" />
 					</Field>
-					<Field label="Nomor SK Pengangkatan" required error={errors.nomor_sk_pengangkatan?.message}>
-						<input {...register("nomor_sk_pengangkatan")} className={inputCls} placeholder="Masukkan nomor SK" />
-					</Field>
-					<Field label="Tanggal Pengangkatan" required error={errors.tanggal_pengangkatan?.message}>
-						<input type="date" {...register("tanggal_pengangkatan")} className={inputCls} />
-					</Field>
-					<Field label="Nomor SK Pemberhentian">
-						<input {...register("nomor_sk_pemberhentian")} className={inputCls} placeholder="Jika ada" />
-					</Field>
-					<Field label="Tanggal Pemberhentian">
-						<input type="date" {...register("tanggal_pemberhentian")} className={inputCls} />
-					</Field>
-					<div className="md:col-span-2">
-						<Field label="SK Pengangkatan (dari Produk Hukum)">
-							<Controller
-								control={control}
-								name="produk_hukum_id"
-								render={({ field: { value, onChange } }) => (
-									<SearchableProdukHukumSelect
-										value={value}
-										onChange={onChange}
-										produkHukumList={produkHukumList}
-									/>
-								)}
-							/>
-						</Field>
+				</div>
+
+				{/* Pengangkatan dan pemberhentian sebagai dua blok sejajar —
+				    pasangan nomor & tanggal SK dibaca bersama. */}
+				<div className="mt-5 grid gap-4 lg:grid-cols-2">
+					<div className="rounded-2xl border border-slate-200 bg-slate-50/60 p-4">
+						<p className="mb-3 flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-slate-500">
+							<span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+							Pengangkatan
+						</p>
+						<div className="space-y-3">
+							<Field label="Nomor SK" required error={errors.nomor_sk_pengangkatan?.message}>
+								<input {...register("nomor_sk_pengangkatan")} className={`${inputCls}${galatCls("nomor_sk_pengangkatan")}`} placeholder="Nomor SK pengangkatan" />
+							</Field>
+							<Field label="Tanggal" required error={errors.tanggal_pengangkatan?.message}>
+								<input type="date" {...register("tanggal_pengangkatan")} className={`${inputCls}${galatCls("tanggal_pengangkatan")}`} />
+							</Field>
+						</div>
 					</div>
-					<div className="md:col-span-2">
-						<Field label="Keterangan">
-							<textarea {...register("keterangan")} className={`${inputCls} min-h-[80px]`} placeholder="Keterangan tambahan (opsional)" rows={3} />
-						</Field>
+					<div className="rounded-2xl border border-dashed border-slate-200 p-4">
+						<p className="mb-3 flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-slate-500">
+							<span className="h-1.5 w-1.5 rounded-full bg-rose-400" />
+							Pemberhentian <span className="font-medium normal-case tracking-normal text-slate-400">— bila ada</span>
+						</p>
+						<div className="space-y-3">
+							<Field label="Nomor SK">
+								<input {...register("nomor_sk_pemberhentian")} className={inputCls} placeholder="Kosongkan bila masih menjabat" />
+							</Field>
+							<Field label="Tanggal">
+								<input type="date" {...register("tanggal_pemberhentian")} className={inputCls} />
+							</Field>
+						</div>
 					</div>
 				</div>
-			</Section>
 
-			{/* BPJS */}
-			<Section icon={Shield} title="Informasi BPJS" color="purple">
-				<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+				<div className="mt-5 grid gap-4">
+					<Field label="SK Pengangkatan dari Produk Hukum Desa" hint={`${(produkHukumList || []).length} dokumen tersedia`}>
+						<Controller
+							control={control}
+							name="produk_hukum_id"
+							render={({ field: { value, onChange } }) => (
+								<SearchableProdukHukumSelect value={value} onChange={onChange} produkHukumList={produkHukumList} />
+							)}
+						/>
+					</Field>
+					<Field label="Keterangan" hint="opsional">
+						<textarea
+							{...register("keterangan")}
+							rows={3}
+							className={`${inputCls} h-auto min-h-[88px] resize-y py-3`}
+							placeholder="Catatan tambahan, misalnya alasan perubahan jabatan"
+						/>
+					</Field>
+				</div>
+			</KartuSeksi>
+
+			{/* 3 · BPJS */}
+			<KartuSeksi seksi={SEKSI[2]} nomor={2} {...hitungan[SEKSI[2].id]}>
+				<div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
 					<Field label="Nomor BPJS Kesehatan">
-						<input {...register("bpjs_kesehatan_nomor")} className={inputCls} placeholder="Masukkan nomor BPJS Kesehatan" />
+						<input {...register("bpjs_kesehatan_nomor")} inputMode="numeric" className={`${inputCls} tabular-nums`} placeholder="13 digit" />
 					</Field>
 					<Field label="Nomor BPJS Ketenagakerjaan">
-						<input {...register("bpjs_ketenagakerjaan_nomor")} className={inputCls} placeholder="Masukkan nomor BPJS Ketenagakerjaan" />
+						<input {...register("bpjs_ketenagakerjaan_nomor")} inputMode="numeric" className={`${inputCls} tabular-nums`} placeholder="11 digit" />
 					</Field>
 				</div>
-			</Section>
+			</KartuSeksi>
 
-			{/* Lampiran */}
-			<Section icon={FileText} title="Lampiran Dokumen" color="amber">
-				<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-					<FileInput
-						control={control}
-						name="file_pas_foto"
-						label="Pas Foto"
-						existingFilename={initialData?.file_pas_foto}
-						isImage
-						icon={Camera}
-					/>
-					<FileInput
-						control={control}
-						name="file_ktp"
-						label="KTP"
-						existingFilename={initialData?.file_ktp}
-						icon={CreditCard}
-					/>
-					<FileInput
-						control={control}
-						name="file_kk"
-						label="Kartu Keluarga"
-						existingFilename={initialData?.file_kk}
-						icon={Users}
-					/>
-					<FileInput
-						control={control}
-						name="file_akta_kelahiran"
-						label="Akta Kelahiran"
-						existingFilename={initialData?.file_akta_kelahiran}
-						icon={FileText}
-					/>
-					<FileInput
-						control={control}
-						name="file_ijazah_terakhir"
-						label="Ijazah Terakhir"
-						existingFilename={initialData?.file_ijazah_terakhir}
-						icon={GraduationCap}
-					/>
-					<FileInput
-						control={control}
-						name="file_bpjs_kesehatan"
-						label="File BPJS Kesehatan"
-						existingFilename={initialData?.file_bpjs_kesehatan}
-						icon={Shield}
-					/>
-					<FileInput
-						control={control}
-						name="file_bpjs_ketenagakerjaan"
-						label="File BPJS Ketenagakerjaan"
-						existingFilename={initialData?.file_bpjs_ketenagakerjaan}
-						icon={Shield}
-					/>
+			{/* 4 · Lampiran */}
+			<KartuSeksi seksi={SEKSI[3]} nomor={3} {...hitungan[SEKSI[3].id]}>
+				<div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+					{BERKAS_LAMPIRAN.map((berkas) => (
+						<UbinBerkas
+							key={berkas.name}
+							control={control}
+							name={berkas.name}
+							label={berkas.label}
+							icon={berkas.icon}
+							existingFilename={initialData?.[berkas.name]}
+						/>
+					))}
 				</div>
-			</Section>
+				<p className="mt-3 text-[11px] text-slate-400">PDF atau gambar, maks. 2 MB per berkas. Berkas lama tetap tersimpan bila tidak diganti.</p>
+			</KartuSeksi>
 
-			{/* Actions */}
-			<div className="flex justify-end gap-3 pt-2">
-				<button
-					type="button"
-					onClick={onCancel}
-					className="px-5 py-2.5 text-sm font-medium text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 transition-colors disabled:opacity-60"
-					disabled={isSubmitting || submitLock}
-				>
-					Batal
-				</button>
-				<button
-					type="submit"
-					className="px-6 py-2.5 text-sm font-medium text-white bg-gradient-to-r from-slate-700 to-slate-900 rounded-lg hover:from-slate-800 hover:to-slate-950 shadow-sm transition-all disabled:opacity-60 flex items-center gap-2"
-					disabled={isSubmitting || submitLock}
-				>
-					{isSubmitting && <Loader2 className="w-4 h-4 animate-spin" />}
-					{isSubmitting ? "Menyimpan..." : "Simpan"}
-				</button>
+			{/* Bilah aksi lengket — progres isian wajib selalu terlihat */}
+			{/* Inline di layout desa, ponsel punya navigasi bawah tetap setinggi
+			    ±5rem (z-50) — bilah ini menempel di atasnya, bukan di baliknya. */}
+			<div className={`sticky z-20 -mx-1 pb-1 pt-2 ${denganNavigasi ? "bottom-0" : "bottom-20 lg:bottom-0"}`}>
+				<div className="flex flex-col gap-3 rounded-2xl border border-slate-200 bg-white/90 p-3 shadow-[0_-8px_30px_-12px_rgba(15,23,42,0.25)] backdrop-blur-xl sm:flex-row sm:items-center sm:p-3.5">
+					<div className="min-w-0 flex-1 px-1">
+						<div className="flex items-baseline justify-between gap-2 text-xs">
+							<span className="font-semibold text-slate-700">Isian wajib</span>
+							<span className="tabular-nums text-slate-500">
+								{wajibTerisi}/{SEMUA_WAJIB.length} · {persenWajib}%
+							</span>
+						</div>
+						<div className="mt-1.5 h-2 overflow-hidden rounded-full bg-slate-100">
+							<motion.div
+								className={`h-full rounded-full ${persenWajib === 100 ? "bg-emerald-500" : "bg-slate-900"}`}
+								initial={false}
+								animate={{ width: `${persenWajib}%` }}
+								transition={{ type: "spring", stiffness: 120, damping: 20 }}
+							/>
+						</div>
+					</div>
+					<div className="flex gap-2">
+						<button
+							type="button"
+							onClick={onCancel}
+							disabled={sibuk}
+							className="h-11 flex-1 rounded-xl border border-slate-200 bg-white px-5 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-50 disabled:opacity-60 sm:flex-none"
+						>
+							Batal
+						</button>
+						<motion.button
+							type="submit"
+							disabled={sibuk}
+							whileTap={{ scale: 0.97 }}
+							className="relative inline-flex h-11 flex-1 items-center justify-center gap-2 overflow-hidden rounded-xl bg-slate-900 px-6 text-sm font-semibold text-white shadow-lg shadow-slate-900/20 transition-colors hover:bg-slate-800 disabled:opacity-70 sm:flex-none"
+						>
+							{sibuk ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+							{sibuk ? "Menyimpan…" : "Simpan Data"}
+						</motion.button>
+					</div>
+				</div>
 			</div>
+		</div>
+	);
+
+	return (
+		<form onSubmit={handleSubmit(buildAndSubmit)} aria-busy={isSubmitting} noValidate>
+			{denganNavigasi ? (
+				<div className="grid gap-6 lg:grid-cols-[14rem_minmax(0,1fr)]">
+					<aside className="hidden lg:block">
+						<NavigasiSeksi hitungan={hitungan} aktif={seksiAktif} onPilih={lompatKe} />
+					</aside>
+					{isiFormulir}
+				</div>
+			) : (
+				isiFormulir
+			)}
 		</form>
 	);
 };

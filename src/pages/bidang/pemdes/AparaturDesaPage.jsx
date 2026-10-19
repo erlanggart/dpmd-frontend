@@ -34,10 +34,12 @@ import {
 	Save,
 	BadgeCheck,
 	Plus,
+	UserPlus,
 	UserCog,
 	AlertTriangle,
 } from 'lucide-react';
 import { PieChart, Pie, Cell, Tooltip as RechartsTooltip } from 'recharts';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useParams, useNavigate } from 'react-router-dom';
 import api from '../../../api';
 import { useAuth } from '../../../context/AuthContext';
@@ -688,14 +690,21 @@ const MULTIPART = { headers: { 'Content-Type': 'multipart/form-data' } };
  * `desa` = { id, nama, kecamatan_id, kecamatan } bila desanya sudah dipilih
  * dari luar (mode per wilayah). Tanpa `desa` dan tanpa `aparatur`, panel ini
  * meminta kecamatan & desa dulu.
+ *
+ * Penutupan lewat state `terbuka` sendiri, bukan langsung memanggil induk:
+ * induk melepas panel dari pohon, dan tanpa jeda itu animasi keluarnya tidak
+ * pernah sempat diputar.
  */
 const PanelIsianAparatur = ({ desa: desaAwal, aparatur, onTutup, onTersimpan }) => {
 	const mengubah = Boolean(aparatur);
 	const perluPilihDesa = !mengubah && !desaAwal;
+	const [terbuka, setTerbuka] = useState(true);
+	const hasilSimpan = useRef(undefined);
 	const [kecamatanList, setKecamatanList] = useState([]);
 	const [desaList, setDesaList] = useState([]);
 	const [kecamatanId, setKecamatanId] = useState('');
 	const [desaId, setDesaId] = useState('');
+	const [ubahLokasi, setUbahLokasi] = useState(true);
 	const [produkHukum, setProdukHukum] = useState([]);
 
 	const desaTujuanId = mengubah ? String(aparatur.desa_id ?? aparatur.desas?.id ?? '') : desaAwal ? String(desaAwal.id) : desaId;
@@ -704,10 +713,20 @@ const PanelIsianAparatur = ({ desa: desaAwal, aparatur, onTutup, onTersimpan }) 
 		: desaAwal
 			? desaAwal.nama
 			: desaList.find((item) => String(item.id) === String(desaId))?.nama;
+	const kecamatanNama = mengubah
+		? aparatur.desas?.kecamatans?.nama
+		: desaAwal
+			? desaAwal.kecamatan
+			: (() => {
+					const kecamatan = kecamatanList.find((item) => String(item.id || item.id_kecamatan) === String(kecamatanId));
+					return kecamatan?.nama || kecamatan?.name;
+				})();
+
+	const tutup = useCallback(() => setTerbuka(false), []);
 
 	useEffect(() => {
 		const onKey = (event) => {
-			if (event.key === 'Escape') onTutup();
+			if (event.key === 'Escape') tutup();
 		};
 		document.addEventListener('keydown', onKey);
 		const overflowSemula = document.body.style.overflow;
@@ -716,7 +735,7 @@ const PanelIsianAparatur = ({ desa: desaAwal, aparatur, onTutup, onTersimpan }) 
 			document.removeEventListener('keydown', onKey);
 			document.body.style.overflow = overflowSemula;
 		};
-	}, [onTutup]);
+	}, [tutup]);
 
 	useEffect(() => {
 		if (!perluPilihDesa) return;
@@ -745,87 +764,238 @@ const PanelIsianAparatur = ({ desa: desaAwal, aparatur, onTutup, onTersimpan }) 
 		return () => { batal = true; };
 	}, [desaTujuanId]);
 
+	const pilihDesa = (nilai) => {
+		setDesaId(nilai);
+		if (nilai) setUbahLokasi(false);
+	};
+
 	const simpan = async (formData) => {
 		try {
 			const response = mengubah
 				? await api.post(`/pemdes/aparatur-desa/${aparatur.id}/lengkap`, formData, MULTIPART)
 				: await api.post(`/pemdes/aparatur-desa?desa_id=${desaTujuanId}`, formData, MULTIPART);
 			toast.success(mengubah ? 'Perubahan disimpan' : `Aparatur ditambahkan ke Desa ${desaTujuanNama || ''}`.trim());
-			onTersimpan?.(response.data?.data);
+			hasilSimpan.current = response.data?.data || {};
+			setTerbuka(false);
 		} catch (error) {
 			toast.error(error.response?.data?.message || 'Gagal menyimpan data aparatur');
 		}
 	};
 
+	const selesaiKeluar = () => {
+		if (hasilSimpan.current !== undefined) onTersimpan?.(hasilSimpan.current);
+		else onTutup();
+	};
+
+	const lokasiTerkunci = !perluPilihDesa || (desaId && !ubahLokasi);
+	const IconKepala = mengubah ? Pencil : UserPlus;
+
 	return (
-		// z-[90]: bilah navigasi bawah layout pegawai memakai z-50.
-		<div className="fixed inset-0 z-[90] flex flex-col bg-slate-900/60 backdrop-blur-sm" role="dialog" aria-modal="true">
-			<div className="flex shrink-0 items-center justify-between gap-3 border-b border-slate-200 bg-white px-4 py-3 sm:px-6">
-				<div className="min-w-0">
-					<p className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">
-						{mengubah ? 'Ubah data aparatur' : 'Tambah aparatur'}
-					</p>
-					<h2 className="truncate text-sm font-semibold text-slate-900 sm:text-base">
-						{mengubah ? aparatur.nama_lengkap : desaTujuanNama ? `Desa ${desaTujuanNama}` : 'Pilih desa tujuan'}
-						{!mengubah && desaAwal?.kecamatan && (
-							<span className="font-normal text-slate-500"> · Kec. {desaAwal.kecamatan}</span>
-						)}
-					</h2>
-				</div>
-				<button
-					type="button"
-					onClick={onTutup}
-					aria-label="Tutup"
-					className="rounded-lg p-2 text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-700"
+		<AnimatePresence onExitComplete={selesaiKeluar}>
+			{terbuka && (
+				// z-[90]: bilah navigasi bawah layout pegawai memakai z-50.
+				<motion.div
+					key="panel-isian"
+					className="fixed inset-0 z-[90] flex flex-col bg-slate-950/50 backdrop-blur-sm sm:pt-4"
+					initial={{ opacity: 0 }}
+					animate={{ opacity: 1 }}
+					exit={{ opacity: 0, transition: { duration: 0.2, delay: 0.05 } }}
+					role="dialog"
+					aria-modal="true"
+					aria-label={mengubah ? 'Ubah data aparatur' : 'Tambah aparatur'}
 				>
-					<X className="h-5 w-5" />
-				</button>
-			</div>
-
-			<div className="flex-1 overflow-y-auto bg-slate-50">
-				<div className="mx-auto max-w-4xl space-y-4 p-4 sm:p-6">
-					{perluPilihDesa && (
-						<div className="grid gap-3 rounded-xl border border-slate-200 bg-white p-4 sm:grid-cols-2">
-							<SelectBox
-								label="Kecamatan"
-								value={kecamatanId}
-								onChange={setKecamatanId}
-								placeholder="Pilih kecamatan"
-								emptyText="Kecamatan tidak ditemukan"
-								options={kecamatanList.map((kecamatan) => ({
-									value: String(kecamatan.id || kecamatan.id_kecamatan),
-									label: kecamatan.nama || kecamatan.name,
-								}))}
-							/>
-							<SelectBox
-								label="Desa"
-								value={desaId}
-								onChange={setDesaId}
-								disabled={!kecamatanId}
-								placeholder={kecamatanId ? 'Pilih desa' : 'Pilih kecamatan dulu'}
-								emptyText="Desa tidak ditemukan"
-								options={desaList.map((desa) => ({ value: String(desa.id), label: desa.nama }))}
-							/>
+					<motion.div
+						className="flex min-h-0 flex-1 flex-col overflow-hidden bg-slate-50 shadow-2xl sm:mx-4 sm:rounded-t-[1.75rem]"
+						initial={{ y: 48, opacity: 0, scale: 0.985 }}
+						animate={{ y: 0, opacity: 1, scale: 1 }}
+						exit={{ y: 32, opacity: 0, transition: { duration: 0.2 } }}
+						transition={{ type: 'spring', stiffness: 260, damping: 30 }}
+					>
+						{/* ---------- Kepala ---------- */}
+						<div className="relative shrink-0 overflow-hidden bg-slate-950 px-4 py-4 text-white sm:px-8 sm:py-5">
+							<span className="pointer-events-none absolute -right-20 -top-24 h-64 w-64 rounded-full bg-brand-600/30 blur-3xl" />
+							<span className="pointer-events-none absolute -bottom-28 left-1/3 h-56 w-56 rounded-full bg-indigo-500/15 blur-3xl" />
+							<div className="relative mx-auto flex max-w-6xl items-center gap-4">
+								<motion.span
+									initial={{ rotate: -12, scale: 0.6, opacity: 0 }}
+									animate={{ rotate: 0, scale: 1, opacity: 1 }}
+									transition={{ type: 'spring', stiffness: 300, damping: 18, delay: 0.1 }}
+									className="hidden h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-white/10 ring-1 ring-white/15 sm:flex"
+								>
+									<IconKepala className="h-6 w-6" />
+								</motion.span>
+								<div className="min-w-0 flex-1">
+									<p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-brand-300">
+										{mengubah ? 'Ubah data aparatur' : 'Tambah aparatur'} · Bidang Pemdes
+									</p>
+									<h2 className="mt-0.5 truncate text-lg font-semibold tracking-tight sm:text-xl">
+										{mengubah ? aparatur.nama_lengkap : desaTujuanNama ? `Desa ${desaTujuanNama}` : 'Pilih desa tujuan'}
+									</h2>
+									<AnimatePresence>
+										{(kecamatanNama || mengubah) && (
+											<motion.div
+												initial={{ opacity: 0, y: -4 }}
+												animate={{ opacity: 1, y: 0 }}
+												className="mt-1.5 flex flex-wrap items-center gap-1.5 text-xs text-slate-300"
+											>
+												{kecamatanNama && (
+													<span className="inline-flex items-center gap-1 rounded-full bg-white/10 px-2.5 py-0.5 ring-1 ring-white/10">
+														<MapPin className="h-3 w-3" />
+														Kec. {kecamatanNama}
+													</span>
+												)}
+												{mengubah && desaTujuanNama && (
+													<span className="inline-flex items-center gap-1 rounded-full bg-white/10 px-2.5 py-0.5 ring-1 ring-white/10">
+														<Building2 className="h-3 w-3" />
+														Desa {desaTujuanNama}
+													</span>
+												)}
+												<span className="hidden text-slate-500 sm:inline">· Tekan Esc untuk menutup</span>
+											</motion.div>
+										)}
+									</AnimatePresence>
+								</div>
+								<motion.button
+									type="button"
+									onClick={tutup}
+									aria-label="Tutup"
+									whileHover={{ rotate: 90 }}
+									transition={{ type: 'spring', stiffness: 300, damping: 15 }}
+									className="shrink-0 rounded-xl bg-white/10 p-2.5 text-slate-300 ring-1 ring-white/10 transition-colors hover:bg-white/20 hover:text-white"
+								>
+									<X className="h-5 w-5" />
+								</motion.button>
+							</div>
 						</div>
-					)}
 
-					{desaTujuanId ? (
-						<AparaturDesaForm
-							// Ganti desa = formulir baru; isian desa sebelumnya tidak terbawa.
-							key={desaTujuanId}
-							onSubmit={simpan}
-							initialData={aparatur || null}
-							produkHukumList={produkHukum}
-							onCancel={onTutup}
-						/>
-					) : (
-						<div className="rounded-xl border border-dashed border-slate-300 bg-white px-4 py-12 text-center text-sm text-slate-500">
-							Pilih kecamatan dan desa tujuan untuk mulai mengisi.
+						{/* ---------- Isi ---------- */}
+						<div className="flex-1 overflow-y-auto">
+							<div className="mx-auto max-w-6xl space-y-5 px-4 py-5 sm:px-8 sm:py-7">
+								{perluPilihDesa && (
+									<motion.section
+										layout
+										initial={{ opacity: 0, y: 12 }}
+										animate={{ opacity: 1, y: 0 }}
+										className="overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-[0_1px_2px_rgba(15,23,42,0.04),0_8px_24px_-12px_rgba(15,23,42,0.08)]"
+									>
+										<AnimatePresence mode="wait" initial={false}>
+											{lokasiTerkunci ? (
+												<motion.div
+													key="ringkas"
+													initial={{ opacity: 0 }}
+													animate={{ opacity: 1 }}
+													exit={{ opacity: 0 }}
+													className="flex items-center gap-3 px-5 py-3.5"
+												>
+													<span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-emerald-50 text-emerald-600">
+														<CheckCircle2 className="h-5 w-5" />
+													</span>
+													<div className="min-w-0 flex-1">
+														<p className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">Lokasi tugas</p>
+														<p className="truncate text-sm font-semibold text-slate-900">
+															Desa {desaTujuanNama}
+															<span className="font-normal text-slate-500"> · Kec. {kecamatanNama}</span>
+														</p>
+													</div>
+													<button
+														type="button"
+														onClick={() => setUbahLokasi(true)}
+														className="shrink-0 rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-semibold text-slate-600 transition-colors hover:bg-slate-50"
+													>
+														Ganti desa
+													</button>
+												</motion.div>
+											) : (
+												<motion.div
+													key="pilih"
+													initial={{ opacity: 0 }}
+													animate={{ opacity: 1 }}
+													exit={{ opacity: 0 }}
+													className="p-5"
+												>
+													<div className="mb-4 flex items-center gap-3">
+														<span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-slate-900 text-white">
+															<MapPin className="h-[18px] w-[18px]" />
+														</span>
+														<div>
+															<h3 className="text-[15px] font-semibold tracking-tight text-slate-900">Lokasi tugas</h3>
+															<p className="text-xs text-slate-500">Pilih desa tempat aparatur ini bertugas</p>
+														</div>
+													</div>
+													<div className="grid gap-3 sm:grid-cols-2">
+														<SelectBox
+															label="Kecamatan"
+															value={kecamatanId}
+															onChange={setKecamatanId}
+															placeholder="Pilih kecamatan"
+															emptyText="Kecamatan tidak ditemukan"
+															options={kecamatanList.map((kecamatan) => ({
+																value: String(kecamatan.id || kecamatan.id_kecamatan),
+																label: kecamatan.nama || kecamatan.name,
+															}))}
+														/>
+														<SelectBox
+															label="Desa"
+															value={desaId}
+															onChange={pilihDesa}
+															disabled={!kecamatanId}
+															placeholder={kecamatanId ? 'Pilih desa' : 'Pilih kecamatan dulu'}
+															emptyText="Desa tidak ditemukan"
+															options={desaList.map((desa) => ({ value: String(desa.id), label: desa.nama }))}
+														/>
+													</div>
+												</motion.div>
+											)}
+										</AnimatePresence>
+									</motion.section>
+								)}
+
+								<AnimatePresence mode="wait">
+									{desaTujuanId ? (
+										<motion.div
+											key={`form-${desaTujuanId}`}
+											initial={{ opacity: 0, y: 16 }}
+											animate={{ opacity: 1, y: 0 }}
+											exit={{ opacity: 0, y: -8 }}
+											transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
+										>
+											<AparaturDesaForm
+												// Ganti desa = formulir baru; isian desa sebelumnya tidak terbawa.
+												key={desaTujuanId}
+												onSubmit={simpan}
+												initialData={aparatur || null}
+												produkHukumList={produkHukum}
+												onCancel={tutup}
+												denganNavigasi
+											/>
+										</motion.div>
+									) : (
+										<motion.div
+											key="kosong"
+											initial={{ opacity: 0, scale: 0.98 }}
+											animate={{ opacity: 1, scale: 1 }}
+											exit={{ opacity: 0 }}
+											className="flex flex-col items-center rounded-2xl border border-dashed border-slate-300 bg-white px-6 py-16 text-center"
+										>
+											<span className="relative flex h-16 w-16 items-center justify-center">
+												<span className="absolute inset-0 animate-ping rounded-full bg-brand-100 opacity-60" />
+												<span className="relative flex h-16 w-16 items-center justify-center rounded-full bg-brand-50 text-brand-600">
+													<MapPin className="h-7 w-7" />
+												</span>
+											</span>
+											<p className="mt-5 text-base font-semibold text-slate-900">Mulai dari lokasi tugas</p>
+											<p className="mt-1 max-w-sm text-sm text-slate-500">
+												Pilih kecamatan lalu desa di atas. Formulir biodata, kepegawaian, BPJS, dan lampiran akan muncul di sini.
+											</p>
+										</motion.div>
+									)}
+								</AnimatePresence>
+							</div>
 						</div>
-					)}
-				</div>
-			</div>
-		</div>
+					</motion.div>
+				</motion.div>
+			)}
+		</AnimatePresence>
 	);
 };
 
