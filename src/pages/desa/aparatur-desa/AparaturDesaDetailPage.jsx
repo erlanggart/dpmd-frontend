@@ -15,7 +15,6 @@ import {
 	FaGraduationCap,
 	FaPray,
 	FaIdCard,
-	FaMedal,
 	FaFileAlt,
 	FaCheckCircle,
 	FaTimesCircle,
@@ -166,8 +165,6 @@ const AparaturDesaDetailPage = () => {
 
 			// Optional-but-useful fields to keep existing values intact
 			const optional = {
-				nipd: d.nipd ?? "",
-				pangkat_golongan: d.pangkat_golongan ?? "",
 				bpjs_kesehatan_nomor: d.bpjs_kesehatan_nomor ?? "",
 				bpjs_ketenagakerjaan_nomor: d.bpjs_ketenagakerjaan_nomor ?? "",
 				produk_hukum_id:
@@ -272,7 +269,7 @@ const AparaturDesaDetailPage = () => {
 								: "Data terverifikasi Bidang Pemdes"}
 						</p>
 						{data.catatan_verifikasi && (
-							<p className="mt-1 text-sm text-slate-700">{data.catatan_verifikasi}</p>
+							<p className="mt-1 whitespace-pre-line text-sm text-slate-700">{data.catatan_verifikasi}</p>
 						)}
 					</div>
 				)}
@@ -362,16 +359,10 @@ const AparaturDesaDetailPage = () => {
 							value={data.agama}
 							color="text-amber-500"
 						/>
-						<InfoCard 
-							icon={FaMedal}
-							label="Pangkat/Golongan"
-							value={data.pangkat_golongan}
-							color="text-rose-500"
-						/>
-						<InfoCard 
+						<InfoCard
 							icon={FaIdCard}
-							label="NIAP"
-							value={data.niap}
+							label="NIPD"
+							value={data.nipd || "Terbit setelah diverifikasi DPMD"}
 							color="text-slate-500"
 						/>
 					</div>
@@ -490,6 +481,7 @@ const AparaturDesaDetailPage = () => {
 					</h3>
 					<div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
 						{[
+							{ key: "file_sk_terakhir", label: "SK Terakhir", icon: FaFileAlt, color: "amber" },
 							{ key: "file_ktp", label: "KTP", icon: FaIdCard, color: "blue" },
 							{ key: "file_kk", label: "Kartu Keluarga", icon: FaFileAlt, color: "green" },
 							{ key: "file_akta_kelahiran", label: "Akta Kelahiran", icon: FaFileAlt, color: "purple" },

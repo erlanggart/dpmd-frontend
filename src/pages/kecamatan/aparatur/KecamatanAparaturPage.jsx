@@ -192,7 +192,7 @@ const KecamatanAparaturPage = () => {
 			{ label: 'SK terhubung ke Produk Hukum', n: hasil.filter((a) => a.punya_sk).length },
 			{ label: 'Peserta BPJS Kesehatan', n: hasil.filter((a) => a.punya_bpjs_kesehatan).length },
 			{ label: 'Peserta BPJS Ketenagakerjaan', n: hasil.filter((a) => a.punya_bpjs_ketenagakerjaan).length },
-			{ label: 'Memiliki NIPD', n: hasil.filter((a) => a.nipd && String(a.nipd).trim()).length },
+			{ label: 'NIPD terbit', n: hasil.filter((a) => a.nipd && String(a.nipd).trim()).length },
 		];
 
 		return {
@@ -656,7 +656,7 @@ const KecamatanAparaturPage = () => {
 															<div className="min-w-0">
 																<p className="truncate font-medium text-slate-900">{a.nama_lengkap}</p>
 																<p className="truncate text-[11px] text-slate-400">
-																	{a.nipd ? `NIPD ${a.nipd}` : 'NIPD belum diisi'}
+																	{a.nipd ? `NIPD ${a.nipd}` : 'NIPD belum terbit'}
 																	{a.status !== 'Aktif' && <span className="ml-1.5 text-rose-500">· tidak aktif</span>}
 																</p>
 															</div>

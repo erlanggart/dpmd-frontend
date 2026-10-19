@@ -73,6 +73,20 @@ const OPSI_JABATAN = [
 			"Kepala Seksi Pemerintahan",
 			"Kepala Seksi Kesejahteraan",
 			"Kepala Seksi Pelayanan",
+		],
+	},
+	// Staf perangkat hanya didata — tidak mendapat NIPD.
+	{
+		grup: "Staf Perangkat Desa",
+		nilai: [
+			"Staf Sekretariat",
+			"Staf Seksi Pemerintahan",
+			"Staf Seksi Pelayanan",
+			"Staf Seksi Kesejahteraan",
+			"Staf Urusan Tata Usaha dan Umum",
+			"Staf Urusan Keuangan",
+			"Staf Urusan Perencanaan",
+			"Staf Kewilayahan",
 			"Staf Desa",
 		],
 	},
@@ -103,14 +117,13 @@ const aparaturSchema = z.object({
 	// Biodata
 	nama_lengkap: z.string().min(1, "Nama lengkap wajib diisi"),
 	jabatan: z.string().min(1, "Jabatan wajib diisi"),
-	nipd: emptyToUndef(z.string().optional()),
-	niap: emptyToUndef(z.string().optional()),
+	// NIPD tidak diisi di sini: diterbitkan sistem setelah DPMD menyatakan data
+	// valid. NIAP & pangkat/golongan dihapus dari isian (kolom lama dibiarkan).
 	tempat_lahir: z.string().min(1, "Tempat lahir wajib diisi"),
 	tanggal_lahir: z.string().min(1, "Tanggal lahir wajib diisi"),
 	jenis_kelamin: z.enum(["Laki-laki", "Perempuan"]),
 	pendidikan_terakhir: z.string().min(1, "Pendidikan terakhir wajib diisi"),
 	agama: z.string().min(1, "Agama wajib diisi"),
-	pangkat_golongan: emptyToUndef(z.string().optional()),
 	tanggal_pengangkatan: z.string().min(1, "Tanggal pengangkatan wajib diisi"),
 	nomor_sk_pengangkatan: z.string().min(1, "Nomor SK pengangkatan wajib diisi"),
 	tanggal_pemberhentian: emptyToNull(z.string().optional().nullable()),
@@ -131,9 +144,11 @@ const aparaturSchema = z.object({
 	file_kk: z.any().optional(),
 	file_akta_kelahiran: z.any().optional(),
 	file_ijazah_terakhir: z.any().optional(),
+	file_sk_terakhir: z.any().optional(),
 });
 
 const FILE_KEYS = [
+	"file_sk_terakhir",
 	"file_bpjs_kesehatan",
 	"file_bpjs_ketenagakerjaan",
 	"file_pas_foto",
@@ -144,8 +159,11 @@ const FILE_KEYS = [
 ];
 
 // Berkas selain pas foto — pas foto punya tempat sendiri di kartu biodata.
+// `wajib` = dibutuhkan agar data bisa dinyatakan valid oleh DPMD (selaras
+// dengan ITEM_VERIFIKASI di backend utils/aparaturNipd.js).
 const BERKAS_LAMPIRAN = [
-	{ name: "file_ktp", label: "KTP", icon: CreditCard },
+	{ name: "file_sk_terakhir", label: "SK Terakhir", icon: Briefcase, wajib: true },
+	{ name: "file_ktp", label: "KTP", icon: CreditCard, wajib: true },
 	{ name: "file_kk", label: "Kartu Keluarga", icon: Users },
 	{ name: "file_akta_kelahiran", label: "Akta Kelahiran", icon: FileText },
 	{ name: "file_ijazah_terakhir", label: "Ijazah Terakhir", icon: GraduationCap },
@@ -169,10 +187,10 @@ const SEKSI = [
 	{
 		id: "seksi-kepegawaian",
 		judul: "Kepegawaian",
-		keterangan: "Nomor induk, SK, dan masa tugas",
+		keterangan: "SK pengangkatan dan masa tugas",
 		icon: Briefcase,
 		wajib: ["nomor_sk_pengangkatan", "tanggal_pengangkatan"],
-		opsional: ["nipd", "niap", "pangkat_golongan", "produk_hukum_id"],
+		opsional: ["produk_hukum_id"],
 	},
 	{
 		id: "seksi-bpjs",
@@ -428,7 +446,7 @@ const PasFoto = ({ control, existingFilename, nama }) => {
 };
 
 /* ---------- Ubin berkas ---------- */
-const UbinBerkas = ({ control, name, label, existingFilename, icon: Icon }) => {
+const UbinBerkas = ({ control, name, label, existingFilename, icon: Icon, wajib = false }) => {
 	const { field } = useController({ control, name });
 	const baru = field.value instanceof File ? field.value : null;
 
@@ -456,7 +474,10 @@ const UbinBerkas = ({ control, name, label, existingFilename, icon: Icon }) => {
 				{keadaan === "kosong" ? <Icon className="h-5 w-5" /> : <Check className="h-5 w-5" />}
 			</span>
 			<span className="min-w-0 flex-1">
-				<span className="block truncate text-sm font-semibold text-slate-900">{label}</span>
+				<span className="block truncate text-sm font-semibold text-slate-900">
+					{label}
+					{wajib && <span className="ml-1 text-[10px] font-semibold uppercase tracking-wide text-brand-600">wajib</span>}
+				</span>
 				<span className="mt-0.5 block truncate text-[11px] text-slate-500">
 					{baru ? baru.name : existingFilename ? existingFilename : isDragActive ? "Lepaskan di sini…" : "Seret berkas atau klik"}
 				</span>
@@ -795,16 +816,26 @@ const AparaturDesaForm = ({
 
 			{/* 2 · Kepegawaian */}
 			<KartuSeksi seksi={SEKSI[1]} nomor={1} {...hitungan[SEKSI[1].id]}>
-				<div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-					<Field label="NIPD" hint="opsional">
-						<input {...register("nipd")} className={inputCls} placeholder="Nomor induk perangkat" />
-					</Field>
-					<Field label="NIAP" hint="opsional">
-						<input {...register("niap")} className={inputCls} placeholder="Nomor induk aparatur" />
-					</Field>
-					<Field label="Pangkat / Golongan" hint="opsional">
-						<input {...register("pangkat_golongan")} className={inputCls} placeholder="Contoh: II/a" />
-					</Field>
+				{/* NIPD tidak diisi manual: diterbitkan sistem dari tanggal lahir,
+				    kode wilayah, jenis kelamin, dan kode jabatan. */}
+				<div className="flex items-start gap-3 rounded-2xl border border-sky-200 bg-sky-50/60 p-4">
+					<span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-sky-600 text-white">
+						<CreditCard className="h-[18px] w-[18px]" />
+					</span>
+					<div className="min-w-0 text-[13px] text-slate-700">
+						<p className="font-semibold text-slate-900">
+							NIPD{" "}
+							{initialData?.nipd ? (
+								<span className="font-mono tracking-wider text-sky-700">{initialData.nipd}</span>
+							) : (
+								<span className="font-normal text-slate-500">— terbit otomatis setelah diverifikasi DPMD</span>
+							)}
+						</p>
+						<p className="mt-0.5 text-xs text-slate-500">
+							20 digit: tanggal lahir · kode kabupaten · kecamatan · desa · jenis kelamin · kode jabatan. Hanya untuk
+							Sekdes, Kasi, Kaur, dan Kadus — kepala desa, staf, dan BPD tidak mendapat NIPD.
+						</p>
+					</div>
 				</div>
 
 				{/* Pengangkatan dan pemberhentian sebagai dua blok sejajar —
@@ -883,11 +914,15 @@ const AparaturDesaForm = ({
 							name={berkas.name}
 							label={berkas.label}
 							icon={berkas.icon}
+							wajib={berkas.wajib}
 							existingFilename={initialData?.[berkas.name]}
 						/>
 					))}
 				</div>
-				<p className="mt-3 text-[11px] text-slate-400">PDF atau gambar, maks. 2 MB per berkas. Berkas lama tetap tersimpan bila tidak diganti.</p>
+				<p className="mt-3 text-[11px] text-slate-400">
+					PDF atau gambar, maks. 2 MB per berkas. Berkas lama tetap tersimpan bila tidak diganti. SK Terakhir dan KTP
+					wajib ada agar data bisa dinyatakan valid dan NIPD diterbitkan.
+				</p>
 			</KartuSeksi>
 
 			{/* Bilah aksi lengket — progres isian wajib selalu terlihat */}

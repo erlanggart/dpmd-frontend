@@ -167,10 +167,8 @@ const AparaturDetailModal = ({ id, onClose }) => {
 							</Bagian>
 
 							<Bagian icon={GraduationCap} judul="Kepegawaian">
-								<Baris label="NIPD" nilai={data.nipd} />
-								<Baris label="NIAP" nilai={data.niap} />
+								<Baris label="NIPD" nilai={data.nipd || "Terbit setelah diverifikasi DPMD"} />
 								<Baris label="Pendidikan terakhir" nilai={data.pendidikan_terakhir} />
-								<Baris label="Pangkat / golongan" nilai={data.pangkat_golongan} />
 							</Bagian>
 
 							<Bagian icon={CalendarDays} judul="Pengangkatan & Pemberhentian">
