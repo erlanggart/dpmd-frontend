@@ -25,7 +25,7 @@ import {
 	toggleKelembagaanVerification,
 	ajukanUlangVerifikasi,
 } from "../../services/kelembagaan";
-import { getProdukHukums } from "../../services/api";
+import { getProdukHukums, getProdukHukumById } from "../../services/api";
 import { getPengurusByKelembagaan } from "../../services/pengurus";
 import PengurusKelembagaan from "./PengurusKelembagaan";
 import ProfilCard from "./ProfilCard";
@@ -260,12 +260,22 @@ export default function KelembagaanDetailPage({
 				status_peraturan: 'berlaku',
 			});
 			const allData = res?.data?.data || [];
-			setProdukHukumList(Array.isArray(allData) ? allData : []);
+			const list = Array.isArray(allData) ? allData : [];
+			// SK yang sudah terkait bisa di luar filter di atas (mis. Keputusan Kepala Desa
+			// atau sudah dicabut) — ambil langsung supaya tetap tampil di kartu profil.
+			const skId = detail?.produk_hukum_id;
+			if (skId && !list.some((ph) => ph.id === skId)) {
+				try {
+					const skRes = await getProdukHukumById(skId);
+					if (skRes?.data?.data) list.push(skRes.data.data);
+				} catch { /* SK terhapus — biarkan "Belum terhubung" */ }
+			}
+			setProdukHukumList(list);
 		} catch (err) {
 			console.error("Gagal memuat daftar produk hukum:", err);
 			setProdukHukumList([]);
 		}
-	}, [detail?.desa_id]);
+	}, [detail?.desa_id, detail?.produk_hukum_id]);
 
 	// Fetch pengurus count
 	const fetchPengurusCount = useCallback(async () => {

@@ -309,8 +309,12 @@ const ProfilCard = ({
 					onClick={sk ? () => navigate(getProdukHukumUrl(profil.produk_hukum_id)) : undefined}
 				>
 					{sk ? (
-						<span className="text-blue-600 truncate flex items-center gap-1">
+						<span
+							className={`${sk.status_peraturan === "dicabut" ? "text-red-600" : "text-blue-600"} truncate flex items-center gap-1`}
+							title={sk.status_peraturan === "dicabut" ? "Produk hukum ini sudah dicabut" : undefined}
+						>
 							No. {sk.nomor}/{sk.tahun}
+							{sk.status_peraturan === "dicabut" && <span className="text-xs font-normal">(Dicabut)</span>}
 							<LuChevronRight className="w-3 h-3 flex-shrink-0" />
 						</span>
 					) : (

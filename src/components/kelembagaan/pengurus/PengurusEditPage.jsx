@@ -466,7 +466,8 @@ const PengurusEditPage = () => {
 			if (statusCode === 400) {
 				detailMessage = "Data yang Anda masukkan tidak valid. Periksa kembali formulir.";
 			} else if (statusCode === 403) {
-				detailMessage = "Anda tidak memiliki izin untuk mengubah data ini.";
+				// 403 punya banyak sumber (izin fitur desa, desa_id, IP diblokir, WAF) — tampilkan alasan dari server.
+				detailMessage = error?.response?.data?.message || "Anda tidak memiliki izin untuk mengubah data ini.";
 			} else if (statusCode === 404) {
 				detailMessage = "Data pengurus tidak ditemukan.";
 			} else if (statusCode === 413) {
