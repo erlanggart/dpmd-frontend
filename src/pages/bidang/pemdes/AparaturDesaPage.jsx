@@ -39,6 +39,7 @@ import {
 	AlertTriangle,
 	Download,
 	FileSpreadsheet,
+	Bell,
 } from 'lucide-react';
 import { PieChart, Pie, Cell, Tooltip as RechartsTooltip } from 'recharts';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -2004,7 +2005,7 @@ const EMPTY_FILTERS = { search: '', kecamatan_id: '', desa_id: '', jabatan: '', 
  * desanya 416": setiap desa masuk tepat satu kelompok pimpinan, dan desa yang
  * belum mengisi apa pun langsung terlihat.
  */
-const CakupanDesa = ({ cakupan, bpd }) => {
+const CakupanDesa = ({ cakupan, bpd, jabatan }) => {
 	const [rinci, setRinci] = useState(false);
 	const { total_desa, sudah_input, belum_input, pimpinan, desa_belum_input = [], pimpinan_perlu_dicek = [] } = cakupan;
 	const kelompok = bpd
@@ -2016,7 +2017,7 @@ const CakupanDesa = ({ cakupan, bpd }) => {
 				{ label: 'Pimpinan aktif ganda', nilai: pimpinan.ganda, kelas: pimpinan.ganda ? 'text-amber-700' : 'text-slate-400' },
 		  ];
 	const daftar = [
-		...desa_belum_input.map((d) => ({ ...d, keadaan: 'Belum input aparatur', nama: '-' })),
+		...desa_belum_input.map((d) => ({ ...d, keadaan: jabatan ? `Belum ada ${jabatan}` : 'Belum input aparatur', nama: '-' })),
 		...(bpd ? [] : pimpinan_perlu_dicek),
 	];
 
@@ -2026,7 +2027,7 @@ const CakupanDesa = ({ cakupan, bpd }) => {
 				<div>
 					<h3 className="text-sm font-semibold text-slate-900">Cakupan Desa</h3>
 					<p className="text-xs text-slate-500">
-						{fmt(sudah_input)} dari {fmt(total_desa)} desa sudah menginput {bpd ? 'BPD' : 'aparatur'}
+						{fmt(sudah_input)} dari {fmt(total_desa)} desa {jabatan ? `sudah punya ${jabatan}` : `sudah menginput ${bpd ? 'BPD' : 'aparatur'}`}
 						{belum_input > 0 && <span className="font-semibold text-rose-600"> &middot; {fmt(belum_input)} belum</span>}
 					</p>
 				</div>
@@ -2085,7 +2086,7 @@ const CakupanDesa = ({ cakupan, bpd }) => {
 	);
 };
 
-const EMPTY_SARING = { kecamatan_id: '', desa_id: '', status: '', jenis_kelamin: '' };
+const EMPTY_SARING = { kecamatan_id: '', desa_id: '', jabatan_baku: '', status: '', jenis_kelamin: '' };
 
 const RingkasanAparatur = ({ jenis, stats: statsKabupaten, statsLoading: loadingKabupaten, onBuka: onBukaInduk }) => {
 	const [showSummary, setShowSummary] = useState(true);
@@ -2140,6 +2141,13 @@ const RingkasanAparatur = ({ jenis, stats: statsKabupaten, statsLoading: loading
 	// orang di pop-up berbeda dari angka yang diklik.
 	const onBuka = onBukaInduk && ((filter, judul) => onBukaInduk({ ...saringAktif, ...filter }, judul));
 
+	// Pilihan jabatan = label baku dari angka kabupaten (bukan yang tersaring),
+	// supaya daftarnya tidak menyusut saat penyaring lain dipasang.
+	const pilihanJabatan = useMemo(
+		() => (statsKabupaten?.jabatan || []).map((j) => ({ value: j.name, label: j.name, hint: `(${fmt(j.value)})` })),
+		[statsKabupaten]
+	);
+
 	const ubahSaring = (kunci, nilai) =>
 		setSaring((prev) => ({ ...prev, [kunci]: nilai, ...(kunci === 'kecamatan_id' ? { desa_id: '' } : {}) }));
 
@@ -2153,6 +2161,7 @@ const RingkasanAparatur = ({ jenis, stats: statsKabupaten, statsLoading: loading
 			const desa = desaList.find((d) => String(d.id) === String(saring.desa_id));
 			label.push(`Desa: ${desa?.nama || desa?.name || saring.desa_id}`);
 		}
+		if (saring.jabatan_baku) label.push(`Jabatan: ${saring.jabatan_baku}`);
 		if (saring.status) label.push(`Status: ${saring.status === 'Aktif' ? 'Aktif' : 'Tidak Aktif'}`);
 		if (saring.jenis_kelamin) label.push(`Kelamin: ${saring.jenis_kelamin === 'Laki_laki' ? 'Laki-laki' : 'Perempuan'}`);
 		return label;
@@ -2180,7 +2189,7 @@ const RingkasanAparatur = ({ jenis, stats: statsKabupaten, statsLoading: loading
 		if (!stats) return;
 		try {
 			const { eksporStatistikExcel, eksporStatistikPdf } = await import('./aparaturEkspor');
-			const opsi = { judul: `Statistik ${JUDUL_JENIS[jenis] || 'Aparatur Desa'}`, penyaring: labelSaring, bpd: jenis === 'bpd' };
+			const opsi = { judul: `Statistik ${JUDUL_JENIS[jenis] || 'Aparatur Desa'}`, penyaring: labelSaring, bpd: jenis === 'bpd', jabatan: saring.jabatan_baku };
 			await (format === 'pdf' ? eksporStatistikPdf(stats, pendidikanChart, opsi) : eksporStatistikExcel(stats, pendidikanChart, opsi));
 		} catch (error) {
 			console.error('Gagal mengekspor statistik:', error);
@@ -2212,7 +2221,7 @@ const RingkasanAparatur = ({ jenis, stats: statsKabupaten, statsLoading: loading
 
 			{showSummary && (
 				<>
-					<div className="mb-4 grid grid-cols-1 gap-3 rounded-2xl border border-slate-200 bg-white p-3 sm:grid-cols-2 lg:grid-cols-[repeat(4,minmax(0,1fr))_auto] lg:items-end">
+					<div className="mb-4 grid grid-cols-1 gap-3 rounded-2xl border border-slate-200 bg-white p-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-[repeat(5,minmax(0,1fr))_auto] lg:items-end">
 						<SelectBox
 							label="Kecamatan"
 							value={saring.kecamatan_id}
@@ -2238,6 +2247,14 @@ const RingkasanAparatur = ({ jenis, stats: statsKabupaten, statsLoading: loading
 								{ value: '', label: 'Semua Desa' },
 								...desaList.map((desa) => ({ value: String(desa.id), label: desa.nama || desa.name })),
 							]}
+						/>
+						<SelectBox
+							label="Jabatan"
+							value={saring.jabatan_baku}
+							onChange={(value) => ubahSaring('jabatan_baku', value)}
+							placeholder="Semua Jabatan"
+							emptyText="Jabatan tidak ditemukan"
+							options={[{ value: '', label: 'Semua Jabatan' }, ...pilihanJabatan]}
 						/>
 						<SelectBox
 							label="Status"
@@ -2325,7 +2342,7 @@ const RingkasanAparatur = ({ jenis, stats: statsKabupaten, statsLoading: loading
 									/>
 								</div>
 
-								{stats.cakupan_desa && <CakupanDesa cakupan={stats.cakupan_desa} bpd={jenis === 'bpd'} />}
+								{stats.cakupan_desa && <CakupanDesa cakupan={stats.cakupan_desa} bpd={jenis === 'bpd'} jabatan={saring.jabatan_baku} />}
 
 								{/* 5 kolom: donut butuh ruang persegi, bar butuh ruang lebar */}
 								<div className="mt-4 grid gap-4 lg:grid-cols-5">
@@ -3796,7 +3813,14 @@ const PanelNotifikasi = ({ jenis, detailBasePath }) => {
 		return () => { batal = true; };
 	}, [jenis]);
 
-	if (!data) return null;
+	if (!data) {
+		return (
+			<div className="flex items-center gap-2 rounded-2xl border border-slate-200 bg-white p-4 text-sm text-slate-400">
+				<Loader2 className="h-4 w-4 animate-spin" />
+				Memuat yang perlu diperhatikan…
+			</div>
+		);
+	}
 
 	const buka = (id) => navigate(`${detailBasePath}/${id}`);
 	const kosong = data.usia_lanjut.total === 0 && data.menunggu_verifikasi.total === 0;
@@ -3845,6 +3869,98 @@ const PanelNotifikasi = ({ jenis, detailBasePath }) => {
 // ============================================================
 // Riwayat aparatur disimpan di tabelnya sendiri, bukan `activity_logs`, jadi
 // panel ini tidak bisa digantikan TimelineAktivitas milik halaman bidang.
+/**
+ * Tombol melayang di pojok kanan bawah yang membuka "Perlu Perhatian" dan
+ * "Aktivitas Terbaru" sebagai pop-up. Dulu keduanya menempati kolom kanan
+ * sendiri dan memakan sepertiga lebar halaman padahal jarang dibaca; kini
+ * tabel dan statistik memakai lebar penuh.
+ *
+ * Isi panel baru dimuat saat pop-up dibuka, jadi membuka halaman tidak lagi
+ * menembak dua permintaan yang hasilnya mungkin tak pernah dilihat. Kedua tab
+ * tetap terpasang selama pop-up terbuka supaya berpindah tab tidak memuat ulang.
+ * Di layar kecil tombolnya dinaikkan agar tidak menutupi navigasi bawah.
+ */
+const PantauanMelayang = ({ jenis, detailBasePath }) => {
+	const [buka, setBuka] = useState(false);
+	const [tab, setTab] = useState('perhatian');
+
+	useEffect(() => {
+		if (!buka) return undefined;
+		const tutup = (event) => event.key === 'Escape' && setBuka(false);
+		document.addEventListener('keydown', tutup);
+		return () => document.removeEventListener('keydown', tutup);
+	}, [buka]);
+
+	const TAB = [
+		{ id: 'perhatian', label: 'Perlu Perhatian', icon: Info },
+		{ id: 'aktivitas', label: 'Aktivitas Terbaru', icon: Clock },
+	];
+
+	return (
+		<>
+			<AnimatePresence>
+				{buka && (
+					<motion.div
+						key="pantauan"
+						role="dialog"
+						aria-label="Pantauan aparatur"
+						initial={{ opacity: 0, y: 12, scale: 0.98 }}
+						animate={{ opacity: 1, y: 0, scale: 1 }}
+						exit={{ opacity: 0, y: 12, scale: 0.98 }}
+						transition={{ duration: 0.18 }}
+						className="fixed bottom-44 left-4 right-4 z-[45] flex max-h-[min(36rem,calc(100vh-13rem))] flex-col overflow-hidden rounded-2xl border border-slate-200 bg-slate-50 shadow-2xl sm:left-auto sm:w-[26rem] lg:bottom-24 lg:right-6 lg:max-h-[min(40rem,calc(100vh-8rem))]"
+					>
+						<div className="flex items-center gap-1 border-b border-slate-200 bg-white p-1.5">
+							{TAB.map(({ id, label, icon: Icon }) => (
+								<button
+									key={id}
+									type="button"
+									onClick={() => setTab(id)}
+									className={`inline-flex flex-1 items-center justify-center gap-1.5 rounded-xl px-3 py-2 text-xs font-semibold transition-colors ${
+										tab === id ? 'bg-slate-900 text-white' : 'text-slate-600 hover:bg-slate-100'
+									}`}
+								>
+									<Icon className="h-3.5 w-3.5" />
+									{label}
+								</button>
+							))}
+							<button
+								type="button"
+								onClick={() => setBuka(false)}
+								className="rounded-lg p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-600"
+								aria-label="Tutup"
+							>
+								<X className="h-4 w-4" />
+							</button>
+						</div>
+						<div className="min-h-0 flex-1 overflow-y-auto p-3">
+							<div className={tab === 'perhatian' ? '' : 'hidden'}>
+								<PanelNotifikasi jenis={jenis} detailBasePath={detailBasePath} />
+							</div>
+							<div className={tab === 'aktivitas' ? '' : 'hidden'}>
+								<AktivitasAparatur jenis={jenis} detailBasePath={detailBasePath} />
+							</div>
+						</div>
+					</motion.div>
+				)}
+			</AnimatePresence>
+
+			<motion.button
+				type="button"
+				whileHover={{ scale: 1.05 }}
+				whileTap={{ scale: 0.95 }}
+				onClick={() => setBuka((v) => !v)}
+				className="fixed bottom-24 right-4 z-[45] flex h-14 w-14 items-center justify-center rounded-full bg-slate-900 text-white shadow-xl shadow-slate-900/25 transition-colors hover:bg-slate-800 lg:bottom-6 lg:right-6"
+				aria-label={buka ? 'Tutup pantauan' : 'Buka perlu perhatian & aktivitas terbaru'}
+				aria-expanded={buka}
+				title="Perlu perhatian & aktivitas terbaru"
+			>
+				{buka ? <X className="h-6 w-6" /> : <Bell className="h-6 w-6" />}
+			</motion.button>
+		</>
+	);
+};
+
 const AktivitasAparatur = ({ jenis, detailBasePath }) => {
 	const navigate = useNavigate();
 	const [riwayat, setRiwayat] = useState([]);
@@ -4184,7 +4300,7 @@ const AparaturDesaPage = ({
 					</Suspense>
 				</section>
 			) : (
-				<div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_20rem] lg:items-start">
+				<>
 					<div className="min-w-0">
 						{activeTab === 'wilayah' && (
 							<WilayahTab
@@ -4213,11 +4329,8 @@ const AparaturDesaPage = ({
 						)}
 					</div>
 
-					<aside className="space-y-4 lg:sticky lg:top-6">
-						<PanelNotifikasi jenis={jenis} detailBasePath={detailBasePath} />
-						<AktivitasAparatur jenis={jenis} detailBasePath={detailBasePath} />
-					</aside>
-				</div>
+					<PantauanMelayang jenis={jenis} detailBasePath={detailBasePath} />
+				</>
 			)}
 
 			{memuatUbah && (

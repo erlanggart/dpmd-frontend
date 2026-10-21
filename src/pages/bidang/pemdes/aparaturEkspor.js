@@ -192,7 +192,7 @@ export const eksporTabelPdf = async (baris, { judul, penyaring = [] }) => {
  * supaya keduanya tidak pernah memuat angka yang berbeda.
  * `pendidikan` = hasil pengelompokan jenjang yang sama dengan grafiknya.
  */
-const bagianStatistik = (stats, pendidikan, { bpd }) => {
+const bagianStatistik = (stats, pendidikan, { bpd, jabatan }) => {
 	const total = Number(stats.total || 0);
 	const bagian = [];
 
@@ -216,8 +216,8 @@ const bagianStatistik = (stats, pendidikan, { bpd }) => {
 	if (c) {
 		const baris = [
 			['Jumlah desa', c.total_desa],
-			['Sudah input aparatur', c.sudah_input],
-			['Belum input aparatur', c.belum_input],
+			[jabatan ? `Sudah punya ${jabatan}` : 'Sudah input aparatur', c.sudah_input],
+			[jabatan ? `Belum punya ${jabatan}` : 'Belum input aparatur', c.belum_input],
 		];
 		if (!bpd) {
 			baris.push(['Dipimpin kepala desa definitif', c.pimpinan.definitif]);
@@ -257,10 +257,10 @@ const bagianStatistik = (stats, pendidikan, { bpd }) => {
 	return bagian;
 };
 
-export const eksporStatistikExcel = async (stats, pendidikan, { judul, penyaring = [], bpd = false }) => {
+export const eksporStatistikExcel = async (stats, pendidikan, { judul, penyaring = [], bpd = false, jabatan = '' }) => {
 	const XLSX = await import('xlsx');
 	const buku = XLSX.utils.book_new();
-	for (const [nama, kepala, baris] of bagianStatistik(stats, pendidikan, { bpd })) {
+	for (const [nama, kepala, baris] of bagianStatistik(stats, pendidikan, { bpd, jabatan })) {
 		const lembar = XLSX.utils.aoa_to_sheet([[nama], [], kepala, ...baris]);
 		lembar['!cols'] = kepala.map((k, i) => ({ wch: i === 0 && k !== 'No' ? 36 : Math.max(10, k.length + 2) }));
 		// Nama lembar Excel maksimal 31 karakter dan tanpa tanda kurung siku.
@@ -278,11 +278,11 @@ export const eksporStatistikExcel = async (stats, pendidikan, { judul, penyaring
 	XLSX.writeFile(buku, `${bersihkanNama(judul)} - ${capTanggal()}.xlsx`, { compression: true });
 };
 
-export const eksporStatistikPdf = async (stats, pendidikan, { judul, penyaring = [], bpd = false }) => {
+export const eksporStatistikPdf = async (stats, pendidikan, { judul, penyaring = [], bpd = false, jabatan = '' }) => {
 	const { doc, autoTable } = await muatPdf('portrait');
 	let y = kop(doc, { judul, penyaring, ringkas: `${Number(stats.total || 0).toLocaleString('id-ID')} aparatur` });
 
-	for (const [nama, kepala, baris] of bagianStatistik(stats, pendidikan, { bpd })) {
+	for (const [nama, kepala, baris] of bagianStatistik(stats, pendidikan, { bpd, jabatan })) {
 		if (y > doc.internal.pageSize.getHeight() - 40) {
 			doc.addPage();
 			y = 16;
