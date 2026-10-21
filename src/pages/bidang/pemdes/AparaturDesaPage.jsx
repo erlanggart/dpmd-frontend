@@ -2050,10 +2050,10 @@ const RingkasanAparatur = ({ jenis, stats, statsLoading, onBuka }) => {
 
 									<ChartCard
 										title="Komposisi Jabatan"
-										subtitle="Urut susunan jabatan, ejaan disatukan"
+										subtitle="Aparatur aktif, urut susunan jabatan, ejaan disatukan"
 										className="lg:col-span-5"
 									>
-										<KomposisiJabatan items={stats.jabatan || []} onPilih={onBuka && ((item) => onBuka({ jabatan_baku: item.name }, item.name))} />
+										<KomposisiJabatan items={stats.jabatan || []} onPilih={onBuka && ((item) => onBuka({ jabatan_baku: item.name, status: 'Aktif' }, item.name))} />
 									</ChartCard>
 
 									<ChartCard
