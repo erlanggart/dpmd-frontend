@@ -232,7 +232,13 @@ const ChartCard = ({ title, subtitle, children, actions, className = '' }) => (
  * Tombol "Ekspor" dengan pilihan Excel/PDF. `onEkspor(format)` boleh async;
  * selama berjalan tombolnya terkunci supaya tidak terunduh dua kali.
  */
-const TombolEkspor = ({ onEkspor, disabled = false, kecil = false }) => {
+const PILIHAN_EKSPOR_BAKU = [{ items: [{ kunci: 'excel', label: 'Excel (.xlsx)' }, { kunci: 'pdf', label: 'PDF' }] }];
+
+/**
+ * `pilihan` = kelompok menu: [{ judul?, keterangan?, items: [{ kunci, label }] }].
+ * `kunci` yang berakhiran "pdf" mendapat ikon PDF, sisanya ikon Excel.
+ */
+const TombolEkspor = ({ onEkspor, disabled = false, kecil = false, pilihan = PILIHAN_EKSPOR_BAKU }) => {
 	const [buka, setBuka] = useState(false);
 	const [sibuk, setSibuk] = useState(null);
 	const wadah = useRef(null);
@@ -272,15 +278,29 @@ const TombolEkspor = ({ onEkspor, disabled = false, kecil = false }) => {
 				<span className={kecil ? '' : 'hidden sm:inline'}>{sibuk ? 'Menyiapkan…' : 'Ekspor'}</span>
 			</button>
 			{buka && (
-				<div role="menu" className="absolute right-0 z-30 mt-1.5 w-44 overflow-hidden rounded-xl border border-slate-200 bg-white py-1 shadow-lg">
-					<button type="button" role="menuitem" onClick={() => jalankan('excel')} className="flex w-full items-center gap-2.5 px-3.5 py-2 text-left text-sm text-slate-700 hover:bg-slate-50">
-						<FileSpreadsheet className="h-4 w-4 text-emerald-600" />
-						Excel (.xlsx)
-					</button>
-					<button type="button" role="menuitem" onClick={() => jalankan('pdf')} className="flex w-full items-center gap-2.5 px-3.5 py-2 text-left text-sm text-slate-700 hover:bg-slate-50">
-						<FileText className="h-4 w-4 text-rose-600" />
-						PDF
-					</button>
+				<div role="menu" className="absolute right-0 z-30 mt-1.5 w-64 overflow-hidden rounded-xl border border-slate-200 bg-white py-1 shadow-lg">
+					{pilihan.map((kelompok, i) => (
+						<div key={kelompok.judul || i} className={i > 0 ? 'mt-1 border-t border-slate-100 pt-1' : ''}>
+							{kelompok.judul && (
+								<div className="px-3.5 pb-1 pt-2">
+									<p className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">{kelompok.judul}</p>
+									{kelompok.keterangan && <p className="text-[11px] leading-snug text-slate-400">{kelompok.keterangan}</p>}
+								</div>
+							)}
+							{kelompok.items.map(({ kunci, label }) => (
+								<button
+									key={kunci}
+									type="button"
+									role="menuitem"
+									onClick={() => jalankan(kunci)}
+									className="flex w-full items-center gap-2.5 px-3.5 py-2 text-left text-sm text-slate-700 hover:bg-slate-50"
+								>
+									{kunci.endsWith('pdf') ? <FileText className="h-4 w-4 text-rose-600" /> : <FileSpreadsheet className="h-4 w-4 text-emerald-600" />}
+									{label}
+								</button>
+							))}
+						</div>
+					))}
 				</div>
 			)}
 		</div>
@@ -288,6 +308,32 @@ const TombolEkspor = ({ onEkspor, disabled = false, kecil = false }) => {
 };
 
 const JUDUL_JENIS = { perangkat: 'Perangkat Desa', bpd: 'BPD' };
+
+/**
+ * Ambil SEMUA baris yang cocok (tanpa halaman) lalu jadikan Excel/PDF berisi
+ * nama, jabatan, desa, kecamatan, dst. Dipakai tabel dan ringkasan, supaya
+ * berkas dari kedua tempat itu berbentuk sama.
+ * `params` = penyaring siap kirim (string, pilihan ganda sudah dipisah koma).
+ */
+const eksporDataAparatur = async ({ params, jenis, format, penyaring, wilayah }) => {
+	try {
+		const query = new URLSearchParams(params);
+		if (jenis) query.set('jenis', jenis);
+		const response = await api.get(`/pemdes/aparatur-desa/ekspor?${query.toString()}`);
+		const baris = response.data?.data || [];
+		if (!baris.length) {
+			toast.error('Tidak ada data yang cocok dengan penyaring');
+			return;
+		}
+		const { eksporTabelExcel, eksporTabelPdf } = await import('./aparaturEkspor');
+		const judul = `Data ${JUDUL_JENIS[jenis] || 'Aparatur Desa'}${wilayah ? ` - ${wilayah}` : ''}`;
+		await (format === 'pdf' ? eksporTabelPdf(baris, { judul, penyaring }) : eksporTabelExcel(baris, { judul, penyaring }));
+		toast.success(`${baris.length.toLocaleString('id-ID')} aparatur diekspor`);
+	} catch (error) {
+		console.error('Gagal mengekspor aparatur:', error);
+		toast.error(error.response?.data?.message || 'Gagal mengekspor data');
+	}
+};
 
 const EmptyChart = ({ message = 'Belum ada data' }) => (
 	<div className="flex h-40 flex-col items-center justify-center rounded-xl border border-dashed border-slate-200 text-center">
@@ -2034,6 +2080,9 @@ const useDesaKecamatan = (idKecamatan, kecamatanList) => {
 	}, [desa, kecamatanList, kunci]);
 };
 
+const namaWilayahTunggal = (ids, opsi) =>
+	ids.length === 1 ? opsi.find((o) => String(o.value) === String(ids[0]))?.label || '' : '';
+
 const EMPTY_FILTERS = { search: '', kecamatan_id: [], desa_id: [], jabatan: '', jenis_kelamin: '', status: '', pendidikan: '' };
 
 // ============================================================
@@ -2214,6 +2263,36 @@ const RingkasanAparatur = ({ jenis, stats: statsKabupaten, statsLoading: loading
 	const total = Number(stats?.total ?? 0);
 	const labelJabatan = saring.jabatan_baku.length === 1 ? saring.jabatan_baku[0] : saring.jabatan_baku.length ? 'jabatan terpilih' : '';
 
+	// Menu ekspor ringkasan: "data" = daftar orang sesuai penyaring ringkasan,
+	// "statistik" = rekap angka. Yang dicari pengguna biasanya daftar namanya.
+	const PILIHAN_EKSPOR_RINGKASAN = [
+		{
+			judul: 'Data aparatur',
+			keterangan: 'Nama, jabatan, desa, kecamatan sesuai penyaring',
+			items: [{ kunci: 'data-excel', label: 'Excel (.xlsx)' }, { kunci: 'data-pdf', label: 'PDF' }],
+		},
+		{
+			judul: 'Rekap statistik',
+			keterangan: 'Angka per jabatan, usia, pendidikan, cakupan desa',
+			items: [{ kunci: 'statistik-excel', label: 'Excel (.xlsx)' }, { kunci: 'statistik-pdf', label: 'PDF' }],
+		},
+	];
+
+	const ekspor = (kunci) => {
+		const format = kunci.endsWith('pdf') ? 'pdf' : 'excel';
+		if (kunci.startsWith('data')) {
+			const opsiKec = kecamatanList.map((k) => ({ value: String(k.id || k.id_kecamatan), label: k.nama || k.name }));
+			return eksporDataAparatur({
+				params: saringAktif,
+				jenis,
+				format,
+				penyaring: labelSaring,
+				wilayah: namaWilayahTunggal(saring.desa_id, pilihanDesa) || namaWilayahTunggal(saring.kecamatan_id, opsiKec),
+			});
+		}
+		return eksporStatistik(format);
+	};
+
 	const eksporStatistik = async (format) => {
 		if (!stats) return;
 		try {
@@ -2236,7 +2315,7 @@ const RingkasanAparatur = ({ jenis, stats: statsKabupaten, statsLoading: loading
 					</p>
 				</div>
 				<div className="flex shrink-0 items-center gap-2">
-				<TombolEkspor kecil onEkspor={eksporStatistik} disabled={!stats || statsLoading} />
+				<TombolEkspor kecil onEkspor={ekspor} pilihan={PILIHAN_EKSPOR_RINGKASAN} disabled={!stats || statsLoading} />
 				<button
 					type="button"
 					onClick={() => setShowSummary((prev) => !prev)}
@@ -2932,28 +3011,14 @@ const DatabaseTab = ({ refreshKey = 0, jenis, stats, statsLoading, detailBasePat
 
 	// Ekspor memakai penyaring yang sama dengan tabel, tapi tanpa halaman:
 	// berkasnya berisi semua baris yang cocok, bukan hanya 20 di layar.
-	const eksporTabel = async (format) => {
-		try {
-			const params = new URLSearchParams(keParamSemua(filters));
-			if (jenis) params.append('jenis', jenis);
-			const response = await api.get(`/pemdes/aparatur-desa/ekspor?${params.toString()}`);
-			const baris = response.data?.data || [];
-			if (!baris.length) {
-				toast.error('Tidak ada data yang cocok dengan penyaring');
-				return;
-			}
-			const { eksporTabelExcel, eksporTabelPdf } = await import('./aparaturEkspor');
-			const opsi = {
-				judul: `Data ${JUDUL_JENIS[jenis] || 'Aparatur Desa'}`,
-				penyaring: activeFilters.map(([key, value]) => labelFor(key, value)),
-			};
-			await (format === 'pdf' ? eksporTabelPdf(baris, opsi) : eksporTabelExcel(baris, opsi));
-			toast.success(`${baris.length.toLocaleString('id-ID')} baris diekspor`);
-		} catch (error) {
-			console.error('Gagal mengekspor aparatur:', error);
-			toast.error(error.response?.data?.message || 'Gagal mengekspor data');
-		}
-	};
+	const eksporTabel = (format) =>
+		eksporDataAparatur({
+			params: keParamSemua(filters),
+			jenis,
+			format,
+			penyaring: activeFilters.map(([key, value]) => labelFor(key, value)),
+			wilayah: namaWilayahTunggal(filters.desa_id, pilihanDesa) || namaWilayahTunggal(filters.kecamatan_id, kecamatanList.map((k) => ({ value: String(k.id || k.id_kecamatan), label: k.nama || k.name }))),
+		});
 
 	const pageNumbers = useMemo(() => {
 		const totalPages = pagination.totalPages || 1;
