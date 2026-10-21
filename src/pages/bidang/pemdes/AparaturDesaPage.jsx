@@ -37,6 +37,8 @@ import {
 	UserPlus,
 	UserCog,
 	AlertTriangle,
+	Download,
+	FileSpreadsheet,
 } from 'lucide-react';
 import { PieChart, Pie, Cell, Tooltip as RechartsTooltip } from 'recharts';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -224,6 +226,67 @@ const ChartCard = ({ title, subtitle, children, actions, className = '' }) => (
 		<div className="flex flex-1 flex-col justify-center">{children}</div>
 	</div>
 );
+
+/**
+ * Tombol "Ekspor" dengan pilihan Excel/PDF. `onEkspor(format)` boleh async;
+ * selama berjalan tombolnya terkunci supaya tidak terunduh dua kali.
+ */
+const TombolEkspor = ({ onEkspor, disabled = false, kecil = false }) => {
+	const [buka, setBuka] = useState(false);
+	const [sibuk, setSibuk] = useState(null);
+	const wadah = useRef(null);
+
+	useEffect(() => {
+		if (!buka) return undefined;
+		const tutup = (event) => {
+			if (wadah.current && !wadah.current.contains(event.target)) setBuka(false);
+		};
+		document.addEventListener('mousedown', tutup);
+		return () => document.removeEventListener('mousedown', tutup);
+	}, [buka]);
+
+	const jalankan = async (format) => {
+		setBuka(false);
+		setSibuk(format);
+		try {
+			await onEkspor(format);
+		} finally {
+			setSibuk(null);
+		}
+	};
+
+	return (
+		<div ref={wadah} className="relative">
+			<button
+				type="button"
+				disabled={disabled || Boolean(sibuk)}
+				onClick={() => setBuka((v) => !v)}
+				className={`inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white font-medium text-slate-600 transition-colors hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60 ${
+					kecil ? 'px-3 py-1.5 text-xs' : 'px-4 py-2.5 text-sm'
+				}`}
+				aria-haspopup="menu"
+				aria-expanded={buka}
+			>
+				{sibuk ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
+				<span className={kecil ? '' : 'hidden sm:inline'}>{sibuk ? 'Menyiapkan…' : 'Ekspor'}</span>
+			</button>
+			{buka && (
+				<div role="menu" className="absolute right-0 z-30 mt-1.5 w-44 overflow-hidden rounded-xl border border-slate-200 bg-white py-1 shadow-lg">
+					<button type="button" role="menuitem" onClick={() => jalankan('excel')} className="flex w-full items-center gap-2.5 px-3.5 py-2 text-left text-sm text-slate-700 hover:bg-slate-50">
+						<FileSpreadsheet className="h-4 w-4 text-emerald-600" />
+						Excel (.xlsx)
+					</button>
+					<button type="button" role="menuitem" onClick={() => jalankan('pdf')} className="flex w-full items-center gap-2.5 px-3.5 py-2 text-left text-sm text-slate-700 hover:bg-slate-50">
+						<FileText className="h-4 w-4 text-rose-600" />
+						PDF
+					</button>
+				</div>
+			)}
+		</div>
+	);
+};
+
+const JUDUL_JENIS = { perangkat: 'Perangkat Desa', bpd: 'BPD' };
 
 const EmptyChart = ({ message = 'Belum ada data' }) => (
 	<div className="flex h-40 flex-col items-center justify-center rounded-xl border border-dashed border-slate-200 text-center">
@@ -1936,8 +1999,164 @@ const EMPTY_FILTERS = { search: '', kecamatan_id: '', desa_id: '', jabatan: '', 
 // Berdiri di luar tab: angka se-kabupaten tidak berubah oleh mode yang sedang
 // dibuka, jadi menyembunyikannya saat pindah ke mode per wilayah cuma memaksa
 // orang bolak-balik untuk melihat angka yang sama.
-const RingkasanAparatur = ({ jenis, stats, statsLoading, onBuka }) => {
+/**
+ * Cakupan pengisian per desa. Menjawab "kenapa KEPALA DESA 414 dan PJ 3 kalau
+ * desanya 416": setiap desa masuk tepat satu kelompok pimpinan, dan desa yang
+ * belum mengisi apa pun langsung terlihat.
+ */
+const CakupanDesa = ({ cakupan, bpd }) => {
+	const [rinci, setRinci] = useState(false);
+	const { total_desa, sudah_input, belum_input, pimpinan, desa_belum_input = [], pimpinan_perlu_dicek = [] } = cakupan;
+	const kelompok = bpd
+		? []
+		: [
+				{ label: 'Kepala desa definitif', nilai: pimpinan.definitif, kelas: 'text-emerald-700' },
+				{ label: 'Dipimpin PJ', nilai: pimpinan.pj, kelas: 'text-sky-700' },
+				{ label: 'Tanpa kades / PJ aktif', nilai: pimpinan.kosong, kelas: pimpinan.kosong ? 'text-rose-700' : 'text-slate-400' },
+				{ label: 'Pimpinan aktif ganda', nilai: pimpinan.ganda, kelas: pimpinan.ganda ? 'text-amber-700' : 'text-slate-400' },
+		  ];
+	const daftar = [
+		...desa_belum_input.map((d) => ({ ...d, keadaan: 'Belum input aparatur', nama: '-' })),
+		...(bpd ? [] : pimpinan_perlu_dicek),
+	];
+
+	return (
+		<div className="mt-4 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+			<div className="flex flex-wrap items-start justify-between gap-3">
+				<div>
+					<h3 className="text-sm font-semibold text-slate-900">Cakupan Desa</h3>
+					<p className="text-xs text-slate-500">
+						{fmt(sudah_input)} dari {fmt(total_desa)} desa sudah menginput {bpd ? 'BPD' : 'aparatur'}
+						{belum_input > 0 && <span className="font-semibold text-rose-600"> &middot; {fmt(belum_input)} belum</span>}
+					</p>
+				</div>
+				{daftar.length > 0 && (
+					<button
+						type="button"
+						onClick={() => setRinci((v) => !v)}
+						className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-50"
+					>
+						{rinci ? 'Tutup rincian' : `Lihat ${fmt(daftar.length)} desa perlu perhatian`}
+						<ChevronDown className={`h-3.5 w-3.5 transition-transform ${rinci ? 'rotate-180' : ''}`} />
+					</button>
+				)}
+			</div>
+
+			<div className="mt-3 h-2 overflow-hidden rounded-full bg-slate-100">
+				<div className="h-full rounded-full bg-emerald-500" style={{ width: `${pct(sudah_input, total_desa)}%` }} />
+			</div>
+
+			{kelompok.length > 0 && (
+				<div className="mt-4 grid grid-cols-2 gap-2.5 sm:grid-cols-4">
+					{kelompok.map((k) => (
+						<div key={k.label} className="rounded-xl border border-slate-200 p-3">
+							<p className={`text-xl font-bold leading-none tabular-nums ${k.kelas}`}>{fmt(k.nilai)}</p>
+							<p className="mt-1.5 text-[11px] font-medium text-slate-600">{k.label}</p>
+						</div>
+					))}
+				</div>
+			)}
+
+			{rinci && (
+				<div className="mt-4 max-h-80 overflow-auto rounded-xl border border-slate-200">
+					<table className="w-full text-left text-xs">
+						<thead className="sticky top-0 bg-slate-50 text-[11px] uppercase tracking-wide text-slate-500">
+							<tr>
+								<th className="px-3 py-2 font-semibold">Kecamatan</th>
+								<th className="px-3 py-2 font-semibold">Desa</th>
+								<th className="px-3 py-2 font-semibold">Keadaan</th>
+								<th className="px-3 py-2 font-semibold">Nama</th>
+							</tr>
+						</thead>
+						<tbody className="divide-y divide-slate-100">
+							{daftar.map((d) => (
+								<tr key={`${d.kecamatan}-${d.desa}-${d.keadaan}`}>
+									<td className="px-3 py-2 text-slate-600">{d.kecamatan}</td>
+									<td className="px-3 py-2 font-medium text-slate-900">{d.desa}</td>
+									<td className="px-3 py-2 text-slate-600">{d.keadaan}</td>
+									<td className="px-3 py-2 text-slate-600">{d.nama}</td>
+								</tr>
+							))}
+						</tbody>
+					</table>
+				</div>
+			)}
+		</div>
+	);
+};
+
+const EMPTY_SARING = { kecamatan_id: '', desa_id: '', status: '', jenis_kelamin: '' };
+
+const RingkasanAparatur = ({ jenis, stats: statsKabupaten, statsLoading: loadingKabupaten, onBuka: onBukaInduk }) => {
 	const [showSummary, setShowSummary] = useState(true);
+
+	// Penyaring milik ringkasan sendiri — terpisah dari filter tabel, karena
+	// yang dicari di sini "angka satu kecamatan", bukan "daftar orang".
+	// Tanpa penyaring, angka kabupaten dari induk halaman dipakai apa adanya.
+	const [saring, setSaring] = useState(EMPTY_SARING);
+	const [statsSaring, setStatsSaring] = useState(null);
+	const [loadingSaring, setLoadingSaring] = useState(false);
+	const [kecamatanList, setKecamatanList] = useState([]);
+	const [desaList, setDesaList] = useState([]);
+	const adaSaring = Object.values(saring).some(Boolean);
+
+	useEffect(() => {
+		api.get('/kecamatans')
+			.then((response) => { if (response.data.success) setKecamatanList(response.data.data || []); })
+			.catch((error) => console.error('Failed to fetch kecamatan:', error));
+	}, []);
+
+	useEffect(() => {
+		if (!saring.kecamatan_id) {
+			setDesaList([]);
+			return;
+		}
+		api.get(`/desas/kecamatan/${saring.kecamatan_id}`)
+			.then((response) => { if (response.data.success) setDesaList(response.data.data || []); })
+			.catch((error) => console.error('Failed to fetch desa:', error));
+	}, [saring.kecamatan_id]);
+
+	// statsKabupaten ikut jadi pemicu: tombol muat ulang di kepala halaman
+	// memperbarui angka kabupaten, dan angka tersaring ikut diperbarui.
+	useEffect(() => {
+		if (!adaSaring) {
+			setStatsSaring(null);
+			return undefined;
+		}
+		let batal = false;
+		setLoadingSaring(true);
+		const params = new URLSearchParams(Object.entries({ ...saring, jenis: jenis || '' }).filter(([, v]) => v));
+		api.get(`/pemdes/aparatur-desa/stats?${params.toString()}`)
+			.then((response) => { if (!batal && response.data.success) setStatsSaring(response.data.data); })
+			.catch(() => toast.error('Gagal memuat statistik tersaring'))
+			.finally(() => { if (!batal) setLoadingSaring(false); });
+		return () => { batal = true; };
+	}, [saring, jenis, adaSaring, statsKabupaten]);
+
+	const stats = adaSaring ? statsSaring : statsKabupaten;
+	const statsLoading = adaSaring ? loadingSaring : loadingKabupaten;
+	const saringAktif = useMemo(() => Object.fromEntries(Object.entries(saring).filter(([, v]) => v)), [saring]);
+	// Pop-up di balik grafik memakai penyaring yang sama, kalau tidak jumlah
+	// orang di pop-up berbeda dari angka yang diklik.
+	const onBuka = onBukaInduk && ((filter, judul) => onBukaInduk({ ...saringAktif, ...filter }, judul));
+
+	const ubahSaring = (kunci, nilai) =>
+		setSaring((prev) => ({ ...prev, [kunci]: nilai, ...(kunci === 'kecamatan_id' ? { desa_id: '' } : {}) }));
+
+	const labelSaring = useMemo(() => {
+		const label = [];
+		if (saring.kecamatan_id) {
+			const kec = kecamatanList.find((k) => String(k.id || k.id_kecamatan) === String(saring.kecamatan_id));
+			label.push(`Kecamatan: ${kec?.nama || kec?.name || saring.kecamatan_id}`);
+		}
+		if (saring.desa_id) {
+			const desa = desaList.find((d) => String(d.id) === String(saring.desa_id));
+			label.push(`Desa: ${desa?.nama || desa?.name || saring.desa_id}`);
+		}
+		if (saring.status) label.push(`Status: ${saring.status === 'Aktif' ? 'Aktif' : 'Tidak Aktif'}`);
+		if (saring.jenis_kelamin) label.push(`Kelamin: ${saring.jenis_kelamin === 'Laki_laki' ? 'Laki-laki' : 'Perempuan'}`);
+		return label;
+	}, [saring, kecamatanList, desaList]);
 
 	// Ejaan jenjang dari dua sumber data disatukan jadi satu label sebelum
 	// digambar, kalau tidak "S1" dan "STRATA I" jadi dua batang berbeda.
@@ -1957,13 +2176,29 @@ const RingkasanAparatur = ({ jenis, stats, statsLoading, onBuka }) => {
 
 	const total = Number(stats?.total ?? 0);
 
+	const eksporStatistik = async (format) => {
+		if (!stats) return;
+		try {
+			const { eksporStatistikExcel, eksporStatistikPdf } = await import('./aparaturEkspor');
+			const opsi = { judul: `Statistik ${JUDUL_JENIS[jenis] || 'Aparatur Desa'}`, penyaring: labelSaring, bpd: jenis === 'bpd' };
+			await (format === 'pdf' ? eksporStatistikPdf(stats, pendidikanChart, opsi) : eksporStatistikExcel(stats, pendidikanChart, opsi));
+		} catch (error) {
+			console.error('Gagal mengekspor statistik:', error);
+			toast.error('Gagal mengekspor statistik');
+		}
+	};
+
 	return (
 		<section>
 			<div className="mb-3 flex items-center justify-between gap-3">
 				<div>
-					<h2 className="text-base font-semibold text-slate-900">Ringkasan Kabupaten</h2>
-					<p className="text-xs text-slate-500">Statistik seluruh aparatur terdata &mdash; tidak terpengaruh filter tabel.</p>
+					<h2 className="text-base font-semibold text-slate-900">{adaSaring ? 'Ringkasan Tersaring' : 'Ringkasan Kabupaten'}</h2>
+					<p className="text-xs text-slate-500">
+						{adaSaring ? labelSaring.join(' · ') : 'Statistik seluruh aparatur terdata'} &mdash; penyaringnya terpisah dari filter tabel.
+					</p>
 				</div>
+				<div className="flex shrink-0 items-center gap-2">
+				<TombolEkspor kecil onEkspor={eksporStatistik} disabled={!stats || statsLoading} />
 				<button
 					type="button"
 					onClick={() => setShowSummary((prev) => !prev)}
@@ -1972,10 +2207,70 @@ const RingkasanAparatur = ({ jenis, stats, statsLoading, onBuka }) => {
 					{showSummary ? 'Sembunyikan' : 'Tampilkan'}
 					<ChevronDown className={`h-3.5 w-3.5 transition-transform ${showSummary ? 'rotate-180' : ''}`} />
 				</button>
+				</div>
 			</div>
 
 			{showSummary && (
 				<>
+					<div className="mb-4 grid grid-cols-1 gap-3 rounded-2xl border border-slate-200 bg-white p-3 sm:grid-cols-2 lg:grid-cols-[repeat(4,minmax(0,1fr))_auto] lg:items-end">
+						<SelectBox
+							label="Kecamatan"
+							value={saring.kecamatan_id}
+							onChange={(value) => ubahSaring('kecamatan_id', value)}
+							placeholder="Semua Kecamatan"
+							emptyText="Kecamatan tidak ditemukan"
+							options={[
+								{ value: '', label: 'Semua Kecamatan' },
+								...kecamatanList.map((kecamatan) => ({
+									value: String(kecamatan.id || kecamatan.id_kecamatan),
+									label: kecamatan.nama || kecamatan.name,
+								})),
+							]}
+						/>
+						<SelectBox
+							label="Desa"
+							value={saring.desa_id}
+							onChange={(value) => ubahSaring('desa_id', value)}
+							disabled={!saring.kecamatan_id}
+							placeholder={saring.kecamatan_id ? 'Semua Desa' : 'Pilih kecamatan dulu'}
+							emptyText="Desa tidak ditemukan"
+							options={[
+								{ value: '', label: 'Semua Desa' },
+								...desaList.map((desa) => ({ value: String(desa.id), label: desa.nama || desa.name })),
+							]}
+						/>
+						<SelectBox
+							label="Status"
+							value={saring.status}
+							onChange={(value) => ubahSaring('status', value)}
+							placeholder="Semua"
+							options={[
+								{ value: '', label: 'Semua' },
+								{ value: 'Aktif', label: 'Aktif' },
+								{ value: 'Tidak_Aktif', label: 'Tidak Aktif' },
+							]}
+						/>
+						<SelectBox
+							label="Jenis Kelamin"
+							value={saring.jenis_kelamin}
+							onChange={(value) => ubahSaring('jenis_kelamin', value)}
+							placeholder="Semua"
+							options={[
+								{ value: '', label: 'Semua' },
+								{ value: 'Laki_laki', label: 'Laki-laki' },
+								{ value: 'Perempuan', label: 'Perempuan' },
+							]}
+						/>
+						<button
+							type="button"
+							onClick={() => setSaring(EMPTY_SARING)}
+							disabled={!adaSaring}
+							className="h-11 rounded-xl px-3 text-xs font-medium text-slate-500 underline-offset-2 hover:text-slate-700 hover:underline disabled:invisible"
+						>
+							Reset
+						</button>
+					</div>
+
 					{statsLoading && !stats ? (
 						<div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
 							{Array.from({ length: 4 }).map((_, index) => (
@@ -2029,6 +2324,8 @@ const RingkasanAparatur = ({ jenis, stats, statsLoading, onBuka }) => {
 										onClick={onBuka && (() => onBuka({ status: 'Aktif' }, 'Aparatur aktif'))}
 									/>
 								</div>
+
+								{stats.cakupan_desa && <CakupanDesa cakupan={stats.cakupan_desa} bpd={jenis === 'bpd'} />}
 
 								{/* 5 kolom: donut butuh ruang persegi, bar butuh ruang lebar */}
 								<div className="mt-4 grid gap-4 lg:grid-cols-5">
@@ -2605,6 +2902,34 @@ const DatabaseTab = ({ refreshKey = 0, jenis, stats, statsLoading, detailBasePat
 		handleFilterChange(key, '');
 	};
 
+	// Ekspor memakai penyaring yang sama dengan tabel, tapi tanpa halaman:
+	// berkasnya berisi semua baris yang cocok, bukan hanya 20 di layar.
+	const eksporTabel = async (format) => {
+		try {
+			const params = new URLSearchParams();
+			Object.entries(filters).forEach(([key, value]) => {
+				if (value) params.append(key, value);
+			});
+			if (jenis) params.append('jenis', jenis);
+			const response = await api.get(`/pemdes/aparatur-desa/ekspor?${params.toString()}`);
+			const baris = response.data?.data || [];
+			if (!baris.length) {
+				toast.error('Tidak ada data yang cocok dengan penyaring');
+				return;
+			}
+			const { eksporTabelExcel, eksporTabelPdf } = await import('./aparaturEkspor');
+			const opsi = {
+				judul: `Data ${JUDUL_JENIS[jenis] || 'Aparatur Desa'}`,
+				penyaring: activeFilters.map(([key, value]) => labelFor(key, value)),
+			};
+			await (format === 'pdf' ? eksporTabelPdf(baris, opsi) : eksporTabelExcel(baris, opsi));
+			toast.success(`${baris.length.toLocaleString('id-ID')} baris diekspor`);
+		} catch (error) {
+			console.error('Gagal mengekspor aparatur:', error);
+			toast.error(error.response?.data?.message || 'Gagal mengekspor data');
+		}
+	};
+
 	const pageNumbers = useMemo(() => {
 		const totalPages = pagination.totalPages || 1;
 		const current = pagination.page;
@@ -2664,6 +2989,7 @@ const DatabaseTab = ({ refreshKey = 0, jenis, stats, statsLoading, detailBasePat
 								</span>
 							)}
 						</button>
+						<TombolEkspor onEkspor={eksporTabel} disabled={loading || pagination.totalItems === 0} />
 						<button
 							type="button"
 							onClick={fetchData}
