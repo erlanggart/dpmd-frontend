@@ -1992,7 +1992,49 @@ export const AparaturDesaDetailPage = ({ backPath }) => {
 // ============================================================
 // Pengelompokan ejaan jenjang pendidikan: lihat utils/jenjangPendidikan.js.
 
-const EMPTY_FILTERS = { search: '', kecamatan_id: '', desa_id: '', jabatan: '', jenis_kelamin: '', status: '', pendidikan: '' };
+// Penyaring pilihan ganda disimpan sebagai array dan dikirim dipisah koma —
+// server (bangunWhere) menerima keduanya, satu nilai maupun banyak.
+const terisi = (nilai) => (Array.isArray(nilai) ? nilai.length > 0 : Boolean(nilai));
+const keParam = (nilai) => (Array.isArray(nilai) ? nilai.join(',') : nilai);
+const keParamSemua = (obj) => Object.fromEntries(Object.entries(obj).filter(([, v]) => terisi(v)).map(([k, v]) => [k, keParam(v)]));
+
+/**
+ * Desa dari satu atau beberapa kecamatan terpilih, siap jadi opsi SelectBox.
+ * Bila lebih dari satu kecamatan, nama kecamatan ikut sebagai keterangan
+ * supaya desa bernama sama (mis. "Sukamaju") tidak tertukar.
+ */
+const useDesaKecamatan = (idKecamatan, kecamatanList) => {
+	const [desa, setDesa] = useState([]);
+	const kunci = idKecamatan.join(',');
+	useEffect(() => {
+		if (!kunci) {
+			setDesa([]);
+			return undefined;
+		}
+		let batal = false;
+		Promise.all(
+			kunci.split(',').map((id) =>
+				api.get(`/desas/kecamatan/${id}`)
+					.then((response) => (response.data.success ? (response.data.data || []).map((d) => ({ ...d, kecamatan_id: id })) : []))
+					.catch(() => [])
+			)
+		).then((hasil) => { if (!batal) setDesa(hasil.flat()); });
+		return () => { batal = true; };
+	}, [kunci]);
+
+	return useMemo(() => {
+		const banyak = idKecamatan.length > 1;
+		const namaKec = new Map(kecamatanList.map((k) => [String(k.id || k.id_kecamatan), k.nama || k.name]));
+		return desa.map((d) => ({
+			value: String(d.id),
+			label: d.nama || d.name,
+			hint: banyak ? namaKec.get(String(d.kecamatan_id)) : undefined,
+		}));
+		// eslint-disable-next-line react-hooks/exhaustive-deps
+	}, [desa, kecamatanList, kunci]);
+};
+
+const EMPTY_FILTERS = { search: '', kecamatan_id: [], desa_id: [], jabatan: '', jenis_kelamin: '', status: '', pendidikan: '' };
 
 // ============================================================
 // Ringkasan kabupaten
@@ -2086,7 +2128,7 @@ const CakupanDesa = ({ cakupan, bpd, jabatan }) => {
 	);
 };
 
-const EMPTY_SARING = { kecamatan_id: '', desa_id: '', jabatan_baku: '', status: '', jenis_kelamin: '' };
+const EMPTY_SARING = { kecamatan_id: [], desa_id: [], jabatan_baku: [], status: '', jenis_kelamin: '' };
 
 const RingkasanAparatur = ({ jenis, stats: statsKabupaten, statsLoading: loadingKabupaten, onBuka: onBukaInduk }) => {
 	const [showSummary, setShowSummary] = useState(true);
@@ -2098,24 +2140,14 @@ const RingkasanAparatur = ({ jenis, stats: statsKabupaten, statsLoading: loading
 	const [statsSaring, setStatsSaring] = useState(null);
 	const [loadingSaring, setLoadingSaring] = useState(false);
 	const [kecamatanList, setKecamatanList] = useState([]);
-	const [desaList, setDesaList] = useState([]);
-	const adaSaring = Object.values(saring).some(Boolean);
+	const adaSaring = Object.values(saring).some(terisi);
+	const pilihanDesa = useDesaKecamatan(saring.kecamatan_id, kecamatanList);
 
 	useEffect(() => {
 		api.get('/kecamatans')
 			.then((response) => { if (response.data.success) setKecamatanList(response.data.data || []); })
 			.catch((error) => console.error('Failed to fetch kecamatan:', error));
 	}, []);
-
-	useEffect(() => {
-		if (!saring.kecamatan_id) {
-			setDesaList([]);
-			return;
-		}
-		api.get(`/desas/kecamatan/${saring.kecamatan_id}`)
-			.then((response) => { if (response.data.success) setDesaList(response.data.data || []); })
-			.catch((error) => console.error('Failed to fetch desa:', error));
-	}, [saring.kecamatan_id]);
 
 	// statsKabupaten ikut jadi pemicu: tombol muat ulang di kepala halaman
 	// memperbarui angka kabupaten, dan angka tersaring ikut diperbarui.
@@ -2126,7 +2158,7 @@ const RingkasanAparatur = ({ jenis, stats: statsKabupaten, statsLoading: loading
 		}
 		let batal = false;
 		setLoadingSaring(true);
-		const params = new URLSearchParams(Object.entries({ ...saring, jenis: jenis || '' }).filter(([, v]) => v));
+		const params = new URLSearchParams(keParamSemua({ ...saring, jenis: jenis || '' }));
 		api.get(`/pemdes/aparatur-desa/stats?${params.toString()}`)
 			.then((response) => { if (!batal && response.data.success) setStatsSaring(response.data.data); })
 			.catch(() => toast.error('Gagal memuat statistik tersaring'))
@@ -2136,7 +2168,7 @@ const RingkasanAparatur = ({ jenis, stats: statsKabupaten, statsLoading: loading
 
 	const stats = adaSaring ? statsSaring : statsKabupaten;
 	const statsLoading = adaSaring ? loadingSaring : loadingKabupaten;
-	const saringAktif = useMemo(() => Object.fromEntries(Object.entries(saring).filter(([, v]) => v)), [saring]);
+	const saringAktif = useMemo(() => keParamSemua(saring), [saring]);
 	// Pop-up di balik grafik memakai penyaring yang sama, kalau tidak jumlah
 	// orang di pop-up berbeda dari angka yang diklik.
 	const onBuka = onBukaInduk && ((filter, judul) => onBukaInduk({ ...saringAktif, ...filter }, judul));
@@ -2149,23 +2181,19 @@ const RingkasanAparatur = ({ jenis, stats: statsKabupaten, statsLoading: loading
 	);
 
 	const ubahSaring = (kunci, nilai) =>
-		setSaring((prev) => ({ ...prev, [kunci]: nilai, ...(kunci === 'kecamatan_id' ? { desa_id: '' } : {}) }));
+		setSaring((prev) => ({ ...prev, [kunci]: nilai, ...(kunci === 'kecamatan_id' ? { desa_id: [] } : {}) }));
 
 	const labelSaring = useMemo(() => {
 		const label = [];
-		if (saring.kecamatan_id) {
-			const kec = kecamatanList.find((k) => String(k.id || k.id_kecamatan) === String(saring.kecamatan_id));
-			label.push(`Kecamatan: ${kec?.nama || kec?.name || saring.kecamatan_id}`);
-		}
-		if (saring.desa_id) {
-			const desa = desaList.find((d) => String(d.id) === String(saring.desa_id));
-			label.push(`Desa: ${desa?.nama || desa?.name || saring.desa_id}`);
-		}
-		if (saring.jabatan_baku) label.push(`Jabatan: ${saring.jabatan_baku}`);
+		const nama = (daftar, id) => daftar.find((d) => String(d.value) === String(id))?.label || id;
+		const opsiKec = kecamatanList.map((k) => ({ value: String(k.id || k.id_kecamatan), label: k.nama || k.name }));
+		if (saring.kecamatan_id.length) label.push(`Kecamatan: ${saring.kecamatan_id.map((id) => nama(opsiKec, id)).join(', ')}`);
+		if (saring.desa_id.length) label.push(`Desa: ${saring.desa_id.map((id) => nama(pilihanDesa, id)).join(', ')}`);
+		if (saring.jabatan_baku.length) label.push(`Jabatan: ${saring.jabatan_baku.join(', ')}`);
 		if (saring.status) label.push(`Status: ${saring.status === 'Aktif' ? 'Aktif' : 'Tidak Aktif'}`);
 		if (saring.jenis_kelamin) label.push(`Kelamin: ${saring.jenis_kelamin === 'Laki_laki' ? 'Laki-laki' : 'Perempuan'}`);
 		return label;
-	}, [saring, kecamatanList, desaList]);
+	}, [saring, kecamatanList, pilihanDesa]);
 
 	// Ejaan jenjang dari dua sumber data disatukan jadi satu label sebelum
 	// digambar, kalau tidak "S1" dan "STRATA I" jadi dua batang berbeda.
@@ -2184,12 +2212,13 @@ const RingkasanAparatur = ({ jenis, stats: statsKabupaten, statsLoading: loading
 	}, [stats]);
 
 	const total = Number(stats?.total ?? 0);
+	const labelJabatan = saring.jabatan_baku.length === 1 ? saring.jabatan_baku[0] : saring.jabatan_baku.length ? 'jabatan terpilih' : '';
 
 	const eksporStatistik = async (format) => {
 		if (!stats) return;
 		try {
 			const { eksporStatistikExcel, eksporStatistikPdf } = await import('./aparaturEkspor');
-			const opsi = { judul: `Statistik ${JUDUL_JENIS[jenis] || 'Aparatur Desa'}`, penyaring: labelSaring, bpd: jenis === 'bpd', jabatan: saring.jabatan_baku };
+			const opsi = { judul: `Statistik ${JUDUL_JENIS[jenis] || 'Aparatur Desa'}`, penyaring: labelSaring, bpd: jenis === 'bpd', jabatan: labelJabatan };
 			await (format === 'pdf' ? eksporStatistikPdf(stats, pendidikanChart, opsi) : eksporStatistikExcel(stats, pendidikanChart, opsi));
 		} catch (error) {
 			console.error('Gagal mengekspor statistik:', error);
@@ -2223,6 +2252,7 @@ const RingkasanAparatur = ({ jenis, stats: statsKabupaten, statsLoading: loading
 				<>
 					<div className="mb-4 grid grid-cols-1 gap-3 rounded-2xl border border-slate-200 bg-white p-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-[repeat(5,minmax(0,1fr))_auto] lg:items-end">
 						<SelectBox
+							multiple
 							label="Kecamatan"
 							value={saring.kecamatan_id}
 							onChange={(value) => ubahSaring('kecamatan_id', value)}
@@ -2237,18 +2267,17 @@ const RingkasanAparatur = ({ jenis, stats: statsKabupaten, statsLoading: loading
 							]}
 						/>
 						<SelectBox
+							multiple
 							label="Desa"
 							value={saring.desa_id}
 							onChange={(value) => ubahSaring('desa_id', value)}
-							disabled={!saring.kecamatan_id}
-							placeholder={saring.kecamatan_id ? 'Semua Desa' : 'Pilih kecamatan dulu'}
+							disabled={!saring.kecamatan_id.length}
+							placeholder={saring.kecamatan_id.length ? 'Semua Desa' : 'Pilih kecamatan dulu'}
 							emptyText="Desa tidak ditemukan"
-							options={[
-								{ value: '', label: 'Semua Desa' },
-								...desaList.map((desa) => ({ value: String(desa.id), label: desa.nama || desa.name })),
-							]}
+							options={[{ value: '', label: 'Semua Desa' }, ...pilihanDesa]}
 						/>
 						<SelectBox
+							multiple
 							label="Jabatan"
 							value={saring.jabatan_baku}
 							onChange={(value) => ubahSaring('jabatan_baku', value)}
@@ -2342,7 +2371,7 @@ const RingkasanAparatur = ({ jenis, stats: statsKabupaten, statsLoading: loading
 									/>
 								</div>
 
-								{stats.cakupan_desa && <CakupanDesa cakupan={stats.cakupan_desa} bpd={jenis === 'bpd'} jabatan={saring.jabatan_baku} />}
+								{stats.cakupan_desa && <CakupanDesa cakupan={stats.cakupan_desa} bpd={jenis === 'bpd'} jabatan={labelJabatan} />}
 
 								{/* 5 kolom: donut butuh ruang persegi, bar butuh ruang lebar */}
 								<div className="mt-4 grid gap-4 lg:grid-cols-5">
@@ -2750,17 +2779,14 @@ const DatabaseTab = ({ refreshKey = 0, jenis, stats, statsLoading, detailBasePat
 	const [filters, setFilters] = useState(EMPTY_FILTERS);
 	const [searchInput, setSearchInput] = useState('');
 	const [kecamatanList, setKecamatanList] = useState([]);
-	const [desaList, setDesaList] = useState([]);
+	const pilihanDesa = useDesaKecamatan(filters.kecamatan_id, kecamatanList);
 	const [showFilters, setShowFilters] = useState(false);
 	const isFirstRefresh = useRef(true);
 
 	const fetchData = useCallback(async () => {
 		try {
 			setLoading(true);
-			const params = new URLSearchParams();
-			Object.entries(filters).forEach(([key, value]) => {
-				if (value) params.append(key, value);
-			});
+			const params = new URLSearchParams(keParamSemua(filters));
 			if (jenis) params.append('jenis', jenis);
 			params.append('page', pagination.page);
 			params.append('limit', pagination.limit);
@@ -2824,26 +2850,10 @@ const DatabaseTab = ({ refreshKey = 0, jenis, stats, statsLoading, detailBasePat
 		return () => clearTimeout(timer);
 	}, [searchInput]);
 
-	useEffect(() => {
-		if (!filters.kecamatan_id) {
-			setDesaList([]);
-			return;
-		}
-		const fetchDesaByKecamatan = async () => {
-			try {
-				const response = await api.get(`/desas/kecamatan/${filters.kecamatan_id}`);
-				if (response.data.success) setDesaList(response.data.data || []);
-			} catch (error) {
-				console.error('Failed to fetch desa:', error);
-			}
-		};
-		fetchDesaByKecamatan();
-	}, [filters.kecamatan_id]);
-
 	const handleFilterChange = (key, value) => {
 		setFilters((prev) => {
 			const next = { ...prev, [key]: value };
-			if (key === 'kecamatan_id') next.desa_id = '';
+			if (key === 'kecamatan_id') next.desa_id = [];
 			return next;
 		});
 		setPagination((prev) => ({ ...prev, page: 1 }));
@@ -2885,13 +2895,14 @@ const DatabaseTab = ({ refreshKey = 0, jenis, stats, statsLoading, detailBasePat
 				case 'search':
 					return `Cari: "${value}"`;
 				case 'kecamatan_id': {
-					const kecamatan = kecamatanList.find((item) => String(item.id || item.id_kecamatan) === String(value));
-					return `Kecamatan: ${kecamatan?.nama || kecamatan?.name || value}`;
+					const nama = value.map((id) => {
+						const kecamatan = kecamatanList.find((item) => String(item.id || item.id_kecamatan) === String(id));
+						return kecamatan?.nama || kecamatan?.name || id;
+					});
+					return `Kecamatan: ${nama.join(', ')}`;
 				}
-				case 'desa_id': {
-					const desa = desaList.find((item) => String(item.id) === String(value));
-					return `Desa: ${desa?.nama || desa?.name || value}`;
-				}
+				case 'desa_id':
+					return `Desa: ${value.map((id) => pilihanDesa.find((d) => d.value === String(id))?.label || id).join(', ')}`;
 				case 'jabatan':
 					return `Jabatan: ${value}`;
 				case 'pendidikan': {
@@ -2906,27 +2917,24 @@ const DatabaseTab = ({ refreshKey = 0, jenis, stats, statsLoading, detailBasePat
 					return value;
 			}
 		},
-		[kecamatanList, desaList, pendidikanFilterOptions]
+		[kecamatanList, pilihanDesa, pendidikanFilterOptions]
 	);
 
 	const activeFilters = useMemo(
-		() => Object.entries(filters).filter(([, value]) => Boolean(value)),
+		() => Object.entries(filters).filter(([, value]) => terisi(value)),
 		[filters]
 	);
 
 	const removeFilter = (key) => {
 		if (key === 'search') setSearchInput('');
-		handleFilterChange(key, '');
+		handleFilterChange(key, Array.isArray(filters[key]) ? [] : '');
 	};
 
 	// Ekspor memakai penyaring yang sama dengan tabel, tapi tanpa halaman:
 	// berkasnya berisi semua baris yang cocok, bukan hanya 20 di layar.
 	const eksporTabel = async (format) => {
 		try {
-			const params = new URLSearchParams();
-			Object.entries(filters).forEach(([key, value]) => {
-				if (value) params.append(key, value);
-			});
+			const params = new URLSearchParams(keParamSemua(filters));
 			if (jenis) params.append('jenis', jenis);
 			const response = await api.get(`/pemdes/aparatur-desa/ekspor?${params.toString()}`);
 			const baris = response.data?.data || [];
@@ -3031,6 +3039,7 @@ const DatabaseTab = ({ refreshKey = 0, jenis, stats, statsLoading, detailBasePat
 				{showFilters && (
 					<div className="mt-3 grid grid-cols-1 gap-3 border-t border-slate-100 pt-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
 						<SelectBox
+							multiple
 							label="Kecamatan"
 							value={filters.kecamatan_id}
 							onChange={(value) => handleFilterChange('kecamatan_id', value)}
@@ -3046,16 +3055,14 @@ const DatabaseTab = ({ refreshKey = 0, jenis, stats, statsLoading, detailBasePat
 						/>
 
 						<SelectBox
+							multiple
 							label="Desa"
 							value={filters.desa_id}
 							onChange={(value) => handleFilterChange('desa_id', value)}
-							disabled={!filters.kecamatan_id}
-							placeholder={filters.kecamatan_id ? 'Semua Desa' : 'Pilih kecamatan dulu'}
+							disabled={!filters.kecamatan_id.length}
+							placeholder={filters.kecamatan_id.length ? 'Semua Desa' : 'Pilih kecamatan dulu'}
 							emptyText="Desa tidak ditemukan"
-							options={[
-								{ value: '', label: 'Semua Desa' },
-								...desaList.map((desa) => ({ value: String(desa.id), label: desa.nama || desa.name })),
-							]}
+							options={[{ value: '', label: 'Semua Desa' }, ...pilihanDesa]}
 						/>
 
 						<label className="block">

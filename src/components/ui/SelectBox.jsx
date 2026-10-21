@@ -10,6 +10,9 @@
 //  - panel dipasang lewat portal + posisi fixed, jadi tidak terpotong kartu
 //    yang ter-scroll dan otomatis membuka ke atas kalau ruang bawah sempit
 //  - di layar sempit panel tampil sebagai lembar bawah yang enak disentuh
+//
+// `multiple`: value berupa array, klik opsi mencentang/melepas tanpa menutup
+// panel. Opsi bernilai '' (mis. "Semua Kecamatan") berarti kosongkan pilihan.
 import React, { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Check, ChevronDown, Search, X } from 'lucide-react';
@@ -33,6 +36,7 @@ const SelectBox = ({
   className = '',
   id,
   name,
+  multiple = false,
 }) => {
   const generatedId = useId();
   const selectId = id || generatedId;
@@ -47,10 +51,30 @@ const SelectBox = ({
   const [rect, setRect] = useState(null);
   const [sheet, setSheet] = useState(false);
 
-  const selected = useMemo(
-    () => options.find((o) => String(o.value) === String(value)) || null,
-    [options, value]
+  const terpilih = useMemo(
+    () => new Set(multiple ? (Array.isArray(value) ? value : []).map(String) : []),
+    [multiple, value]
   );
+  const isSelectedValue = useCallback(
+    (optionValue) =>
+      multiple
+        ? optionValue === '' ? terpilih.size === 0 : terpilih.has(String(optionValue))
+        : String(optionValue) === String(value),
+    [multiple, terpilih, value]
+  );
+
+  const selected = useMemo(
+    () => (multiple ? null : options.find((o) => String(o.value) === String(value)) || null),
+    [multiple, options, value]
+  );
+
+  // Teks pemicu untuk pilihan ganda: satu label, atau label pertama + sisanya.
+  const labelGanda = useMemo(() => {
+    if (!multiple || terpilih.size === 0) return null;
+    const label = options.filter((o) => o.value !== '' && terpilih.has(String(o.value))).map((o) => o.label);
+    if (!label.length) return `${terpilih.size} dipilih`;
+    return label.length === 1 ? label[0] : `${label[0]} +${label.length - 1} lainnya`;
+  }, [multiple, options, terpilih]);
 
   const withSearch = searchable ?? options.length > SEARCH_THRESHOLD;
 
@@ -83,9 +107,9 @@ const SelectBox = ({
     setSheet(asSheet);
     if (!asSheet) measure();
     setQuery('');
-    setHighlight(options.findIndex((o) => String(o.value) === String(value)));
+    setHighlight(multiple ? 0 : options.findIndex((o) => String(o.value) === String(value)));
     setOpen(true);
-  }, [disabled, measure, options, value]);
+  }, [disabled, measure, multiple, options, value]);
 
   const closePanel = useCallback(
     (refocus = true) => {
@@ -98,10 +122,23 @@ const SelectBox = ({
 
   const pick = useCallback(
     (option) => {
+      if (multiple) {
+        if (option.value === '') {
+          onChange?.([]);
+          return;
+        }
+        const kunci = String(option.value);
+        const berikut = new Set(terpilih);
+        if (berikut.has(kunci)) berikut.delete(kunci);
+        else berikut.add(kunci);
+        // Urutan mengikuti daftar opsi, bukan urutan klik.
+        onChange?.(options.filter((o) => berikut.has(String(o.value))).map((o) => String(o.value)));
+        return;
+      }
       onChange?.(option.value);
       closePanel();
     },
-    [onChange, closePanel]
+    [multiple, terpilih, options, onChange, closePanel]
   );
 
   // Tutup saat klik di luar, dan ikuti scroll/resize selagi terbuka.
@@ -238,6 +275,7 @@ const SelectBox = ({
 
       <ul
         role="listbox"
+        aria-multiselectable={multiple || undefined}
         aria-labelledby={`${selectId}-trigger`}
         className="max-h-full overflow-y-auto overscroll-contain p-1.5"
       >
@@ -245,7 +283,7 @@ const SelectBox = ({
           <li className="px-3 py-6 text-center text-sm text-slate-400">{emptyText}</li>
         )}
         {visible.map((option, index) => {
-          const isSelected = String(option.value) === String(value);
+          const isSelected = isSelectedValue(option.value);
           const isActive = index === highlight;
           return (
             <li key={`${option.value}-${index}`} data-index={index}>
@@ -261,6 +299,7 @@ const SelectBox = ({
                     : isActive
                       ? 'bg-slate-100 text-slate-900'
                       : 'text-slate-700'
+                } ${multiple ? 'py-2' : ''
                 }`}
               >
                 <span className="min-w-0 flex-1 truncate">
@@ -281,6 +320,30 @@ const SelectBox = ({
           );
         })}
       </ul>
+
+      {multiple && (
+        <div className="flex items-center justify-between gap-2 border-t border-slate-100 px-3 py-2">
+          <span className="text-xs text-slate-500">{terpilih.size ? `${terpilih.size} dipilih` : 'Belum ada yang dipilih'}</span>
+          <div className="flex items-center gap-1">
+            {terpilih.size > 0 && (
+              <button
+                type="button"
+                onClick={() => onChange?.([])}
+                className="rounded-lg px-2.5 py-1.5 text-xs font-medium text-slate-500 hover:bg-slate-100 hover:text-slate-900"
+              >
+                Bersihkan
+              </button>
+            )}
+            <button
+              type="button"
+              onClick={() => closePanel()}
+              className="rounded-lg bg-slate-900 px-3 py-1.5 text-xs font-semibold text-white hover:bg-slate-800"
+            >
+              Selesai
+            </button>
+          </div>
+        </div>
+      )}
     </>
   );
 
@@ -310,8 +373,8 @@ const SelectBox = ({
           open ? 'border-slate-900 ring-2 ring-slate-900/10' : ''
         }`}
       >
-        <span className={`min-w-0 flex-1 truncate text-left ${selected ? '' : 'text-slate-400'}`}>
-          {selected ? selected.label : placeholder}
+        <span className={`min-w-0 flex-1 truncate text-left ${selected || labelGanda ? '' : 'text-slate-400'}`}>
+          {multiple ? labelGanda || placeholder : selected ? selected.label : placeholder}
         </span>
         <ChevronDown
           className={`h-4 w-4 flex-shrink-0 transition-transform duration-200 ${
@@ -321,7 +384,7 @@ const SelectBox = ({
       </button>
 
       {/* nilai ikut terkirim kalau dipakai di dalam <form> biasa */}
-      {name && <input type="hidden" name={name} value={value ?? ''} />}
+      {name && <input type="hidden" name={name} value={multiple ? [...terpilih].join(',') : value ?? ''} />}
 
       {open &&
         createPortal(
