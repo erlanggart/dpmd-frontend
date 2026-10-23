@@ -125,6 +125,40 @@ export const kelasDokumen = (d) => {
 export const jumlahLegalitas = (d) =>
   [d.nib, d.npwp, d.lkpp].filter(adaIsi).length;
 
+/**
+ * Kolom yang dihitung untuk "Kelengkapan isian". Dipakai meteran di kartu
+ * detail DAN penyaring kelengkapan — kalau rumusnya dua, BUMDes yang lolos
+ * filter "80% ke atas" bisa membuka kartu yang meterannya bilang 76%.
+ */
+export const ISIAN_DIPANTAU = [
+  'tahun_pendirian', 'jenis_usaha_utama', 'direktur', 'hp_direktur', 'tenaga_kerja',
+  'alamat', 'telepon', 'email', 'badan_hukum', 'nomor_perdes', 'nib', 'npwp', 'lkpp',
+  'aset', 'omset_2025', 'laba_2025', 'pades_2025',
+];
+
+const kolomTerisi = (v) => {
+  if (typeof v === 'number') return true;
+  if (v === null || v === undefined) return false;
+  const t = String(v).trim();
+  return t !== '' && t !== '-' && t !== '–';
+};
+
+export const jumlahIsian = (d) => ISIAN_DIPANTAU.filter((k) => kolomTerisi(d[k])).length;
+
+export const persenIsian = (d) => Math.round((jumlahIsian(d) / ISIAN_DIPANTAU.length) * 100);
+
+export const AMBANG_ISIAN = 80;
+
+/** penuh = 100%, tinggi = ≥ 80%, rendah = di bawah 80%. */
+export const cocokIsian = (d, pilihan) => {
+  if (pilihan === 'semua') return true;
+  const p = persenIsian(d);
+  if (pilihan === 'penuh') return p >= 100;
+  if (pilihan === 'tinggi') return p >= AMBANG_ISIAN;
+  if (pilihan === 'rendah') return p < AMBANG_ISIAN;
+  return true;
+};
+
 /* ------------------------------------------------------------------ filter -- */
 
 export const FILTER_AWAL = {
@@ -137,6 +171,7 @@ export const FILTER_AWAL = {
   program: 'semua',      // ketapang | wisata | mbg | tanpa-peran
   dokumen: 'semua',      // lengkap | sebagian | kosong
   legalitas: 'semua',    // nib | npwp | lkpp | lengkap | belum
+  isian: 'semua',        // penuh | tinggi (≥ 80%) | rendah (< 80%)
 };
 
 export const adaFilterAktif = (f) =>
@@ -188,6 +223,7 @@ export const terapkanFilter = (data, f) => {
     if (!cocokProgram(d, f.program)) return false;
     if (f.dokumen !== 'semua' && kelasDokumen(d) !== f.dokumen) return false;
     if (!cocokLegalitas(d, f.legalitas)) return false;
+    if (!cocokIsian(d, f.isian ?? 'semua')) return false;
 
     if (!kata.length) return true;
     const teks = [

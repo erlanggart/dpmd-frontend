@@ -12,8 +12,14 @@ import { Search, SlidersHorizontal, X, RotateCcw } from 'lucide-react';
 import {
   FILTER_AWAL, KELAS_OMSET, URUTAN_BADAN_HUKUM, URUTAN_PERINGKAT,
   BADAN_HUKUM_LAINNYA, PERINGKAT_KOSONG,
-  adaFilterAktif, jumlahFilterAktif, peringkatResmi, tahapBadanHukum,
+  AMBANG_ISIAN, adaFilterAktif, cocokIsian, jumlahFilterAktif, peringkatResmi, tahapBadanHukum,
 } from './bumdesFilter';
+
+const LABEL_ISIAN = {
+  tinggi: `Isian ${AMBANG_ISIAN}% ke atas`,
+  penuh: 'Isian lengkap 100%',
+  rendah: `Isian di bawah ${AMBANG_ISIAN}%`,
+};
 
 const nf = new Intl.NumberFormat('id-ID');
 
@@ -91,6 +97,14 @@ const BumdesFilterBar = ({ data, filter, onChange, jumlahHasil, tersemat = false
         .map((x) => ({ value: x, label: `${x} (${nf.format(hitung.get(x))})` }))];
   }, [data]);
 
+  const opsiIsian = useMemo(() => [
+    { value: 'semua', label: `Semua (${nf.format(data.length)})` },
+    ...['tinggi', 'penuh', 'rendah'].map((p) => ({
+      value: p,
+      label: `${LABEL_ISIAN[p]} (${nf.format(data.filter((d) => cocokIsian(d, p)).length)})`,
+    })),
+  ], [data]);
+
   const ubah = (kunci) => (nilai) => onChange({ ...filter, [kunci]: nilai });
   const bersihkan = (kunci) => onChange({ ...filter, [kunci]: FILTER_AWAL[kunci] });
   const reset = () => onChange({ ...FILTER_AWAL });
@@ -132,6 +146,7 @@ const BumdesFilterBar = ({ data, filter, onChange, jumlahHasil, tersemat = false
         lengkap: 'NIB + NPWP + LKPP', belum: 'Belum punya identitas legal',
       }[filter.legalitas],
     },
+    filter.isian !== 'semua' && { kunci: 'isian', teks: LABEL_ISIAN[filter.isian] },
   ].filter(Boolean);
 
   return (
@@ -255,6 +270,7 @@ const BumdesFilterBar = ({ data, filter, onChange, jumlahHasil, tersemat = false
                 { value: 'belum', label: 'Belum punya satu pun' },
               ]}
             />
+            <Pilihan label="Kelengkapan isian" value={filter.isian} onChange={ubah('isian')} options={opsiIsian} />
           </div>
         )}
 

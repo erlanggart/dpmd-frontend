@@ -18,7 +18,8 @@ import {
 import { LencanaStatus, LencanaPeringkat } from './BumdesLencana';
 import DokumenViewer from './DokumenViewer';
 import {
-  DOKUMEN_INTI, PERINGKAT_KOSONG, isAktif, omsetTerbaru, peringkatResmi,
+  DOKUMEN_INTI, ISIAN_DIPANTAU, PERINGKAT_KOSONG, isAktif, jumlahIsian, omsetTerbaru,
+  peringkatResmi, persenIsian,
 } from './bumdesFilter';
 import { nf, rupiah, rupiahRingkas, teksAtauNull } from './bumdesFormat';
 
@@ -73,13 +74,6 @@ const LABEL_DOKUMEN = {
   berita_acara: 'Berita Acara',
 };
 
-/** Kolom yang dihitung untuk meteran kelengkapan di kepala kartu. */
-const ISIAN_DIPANTAU = [
-  'tahun_pendirian', 'jenis_usaha_utama', 'direktur', 'hp_direktur', 'tenaga_kerja',
-  'alamat', 'telepon', 'email', 'badan_hukum', 'nomor_perdes', 'nib', 'npwp', 'lkpp',
-  'aset', 'omset_2025', 'laba_2025', 'pades_2025',
-];
-
 const adaAngka = (v) => v !== null && v !== undefined && !Number.isNaN(v);
 
 const BumdesDetailModal = ({ item, onClose, onUbah }) => {
@@ -128,11 +122,8 @@ const BumdesDetailModal = ({ item, onClose, onUbah }) => {
 
     return {
       kelas,
-      persenIsian: Math.round(
-        (ISIAN_DIPANTAU.filter((k) => (typeof item[k] === 'number' ? true : teksAtauNull(item[k]) !== null)).length
-          / ISIAN_DIPANTAU.length) * 100
-      ),
-      terisi: ISIAN_DIPANTAU.filter((k) => (typeof item[k] === 'number' ? true : teksAtauNull(item[k]) !== null)).length,
+      persenIsian: persenIsian(item),
+      terisi: jumlahIsian(item),
 
       profil: saringTeks([
         { icon: Building2, label: 'Tahun pendirian', nilai: item.tahun_pendirian },
