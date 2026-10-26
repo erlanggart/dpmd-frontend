@@ -26,6 +26,10 @@ const TOMBOL =
  * @param namaBerkas dasar nama berkas, tanpa tanggal dan tanpa ekstensi
  * @param judul      judul di kepala PDF
  * @param subjudul   satu baris keterangan di bawah judul (mis. penyaring aktif)
+ * @param penyusun   { excel?, pdf? }: async (baris) => void. Untuk modul yang
+ *                   berkasnya lebih dari satu tabel datar (lembar ringkasan,
+ *                   rekap, lampiran). Tanpa ini dipakai eksporTabel.js biasa
+ *                   dengan `kolom`. Keadaan tombol tetap diurus di sini.
  *
  * Yang diekspor harus persis yang sedang dilihat: `baris` menerima data yang
  * SUDAH tersaring, dan `ambilBaris` diharapkan memakai penyaring yang sama
@@ -41,6 +45,7 @@ const TombolEkspor = ({
 	judul,
 	subjudul,
 	keterangan = true,
+	penyusun = null,
 }) => {
 	const [sibuk, setSibuk] = useState(null); // 'excel' | 'pdf' | null
 
@@ -59,8 +64,10 @@ const TombolEkspor = ({
 				toast.error('Tidak ada baris untuk diekspor.');
 				return;
 			}
+			const kustom = penyusun?.[jenis];
 			const argumen = { kolom, baris: isi, namaBerkas, judul, subjudul };
-			if (jenis === 'excel') await eksporExcel({ ...argumen, namaSheet: judul });
+			if (kustom) await kustom(isi);
+			else if (jenis === 'excel') await eksporExcel({ ...argumen, namaSheet: judul });
 			else await eksporPdf(argumen);
 		} catch (error) {
 			console.error('[TombolEkspor] gagal mengekspor:', error);

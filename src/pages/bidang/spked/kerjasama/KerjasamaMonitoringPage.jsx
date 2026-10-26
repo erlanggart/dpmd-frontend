@@ -227,25 +227,6 @@ const KerjasamaMonitoringPage = ({ rapat = false }) => {
 	};
 
 	/**
-	 * Kolom ekspor. Label bidang dan kode jenis diterjemahkan dari peta meta —
-	 * yang terunduh harus berbunyi sama dengan yang terbaca di tabel, bukan
-	 * kunci internal seperti nomor bidang.
-	 */
-	const kolomEkspor = useMemo(
-		() => [
-			{ label: 'Kecamatan', nilai: (b) => b.desa?.kecamatan?.nama },
-			{ label: 'Desa', nilai: (b) => b.desa?.nama },
-			{ label: 'Tahun', nilai: (b) => b.tahun },
-			{ label: 'Jenis', nilai: (b) => petaJenis.get(b.jenis)?.kode || b.jenis },
-			{ label: 'Mitra', nilai: (b) => b.mitra },
-			{ label: 'Bidang', nilai: (b) => petaBidang.get(b.bidang)?.label || b.bidang },
-			{ label: 'Sub-bidang', nilai: (b) => b.sub_bidang },
-			{ label: 'Dokumen lengkap', nilai: (b) => (b.dokumen_lengkap ? 'Ya' : 'Belum') },
-		],
-		[petaJenis, petaBidang],
-	);
-
-	/**
 	 * Kumpulkan SELURUH hasil penyaringan, bukan satu halaman.
 	 *
 	 * Tombol sebelumnya bernama "Unduh halaman ini" dan memang hanya mengirim 25
@@ -260,11 +241,6 @@ const KerjasamaMonitoringPage = ({ rapat = false }) => {
 	 * berujung yang membanjiri server.
 	 */
 	const ambilSemuaBaris = useCallback(async () => {
-		const params = {};
-		Object.entries(saring).forEach(([k, v]) => {
-			if (v !== '' && v !== null && v !== undefined) params[k] = v;
-		});
-
 		const PER_HALAMAN = 200;
 		const terkumpul = [];
 		for (let h = 1; h <= 60; h += 1) {
@@ -277,7 +253,42 @@ const KerjasamaMonitoringPage = ({ rapat = false }) => {
 			if (isi.length < PER_HALAMAN || (total && terkumpul.length >= total)) break;
 		}
 		return terkumpul;
-	}, [saring]);
+	}, [params]);
+
+	/**
+	 * Berkas ekspor bersusun (ringkasan, rekap, rincian, lampiran desa belum
+	 * Perdes) — lihat eksporKerjasama.js. Cakupan Perdes dan daftar desa yang
+	 * belum diambil SAAT tombol ditekan dengan penyaring yang sama, bukan dari
+	 * state layar yang bisa tertinggal satu ketukan di belakang penyaringnya.
+	 */
+	const penyusunEkspor = useMemo(() => {
+		const siapkan = async (isi) => {
+			const [resStatistik, resBelum] = await Promise.all([
+				api.get('/dpmd/kerjasama-desa/statistik', { params }),
+				api.get('/dpmd/kerjasama-desa/desa-belum-legalitas', {
+					params: saring.kecamatan_id ? { kecamatan_id: saring.kecamatan_id } : {},
+				}),
+			]);
+			return {
+				baris: isi,
+				meta,
+				saring,
+				cakupan: resStatistik.data?.data?.cakupan_legalitas || null,
+				desaBelum: resBelum.data?.data || [],
+				urlDokumen,
+			};
+		};
+		return {
+			excel: async (isi) => {
+				const [{ eksporKerjasamaExcel }, argumen] = await Promise.all([import('./eksporKerjasama'), siapkan(isi)]);
+				await eksporKerjasamaExcel(argumen);
+			},
+			pdf: async (isi) => {
+				const [{ eksporKerjasamaPdf }, argumen] = await Promise.all([import('./eksporKerjasama'), siapkan(isi)]);
+				await eksporKerjasamaPdf(argumen);
+			},
+		};
+	}, [params, saring, meta]);
 
 	if (memuat) {
 		return (
@@ -532,14 +543,9 @@ const KerjasamaMonitoringPage = ({ rapat = false }) => {
 						</h3>
 					</div>
 					<TombolEkspor
-						kolom={kolomEkspor}
 						ambilBaris={ambilSemuaBaris}
 						jumlah={halamanMeta?.total ?? baris.length}
-						namaBerkas="kerjasama-desa"
-						judul="Monitoring Kerja Sama Desa"
-						subjudul={`${angka(halamanMeta?.total ?? baris.length)} transaksi kerja sama${
-							Object.values(saring).some(Boolean) ? ' (hasil penyaringan)' : ' se-Kabupaten Bogor'
-						}`}
+						penyusun={penyusunEkspor}
 					/>
 				</div>
 
