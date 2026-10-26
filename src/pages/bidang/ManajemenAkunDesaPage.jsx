@@ -32,6 +32,7 @@ import {
 	FiEyeOff,
 	FiFilter,
 	FiLock,
+	FiMail,
 	FiMapPin,
 	FiPlus,
 	FiPower,
@@ -231,14 +232,6 @@ const warnaAvatar = (nama) => {
 	return WARNA_AVATAR[jumlah % WARNA_AVATAR.length];
 };
 
-/** Hak akses yang diberikan bidang ini → pekat, karena inilah yang bisa diubah. */
-const ChipMilikBidang = ({ children }) => (
-	<span className="inline-flex items-center gap-1 rounded-lg bg-slate-900 px-2 py-1 text-[11px] font-semibold text-white">
-		<FiCheck className="h-3 w-3" />
-		{children}
-	</span>
-);
-
 const KotakGalat = ({ pesan }) => (
 	<div className="mx-auto mt-10 max-w-2xl rounded-2xl border border-amber-200 bg-amber-50 p-6 text-center">
 		<FiAlertCircle className="mx-auto h-8 w-8 text-amber-500" />
@@ -249,19 +242,18 @@ const KotakGalat = ({ pesan }) => (
 
 /** Kerangka kartu selama akun dimuat — menahan tinggi daftar supaya tidak melompat. */
 const KerangkaKartu = () => (
-	<div className="animate-pulse rounded-2xl border border-slate-200 bg-white p-4">
+	<div className="animate-pulse rounded-2xl border border-slate-200/90 bg-white p-4">
 		<div className="flex gap-3">
-			<div className="h-10 w-10 shrink-0 rounded-xl bg-slate-200" />
-			<div className="min-w-0 flex-1 space-y-2">
-				<div className="h-3.5 w-2/5 rounded bg-slate-200" />
-				<div className="h-3 w-3/5 rounded bg-slate-100" />
-				<div className="h-3 w-1/2 rounded bg-slate-100" />
+			<div className="h-11 w-11 shrink-0 rounded-full bg-slate-200" />
+			<div className="min-w-0 flex-1 space-y-2 pt-1">
+				<div className="h-3.5 w-2/5 rounded-full bg-slate-200" />
+				<div className="h-3 w-3/5 rounded-full bg-slate-100" />
 			</div>
 		</div>
-		<div className="mt-4 flex gap-1.5 border-t border-slate-100 pt-3">
-			<div className="h-6 w-24 rounded-lg bg-slate-100" />
-			<div className="h-6 w-20 rounded-lg bg-slate-100" />
-			<div className="h-6 w-28 rounded-lg bg-slate-100" />
+		<div className="mt-3 h-9 rounded-xl bg-slate-50" />
+		<div className="mt-3 flex items-center justify-between">
+			<div className="h-6 w-28 rounded-full bg-slate-100" />
+			<div className="h-3 w-20 rounded-full bg-slate-100" />
 		</div>
 	</div>
 );
@@ -298,25 +290,48 @@ const BarisAkunRingkas = ({ user, aksi }) => (
 );
 
 /**
+ * Nama dan jabatan yang diketik HURUF BESAR SEMUA dirapikan untuk tampilan
+ * saja ("AHMAD HAERUN" → "Ahmad Haerun"); isian di form tetap apa adanya.
+ * Kata berisi titik atau ≤ 2 huruf (gelar seperti "SH", "S.Sos") dibiarkan.
+ */
+const rapikanHuruf = (teks) => {
+	const s = String(teks || "").trim();
+	if (!s || s !== s.toUpperCase() || !/[A-Z]/.test(s)) return s;
+	return s
+		.split(/\s+/)
+		.map((k) => (k.includes(".") || k.length <= 2 ? k : k[0] + k.slice(1).toLowerCase()))
+		.join(" ");
+};
+
+/**
  * Satu akun operator.
  *
- * Hak akses dari bidang LAIN sengaja diringkas jadi satu lencana berpenghitung,
- * bukan satu chip per fitur. Di lapangan sebagian besar akun desa memegang
- * hampir seluruh katalog, sehingga menampilkan semuanya membuat tiap kartu
- * setinggi dua baris chip dan mengubur satu-satunya hal yang bisa diubah staf
- * di halaman ini: fitur bidangnya sendiri. Rinciannya tetap ada, tinggal diklik.
+ * Kartu ini dibaca sambil lalu di daftar ratusan akun, jadi yang ditonjolkan
+ * hanya yang BERBEDA antar akun: siapa orangnya, desanya, emailnya, dan apakah
+ * akunnya sudah dipakai. Versi sebelumnya memasang chip hitam per fitur di
+ * setiap kartu — di halaman modul isinya selalu sama persis, sehingga deretan
+ * chip identik itulah yang paling menarik mata. Sekarang hak akses bidang ini
+ * diringkas jadi satu lencana "Akses lengkap", dan yang diberi warna justru
+ * kekurangannya: fitur yang BELUM dipegang.
+ *
+ * Hak akses dari bidang LAIN tetap diringkas jadi satu tautan berpenghitung;
+ * rinciannya tinggal diklik.
  */
 // `ref` diteruskan ke motion.article: AnimatePresence mode="popLayout" butuh
 // elemen aslinya untuk mengukur kartu yang sedang keluar.
-const KartuAkun = ({ ref, user, urutan = 0, labelPermission, onUbah, onUbahStatus }) => {
+const KartuAkun = ({ ref, user, urutan = 0, katalogKunci = [], labelPermission, onUbah, onUbahStatus }) => {
 	const [rincianTerbuka, setRincianTerbuka] = useState(false);
 	const [tersalin, setTersalin] = useState(false);
 
 	const milikBidang = user.permissions_dikelola || [];
 	const milikBidangLain = user.permissions_bidang_lain || [];
 	const tanpaAkses = !user.permissions?.length;
+	const kurang = katalogKunci.filter((k) => !milikBidang.includes(k));
+	const lengkap = katalogKunci.length > 0 && kurang.length === 0;
 	const daring = user.is_active && sedangDaring(user.last_active_at);
 	const terakhirAktif = waktuRelatif(user.last_active_at);
+	const nama = rapikanHuruf(user.name);
+	const label = (k) => labelPermission.get(k) || k;
 
 	// Email inilah yang paling sering dibacakan ke desa lewat telepon/WA.
 	const salinEmail = async () => {
@@ -338,195 +353,203 @@ const KartuAkun = ({ ref, user, urutan = 0, labelPermission, onUbah, onUbahStatu
 			initial="awal"
 			animate="tampil"
 			exit="keluar"
-			whileHover={{ y: -3 }}
+			whileHover={{ y: -2 }}
 			transition={PEGAS}
-			className="group relative overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm transition-[border-color,box-shadow] duration-200 hover:border-slate-300 hover:shadow-[0_12px_32px_-12px_rgba(15,23,42,0.25)]"
+			className={`group relative flex flex-col rounded-2xl border p-4 transition-[border-color,box-shadow] duration-200 hover:shadow-[0_10px_30px_-14px_rgba(15,23,42,0.22)] ${
+				user.is_active
+					? "border-slate-200/90 bg-white hover:border-slate-300"
+					: "border-dashed border-slate-300 bg-slate-50/70"
+			}`}
 		>
-			{/* Pita status di tepi kiri: keadaan akun terbaca sebelum teksnya dibaca. */}
-			<motion.span
-				aria-hidden
-				initial={{ scaleY: 0 }}
-				animate={{ scaleY: 1 }}
-				transition={{ ...PEGAS, delay: Math.min(urutan, 12) * 0.035 + 0.1 }}
-				className={`absolute inset-y-0 left-0 w-1 origin-top ${user.is_active ? "bg-gradient-to-b from-emerald-400 to-emerald-600" : "bg-slate-300"}`}
-			/>
-			{/* Kilau tipis yang menyapu kartu saat disorot. */}
-			<span
-				aria-hidden
-				className="pointer-events-none absolute inset-y-0 -left-1/2 w-1/2 -skew-x-12 bg-gradient-to-r from-transparent via-white/60 to-transparent opacity-0 transition-all duration-700 group-hover:left-[120%] group-hover:opacity-100"
-			/>
-
-			<div className="relative p-4 pl-5">
-				<div className="flex items-start gap-3">
-					<span className="relative shrink-0" aria-hidden>
-						<span
-							className={`flex h-11 w-11 items-center justify-center rounded-xl text-[13px] font-bold ring-1 ring-inset ring-black/5 transition-transform duration-300 group-hover:scale-105 group-hover:-rotate-3 ${warnaAvatar(user.name)} ${user.is_active ? "" : "opacity-50 grayscale"}`}
-						>
-							{inisialNama(user.name)}
+			{/* ── Identitas + aksi ── */}
+			<div className="flex items-start gap-3">
+				<span className="relative shrink-0" aria-hidden>
+					<span
+						className={`flex h-11 w-11 items-center justify-center rounded-full text-[13px] font-semibold ring-2 ring-white transition-transform duration-300 group-hover:scale-105 ${warnaAvatar(user.name)} ${user.is_active ? "" : "opacity-50 grayscale"}`}
+					>
+						{inisialNama(user.name)}
+					</span>
+					{daring && (
+						<span className="absolute bottom-0 right-0 flex h-3 w-3">
+							<span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-60" />
+							<span className="relative inline-flex h-3 w-3 rounded-full border-2 border-white bg-emerald-500" />
 						</span>
-						{daring && (
-							<span className="absolute -bottom-0.5 -right-0.5 flex h-3.5 w-3.5">
-								<span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-60" />
-								<span className="relative inline-flex h-3.5 w-3.5 rounded-full border-2 border-white bg-emerald-500" />
+					)}
+				</span>
+
+				<div className="min-w-0 flex-1 pt-0.5">
+					<div className="flex items-center gap-2">
+						<h3 className="truncate text-[15px] font-semibold leading-tight text-slate-900" title={user.name}>
+							{nama}
+						</h3>
+						{!user.is_active && (
+							<span className="shrink-0 rounded-full bg-slate-200 px-2 py-0.5 text-[10.5px] font-semibold text-slate-600">
+								Nonaktif
 							</span>
 						)}
-					</span>
-
-					<div className="min-w-0 flex-1">
-						<div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-							<h3 className="text-[14.5px] font-bold leading-tight text-slate-900">{user.name}</h3>
-							{user.jabatan_desa && (
-								<span className="rounded-md bg-slate-100 px-1.5 py-0.5 text-[10.5px] font-semibold uppercase tracking-wide text-slate-600">
-									{user.jabatan_desa}
-								</span>
-							)}
-							{!user.is_active && (
-								<span className="rounded-md bg-slate-200 px-1.5 py-0.5 text-[10.5px] font-bold uppercase tracking-wide text-slate-600">
-									Nonaktif
-								</span>
-							)}
-						</div>
-
-						<div className="mt-1 flex items-start gap-1">
-							<p className="min-w-0 break-all text-[12.5px] leading-snug text-slate-500">{user.email}</p>
-							<button
-								type="button"
-								onClick={salinEmail}
-								title="Salin email"
-								aria-label="Salin email"
-								className="relative -my-0.5 shrink-0 rounded-md p-1 text-slate-300 transition-colors hover:bg-slate-100 hover:text-slate-600"
-							>
-								<AnimatePresence mode="wait" initial={false}>
-									<motion.span
-										key={tersalin ? "ok" : "salin"}
-										initial={{ scale: 0.4, opacity: 0, rotate: -30 }}
-										animate={{ scale: 1, opacity: 1, rotate: 0 }}
-										exit={{ scale: 0.4, opacity: 0 }}
-										transition={{ duration: 0.15 }}
-										className="block"
-									>
-										{tersalin ? (
-											<FiCheck className="h-3.5 w-3.5 text-emerald-600" />
-										) : (
-											<FiCopy className="h-3.5 w-3.5" />
-										)}
-									</motion.span>
-								</AnimatePresence>
-							</button>
-						</div>
-
-						<div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-[11.5px] leading-snug text-slate-400">
-							{user.desa && (
-								<span className="flex min-w-0 items-start gap-1">
-									<FiMapPin className="mt-[2px] h-3 w-3 shrink-0" />
-									<span className="min-w-0">
-										{sebutanDesa(user.desa)}
-										{user.desa.kecamatan ? ` · Kec. ${user.desa.kecamatan.nama}` : ""}
-									</span>
-								</span>
-							)}
-							<span
-								className={`flex items-center gap-1 ${daring ? "font-semibold text-emerald-600" : terakhirAktif ? "" : "text-amber-600"}`}
-								title={user.last_active_at ? new Date(user.last_active_at).toLocaleString("id-ID") : undefined}
-							>
-								<FiClock className="h-3 w-3 shrink-0" />
-								{daring ? "Sedang daring" : terakhirAktif ? `Aktif ${terakhirAktif}` : "Belum pernah login"}
+					</div>
+					<p className="mt-1 truncate text-[12.5px] leading-snug text-slate-500">
+						{user.jabatan_desa && (
+							<span className="font-medium text-slate-600">{rapikanHuruf(user.jabatan_desa)}</span>
+						)}
+						{user.jabatan_desa && user.desa && <span className="mx-1.5 text-slate-300">•</span>}
+						{user.desa && (
+							<span title={user.desa.kecamatan ? `Kec. ${user.desa.kecamatan.nama}` : undefined}>
+								{sebutanDesa(user.desa)}
+								{user.desa.kecamatan && <span className="text-slate-400">, {user.desa.kecamatan.nama}</span>}
 							</span>
-						</div>
-					</div>
-
-					<div className="flex shrink-0 items-center gap-1.5">
-						<motion.button
-							whileTap={{ scale: 0.94 }}
-							onClick={() => onUbah(user)}
-							className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-[12px] font-semibold text-slate-700 transition-colors hover:border-slate-900 hover:bg-slate-900 hover:text-white"
-						>
-							<FiEdit2 className="h-3.5 w-3.5" />
-							<span className="hidden sm:inline">Ubah</span>
-						</motion.button>
-						{/* Menonaktifkan akun jarang dilakukan dan memutus kerja satu desa,
-						    jadi tombolnya ikon saja — tetap terjangkau, tapi tidak bersaing
-						    perhatian dengan Ubah seperti pada tata letak sebelumnya. */}
-						<motion.button
-							whileTap={{ scale: 0.9 }}
-							whileHover={{ rotate: 90 }}
-							onClick={() => onUbahStatus(user)}
-							title={user.is_active ? "Nonaktifkan akun" : "Aktifkan akun"}
-							aria-label={user.is_active ? "Nonaktifkan akun" : "Aktifkan akun"}
-							className={`inline-flex h-[30px] w-[30px] items-center justify-center rounded-lg border transition-colors ${
-								user.is_active
-									? "border-slate-200 text-slate-400 hover:border-red-200 hover:bg-red-50 hover:text-red-600"
-									: "border-emerald-200 bg-emerald-50 text-emerald-600 hover:bg-emerald-100"
-							}`}
-						>
-							<FiPower className="h-3.5 w-3.5" />
-						</motion.button>
-					</div>
+						)}
+					</p>
 				</div>
 
-				<div className="mt-3 flex flex-wrap items-center gap-1.5 border-t border-slate-100 pt-3">
-					{milikBidang.map((key, i) => (
+				{/* Aksi berupa ikon bundar yang tenang; menguat saat kartu disorot. */}
+				<div className="-mr-1 -mt-1 flex shrink-0 items-center">
+					<motion.button
+						whileTap={{ scale: 0.9 }}
+						onClick={() => onUbah(user)}
+						title="Ubah akun"
+						aria-label="Ubah akun"
+						className="inline-flex h-8 w-8 items-center justify-center rounded-full text-slate-400 transition-colors hover:bg-slate-900 hover:text-white group-hover:text-slate-700"
+					>
+						<FiEdit2 className="h-[15px] w-[15px]" />
+					</motion.button>
+					<motion.button
+						whileTap={{ scale: 0.9 }}
+						onClick={() => onUbahStatus(user)}
+						title={user.is_active ? "Nonaktifkan akun" : "Aktifkan akun"}
+						aria-label={user.is_active ? "Nonaktifkan akun" : "Aktifkan akun"}
+						className={`inline-flex h-8 w-8 items-center justify-center rounded-full transition-colors ${
+							user.is_active
+								? "text-slate-300 hover:bg-red-50 hover:text-red-600 group-hover:text-slate-500"
+								: "bg-emerald-50 text-emerald-600 hover:bg-emerald-100"
+						}`}
+					>
+						<FiPower className="h-[15px] w-[15px]" />
+					</motion.button>
+				</div>
+			</div>
+
+			{/* ── Email login: diperlakukan sebagai "kredensial", bisa disalin. ── */}
+			<div className="mt-3 flex items-center gap-2 rounded-xl bg-slate-50 py-1.5 pl-3 pr-1.5 ring-1 ring-inset ring-slate-100 transition-colors group-hover:bg-slate-100/70">
+				<FiMail className="h-3.5 w-3.5 shrink-0 text-slate-400" />
+				<span className="min-w-0 flex-1 truncate text-[12.5px] text-slate-600" title={user.email}>
+					{user.email}
+				</span>
+				<button
+					type="button"
+					onClick={salinEmail}
+					title="Salin email"
+					aria-label="Salin email"
+					className="relative shrink-0 rounded-lg p-1.5 text-slate-400 transition-colors hover:bg-white hover:text-slate-700 hover:shadow-sm"
+				>
+					<AnimatePresence mode="wait" initial={false}>
 						<motion.span
-							key={key}
-							initial={{ opacity: 0, scale: 0.8 }}
-							animate={{ opacity: 1, scale: 1 }}
-							transition={{ ...PEGAS, delay: Math.min(urutan, 12) * 0.035 + 0.15 + i * 0.04 }}
+							key={tersalin ? "ok" : "salin"}
+							initial={{ scale: 0.4, opacity: 0, rotate: -30 }}
+							animate={{ scale: 1, opacity: 1, rotate: 0 }}
+							exit={{ scale: 0.4, opacity: 0 }}
+							transition={{ duration: 0.15 }}
+							className="block"
 						>
-							<ChipMilikBidang>{labelPermission.get(key) || key}</ChipMilikBidang>
+							{tersalin ? <FiCheck className="h-3.5 w-3.5 text-emerald-600" /> : <FiCopy className="h-3.5 w-3.5" />}
 						</motion.span>
-					))}
+					</AnimatePresence>
+				</button>
+			</div>
+
+			{/* ── Status akses + terakhir aktif ── */}
+			<div className="mt-3 flex flex-wrap items-center justify-between gap-x-3 gap-y-2">
+				<div className="flex min-w-0 flex-wrap items-center gap-1.5">
+					{tanpaAkses ? (
+						<span className="inline-flex items-center gap-1 rounded-full bg-amber-50 px-2.5 py-1 text-[11.5px] font-medium text-amber-700 ring-1 ring-inset ring-amber-200">
+							<FiAlertCircle className="h-3 w-3" />
+							Belum ada hak akses
+						</span>
+					) : lengkap ? (
+						<span
+							title={milikBidang.map(label).join(", ")}
+							className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2.5 py-1 text-[11.5px] font-medium text-emerald-700 ring-1 ring-inset ring-emerald-200/70"
+						>
+							<FiCheck className="h-3 w-3" />
+							Akses lengkap
+						</span>
+					) : (
+						<>
+							{milikBidang.map((k) => (
+								<span
+									key={k}
+									className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2.5 py-1 text-[11.5px] font-medium text-slate-600"
+								>
+									<FiCheck className="h-3 w-3 text-emerald-600" />
+									{label(k)}
+								</span>
+							))}
+							{kurang.length > 0 && (
+								<span
+									title={`Belum dipegang: ${kurang.map(label).join(", ")}`}
+									className="inline-flex items-center gap-1 rounded-full bg-amber-50 px-2.5 py-1 text-[11.5px] font-medium text-amber-700 ring-1 ring-inset ring-amber-200"
+								>
+									Belum: {kurang.map(label).join(", ")}
+								</span>
+							)}
+						</>
+					)}
 
 					{milikBidangLain.length > 0 && (
 						<button
 							type="button"
 							onClick={() => setRincianTerbuka((t) => !t)}
 							aria-expanded={rincianTerbuka}
-							className="inline-flex items-center gap-1 rounded-lg border border-dashed border-slate-300 bg-slate-50 px-2 py-1 text-[11px] font-medium text-slate-500 transition-colors hover:bg-slate-100"
+							className="inline-flex items-center gap-0.5 rounded-full px-2 py-1 text-[11.5px] font-medium text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-600"
 						>
-							<FiLock className="h-3 w-3" />
-							{milikBidangLain.length} fitur bidang lain
+							+{milikBidangLain.length} bidang lain
 							<motion.span animate={{ rotate: rincianTerbuka ? 180 : 0 }} transition={PEGAS} className="block">
 								<FiChevronDown className="h-3 w-3" />
 							</motion.span>
 						</button>
 					)}
-
-					{tanpaAkses && (
-						<span className="inline-flex items-center gap-1 rounded-lg bg-amber-50 px-2 py-1 text-[11px] font-medium text-amber-700 ring-1 ring-inset ring-amber-200">
-							<FiAlertCircle className="h-3 w-3 animate-pulse" />
-							Belum ada hak akses — hanya bisa melihat dashboard
-						</span>
-					)}
 				</div>
 
-				{/* Hak akses bidang lain ditampilkan tapi tidak bisa disentuh — supaya
-				    staf tahu akun ini juga dipakai untuk urusan di luar bidangnya. */}
-				<AnimatePresence initial={false}>
-					{rincianTerbuka && milikBidangLain.length > 0 && (
-						<motion.div {...LIPATAN} className="overflow-hidden">
-							<div className="mt-2 rounded-xl bg-slate-50 p-2.5">
-								<p className="mb-1.5 text-[10.5px] font-semibold uppercase tracking-wide text-slate-400">
-									Diberikan bidang lain atau Admin Desa — tidak dapat Anda ubah
-								</p>
-								<div className="flex flex-wrap gap-1.5">
-									{milikBidangLain.map((key, i) => (
-										<motion.span
-											key={key}
-											initial={{ opacity: 0, y: 4 }}
-											animate={{ opacity: 1, y: 0 }}
-											transition={{ delay: i * 0.025 }}
-											className="inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-white px-2 py-1 text-[11px] font-medium text-slate-500"
-										>
-											<FiLock className="h-3 w-3" />
-											{labelPermission.get(key) || key}
-										</motion.span>
-									))}
-								</div>
-							</div>
-						</motion.div>
-					)}
-				</AnimatePresence>
+				<span
+					className={`inline-flex shrink-0 items-center gap-1.5 text-[11.5px] ${
+						daring ? "font-medium text-emerald-600" : terakhirAktif ? "text-slate-400" : "font-medium text-amber-600"
+					}`}
+					title={user.last_active_at ? new Date(user.last_active_at).toLocaleString("id-ID") : undefined}
+				>
+					<span
+						className={`h-1.5 w-1.5 rounded-full ${daring ? "bg-emerald-500" : terakhirAktif ? "bg-slate-300" : "bg-amber-400"}`}
+					/>
+					{daring ? "Sedang daring" : terakhirAktif ? `Aktif ${terakhirAktif}` : "Belum pernah login"}
+				</span>
 			</div>
+
+			{/* Hak akses bidang lain ditampilkan tapi tidak bisa disentuh — supaya
+			    staf tahu akun ini juga dipakai untuk urusan di luar bidangnya. */}
+			<AnimatePresence initial={false}>
+				{rincianTerbuka && milikBidangLain.length > 0 && (
+					<motion.div {...LIPATAN} className="overflow-hidden">
+						<div className="mt-3 rounded-xl border border-slate-100 bg-slate-50/80 p-2.5">
+							<p className="mb-1.5 text-[11px] font-medium text-slate-400">
+								Diberikan bidang lain atau Admin Desa — tidak dapat Anda ubah
+							</p>
+							<div className="flex flex-wrap gap-1.5">
+								{milikBidangLain.map((key, i) => (
+									<motion.span
+										key={key}
+										initial={{ opacity: 0, y: 4 }}
+										animate={{ opacity: 1, y: 0 }}
+										transition={{ delay: i * 0.025 }}
+										className="inline-flex items-center gap-1 rounded-full bg-white px-2.5 py-1 text-[11px] font-medium text-slate-500 ring-1 ring-inset ring-slate-200"
+									>
+										<FiLock className="h-3 w-3" />
+										{label(key)}
+									</motion.span>
+								))}
+							</div>
+						</div>
+					</motion.div>
+				)}
+			</AnimatePresence>
 		</motion.article>
 	);
 };
@@ -1081,6 +1104,7 @@ const ManajemenAkunDesaPage = ({ modul = null, tersemat = false }) => {
 	const [menyimpan, setMenyimpan] = useState(false);
 
 	const katalog = meta?.catalog || [];
+	const katalogKunci = useMemo(() => (meta?.catalog || []).map((p) => p.key), [meta]);
 	const labelPermission = useMemo(() => {
 		const peta = new Map();
 		(meta?.catalog_lengkap || []).forEach((p) => peta.set(p.key, p.label));
@@ -2157,6 +2181,7 @@ const ManajemenAkunDesaPage = ({ modul = null, tersemat = false }) => {
 									// Kartu yang ditambahkan lewat "Tampilkan lagi" mulai
 									// bergelombang dari awal lagi, bukan menunggu giliran ke-25.
 									urutan={i % UKURAN_HALAMAN}
+									katalogKunci={katalogKunci}
 									labelPermission={labelPermission}
 									onUbah={bukaUbah}
 									onUbahStatus={ubahStatus}
