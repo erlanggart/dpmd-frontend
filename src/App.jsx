@@ -276,6 +276,7 @@ const PemdesProfilDesaDetailPage = lazy(() => import("./pages/bidang/pemdes/Prof
 const ProdukHukumPemdesPage = lazy(() => import("./pages/bidang/pemdes/ProdukHukumPage"));
 const ProdukHukumBidangPage = lazy(() => import("./pages/bidang/ProdukHukumBidangPage"));
 const CoreProdukHukumPage = lazy(() => import("./pages/core-dashboard/ProdukHukumPage"));
+const CoreKerjasamaDesaPage = lazy(() => import("./pages/core-dashboard/KerjasamaDesaPage"));
 const GemaPage = lazy(() => import("./pages/core-dashboard/GemaPage"));
 const AstaDesaPage = lazy(() => import("./pages/core-dashboard/asta-desa/AstaDesaPage"));
 // Dimuat malas terpisah dari AstaDesaPage: OpenLayers + ol-ext berukuran ratusan
@@ -1851,6 +1852,9 @@ function App() {
                     path="statistik-bumdes"
                     element={<StatistikBumdes />}
                   />
+                  {/* Kerja Sama Desa — komponen pantau yang sama dengan tab SPKED.
+                      Rutenya (/api/dpmd/kerjasama-desa) hanya GET. */}
+                  <Route path="kerjasama-desa" element={<CoreKerjasamaDesaPage />} />
                   <Route
                     path="statistik-kelembagaan"
                     element={<StatistikKelembagaan />}

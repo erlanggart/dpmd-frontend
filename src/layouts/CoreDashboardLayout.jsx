@@ -18,6 +18,7 @@ import {
   Home,
   AudioLines,
   Satellite,
+  Handshake,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
@@ -36,6 +37,7 @@ const MENU_ITEMS = [
   { path: '/core-dashboard/gema', icon: AudioLines, label: 'Gema' },
   { path: '/core-dashboard/asta-desa', icon: Satellite, label: 'Asta Desa' },
   { path: '/core-dashboard/statistik-bumdes', icon: Store, label: 'Statistik BUMDes' },
+  { path: '/core-dashboard/kerjasama-desa', icon: Handshake, label: 'Kerja Sama Desa' },
   { path: '/core-dashboard/statistik-kelembagaan', icon: Landmark, label: 'Statistik Kelembagaan' },
   { path: '/core-dashboard/statistik-profil-desa', icon: MapPin, label: 'Statistik Profil Desa' },
   { path: '/core-dashboard/statistik-produk-hukum', icon: Scale, label: 'Produk Hukum' },

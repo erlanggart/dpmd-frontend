@@ -33,6 +33,7 @@ import {
 import Swal from 'sweetalert2';
 import api from '../../../../api';
 import TombolEkspor from '../../../../components/shared/TombolEkspor';
+import escapeHtml from '../../../../utils/escapeHtml';
 import {
 	LuChartPie,
 	LuFileText,
@@ -103,7 +104,12 @@ const Petunjuk = ({ active, payload, satuan = 'kerja sama' }) => {
 	);
 };
 
-const KerjasamaMonitoringPage = () => {
+/**
+ * `rapat` melepas bantalan luar, untuk halaman yang sudah punya bingkai sendiri
+ * (Core Dashboard). Isinya tetap satu komponen yang sama dengan tab SPKED,
+ * supaya angkanya mustahil berbeda di kedua tempat.
+ */
+const KerjasamaMonitoringPage = ({ rapat = false }) => {
 	const [meta, setMeta] = useState(null);
 	const [statistik, setStatistik] = useState(null);
 	const [baris, setBaris] = useState([]);
@@ -189,14 +195,16 @@ const KerjasamaMonitoringPage = () => {
 				return Swal.fire({ icon: 'success', title: 'Seluruh desa sudah mengunggah Perdes' });
 			}
 
+			// Semua nilai di-escape: nomor Perdes diketik bebas oleh desa, dan Swal
+			// merender `html` lewat innerHTML di sesi staf yang membukanya.
 			const isi = daftar
 				.slice(0, 200)
 				.map(
 					(d) =>
-						`<tr><td style="padding:4px 8px;border-bottom:1px solid #f1f5f9">${d.kecamatan?.nama || '-'}</td>` +
-						`<td style="padding:4px 8px;border-bottom:1px solid #f1f5f9">${d.nama}</td>` +
+						`<tr><td style="padding:4px 8px;border-bottom:1px solid #f1f5f9">${escapeHtml(d.kecamatan?.nama || '-')}</td>` +
+						`<td style="padding:4px 8px;border-bottom:1px solid #f1f5f9">${escapeHtml(d.nama)}</td>` +
 						`<td style="padding:4px 8px;border-bottom:1px solid #f1f5f9;color:#64748b">${
-							d.nomor_perdes ? `nomor ${d.nomor_perdes}, berkas belum` : 'belum sama sekali'
+							d.nomor_perdes ? `nomor ${escapeHtml(d.nomor_perdes)}, berkas belum` : 'belum sama sekali'
 						}</td></tr>`,
 				)
 				.join('');
@@ -297,7 +305,7 @@ const KerjasamaMonitoringPage = () => {
 	const dataKecamatan = (statistik?.top_kecamatan || []).map((k) => ({ ...k, nama: k.nama }));
 
 	return (
-		<div className="space-y-5 p-5">
+		<div className={rapat ? 'space-y-5' : 'space-y-5 p-5'}>
 			{/* Penyaring dalam SATU baris di atas grafik, bukan tersebar per panel. */}
 			<div className="flex flex-wrap items-center gap-2.5">
 				<div className="relative min-w-[220px] flex-1">

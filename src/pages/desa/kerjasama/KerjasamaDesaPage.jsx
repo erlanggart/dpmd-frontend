@@ -15,12 +15,14 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Swal from "sweetalert2";
 import api from "../../../api";
+import escapeHtml from "../../../utils/escapeHtml";
 import {
 	LuBuilding2,
 	LuCheck,
 	LuChevronRight,
 	LuCircleAlert,
 	LuFileText,
+	LuLink,
 	LuLoader,
 	LuPencil,
 	LuPlus,
@@ -90,7 +92,7 @@ const Penanda = ({ ada, anak }) => (
 
 // ── Panel legalitas ─────────────────────────────────────────────────────────
 
-const PanelLegalitas = ({ legalitas, onUnggah, onSimpanNomor, menyimpan }) => {
+const PanelLegalitas = ({ legalitas, onUnggah, onSimpanNomor, onTautkan, menyimpan }) => {
 	const lengkap = Boolean(legalitas?.lengkap);
 
 	return (
@@ -145,6 +147,10 @@ const PanelLegalitas = ({ legalitas, onUnggah, onSimpanNomor, menyimpan }) => {
 									Lihat
 								</a>
 							)}
+							<button onClick={onTautkan} className={TOMBOL_HALUS} disabled={menyimpan}>
+								<LuLink className="h-4 w-4" />
+								Pilih lain
+							</button>
 							<button onClick={onUnggah} className={TOMBOL_HALUS} disabled={menyimpan}>
 								<LuUpload className="h-4 w-4" />
 								Ganti
@@ -168,9 +174,15 @@ const PanelLegalitas = ({ legalitas, onUnggah, onSimpanNomor, menyimpan }) => {
 								</p>
 							</div>
 						</div>
-						<div className="flex gap-2">
+						<div className="flex flex-wrap gap-2">
 							<button onClick={onSimpanNomor} className={TOMBOL_HALUS} disabled={menyimpan}>
 								Catat nomor saja
+							</button>
+							{/* Desa yang sudah mengunggah Perdes-nya lewat menu Produk Hukum
+							    cukup menautkannya — mengunggah ulang hanya membuat duplikat. */}
+							<button onClick={onTautkan} className={TOMBOL_HALUS} disabled={menyimpan}>
+								<LuLink className="h-4 w-4" />
+								Pilih dari Produk Hukum
 							</button>
 							<button onClick={onUnggah} className={TOMBOL_UTAMA} disabled={menyimpan}>
 								<LuUpload className="h-4 w-4" />
@@ -393,9 +405,9 @@ const KerjasamaDesaPage = () => {
 			html:
 				`<div style="text-align:left;font-size:13px">` +
 				`<label style="display:block;margin-bottom:4px;font-weight:600">Nomor Perdes</label>` +
-				`<input id="kd-nomor2" class="swal2-input" style="margin:0 0 10px;width:100%" value="${meta?.legalitas?.nomor_perdes || ""}">` +
+				`<input id="kd-nomor2" class="swal2-input" style="margin:0 0 10px;width:100%" value="${escapeHtml(meta?.legalitas?.nomor_perdes)}">` +
 				`<label style="display:block;margin-bottom:4px;font-weight:600">Tahun</label>` +
-				`<input id="kd-tahun2" type="number" class="swal2-input" style="margin:0;width:100%" value="${meta?.legalitas?.tahun_perdes || new Date().getFullYear()}">` +
+				`<input id="kd-tahun2" type="number" class="swal2-input" style="margin:0;width:100%" value="${escapeHtml(meta?.legalitas?.tahun_perdes || new Date().getFullYear())}">` +
 				`<p style="margin:10px 0 0;color:#64748b;font-size:11.5px">Berkasnya bisa menyusul. Selama berkasnya belum ada, legalitas desa ini masih terhitung belum lengkap.</p>` +
 				`</div>`,
 			showCancelButton: true,
@@ -419,6 +431,61 @@ const KerjasamaDesaPage = () => {
 			});
 			await muatMeta();
 			Swal.fire({ icon: "success", title: "Nomor tercatat", timer: 1500, showConfirmButton: false });
+		} catch (error) {
+			Swal.fire("Gagal menyimpan", pesanGalat(error, "Terjadi kesalahan."), "error");
+		} finally {
+			setMenyimpan(false);
+		}
+	};
+
+	const tautkanPerdes = async () => {
+		let pilihan;
+		try {
+			const res = await api.get("/desa/kerjasama/legalitas/perdes-tersedia");
+			pilihan = res.data?.data || [];
+		} catch (error) {
+			return Swal.fire("Gagal memuat", pesanGalat(error, "Terjadi kesalahan."), "error");
+		}
+
+		if (pilihan.length === 0) {
+			return Swal.fire({
+				icon: "info",
+				title: "Belum ada Perdes",
+				text: "Belum ada Perdes berstatus berlaku di menu Produk Hukum desa ini. Unggah Perdes-nya langsung dari sini.",
+				confirmButtonColor: "#0f172a",
+			});
+		}
+
+		// Label opsi di-escape: SweetAlert2 menyisipkannya sebagai HTML, dan judul
+		// produk hukum diketik bebas oleh desa.
+		const opsi = Object.fromEntries(
+			pilihan.map((p) => [p.id, escapeHtml(`No. ${p.nomor} Tahun ${p.tahun} — ${p.judul}`)]),
+		);
+
+		const { value: id } = await Swal.fire({
+			title: "Pilih Perdes dari Produk Hukum",
+			input: "select",
+			inputOptions: opsi,
+			inputValue: meta?.legalitas?.produk_hukum?.id || "",
+			inputPlaceholder: "— Pilih Perdes —",
+			showCancelButton: true,
+			confirmButtonText: "Tautkan",
+			cancelButtonText: "Batal",
+			confirmButtonColor: "#0f172a",
+			inputValidator: (nilai) => (!nilai ? "Pilih salah satu Perdes" : undefined),
+		});
+		if (!id) return;
+
+		const dipilih = pilihan.find((p) => p.id === id);
+		setMenyimpan(true);
+		try {
+			await api.put("/desa/kerjasama/legalitas", {
+				nomor_perdes: dipilih.nomor,
+				tahun_perdes: dipilih.tahun,
+				produk_hukum_id: dipilih.id,
+			});
+			await muatMeta();
+			Swal.fire({ icon: "success", title: "Perdes tertaut", timer: 1500, showConfirmButton: false });
 		} catch (error) {
 			Swal.fire("Gagal menyimpan", pesanGalat(error, "Terjadi kesalahan."), "error");
 		} finally {
@@ -459,6 +526,27 @@ const KerjasamaDesaPage = () => {
 		if (!form.jenis) return Swal.fire("Belum lengkap", "Pilih jenis kerja sama.", "warning");
 		if (!form.bidang) return Swal.fire("Belum lengkap", "Pilih bidang kerja sama.", "warning");
 		if (!form.mitra.trim()) return Swal.fire("Belum lengkap", "Isi mitra kerja sama.", "warning");
+
+		// Server melepas (dan membuang) dokumen yang tidak berlaku untuk jenis
+		// baru. Itu tidak bisa dibatalkan, jadi ditanyakan dulu.
+		if (entriDiubah && entriDiubah.jenis !== form.jenis) {
+			const dipakai = (petaJenis.get(form.jenis)?.dokumen || []).map((d) => d.field);
+			const hilang = (entriDiubah.dokumen || []).filter((d) => d.file && !dipakai.includes(d.field));
+			if (hilang.length) {
+				const konfirmasi = await Swal.fire({
+					icon: "warning",
+					title: "Ganti jenis kerja sama?",
+					html:
+						`Dokumen berikut tidak berlaku untuk jenis baru dan akan <b>dihapus</b>:<br/>` +
+						`<b>${hilang.map((d) => escapeHtml(d.label)).join(", ")}</b>`,
+					showCancelButton: true,
+					confirmButtonText: "Ya, ganti jenis",
+					cancelButtonText: "Batal",
+					confirmButtonColor: "#dc2626",
+				});
+				if (!konfirmasi.isConfirmed) return;
+			}
+		}
 
 		setMenyimpan(true);
 		let id;
@@ -503,7 +591,7 @@ const KerjasamaDesaPage = () => {
 			return Swal.fire({
 				icon: "warning",
 				title: "Data tersimpan, sebagian dokumen gagal",
-				html: `${gagal.join("<br/>")}<br/><span style="font-size:12px;color:#64748b">Unggah ulang lewat tautan di baris daftar.</span>`,
+				html: `${gagal.map(escapeHtml).join("<br/>")}<br/><span style="font-size:12px;color:#64748b">Unggah ulang lewat tautan di baris daftar.</span>`,
 			});
 		}
 		const belumAda = (petaJenis.get(form.jenis)?.dokumen || []).some((d) => {
@@ -530,7 +618,7 @@ const KerjasamaDesaPage = () => {
 		const konfirmasi = await Swal.fire({
 			icon: "warning",
 			title: "Hapus kerja sama ini?",
-			html: `<b>${entri.mitra}</b><br/><span style="font-size:13px">Dokumen yang sudah diunggah ikut terhapus.</span>`,
+			html: `<b>${escapeHtml(entri.mitra)}</b><br/><span style="font-size:13px">Dokumen yang sudah diunggah ikut terhapus.</span>`,
 			showCancelButton: true,
 			confirmButtonText: "Ya, hapus",
 			cancelButtonText: "Batal",
@@ -621,6 +709,7 @@ const KerjasamaDesaPage = () => {
 				legalitas={meta?.legalitas}
 				onUnggah={unggahPerdes}
 				onSimpanNomor={catatNomorSaja}
+				onTautkan={tautkanPerdes}
 				menyimpan={menyimpan}
 			/>
 
