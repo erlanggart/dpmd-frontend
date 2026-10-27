@@ -385,7 +385,7 @@ const KartuKecamatan = ({ baris, urutan, params, fiturBidang, onTambah, onBeruba
 	);
 };
 
-const AkunKecamatanPanel = ({ params }) => {
+const AkunKecamatanPanel = ({ params, onRingkasan }) => {
 	const [baris, setBaris] = useState([]);
 	const [fiturBidang, setFiturBidang] = useState([]);
 	const [memuat, setMemuat] = useState(true);
@@ -398,15 +398,19 @@ const AkunKecamatanPanel = ({ params }) => {
 	const muat = useCallback(async () => {
 		try {
 			const res = await api.get("/bidang/akun-desa/kecamatan", { params });
-			setBaris(res.data?.data || []);
-			setFiturBidang(res.data?.meta?.fitur_kecamatan || []);
+			const data = res.data?.data || [];
+			const fitur = res.data?.meta?.fitur_kecamatan || [];
+			setBaris(data);
+			setFiturBidang(fitur);
+			// Untuk kepala halaman induk: jumlah operator urusan bidang ini & fiturnya.
+			onRingkasan?.({ operator: data.reduce((n, r) => n + operatorBidang(r).length, 0), fitur });
 			setGalat(null);
 		} catch (error) {
 			setGalat(pesanError(error, "Tidak dapat memuat akun kecamatan."));
 		} finally {
 			setMemuat(false);
 		}
-	}, [params]);
+	}, [params, onRingkasan]);
 
 	useEffect(() => {
 		muat();

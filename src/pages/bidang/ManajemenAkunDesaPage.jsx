@@ -21,6 +21,7 @@ import toast from "react-hot-toast";
 import api from "../../api";
 import escapeHtml from "../../utils/escapeHtml";
 import AkunKecamatanPanel from "./AkunKecamatanPanel";
+import { KECAMATAN_PERMISSIONS } from "../../constants/kecamatanPermissions";
 import {
 	FiAlertCircle,
 	FiCheck,
@@ -1062,6 +1063,16 @@ const ManajemenAkunDesaPage = ({ modul = null, tersemat = false }) => {
 	const [meta, setMeta] = useState(null);
 	// "desa" = akun operator desa; "kecamatan" = satu akun per kecamatan, lihat/reset sandi saja.
 	const [tampilan, setTampilan] = useState("desa");
+	// Diisi panel akun kecamatan, supaya kepala halaman ikut berganti isi.
+	const [ringkasKecamatan, setRingkasKecamatan] = useState({ operator: 0, fitur: [] });
+	const modeKecamatan = tampilan === "kecamatan";
+	const fiturKecamatan = useMemo(
+		() =>
+			ringkasKecamatan.fitur.length > 0
+				? KECAMATAN_PERMISSIONS.filter((p) => [...ringkasKecamatan.fitur, "pesan"].includes(p.key))
+				: [],
+		[ringkasKecamatan.fitur],
+	);
 	const [modalGenerate, setModalGenerate] = useState(false);
 	const [desas, setDesas] = useState([]);
 	const [memuatAwal, setMemuatAwal] = useState(true);
@@ -1649,10 +1660,18 @@ const ManajemenAkunDesaPage = ({ modul = null, tersemat = false }) => {
 						</motion.span>
 						<div className="min-w-0">
 						<h1 className="text-xl font-bold tracking-tight sm:text-2xl">
-							{meta?.modul ? `Akun Operator ${meta.modul.label}` : "Akun Operator Desa"}
+							{modeKecamatan
+								? `Akun Kecamatan${meta?.modul ? ` — ${meta.modul.label}` : ""}`
+								: meta?.modul
+									? `Akun Operator ${meta.modul.label}`
+									: "Akun Operator Desa"}
 						</h1>
 						<p className="mt-1 text-[13px] text-slate-400">
-							{meta?.modul
+							{modeKecamatan
+								? ringkasKecamatan.fitur.length > 0
+									? `Akun utama & operator kecamatan yang mengurus ${meta?.modul?.label || "fitur bidang Anda"}`
+									: "Akun utama kecamatan — fitur ini tidak ada di halaman kecamatan"
+								: meta?.modul
 								? `Petugas desa yang mengurus ${meta.modul.label}${meta?.bidang?.nama ? ` — ${meta.bidang.nama}` : ""}`
 								: meta?.bidang?.nama
 									? `Dibuat atas nama ${meta.bidang.nama}`
@@ -1667,10 +1686,10 @@ const ManajemenAkunDesaPage = ({ modul = null, tersemat = false }) => {
 						className="shrink-0 rounded-2xl bg-white/[0.07] px-4 py-2.5 text-center ring-1 ring-inset ring-white/10 backdrop-blur-sm"
 					>
 						<div className="text-2xl font-bold leading-none">
-							<AngkaBergerak nilai={meta?.total_akun_dikelola ?? 0} />
+							<AngkaBergerak nilai={modeKecamatan ? ringkasKecamatan.operator : meta?.total_akun_dikelola ?? 0} />
 						</div>
 						<div className="mt-1 text-[10.5px] font-medium uppercase tracking-wider text-slate-400">
-							Akun dikelola
+							{modeKecamatan ? "Operator kecamatan" : "Akun dikelola"}
 						</div>
 					</motion.div>
 				</div>
@@ -1681,7 +1700,10 @@ const ManajemenAkunDesaPage = ({ modul = null, tersemat = false }) => {
 						Fitur yang bisa Anda berikan
 					</span>
 					<div className="mt-2.5 flex flex-wrap gap-1.5">
-						{katalog.map((p, i) => (
+						{modeKecamatan && fiturKecamatan.length === 0 && (
+							<span className="text-[12px] text-slate-400">Tidak ada fitur kecamatan untuk bidang ini.</span>
+						)}
+						{(modeKecamatan ? fiturKecamatan : katalog).map((p, i) => (
 							<motion.span
 								key={p.key}
 								title={p.description}
@@ -1732,7 +1754,7 @@ const ManajemenAkunDesaPage = ({ modul = null, tersemat = false }) => {
 			</div>
 
 			{tampilan === "kecamatan" ? (
-				<AkunKecamatanPanel params={paramModul} />
+				<AkunKecamatanPanel params={paramModul} onRingkasan={setRingkasKecamatan} />
 			) : (
 			<>
 			{/* ── Bilah kendali ───────────────────────────────────────────────────
