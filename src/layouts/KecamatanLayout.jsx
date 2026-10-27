@@ -2,6 +2,8 @@ import React, { useState, useRef, useEffect, useMemo } from "react";
 import { Outlet, useNavigate, NavLink, useLocation } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { useUserProfile } from "../hooks/useUserProfile";
+import { useKecamatanPermissions } from "../hooks/useKecamatanPermissions";
+import WajibOperatorKecamatan from "../components/kecamatan/WajibOperatorKecamatan";
 import {
   LayoutDashboard,
   Banknote,
@@ -22,6 +24,7 @@ import {
   ChevronsRight,
   Eye,
   CornerDownLeft,
+  UserCog,
 } from "lucide-react";
 
 // Menu dikelompokkan menurut sifat pekerjaannya: yang harus diputuskan
@@ -36,34 +39,35 @@ const menuGroups = [
   {
     label: "Verifikasi",
     items: [
-      { id: "bankeu", label: "Bantuan Keuangan", path: "/kecamatan/bankeu", icon: Banknote },
-      { id: "bankeu-perubahan", label: "Bankeu Perubahan", path: "/kecamatan/bankeu-perubahan", icon: Coins },
-      { id: "kelembagaan", label: "Kelembagaan", path: "/kecamatan/kelembagaan", icon: Building2 },
+      { id: "bankeu", label: "Bantuan Keuangan", path: "/kecamatan/bankeu", icon: Banknote, izin: "bankeu" },
+      { id: "bankeu-perubahan", label: "Bankeu Perubahan", path: "/kecamatan/bankeu-perubahan", icon: Coins, izin: "bankeu-perubahan" },
+      { id: "kelembagaan", label: "Kelembagaan", path: "/kecamatan/kelembagaan", icon: Building2, izin: "kelembagaan" },
     ],
   },
   {
     label: "Pemantauan",
     items: [
-      { id: "aparatur-desa", label: "Aparatur Desa", path: "/kecamatan/aparatur-desa", icon: Users, tag: "Lihat" },
-      { id: "bumdes", label: "BUMDes", path: "/kecamatan/bumdes", icon: Store, tag: "Lihat" },
+      { id: "aparatur-desa", label: "Aparatur Desa", path: "/kecamatan/aparatur-desa", icon: Users, tag: "Lihat", izin: "aparatur-desa" },
+      { id: "bumdes", label: "BUMDes", path: "/kecamatan/bumdes", icon: Store, tag: "Lihat", izin: "bumdes" },
     ],
   },
   {
     label: "Komunikasi",
     items: [
-      { id: "pesan", label: "Pesan", path: "/kecamatan/pesan", icon: MessageCircle },
+      { id: "pesan", label: "Pesan", path: "/kecamatan/pesan", icon: MessageCircle, izin: "pesan" },
     ],
   },
   {
     label: "Akun",
     items: [
+      // Hanya akun utama: operator tidak membuat atau mengatur operator lain.
+      { id: "akun-operator", label: "Akun Operator", path: "/kecamatan/akun-operator", icon: UserCog, khususUtama: true },
       { id: "settings", label: "Pengaturan", path: "/kecamatan/settings", icon: Settings },
       { id: "change-password", label: "Ganti Password", path: "/kecamatan/change-password", icon: Lock },
     ],
   },
 ];
 
-const menuItems = menuGroups.flatMap((g) => g.items.map((item) => ({ ...item, group: g.label })));
 
 const KUNCI_CIUT = "kecamatan-sidebar-ciut";
 
@@ -78,6 +82,23 @@ const bacaCiut = () => {
 const KecamatanLayout = () => {
   const { logout } = useAuth();
   const user = useUserProfile();
+  const { isOperator, hasPermission } = useKecamatanPermissions();
+
+  // Operator hanya melihat menu fitur yang diberikan akun utama kepadanya.
+  const grupTampil = useMemo(
+    () =>
+      menuGroups
+        .map((g) => ({
+          ...g,
+          items: g.items.filter((item) => (item.khususUtama ? !isOperator : hasPermission(item.izin))),
+        }))
+        .filter((g) => g.items.length > 0),
+    [isOperator, hasPermission]
+  );
+  const menuItems = useMemo(
+    () => grupTampil.flatMap((g) => g.items.map((item) => ({ ...item, group: g.label }))),
+    [grupTampil]
+  );
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -98,7 +119,7 @@ const KecamatanLayout = () => {
 
   const halamanAktif = useMemo(
     () => menuItems.find((m) => location.pathname.startsWith(m.path)),
-    [location.pathname]
+    [location.pathname, menuItems]
   );
 
   const searchResults = useMemo(() => {
@@ -107,7 +128,7 @@ const KecamatanLayout = () => {
     return menuItems.filter(
       (item) => item.label.toLowerCase().includes(q) || item.group.toLowerCase().includes(q)
     );
-  }, [searchQuery]);
+  }, [searchQuery, menuItems]);
 
   const handleLogout = () => {
     logout();
@@ -184,6 +205,7 @@ const KecamatanLayout = () => {
 
   return (
     <div className="flex h-screen bg-slate-50">
+      <WajibOperatorKecamatan />
       {/* ------------------------------------------------------- sidebar -- */}
       <aside
         className={`fixed inset-y-0 left-0 z-50 flex flex-col bg-slate-950 text-slate-300 transition-all duration-300 ease-out
@@ -239,7 +261,7 @@ const KecamatanLayout = () => {
 
         {/* Navigasi */}
         <nav className="relative flex-1 overflow-y-auto overflow-x-hidden px-3 py-3 [scrollbar-width:thin] [scrollbar-color:rgba(255,255,255,0.12)_transparent]">
-          {menuGroups.map((group, gi) => (
+          {grupTampil.map((group, gi) => (
             <div key={group.label} className={gi ? "mt-5" : ""}>
               {lebar ? (
                 <p className="mb-1.5 px-3 text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-500">
@@ -421,7 +443,9 @@ const KecamatanLayout = () => {
                 <span className="block max-w-[10rem] truncate text-[13px] font-semibold leading-tight text-slate-900">
                   {namaUser}
                 </span>
-                <span className="block text-[11px] leading-tight text-slate-500">Admin Kecamatan</span>
+                <span className="block text-[11px] leading-tight text-slate-500">
+                  {isOperator ? "Operator Kecamatan" : "Admin Kecamatan"}
+                </span>
               </span>
               <ChevronDown
                 className={`hidden h-4 w-4 text-slate-400 transition-transform sm:block ${dropdownOpen ? "rotate-180" : ""}`}

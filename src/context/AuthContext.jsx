@@ -2,6 +2,7 @@
 import React, { createContext, useContext, useState, useEffect, useRef } from "react";
 import { clearAllSessionData, backupSessionToIndexedDB, restoreSessionFromIndexedDB, performFullLogout, clearLogoutFlag, clearApiResponseCache } from "../utils/sessionPersistence";
 import { resetDesaPermissionRefresh } from "../hooks/useDesaPermissions";
+import { resetKecamatanPermissionRefresh } from "../hooks/useKecamatanPermissions";
 import { setTokenMemori } from "../utils/tokenSesi";
 
 // 1. Membuat Context
@@ -328,6 +329,7 @@ export const AuthProvider = ({ children }) => {
 		// Use performFullLogout to clear everything including IndexedDB + set logout flag
 		await performFullLogout();
 		resetDesaPermissionRefresh();
+		resetKecamatanPermissionRefresh();
 		setUser(null);
 		setExpressToken(null);
 		console.log('[Auth] User logged out, all session data cleared');

@@ -14,6 +14,7 @@ import { Toaster, toast } from "react-hot-toast";
 import { useAuth } from "./context/AuthContext";
 import { useThemeColor } from "./hooks/useThemeColor";
 import { useDesaPermissions } from "./hooks/useDesaPermissions";
+import { useKecamatanPermissions } from "./hooks/useKecamatanPermissions";
 import { isDinasPelihat, canViewBankeuPerubahanPelihat, canViewAstaDesa } from "./utils/dinasPelihat";
 import { DataCacheProvider } from "./context/DataCacheContext";
 import { EditModeProvider } from "./context/EditModeContext.jsx";
@@ -394,6 +395,7 @@ const KecamatanBumdesPage = lazy(
 const KecamatanAparaturPage = lazy(
   () => import("./pages/kecamatan/aparatur/KecamatanAparaturPage"),
 );
+const KecamatanOperatorPage = lazy(() => import("./pages/kecamatan/KecamatanOperatorPage"));
 const DinasBankeuPage = lazy(() => import("./pages/dinas/DinasBankeuPage"));
 const DinasBankeuPerubahanArsipPage = lazy(
   () => import("./pages/dinas/DinasBankeuPerubahanArsipPage"),
@@ -615,6 +617,26 @@ const DesaPermissionRoute = ({ permission, children }) => {
   if (!hasPermission(permission)) {
     return <Navigate to="/forbidden" replace />;
   }
+
+  return children || <Outlet />;
+};
+
+// Pagar fitur untuk OPERATOR kecamatan; akun utama kecamatan selalu lolos.
+// `permission` kosong = khusus akun utama (mis. Akun Operator).
+// Backend tetap penjaga terakhir; ini hanya supaya UX-nya jelas.
+const KecamatanPermissionRoute = ({ permission, children }) => {
+  const { hasPermission, isOperator, isReady } = useKecamatanPermissions();
+
+  if (!isReady) {
+    return (
+      <div className="flex items-center justify-center py-24">
+        <div className="animate-spin rounded-full h-10 w-10 border-4 border-slate-200 border-t-slate-800"></div>
+      </div>
+    );
+  }
+
+  const boleh = permission ? hasPermission(permission) : !isOperator;
+  if (!boleh) return <Navigate to="/kecamatan/dashboard" replace />;
 
   return children || <Outlet />;
 };
@@ -1701,35 +1723,51 @@ function App() {
                     path="dashboard"
                     element={<KecamatanDashboardPage />}
                   />
-                  <Route path="bankeu" element={<KecamatanBankeuPage />} />
-                  <Route path="bankeu-perubahan" element={<KecamatanBankeuPerubahanPage />} />
-                  <Route
-                    path="bankeu/verifikasi/:desaId"
-                    element={<BankeuVerificationDetailPage />}
-                  />
-                  <Route
-                    path="bankeu/tim-verifikasi/:desaId"
-                    element={<KecamatanTimVerifikasiPage />}
-                  />
-                  <Route
-                    path="bankeu-perubahan/tim-verifikasi/:desaId"
-                    element={<KecamatanPerubahanTimProposalPage />}
-                  />
-                  <Route path="kelembagaan" element={<KecamatanKelembagaanPage />} />
-                  <Route path="bumdes" element={<KecamatanBumdesPage />} />
-                  <Route path="aparatur-desa" element={<KecamatanAparaturPage />} />
-                  <Route
-                    path="kelembagaan/:desaId/:type"
-                    element={<KelembagaanList />}
-                  />
-                  <Route
-                    path="kelembagaan/:desaId/:type/:id"
-                    element={<KelembagaanDetailPage />}
-                  />
-                  <Route path="pengurus/:id" element={<PengurusDetailPage />} />
+                  {/* Operator kecamatan hanya membuka fitur yang diberikan akun utamanya. */}
+                  <Route element={<KecamatanPermissionRoute permission="bankeu" />}>
+                    <Route path="bankeu" element={<KecamatanBankeuPage />} />
+                    <Route
+                      path="bankeu/verifikasi/:desaId"
+                      element={<BankeuVerificationDetailPage />}
+                    />
+                    <Route
+                      path="bankeu/tim-verifikasi/:desaId"
+                      element={<KecamatanTimVerifikasiPage />}
+                    />
+                  </Route>
+                  <Route element={<KecamatanPermissionRoute permission="bankeu-perubahan" />}>
+                    <Route path="bankeu-perubahan" element={<KecamatanBankeuPerubahanPage />} />
+                    <Route
+                      path="bankeu-perubahan/tim-verifikasi/:desaId"
+                      element={<KecamatanPerubahanTimProposalPage />}
+                    />
+                  </Route>
+                  <Route element={<KecamatanPermissionRoute permission="kelembagaan" />}>
+                    <Route path="kelembagaan" element={<KecamatanKelembagaanPage />} />
+                    <Route
+                      path="kelembagaan/:desaId/:type"
+                      element={<KelembagaanList />}
+                    />
+                    <Route
+                      path="kelembagaan/:desaId/:type/:id"
+                      element={<KelembagaanDetailPage />}
+                    />
+                    <Route path="pengurus/:id" element={<PengurusDetailPage />} />
+                  </Route>
+                  <Route element={<KecamatanPermissionRoute permission="bumdes" />}>
+                    <Route path="bumdes" element={<KecamatanBumdesPage />} />
+                  </Route>
+                  <Route element={<KecamatanPermissionRoute permission="aparatur-desa" />}>
+                    <Route path="aparatur-desa" element={<KecamatanAparaturPage />} />
+                  </Route>
+                  <Route element={<KecamatanPermissionRoute permission="pesan" />}>
+                    <Route path="pesan" element={<MessagingPage />} />
+                  </Route>
+                  <Route element={<KecamatanPermissionRoute />}>
+                    <Route path="akun-operator" element={<KecamatanOperatorPage />} />
+                  </Route>
                   <Route path="settings" element={<KecamatanSettings />} />
                   <Route path="change-password" element={<KecamatanChangePasswordPage />} />
-                  <Route path="pesan" element={<MessagingPage />} />
                 </Route>
 
                 {/* Rute Dinas Terkait - Untuk verifikasi teknis */}

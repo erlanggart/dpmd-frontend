@@ -21,6 +21,7 @@ import {
 } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
 import api from "../../api";
+import { useKecamatanPermissions } from "../../hooks/useKecamatanPermissions";
 import PageHeader from "../statistik/PageHeader";
 import { isAktif, tahapBadanHukum } from "../../pages/kepala-dinas/components/bumdesFilter";
 
@@ -39,24 +40,28 @@ const MODUL = [
         teks: "Verifikasi proposal bantuan keuangan desa",
         path: "/kecamatan/bankeu",
         icon: Banknote,
+        izin: "bankeu",
     },
     {
         judul: "Bankeu Perubahan",
         teks: "Verifikasi proposal pada APBD perubahan",
         path: "/kecamatan/bankeu-perubahan",
         icon: Coins,
+        izin: "bankeu-perubahan",
     },
     {
         judul: "Kelembagaan",
         teks: "Verifikasi pengurus lembaga kemasyarakatan desa",
         path: "/kecamatan/kelembagaan",
         icon: Building2,
+        izin: "kelembagaan",
     },
     {
         judul: "Aparatur Desa",
         teks: "Pantau perangkat desa & BPD beserta statistiknya",
         path: "/kecamatan/aparatur-desa",
         icon: Users,
+        izin: "aparatur-desa",
         lihat: true,
     },
     {
@@ -64,6 +69,7 @@ const MODUL = [
         teks: "Pantau profil, legalitas, dan kinerja BUMDes",
         path: "/kecamatan/bumdes",
         icon: Store,
+        izin: "bumdes",
         lihat: true,
     },
     {
@@ -71,6 +77,7 @@ const MODUL = [
         teks: "Komunikasi dengan desa dan DPMD",
         path: "/kecamatan/pesan",
         icon: MessageCircle,
+        izin: "pesan",
     },
 ];
 
@@ -96,6 +103,11 @@ const JudulKartu = ({ icon: Icon, children, aksi }) => (
 const KecamatanDashboard = () => {
     const { user } = useAuth();
     const navigate = useNavigate();
+    // Operator kecamatan hanya melihat kartu fitur yang diberikan kepadanya —
+    // memanggil API fitur lain pun hanya akan dibalas 403.
+    const { hasPermission, isReady } = useKecamatanPermissions();
+    const bolehBankeu = hasPermission("bankeu");
+    const bolehBumdes = hasPermission("bumdes");
 
     const [loadingBankeu, setLoadingBankeu] = useState(true);
     const [loadingBumdes, setLoadingBumdes] = useState(true);
@@ -112,6 +124,7 @@ const KecamatanDashboard = () => {
     const [wilayah, setWilayah] = useState(null);
 
     useEffect(() => {
+        if (!isReady) return;
         const loadDesaData = async () => {
             try {
                 const response = await api.get("/desas");
@@ -152,9 +165,11 @@ const KecamatanDashboard = () => {
         };
 
         loadDesaData();
-        loadBankeu();
-        loadBumdes();
-    }, [user?.kecamatan_id]);
+        if (bolehBankeu) loadBankeu();
+        else setLoadingBankeu(false);
+        if (bolehBumdes) loadBumdes();
+        else setLoadingBumdes(false);
+    }, [user?.kecamatan_id, isReady, bolehBankeu, bolehBumdes]);
 
     const namaKecamatan =
         user?.kecamatan_name || user?.kecamatan?.nama || wilayah?.kecamatan || "Kecamatan";
@@ -193,14 +208,16 @@ const KecamatanDashboard = () => {
                 stats={[
                     { label: "Desa", value: nf.format(totalDesa) },
                     { label: "Penduduk", value: nf.format(stats.totalPenduduk || 0) },
-                    { label: "Proposal Bankeu", value: loadingBankeu ? "…" : nf.format(totalProposal) },
-                    { label: "BUMDes", value: loadingBumdes ? "…" : nf.format(ringkasBumdes.total) },
-                ]}
+                    bolehBankeu && { label: "Proposal Bankeu", value: loadingBankeu ? "…" : nf.format(totalProposal) },
+                    bolehBumdes && { label: "BUMDes", value: loadingBumdes ? "…" : nf.format(ringkasBumdes.total) },
+                ].filter(Boolean)}
             />
 
+            {(bolehBankeu || bolehBumdes) && (
             <div className="grid grid-cols-1 gap-6 xl:grid-cols-5">
                 {/* ------------------------------------------ verifikasi -- */}
-                <Kartu className="xl:col-span-3">
+                {bolehBankeu && (
+                <Kartu className={bolehBumdes ? "xl:col-span-3" : "xl:col-span-5"}>
                     <JudulKartu
                         icon={ClipboardCheck}
                         aksi={
@@ -316,9 +333,11 @@ const KecamatanDashboard = () => {
                         </div>
                     </div>
                 </Kartu>
+                )}
 
                 {/* ---------------------------------------------- BUMDes -- */}
-                <Kartu className="flex flex-col xl:col-span-2">
+                {bolehBumdes && (
+                <Kartu className={`flex flex-col ${bolehBankeu ? "xl:col-span-2" : "xl:col-span-5"}`}>
                     <JudulKartu
                         icon={Store}
                         aksi={
@@ -388,13 +407,15 @@ const KecamatanDashboard = () => {
                         </button>
                     </div>
                 </Kartu>
+                )}
             </div>
+            )}
 
             {/* ---------------------------------------------- modul -- */}
             <div>
                 <h2 className="mb-3 text-xs font-semibold uppercase tracking-[0.14em] text-slate-400">Modul</h2>
                 <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                    {MODUL.map((m) => {
+                    {MODUL.filter((m) => hasPermission(m.izin)).map((m) => {
                         const Icon = m.icon;
                         return (
                             <button
