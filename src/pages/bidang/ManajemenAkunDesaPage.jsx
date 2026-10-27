@@ -20,6 +20,7 @@ import Swal from "sweetalert2";
 import toast from "react-hot-toast";
 import api from "../../api";
 import escapeHtml from "../../utils/escapeHtml";
+import AkunKecamatanPanel from "./AkunKecamatanPanel";
 import {
 	FiAlertCircle,
 	FiCheck,
@@ -1059,6 +1060,8 @@ const ManajemenAkunDesaPage = ({ modul = null, tersemat = false }) => {
 	const paramModul = useMemo(() => (modulSlug ? { modul: modulSlug } : {}), [modulSlug]);
 
 	const [meta, setMeta] = useState(null);
+	// "desa" = akun operator desa; "kecamatan" = satu akun per kecamatan, lihat/reset sandi saja.
+	const [tampilan, setTampilan] = useState("desa");
 	const [modalGenerate, setModalGenerate] = useState(false);
 	const [desas, setDesas] = useState([]);
 	const [memuatAwal, setMemuatAwal] = useState(true);
@@ -1695,6 +1698,43 @@ const ManajemenAkunDesaPage = ({ modul = null, tersemat = false }) => {
 				</div>
 			</motion.header>
 
+			{/* ── Akun desa / akun kecamatan ──────────────────────────────────── */}
+			<div role="tablist" aria-label="Jenis akun" className="inline-flex rounded-xl bg-slate-100 p-1">
+				{[
+					{ id: "desa", label: "Akun Desa", icon: FiUsers },
+					{ id: "kecamatan", label: "Akun Kecamatan", icon: FiMapPin },
+				].map((t) => {
+					const aktif = tampilan === t.id;
+					const Ikon = t.icon;
+					return (
+						<button
+							key={t.id}
+							type="button"
+							role="tab"
+							aria-selected={aktif}
+							onClick={() => setTampilan(t.id)}
+							className={`relative inline-flex items-center gap-2 rounded-lg px-4 py-2 text-[13px] font-semibold transition-colors ${
+								aktif ? "text-slate-900" : "text-slate-500 hover:text-slate-700"
+							}`}
+						>
+							{aktif && (
+								<motion.span
+									layoutId="sorot-jenis-akun"
+									transition={PEGAS}
+									className="absolute inset-0 rounded-lg bg-white shadow-sm"
+								/>
+							)}
+							<Ikon className="relative h-4 w-4" />
+							<span className="relative">{t.label}</span>
+						</button>
+					);
+				})}
+			</div>
+
+			{tampilan === "kecamatan" ? (
+				<AkunKecamatanPanel params={paramModul} />
+			) : (
+			<>
 			{/* ── Bilah kendali ───────────────────────────────────────────────────
 			    Pemilih wilayah, pencarian, dan tombol tambah disatukan dalam satu
 			    bilah. Sebelumnya ketiganya jadi tiga blok bertumpuk, sehingga daftar
@@ -2215,6 +2255,8 @@ const ManajemenAkunDesaPage = ({ modul = null, tersemat = false }) => {
 						</div>
 					)}
 				</>
+			)}
+			</>
 			)}
 
 			{/* ── Modal generate massal ───────────────────────────────────────── */}

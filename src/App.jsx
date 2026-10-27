@@ -1330,8 +1330,12 @@ function App() {
                       penyaluran) semuanya pencatatan sisi DPMD, tidak ada fitur
                       halaman desa yang menjadi wewenangnya. Lihat
                       backend/src/config/bidangDesaPermissions.js */}
-                  <Route path="spked/akun-desa" element={<ManajemenAkunDesaPage />} />
-                  <Route path="pemdes/akun-desa" element={<ManajemenAkunDesaPage />} />
+                  {/* Alamat lama halaman akun penuh SPKED/Pemdes. Akun yang dibuat
+                      dari sana membawa seluruh wewenang bidang sekaligus, jadi
+                      diarahkan ke pintu per fitur: tab-tab SpkedPage dan tab Akun
+                      Operator di Perangkat Desa. */}
+                  <Route path="spked/akun-desa" element={<Navigate to="/bidang/spked" replace />} />
+                  <Route path="pemdes/akun-desa" element={<PemdesAparaturDesaPage jenis="perangkat" initialTab="akun" />} />
 
                   {/* Detail Disposisi - Accessible dari semua bidang */}
                   <Route path="disposisi/:id" element={<DisposisiDetail />} />
@@ -1380,7 +1384,7 @@ function App() {
                     element={<KelembagaanDetailPage />}
                   />
                   <Route path="produk-hukum-kabupaten" element={<ProdukHukumBidangPage bidangId={5} />} />
-                  <Route path="akun-desa" element={<ManajemenAkunDesaPage />} />
+                  <Route path="akun-desa" element={<ManajemenAkunDesaPage modul="kelembagaan" />} />
                   <Route path="pengurus" element={<PengurusDashboardPage />} />
                   <Route path="pengurus/import" element={<PengurusImportPage />} />
                   <Route path="pengurus/:id" element={<PengurusDetailPage />} />
@@ -1661,9 +1665,9 @@ function App() {
                   <Route path="bidang/pmd/kelembagaan/admin/:desaId/:type" element={<KelembagaanList />} />
                   <Route path="bidang/pmd/kelembagaan/:type" element={<KelembagaanList />} />
                   <Route path="bidang/pmd/kelembagaan/:type/:id" element={<KelembagaanDetailPage />} />
-                  <Route path="bidang/pmd/akun-desa" element={<ManajemenAkunDesaPage />} />
-                  <Route path="bidang/spked/akun-desa" element={<ManajemenAkunDesaPage />} />
-                  <Route path="bidang/pemdes/akun-desa" element={<ManajemenAkunDesaPage />} />
+                  <Route path="bidang/pmd/akun-desa" element={<ManajemenAkunDesaPage modul="kelembagaan" />} />
+                  <Route path="bidang/spked/akun-desa" element={<Navigate to="/superadmin/bidang/spked" replace />} />
+                  <Route path="bidang/pemdes/akun-desa" element={<PemdesAparaturDesaPage jenis="perangkat" initialTab="akun" />} />
                   <Route path="bidang/pmd/pengurus" element={<PengurusDashboardPage />} />
                   <Route path="bidang/pmd/pengurus/import" element={<PengurusImportPage />} />
                   <Route path="bidang/pmd/pengurus/:id" element={<PengurusDetailPage />} />
