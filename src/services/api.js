@@ -161,16 +161,6 @@ export const updateProdukHukum = async (id, data) => {
 	}
 };
 
-export const deleteProdukHukum = async (id) => {
-	try {
-		const response = await api.delete(`/produk-hukum/${id}`);
-		return response;
-	} catch (error) {
-		console.error('Error deleting produk hukum:', error);
-		throw error;
-	}
-};
-
 export const updateProdukHukumStatus = async (id, status_peraturan) => {
 	try {
 		const response = await api.put(`/produk-hukum/${id}/status`, { status_peraturan });

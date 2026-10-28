@@ -186,10 +186,6 @@ export const updateProdukHukum = (id, data) => {
 	});
 };
 
-export const deleteProdukHukum = (id) => {
-	return api.delete(`/produk-hukum/${id}`);
-};
-
 
 // --- Perjadin ---
 export const getPerjadinBidang = () => {

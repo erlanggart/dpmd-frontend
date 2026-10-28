@@ -70,6 +70,3 @@ export const updateProdukHukum = (id, data) => {
 	});
 };
 
-export const deleteProdukHukum = (id) => {
-	return api.delete(`/desa/produk-hukum/${id}`);
-};
