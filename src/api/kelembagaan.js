@@ -85,6 +85,12 @@ export const kelembagaanApi = {
 		return response.data;
 	},
 
+	// Pertumbuhan kumulatif lembaga & pengurus dari desa + tanggal masuk tiap desa
+	getCapaianDataMasuk: async () => {
+		const response = await api.get("/kelembagaan/capaian-verifikasi/data-masuk");
+		return response.data;
+	},
+
 	// Desa yang punya permasalahan data kelembagaan / produk hukum
 	getPermasalahanDesa: async () => {
 		const response = await api.get("/kelembagaan/capaian-verifikasi/permasalahan");

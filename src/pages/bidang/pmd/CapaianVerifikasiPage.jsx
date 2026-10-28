@@ -9,6 +9,7 @@ import {
   LuLoader,
   LuShieldCheck,
   LuTriangleAlert,
+  LuDatabase,
 } from "react-icons/lu";
 import kelembagaanApi from "../../../api/kelembagaan";
 import useStatistikTahunan from "../../../hooks/useStatistikTahunan";
@@ -16,6 +17,7 @@ import TrenVerifikasiHarian from "../../../components/kelembagaan/capaian/TrenVe
 import AktivitasVerifikator from "../../../components/kelembagaan/capaian/AktivitasVerifikator";
 import CapaianPerDesa from "../../../components/kelembagaan/capaian/CapaianPerDesa";
 import PermasalahanDesa from "../../../components/kelembagaan/capaian/PermasalahanDesa";
+import CapaianDataMasuk from "../../../components/kelembagaan/capaian/CapaianDataMasuk";
 import TombolEkspor from "../../../components/shared/TombolEkspor";
 import { WARNA_LEMBAGA, persen } from "../../../components/kelembagaan/capaian/warnaLembaga";
 
@@ -25,6 +27,7 @@ const TABS = [
   { key: "verifikator", label: "Aktivitas Verifikator", icon: LuUserCheck },
   { key: "desa", label: "Capaian per Desa", icon: LuMapPin },
   { key: "permasalahan", label: "Permasalahan Desa", icon: LuTriangleAlert },
+  { key: "data-masuk", label: "Capaian Data Masuk", icon: LuDatabase },
 ];
 
 const KartuAngka = ({ label, nilai, keterangan, kelas = "text-slate-900" }) => (
@@ -296,6 +299,8 @@ const CapaianVerifikasiPage = () => {
         ))}
 
       {tab === "permasalahan" && <PermasalahanDesa onDesaClick={bukaDesa} />}
+
+      {tab === "data-masuk" && <CapaianDataMasuk onDesaClick={bukaDesa} />}
     </div>
   );
 };
