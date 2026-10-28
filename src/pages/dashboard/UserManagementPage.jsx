@@ -41,6 +41,7 @@ import DesaPermissionsModal from "../../components/DesaPermissionsModal";
 import EditAvatarModal from "../../components/EditAvatarModal";
 import UserDetailDrawer from "../../components/users/UserDetailDrawer";
 import { getAvatarUrl } from "../../utils/avatarUtils";
+import { ubahStatusAkun } from "../../utils/ubahStatusAkun";
 import { getRoleInfo } from "../../constants/userRoles";
 import { useAuth } from "../../context/AuthContext";
 import Swal from "sweetalert2";
@@ -603,31 +604,10 @@ const UserManagementPage = () => {
 		}));
 	};
 
-	const handleDeleteUser = async (user) => {
-		const result = await Swal.fire({
-			title: "Hapus User?",
-			text: `Apakah Anda yakin ingin menghapus user ${user.name}?`,
-			icon: "warning",
-			showCancelButton: true,
-			confirmButtonColor: "#d33",
-			cancelButtonColor: "#3085d6",
-			confirmButtonText: "Ya, Hapus!",
-			cancelButtonText: "Batal",
-		});
-
-		if (result.isConfirmed) {
-			try {
-				await api.delete(`/users/${user.id}`);
-				setDetailUser(null);
-				Swal.fire("Terhapus!", "User berhasil dihapus.", "success");
-				fetchUsers();
-			} catch (err) {
-				Swal.fire(
-					"Error!",
-					err.response?.data?.message || "Gagal menghapus user.",
-					"error"
-				);
-			}
+	const handleToggleActive = async (user) => {
+		if (await ubahStatusAkun(user)) {
+			setDetailUser(null);
+			fetchUsers();
 		}
 	};
 
@@ -1222,7 +1202,7 @@ const UserManagementPage = () => {
 						device: handleSetDevice,
 						impersonate: handleImpersonate,
 						resetPassword: handleResetPassword,
-						hapus: handleDeleteUser,
+						ubahStatus: handleToggleActive,
 					}}
 				/>
 			)}

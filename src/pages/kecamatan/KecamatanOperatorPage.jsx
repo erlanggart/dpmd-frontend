@@ -7,7 +7,7 @@
 import React, { useCallback, useEffect, useState } from "react";
 import Swal from "sweetalert2";
 import toast from "react-hot-toast";
-import { Clock, Mail, Pencil, Phone, Plus, Power, Trash2, UserCog, Users } from "lucide-react";
+import { Clock, Mail, Pencil, Phone, Plus, Power, UserCog, Users } from "lucide-react";
 import api from "../../api";
 import escapeHtml from "../../utils/escapeHtml";
 import FormOperatorKecamatan from "../../components/kecamatan/FormOperatorKecamatan";
@@ -100,26 +100,6 @@ const KecamatanOperatorPage = () => {
 			muat();
 		} catch (error) {
 			toast.error(pesanError(error, "Gagal mengubah status"));
-		}
-	};
-
-	const hapus = async (u) => {
-		const ok = await Swal.fire({
-			icon: "warning",
-			title: "Hapus akun operator?",
-			html: `Akun <b>${escapeHtml(u.name)}</b> (${escapeHtml(u.email)}) akan dihapus permanen.`,
-			showCancelButton: true,
-			confirmButtonText: "Hapus",
-			cancelButtonText: "Batal",
-			confirmButtonColor: "#b91c1c",
-		});
-		if (!ok.isConfirmed) return;
-		try {
-			await api.delete(`/kecamatan-admin/users/${u.id}`);
-			toast.success("Akun operator dihapus");
-			muat();
-		} catch (error) {
-			Swal.fire({ icon: "error", title: "Tidak bisa dihapus", text: pesanError(error, "Terjadi kesalahan.") });
 		}
 	};
 
@@ -243,14 +223,6 @@ const KecamatanOperatorPage = () => {
 									>
 										<Power className="h-3.5 w-3.5" />
 										{u.is_active ? "Nonaktifkan" : "Aktifkan"}
-									</button>
-									<button
-										type="button"
-										onClick={() => hapus(u)}
-										aria-label="Hapus akun"
-										className="inline-flex items-center justify-center rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-rose-700 hover:bg-rose-100"
-									>
-										<Trash2 className="h-3.5 w-3.5" />
 									</button>
 								</div>
 							</article>

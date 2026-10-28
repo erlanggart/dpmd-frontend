@@ -1022,29 +1022,6 @@ const DpmdVerificationPage = ({ tahunAnggaran = 2027 }) => {
     }
   };
 
-  const handleDeleteVerifikator = async (dinasId, verifikatorId) => {
-    const result = await Swal.fire({
-      title: 'Hapus Verifikator?',
-      text: 'Akun verifikator akan dihapus dan tidak dapat dikembalikan',
-      icon: 'warning',
-      showCancelButton: true,
-      confirmButtonColor: '#d33',
-      cancelButtonColor: '#3085d6',
-      confirmButtonText: 'Ya, Hapus',
-      cancelButtonText: 'Batal'
-    });
-
-    if (result.isConfirmed) {
-      try {
-        await api.delete(`/dinas/${dinasId}/verifikator/${verifikatorId}`);
-        Swal.fire('Terhapus!', 'Verifikator berhasil dihapus', 'success');
-        fetchVerifikatorForDinas(dinasId);
-      } catch (error) {
-        Swal.fire('Gagal', error.response?.data?.message || 'Gagal menghapus verifikator', 'error');
-      }
-    }
-  };
-
   const handleToggleVerifikatorStatus = async (dinasId, verifikatorId) => {
     try {
       await api.patch(`/dinas/${dinasId}/verifikator/${verifikatorId}/toggle-status`);
@@ -4045,13 +4022,6 @@ const DpmdVerificationPage = ({ tahunAnggaran = 2027 }) => {
                                                 title="Edit"
                                               >
                                                 <Edit className="h-4 w-4" />
-                                              </button>
-                                              <button
-                                                onClick={() => handleDeleteVerifikator(item.id, verifikator.id)}
-                                                className="p-1.5 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                                                title="Hapus"
-                                              >
-                                                <Trash2 className="h-4 w-4" />
                                               </button>
                                             </div>
                                           </div>

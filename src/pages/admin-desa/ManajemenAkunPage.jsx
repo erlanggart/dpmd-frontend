@@ -12,7 +12,8 @@ import {
 	FiEyeOff,
 	FiPlus,
 	FiSearch,
-	FiTrash2,
+	FiUserCheck,
+	FiUserX,
 	FiUsers,
 	FiX,
 } from "react-icons/fi";
@@ -173,27 +174,39 @@ const ManajemenAkunPage = () => {
 		}
 	};
 
-	const handleDelete = async (user) => {
+	// Akun tidak pernah dihapus: menghapusnya ikut menghapus seluruh log
+	// aktivitas akun tersebut. Akun nonaktif tidak bisa login lagi.
+	const handleToggleActive = async (user) => {
+		const nonaktifkan = user.is_active;
 		const confirm = await Swal.fire({
 			icon: "warning",
-			title: "Hapus akun ini?",
-			html: `<b>${user.name}</b><br/><span class="text-sm">${user.email}</span>`,
+			title: nonaktifkan ? "Nonaktifkan akun ini?" : "Aktifkan kembali akun ini?",
+			html: `<b>${user.name}</b><br/><span class="text-sm">${user.email}</span>${
+				nonaktifkan
+					? '<p class="text-sm mt-3">Akun tidak bisa login lagi, tetapi riwayat aktivitasnya tetap tersimpan.</p>'
+					: ""
+			}`,
 			showCancelButton: true,
-			confirmButtonText: "Ya, hapus",
+			confirmButtonText: nonaktifkan ? "Ya, nonaktifkan" : "Ya, aktifkan",
 			cancelButtonText: "Batal",
-			confirmButtonColor: "#dc2626",
+			confirmButtonColor: nonaktifkan ? "#dc2626" : "#059669",
 		});
 		if (!confirm.isConfirmed) return;
 
 		try {
-			await api.delete(`/desa-admin/users/${user.id}`);
+			await api.put(`/desa-admin/users/${user.id}`, { is_active: !nonaktifkan });
 			await loadUsers();
-			Swal.fire({ icon: "success", title: "Akun dihapus", timer: 1500, showConfirmButton: false });
+			Swal.fire({
+				icon: "success",
+				title: nonaktifkan ? "Akun dinonaktifkan" : "Akun diaktifkan",
+				timer: 1500,
+				showConfirmButton: false,
+			});
 		} catch (error) {
 			Swal.fire({
 				icon: "error",
-				title: "Gagal menghapus",
-				text: errorMessage(error, "Akun tidak dapat dihapus."),
+				title: "Gagal menyimpan",
+				text: errorMessage(error, "Status akun tidak dapat diubah."),
 			});
 		}
 	};
@@ -307,11 +320,19 @@ const ManajemenAkunPage = () => {
 										Ubah
 									</button>
 									<button
-										onClick={() => handleDelete(user)}
-										className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg border border-red-200 text-red-600 text-xs font-semibold hover:bg-red-50"
+										onClick={() => handleToggleActive(user)}
+										className={`inline-flex items-center gap-1.5 px-3 py-2 rounded-lg border text-xs font-semibold ${
+											user.is_active
+												? "border-red-200 text-red-600 hover:bg-red-50"
+												: "border-emerald-200 text-emerald-700 hover:bg-emerald-50"
+										}`}
 									>
-										<FiTrash2 className="h-3.5 w-3.5" />
-										Hapus
+										{user.is_active ? (
+											<FiUserX className="h-3.5 w-3.5" />
+										) : (
+											<FiUserCheck className="h-3.5 w-3.5" />
+										)}
+										{user.is_active ? "Nonaktifkan" : "Aktifkan"}
 									</button>
 								</div>
 							</div>

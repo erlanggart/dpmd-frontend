@@ -126,7 +126,8 @@ api.interceptors.response.use(
 		// keputusan admin, bukan sesi yang rusak — token lama memang harus mati dan
 		// user wajib login ulang. Alasannya disimpan supaya halaman login bisa
 		// menjelaskan, bukan sekadar melempar user keluar tanpa keterangan.
-		if (error.response.data?.code === "ROLE_CHANGED") {
+		// Begitu juga akun desa yang dinonaktifkan Admin Desa (AKUN_NONAKTIF).
+		if (["ROLE_CHANGED", "AKUN_NONAKTIF"].includes(error.response.data?.code)) {
 			hentikanSesi(
 				error.response.data.message ||
 					"Hak akses akun Anda telah diperbarui. Silakan login kembali.",

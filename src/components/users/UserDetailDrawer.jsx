@@ -34,7 +34,8 @@ import {
 	LuSmartphone,
 	LuLogIn,
 	LuKey,
-	LuTrash2,
+	LuUserX,
+	LuUserCheck,
 	LuTriangleAlert,
 } from 'react-icons/lu';
 import { getAvatarUrl } from '../../utils/avatarUtils';
@@ -273,7 +274,11 @@ const UserDetailDrawer = ({
 								<Tindakan icon={LuLogIn} label="Masuk Sebagai" nada="utama" onClick={() => aksi.impersonate(user)} />
 							)}
 							<Tindakan icon={LuKey} label="Reset Sandi" onClick={() => aksi.resetPassword(user)} />
-							<Tindakan icon={LuTrash2} label="Hapus Akun" nada="bahaya" onClick={() => aksi.hapus(user)} />
+							{user.is_active !== false ? (
+								<Tindakan icon={LuUserX} label="Nonaktifkan Akun" nada="bahaya" onClick={() => aksi.ubahStatus(user)} />
+							) : (
+								<Tindakan icon={LuUserCheck} label="Aktifkan Akun" onClick={() => aksi.ubahStatus(user)} />
+							)}
 						</div>
 					</div>
 				)}

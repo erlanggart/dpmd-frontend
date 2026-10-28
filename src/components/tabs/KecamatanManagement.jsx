@@ -8,12 +8,14 @@ import {
 	LuBuilding2,
 	LuPlus,
 	LuKey,
-	LuTrash2,
+	LuUserX,
+	LuUserCheck,
 	LuShield,
 	LuSearch,
 	LuFilter,
 } from "react-icons/lu";
 import api from "../../api";
+import { ubahStatusAkun } from "../../utils/ubahStatusAkun";
 import AddUserModal from "../AddUserModal";
 import ResetPasswordModal from "../ResetPasswordModal";
 import EditRoleModal from "../EditRoleModal";
@@ -129,32 +131,8 @@ const KecamatanManagement = () => {
 		fetchUsers();
 	};
 
-	// Handle delete user
-	const handleDeleteUser = async (user) => {
-		const result = await Swal.fire({
-			title: "Hapus User?",
-			text: `Apakah Anda yakin ingin menghapus user ${user.name}?`,
-			icon: "warning",
-			showCancelButton: true,
-			confirmButtonColor: "#d33",
-			cancelButtonColor: "#3085d6",
-			confirmButtonText: "Ya, Hapus!",
-			cancelButtonText: "Batal",
-		});
-
-		if (result.isConfirmed) {
-			try {
-				await api.delete(`/users/${user.id}`);
-				Swal.fire("Terhapus!", "User berhasil dihapus.", "success");
-				fetchUsers();
-			} catch (err) {
-				Swal.fire(
-					"Error!",
-					err.response?.data?.message || "Gagal menghapus user.",
-					"error"
-				);
-			}
-		}
+	const handleToggleActive = async (user) => {
+		if (await ubahStatusAkun(user)) fetchUsers();
 	};
 
 	if (loading)
@@ -327,12 +305,20 @@ const KecamatanManagement = () => {
 										<span className="text-xs font-medium">Reset</span>
 									</button>
 									<button
-										onClick={() => handleDeleteUser(user)}
-										className="flex flex-col items-center justify-center gap-1 p-3 bg-red-50 text-red-600 rounded-xl hover:bg-red-100 transition-all group/btn"
-										title="Hapus User"
+										onClick={() => handleToggleActive(user)}
+										className={`flex flex-col items-center justify-center gap-1 p-3 rounded-xl transition-all group/btn ${
+											user.is_active
+												? "bg-red-50 text-red-600 hover:bg-red-100"
+												: "bg-emerald-50 text-emerald-700 hover:bg-emerald-100"
+										}`}
+										title={user.is_active ? "Nonaktifkan Akun" : "Aktifkan Akun"}
 									>
-										<LuTrash2 className="h-5 w-5 group-hover/btn:scale-110 transition-transform" />
-										<span className="text-xs font-medium">Hapus</span>
+										{user.is_active ? (
+											<LuUserX className="h-5 w-5 group-hover/btn:scale-110 transition-transform" />
+										) : (
+											<LuUserCheck className="h-5 w-5 group-hover/btn:scale-110 transition-transform" />
+										)}
+										<span className="text-xs font-medium">{user.is_active ? "Nonaktifkan" : "Aktifkan"}</span>
 									</button>
 								</div>
 							</div>

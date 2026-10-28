@@ -241,42 +241,6 @@ const DinasVerifikatorPage = () => {
     }
   };
 
-  const handleDeleteVerifikator = async (verifikator) => {
-    const result = await Swal.fire({
-      title: 'Hapus Verifikator?',
-      html: `Anda yakin ingin menghapus verifikator <strong>${verifikator.nama}</strong>?<br/>
-             <small class="text-gray-500">Akun user juga akan terhapus.</small>`,
-      icon: 'warning',
-      showCancelButton: true,
-      confirmButtonText: 'Ya, Hapus',
-      cancelButtonText: 'Batal',
-      confirmButtonColor: '#ef4444'
-    });
-
-    if (result.isConfirmed) {
-      try {
-        const response = await api.delete(`/dinas/${dinasId}/verifikator/${verifikator.id}`);
-        
-        if (response.data.success) {
-          Swal.fire({
-            icon: 'success',
-            title: 'Berhasil',
-            text: 'Verifikator berhasil dihapus',
-            timer: 2000
-          });
-          fetchVerifikators();
-        }
-      } catch (error) {
-        console.error('Error deleting verifikator:', error);
-        Swal.fire({
-          icon: 'error',
-          title: 'Gagal',
-          text: 'Gagal menghapus verifikator'
-        });
-      }
-    }
-  };
-
   const openEditModal = (verifikator) => {
     setSelectedVerifikator(verifikator);
     setFormData({
@@ -590,13 +554,6 @@ const DinasVerifikatorPage = () => {
                             title="Buat Password Baru"
                           >
                             <LuKey className="w-4 h-4" />
-                          </button>
-                          <button
-                            onClick={() => handleDeleteVerifikator(verifikator)}
-                            className="text-red-600 hover:text-red-900 p-1.5 hover:bg-red-50 rounded transition-colors"
-                            title="Hapus"
-                          >
-                            <LuTrash2 className="w-4 h-4" />
                           </button>
                         </div>
                       </td>
