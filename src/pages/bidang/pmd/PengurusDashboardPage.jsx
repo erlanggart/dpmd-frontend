@@ -11,7 +11,6 @@ import {
   LuChevronDown,
   LuChevronRight,
   LuChevronLeft,
-  LuTriangleAlert,
   LuFilter,
   LuX,
   LuGraduationCap,
@@ -127,23 +126,6 @@ const getJabatanStatus = (status) => (
   }
 );
 
-// Scope status jabatan. Sebelumnya dashboard mengunci diri ke pengurus aktif saja,
-// sehingga pengurus yang sudah purna tugas / dinonaktifkan tidak pernah terhitung.
-const JABATAN_SCOPE_OPTIONS = [
-  { value: "aktif", label: "Hanya Aktif" },
-  { value: "tidak_aktif", label: "Hanya Tidak Aktif" },
-  { value: "selesai", label: "Selesai (Purna Tugas)" },
-  { value: "nonaktif", label: "Nonaktif" },
-  { value: "all", label: "Semua Status Jabatan" },
-];
-
-const GENDER_FILTER_OPTIONS = [
-  { value: "", label: "Semua" },
-  { value: "Laki_laki", label: "Laki-laki" },
-  { value: "Perempuan", label: "Perempuan" },
-  { value: "unknown", label: "Tidak Diketahui" },
-];
-
 const STAT_ACCENTS = {
   blue: { bg: "bg-blue-50/70", border: "border-blue-100", text: "text-blue-600", ring: "#3b82f6" },
   emerald: { bg: "bg-emerald-50/70", border: "border-emerald-100", text: "text-emerald-600", ring: "#10b981" },
@@ -170,34 +152,58 @@ const getVerificationStatus = (status) => (
   }
 );
 
-const VERIFICATION_SCOPE_OPTIONS = [
+// Kartu statistik sekaligus tab: memilih kartu menentukan data di grafik dan tabel.
+// Terverifikasi/Belum/Ditolak = pengurus aktif; Tidak Aktif = selesai + nonaktif.
+const STAT_TABS = [
+  {
+    id: "all",
+    label: "Total Keseluruhan",
+    caption: "seluruh data pengurus",
+    tableTitle: "Daftar Seluruh Pengurus",
+    verification: "all",
+    jabatan: "all",
+    icon: LuUsers,
+    accent: STAT_ACCENTS.blue,
+  },
   {
     id: "verified",
     label: "Terverifikasi",
-    description: "Hanya data yang lolos verifikasi masuk ke tabel dan statistik.",
+    caption: "pengurus aktif lolos verifikasi",
+    tableTitle: "Daftar Pengurus Terverifikasi",
+    verification: "verified",
+    jabatan: "aktif",
     icon: LuShieldCheck,
-    activeClass: "border-emerald-200 bg-emerald-50 text-emerald-700",
+    accent: STAT_ACCENTS.emerald,
   },
   {
     id: "unverified",
     label: "Belum Verifikasi",
-    description: "Lihat data aktif yang masih menunggu proses verifikasi.",
+    caption: "belum / sedang mengajukan verifikasi",
+    tableTitle: "Daftar Pengurus Belum Verifikasi",
+    verification: "unverified",
+    jabatan: "aktif",
     icon: LuShieldAlert,
-    activeClass: "border-amber-200 bg-amber-50 text-amber-700",
+    accent: STAT_ACCENTS.amber,
   },
   {
     id: "ditolak",
     label: "Ditolak",
-    description: "Lihat pengurus yang verifikasinya ditolak seperti pada modul kelembagaan.",
+    caption: "verifikasi ditolak",
+    tableTitle: "Daftar Pengurus Ditolak",
+    verification: "ditolak",
+    jabatan: "aktif",
     icon: LuX,
-    activeClass: "border-rose-200 bg-rose-50 text-rose-700",
+    accent: STAT_ACCENTS.rose,
   },
   {
-    id: "all",
-    label: "Semua Status",
-    description: "Gabungkan semua status verifikasi ke dalam statistik, grafik, dan tabel.",
-    icon: LuUsers,
-    activeClass: "border-blue-200 bg-blue-50 text-blue-700",
+    id: "tidak_aktif",
+    label: "Tidak Aktif",
+    caption: "dinonaktifkan / purna tugas",
+    tableTitle: "Daftar Pengurus Tidak Aktif",
+    verification: "all",
+    jabatan: "tidak_aktif",
+    icon: LuUserX,
+    accent: STAT_ACCENTS.slate,
   },
 ];
 
@@ -210,8 +216,13 @@ export default function PengurusDashboardPage() {
   const [data, setData] = useState([]);
   const [summary, setSummary] = useState(null);
   const [pagination, setPagination] = useState({ page: 1, per_page: 25, total: 0, total_pages: 1 });
-  const [unverified, setUnverified] = useState([]);
-  const [rejected, setRejected] = useState([]);
+  const [yearlyStats, setYearlyStats] = useState({});
+  const [summaryLoading, setSummaryLoading] = useState(true);
+  const [yearlyLoading, setYearlyLoading] = useState(true);
+  // Nomor permintaan terakhir: respons lama yang datang belakangan (klik tab beruntun)
+  // diabaikan supaya tidak menimpa data permintaan terbaru.
+  const summaryReq = useRef(0);
+  const dataReq = useRef(0);
   const [filters, setFilters] = useState({ kecamatans: [], desas: [] });
   const [exporting, setExporting] = useState(false);
 
@@ -223,14 +234,13 @@ export default function PengurusDashboardPage() {
   const [selectedType, setSelectedType] = useState("");
   const [selectedJabatan, setSelectedJabatan] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
-  const [verificationScope, setVerificationScope] = useState("verified");
-  const [jabatanScope, setJabatanScope] = useState("aktif");
+  const [activeTab, setActiveTab] = useState("verified");
   const [selectedTahun, setSelectedTahun] = useState("");
-  const [selectedGender, setSelectedGender] = useState("");
   const [showFilters, setShowFilters] = useState(false);
-  const [showUnverified, setShowUnverified] = useState(false);
-  const [showRejected, setShowRejected] = useState(false);
   const tableRef = useRef(null);
+  const currentTab = STAT_TABS.find((tab) => tab.id === activeTab) || STAT_TABS[0];
+  const verificationScope = currentTab.verification;
+  const jabatanScope = currentTab.jabatan;
 
   // Debounce search input — reset page on new search
   useEffect(() => {
@@ -250,26 +260,25 @@ export default function PengurusDashboardPage() {
     if (searchQuery.trim()) params.append("search", searchQuery.trim());
     if (selectedJabatan) params.append("jabatan", selectedJabatan);
     if (selectedTahun) params.append("tahun", selectedTahun);
-    if (selectedGender) params.append("jenis_kelamin", selectedGender);
     params.append("verification_scope", verificationScope);
     params.append("status_jabatan", jabatanScope);
     params.append("page", String(overrides.page || currentPage));
     params.append("per_page", "25");
     Object.entries(overrides).forEach(([k, v]) => { if (k !== 'page') params.set(k, String(v)); });
     return params;
-  }, [selectedKecamatan, selectedDesa, selectedType, selectedJabatan, searchQuery, verificationScope, jabatanScope, selectedTahun, selectedGender, currentPage]);
+  }, [selectedKecamatan, selectedDesa, selectedType, selectedJabatan, searchQuery, verificationScope, jabatanScope, selectedTahun, currentPage]);
 
-  // Fetch summary/stats — only depends on verificationScope (no filters/search)
   const fetchSummary = useCallback(async () => {
+    const reqId = ++summaryReq.current;
+    setSummaryLoading(true);
     try {
-      // Statistik mengikuti filter global di kartu statistik (tahun, status verifikasi,
-      // status jabatan, jenis kelamin, kelembagaan) dan wilayah, tapi sengaja mengabaikan
-      // kotak pencarian & filter jabatan agar angka agregat tidak melompat saat mengetik.
+      // Statistik mengikuti tab kartu, kelembagaan, tahun, dan wilayah, tapi sengaja
+      // mengabaikan kotak pencarian & filter jabatan agar angka agregat tidak melompat
+      // saat mengetik.
       const params = new URLSearchParams();
       params.append("verification_scope", verificationScope);
       params.append("status_jabatan", jabatanScope);
       if (selectedTahun) params.append("tahun", selectedTahun);
-      if (selectedGender) params.append("jenis_kelamin", selectedGender);
       if (selectedType) params.append("pengurusable_type", TYPE_QUERY_MAP[selectedType] || selectedType);
       if (selectedKecamatan) params.append("kecamatan_id", selectedKecamatan);
       if (selectedDesa) params.append("desa_id", selectedDesa);
@@ -277,38 +286,60 @@ export default function PengurusDashboardPage() {
       params.append("page", "1");
       params.append("per_page", "1");
       const res = await api.get(`/kelembagaan/pengurus-dashboard?${params}`);
+      if (reqId !== summaryReq.current) return;
       if (res.data.success) {
         setSummary(res.data.summary || null);
-        setUnverified(res.data.unverified || []);
-        setRejected(res.data.ditolak || []);
         setFilters(res.data.filters || { kecamatans: [], desas: [] });
       }
     } catch (error) {
       console.error("Error fetching summary:", error);
+    } finally {
+      if (reqId === summaryReq.current) setSummaryLoading(false);
     }
-  }, [verificationScope, jabatanScope, selectedTahun, selectedGender, selectedType, selectedKecamatan, selectedDesa]);
+  }, [verificationScope, jabatanScope, selectedTahun, selectedType, selectedKecamatan, selectedDesa]);
+
+  // Tren per tahun sengaja tanpa filter apa pun: pengurus aktif terverifikasi.
+  const fetchYearly = useCallback(async () => {
+    setYearlyLoading(true);
+    try {
+      const res = await api.get("/kelembagaan/pengurus-dashboard?verification_scope=verified&status_jabatan=aktif&summary_only=1&page=1&per_page=1");
+      if (res.data.success) setYearlyStats(res.data.summary?.yearlyStats || {});
+    } catch (error) {
+      console.error("Error fetching yearly stats:", error);
+    } finally {
+      setYearlyLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchYearly();
+  }, [fetchYearly]);
 
   // Fetch table data — depends on all filters/search/pagination
   const fetchData = useCallback(async () => {
+    const reqId = ++dataReq.current;
     try {
       setLoading(true);
       const params = buildParams();
       const qs = params.toString();
       const res = await api.get(`/kelembagaan/pengurus-dashboard${qs ? `?${qs}` : ""}`);
+      if (reqId !== dataReq.current) return;
       if (res.data.success) {
         setData(res.data.data || []);
         setPagination(res.data.pagination || { page: 1, per_page: 25, total: 0, total_pages: 1 });
       }
     } catch (error) {
+      if (reqId !== dataReq.current) return;
       console.error("Error fetching data:", error);
       toast.error("Gagal memuat data pengurus");
     } finally {
-      setLoading(false);
-      setInitialLoading(false);
+      if (reqId === dataReq.current) {
+        setLoading(false);
+        setInitialLoading(false);
+      }
     }
   }, [buildParams]);
 
-  // Summary: re-fetch only when verificationScope changes
   useEffect(() => {
     fetchSummary();
   }, [fetchSummary]);
@@ -394,63 +425,28 @@ export default function PengurusDashboardPage() {
   const jabatanList = summary?.jabatanList || [];
   const maxAgamaCount = summary ? Math.max(...Object.values(summary.agamaStats || {}), 1) : 1;
 
+  // Reset hanya filter tabel; tab kartu, kelembagaan & tahun selalu terlihat di atas.
   const resetFilters = () => {
     setSearchInput("");
     setSearchQuery("");
     setSelectedKecamatan("");
     setSelectedDesa("");
-    setSelectedType("");
     setSelectedJabatan("");
     setCurrentPage(1);
-    setVerificationScope("verified");
-    setJabatanScope("aktif");
-    setSelectedTahun("");
-    setSelectedGender("");
-    setShowUnverified(false);
-    setShowRejected(false);
   };
 
-  const hasActiveFilters = searchInput || selectedKecamatan || selectedDesa || selectedType
-    || selectedJabatan || verificationScope !== "verified" || jabatanScope !== "aktif"
-    || selectedTahun || selectedGender;
-  const hasTypeStats = Boolean(summary && Object.keys(summary.typeStats || {}).length > 0);
-  const hasYearlyStats = Boolean(summary && Object.keys(summary.yearlyStats || {}).length > 0);
-  const matchingCounts = summary?.matchingCounts || { all: 0, verified: 0, unverified: 0, ditolak: 0 };
-  const statusJabatanCounts = summary?.statusJabatanCounts || {
-    aktif: 0, selesai: 0, nonaktif: 0, tidak_diketahui: 0, tidak_aktif: 0, total: 0,
-  };
-  const inactiveCount = statusJabatanCounts.tidak_aktif || 0;
-  const jabatanScopeTotal = statusJabatanCounts.total || 0;
+  const hasActiveFilters = searchInput || selectedKecamatan || selectedDesa || selectedJabatan;
+  const hasYearlyStats = Object.keys(yearlyStats).length > 0;
+  const cardCounts = summary?.cardCounts || { total: 0, verified: 0, unverified: 0, ditolak: 0, tidak_aktif: 0 };
+  const cardValue = (tabId) => (tabId === "all" ? cardCounts.total : cardCounts[tabId]);
+  const activeTotal = cardCounts.verified + cardCounts.unverified + cardCounts.ditolak;
   const availableYears = summary?.availableYears || [];
   const displayedTotal = summary?.total || 0;
-  // Persentase verifikasi memakai jumlah pengurus yang cocok filter (lintas status
-  // verifikasi) sebagai penyebut, bukan jumlah yang kebetulan sedang ditampilkan.
-  const verificationBase = matchingCounts.all || 0;
-  const pendingVerificationCount = summary?.pendingVerificationCount ?? matchingCounts.unverified;
-  const rejectedVerificationCount = summary?.rejectedVerificationCount ?? matchingCounts.ditolak;
-  const currentScopeOption = VERIFICATION_SCOPE_OPTIONS.find((option) => option.id === verificationScope) || VERIFICATION_SCOPE_OPTIONS[0];
-  const tableTitle = verificationScope === "verified"
-    ? "Daftar Pengurus Terverifikasi"
-    : verificationScope === "unverified"
-      ? "Daftar Pengurus Belum Verifikasi"
-      : "Daftar Pengurus Ditolak";
-  const emptyTableText = verificationScope === "verified"
-    ? "Tidak ada data pengurus terverifikasi"
-    : verificationScope === "unverified"
-      ? "Tidak ada data pengurus yang belum verifikasi"
-      : "Tidak ada data pengurus yang ditolak";
+  // Distribusi kelembagaan tidak berguna saat satu lembaga sudah dipilih (pasti 100%).
+  const showTypeChart = !selectedType && Object.keys(summary?.typeStats || {}).length > 0;
 
-  useEffect(() => {
-    if (pendingVerificationCount === 0 && showUnverified) {
-      setShowUnverified(false);
-    }
-  }, [pendingVerificationCount, showUnverified]);
-
-  useEffect(() => {
-    if (rejectedVerificationCount === 0 && showRejected) {
-      setShowRejected(false);
-    }
-  }, [rejectedVerificationCount, showRejected]);
+  const selectTab = (tabId) => { setActiveTab(tabId); setCurrentPage(1); };
+  const selectType = (type) => { setSelectedType(type); setCurrentPage(1); };
 
   // Compute max value for bar charts
   const maxAgeCount = summary ? Math.max(...Object.values(summary.ageRanges), 1) : 1;
@@ -485,7 +481,7 @@ export default function PengurusDashboardPage() {
                         Dashboard Pengurus
                       </h1>
                       <p className="hidden sm:block text-xs sm:text-sm text-gray-500">
-                        {currentScopeOption.description}
+                        Data, statistik, dan tren pengurus kelembagaan desa.
                       </p>
                     </div>
                   </div>
@@ -498,7 +494,7 @@ export default function PengurusDashboardPage() {
                       <span className="hidden sm:inline">Import Excel</span>
                     </button>
                     <button
-                      onClick={() => { fetchSummary(); fetchData(); }}
+                      onClick={() => { fetchYearly(); fetchSummary(); fetchData(); }}
                       className="flex items-center gap-2 px-3 py-2 text-sm bg-blue-500 text-white hover:bg-blue-600 rounded-lg transition-colors"
                     >
                       <LuRefreshCw className="h-4 w-4" />
@@ -509,236 +505,76 @@ export default function PengurusDashboardPage() {
               
             </header>
 
-      {/* Statistik: filter global + ringkasan */}
-      <section className="bg-white rounded-xl border border-gray-200 p-5">
-        <div className="flex flex-col gap-5 2xl:flex-row 2xl:items-start 2xl:justify-between">
-          <div className="flex items-start gap-3">
-            <div className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-xl bg-blue-50 text-blue-600">
-              <LuChartPie className="h-5 w-5" />
-            </div>
-            <div>
-              <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-gray-400">
-                Mode Agregat
-              </p>
-              <h2 className="mt-0.5 text-lg font-semibold text-gray-900">Statistik Verifikasi</h2>
-              <p className="mt-1 max-w-xl text-sm text-gray-500">
-                {currentScopeOption.description}
-              </p>
+      {/* Tren per tahun: tidak ikut filter di bawahnya */}
+      {yearlyLoading ? (
+        <LoadingPanel className="h-[380px]" text="Memuat tren pengurus per tahun..." />
+      ) : hasYearlyStats && <YearlyPengurusChart yearlyStats={yearlyStats} />}
+
+      {/* Filter statistik: kelembagaan (tab) + sejak tahun */}
+      <section className="bg-white rounded-xl border border-gray-200 p-4">
+        <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
+          <div className="min-w-0">
+            <p className="mb-1.5 flex items-center gap-1.5 text-xs font-medium text-gray-500">
+              <LuChartPie className="h-3.5 w-3.5" />
+              Statistik per Kelembagaan
+            </p>
+            <div className="flex flex-wrap gap-1.5">
+              {[{ value: "", label: "Semua" }, ...TYPE_FILTER_OPTIONS].map((option) => (
+                <button
+                  key={option.value || "all"}
+                  type="button"
+                  onClick={() => selectType(option.value)}
+                  className={`rounded-lg border px-3 py-1.5 text-sm font-medium transition-colors ${
+                    selectedType === option.value
+                      ? "border-blue-500 bg-blue-500 text-white"
+                      : "border-gray-200 bg-white text-gray-600 hover:bg-gray-50"
+                  }`}
+                >
+                  {option.label}
+                </button>
+              ))}
             </div>
           </div>
-
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-5 2xl:min-w-[880px]">
+          <div className="w-full lg:w-48 flex-shrink-0">
             <FilterSelect
-              label="Tahun"
+              label="Sejak Tahun"
               icon={LuCalendarDays}
               value={selectedTahun}
               onChange={(value) => { setSelectedTahun(value); setCurrentPage(1); }}
             >
               <option value="">Semua Tahun</option>
               {availableYears.map((year) => (
-                <option key={year} value={year}>{year}</option>
-              ))}
-            </FilterSelect>
-
-            <FilterSelect
-              label="Status Verifikasi"
-              icon={LuShieldCheck}
-              value={verificationScope}
-              onChange={(value) => { setVerificationScope(value); setCurrentPage(1); }}
-            >
-              {VERIFICATION_SCOPE_OPTIONS.map((option) => (
-                <option key={option.id} value={option.id}>{option.label}</option>
-              ))}
-            </FilterSelect>
-
-            <FilterSelect
-              label="Status Jabatan"
-              icon={LuUserX}
-              value={jabatanScope}
-              onChange={(value) => { setJabatanScope(value); setCurrentPage(1); }}
-            >
-              {JABATAN_SCOPE_OPTIONS.map((option) => (
-                <option key={option.value} value={option.value}>{option.label}</option>
-              ))}
-            </FilterSelect>
-
-            <FilterSelect
-              label="Jenis Kelamin"
-              icon={LuUsers}
-              value={selectedGender}
-              onChange={(value) => { setSelectedGender(value); setCurrentPage(1); }}
-            >
-              {GENDER_FILTER_OPTIONS.map((option) => (
-                <option key={option.value} value={option.value}>{option.label}</option>
-              ))}
-            </FilterSelect>
-
-            <FilterSelect
-              label="Kelembagaan"
-              icon={LuBuilding2}
-              value={selectedType}
-              onChange={(value) => { setSelectedType(value); setCurrentPage(1); }}
-            >
-              <option value="">Semua</option>
-              {TYPE_FILTER_OPTIONS.map((option) => (
-                <option key={option.value} value={option.value}>{option.label}</option>
+                <option key={year} value={year}>{year} - sekarang</option>
               ))}
             </FilterSelect>
           </div>
         </div>
       </section>
 
-      {/* Summary Cards */}
-      {summary && (
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-5">
+      {/* Kartu statistik sekaligus tab tampilan grafik & tabel */}
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-5">
+        {STAT_TABS.map((tab) => (
           <StatCard
-            icon={LuUsers}
-            label="Total Ditampilkan"
-            value={displayedTotal}
-            percent={toPercent(displayedTotal, verificationBase)}
-            caption={`dari ${formatNumber(verificationBase)} pengurus sesuai filter`}
-            accent={STAT_ACCENTS.blue}
+            key={tab.id}
+            icon={tab.icon}
+            label={tab.label}
+            value={cardValue(tab.id)}
+            // Persentase hanya untuk status verifikasi, terhadap total pengurus aktif.
+            percent={tab.verification === "all" ? null : toPercent(cardValue(tab.id), activeTotal)}
+            caption={tab.caption}
+            accent={tab.accent}
+            active={activeTab === tab.id}
+            loading={summaryLoading}
+            onClick={() => selectTab(tab.id)}
           />
-          <StatCard
-            icon={LuShieldCheck}
-            label="Terverifikasi"
-            value={matchingCounts.verified}
-            percent={toPercent(matchingCounts.verified, verificationBase)}
-            caption="sudah lolos verifikasi"
-            accent={STAT_ACCENTS.emerald}
-          />
-          <StatCard
-            icon={LuShieldAlert}
-            label="Belum Verifikasi"
-            value={pendingVerificationCount}
-            percent={toPercent(pendingVerificationCount, verificationBase)}
-            caption="menunggu proses validasi"
-            accent={STAT_ACCENTS.amber}
-            onClick={() => setShowUnverified(!showUnverified)}
-            clickable={verificationScope !== "unverified" && pendingVerificationCount > 0}
-          />
-          <StatCard
-            icon={LuX}
-            label="Ditolak"
-            value={rejectedVerificationCount}
-            percent={toPercent(rejectedVerificationCount, verificationBase)}
-            caption="perlu perbaikan data"
-            accent={STAT_ACCENTS.rose}
-            onClick={() => setShowRejected(!showRejected)}
-            clickable={verificationScope !== "ditolak" && rejectedVerificationCount > 0}
-          />
-          <StatCard
-            icon={LuUserX}
-            label="Tidak Aktif"
-            value={inactiveCount}
-            percent={toPercent(inactiveCount, jabatanScopeTotal)}
-            caption={`selesai ${formatNumber(statusJabatanCounts.selesai)} · nonaktif ${formatNumber(statusJabatanCounts.nonaktif)}`}
-            accent={STAT_ACCENTS.slate}
-            onClick={() => { setJabatanScope("tidak_aktif"); setCurrentPage(1); }}
-            clickable={jabatanScope !== "tidak_aktif" && inactiveCount > 0}
-          />
-        </div>
-      )}
+        ))}
+      </div>
 
-      {jabatanScope === "aktif" && inactiveCount > 0 && (
-        <div className="flex flex-col gap-2 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600 sm:flex-row sm:items-center sm:justify-between">
-          <p>
-            Statistik di atas hanya menghitung <strong>pengurus aktif</strong>.{" "}
-            <strong>{formatNumber(inactiveCount)}</strong> pengurus tidak aktif
-            ({formatNumber(statusJabatanCounts.selesai)} selesai, {formatNumber(statusJabatanCounts.nonaktif)} nonaktif) belum termasuk.
-          </p>
-          <button
-            type="button"
-            onClick={() => { setJabatanScope("all"); setCurrentPage(1); }}
-            className="self-start whitespace-nowrap rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 transition-colors hover:bg-slate-100 sm:self-auto"
-          >
-            Hitung semua status jabatan
-          </button>
-        </div>
-      )}
-
-      {/* Status Detail Panels */}
-      {verificationScope !== "unverified" && showUnverified && unverified.length > 0 && (
-        <div className="bg-amber-50 border border-amber-200 rounded-xl p-4">
-          <div className="flex items-center justify-between mb-3">
-            <div className="flex items-center gap-2">
-              <LuTriangleAlert className="w-5 h-5 text-amber-600" />
-              <h3 className="font-semibold text-amber-800">
-                Pengurus Belum Terverifikasi ({pendingVerificationCount})
-              </h3>
-            </div>
-            <button
-              onClick={() => setShowUnverified(false)}
-              className="p-1 hover:bg-amber-100 rounded"
-            >
-              <LuX className="w-4 h-4 text-amber-600" />
-            </button>
-          </div>
-          <div className="space-y-2 max-h-64 overflow-y-auto">
-            {unverified.map((p) => (
-              <button
-                key={p.id}
-                onClick={() => navigate(getPath(`/bidang/pmd/pengurus/${p.id}`))}
-                className="w-full flex items-center justify-between p-3 bg-white rounded-lg border border-amber-100 hover:border-amber-300 hover:shadow-sm transition-all text-left"
-              >
-                <div>
-                  <p className="font-medium text-gray-800">{p.nama_lengkap}</p>
-                  <p className="text-xs text-gray-500">
-                    {p.jabatan} — {TYPE_LABELS[p.pengurusable_type] || p.pengurusable_type}
-                  </p>
-                  <p className="text-xs text-gray-400">
-                    {p.desa_nama}, {p.kecamatan_nama}
-                  </p>
-                </div>
-                <LuExternalLink className="w-4 h-4 text-amber-500 flex-shrink-0" />
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {verificationScope !== "ditolak" && showRejected && rejected.length > 0 && (
-        <div className="bg-rose-50 border border-rose-200 rounded-xl p-4">
-          <div className="flex items-center justify-between mb-3">
-            <div className="flex items-center gap-2">
-              <LuX className="w-5 h-5 text-rose-600" />
-              <h3 className="font-semibold text-rose-800">
-                Pengurus Ditolak ({rejectedVerificationCount})
-              </h3>
-            </div>
-            <button
-              onClick={() => setShowRejected(false)}
-              className="p-1 hover:bg-rose-100 rounded"
-            >
-              <LuX className="w-4 h-4 text-rose-600" />
-            </button>
-          </div>
-          <div className="space-y-2 max-h-64 overflow-y-auto">
-            {rejected.map((p) => (
-              <button
-                key={p.id}
-                onClick={() => navigate(getPath(`/bidang/pmd/pengurus/${p.id}`))}
-                className="w-full flex items-center justify-between p-3 bg-white rounded-lg border border-rose-100 hover:border-rose-300 hover:shadow-sm transition-all text-left"
-              >
-                <div>
-                  <p className="font-medium text-gray-800">{p.nama_lengkap}</p>
-                  <p className="text-xs text-gray-500">
-                    {p.jabatan} — {TYPE_LABELS[p.pengurusable_type] || p.pengurusable_type}
-                  </p>
-                  <p className="text-xs text-gray-400">
-                    {p.desa_nama}, {p.kecamatan_nama}
-                  </p>
-                </div>
-                <LuExternalLink className="w-4 h-4 text-rose-500 flex-shrink-0" />
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Infographics */}
-      {summary && (
-        <div className="grid grid-cols-1 gap-4 lg:grid-cols-2 xl:grid-cols-4">
+      {/* Infographics: mengikuti kartu yang dipilih */}
+      {(summaryLoading || !summary) ? (
+        <LoadingPanel className="h-[420px]" text={`Memuat statistik ${currentTab.label.toLowerCase()}...`} />
+      ) : (
+        <div className={`grid grid-cols-1 gap-4 md:grid-cols-2 ${showTypeChart ? "xl:grid-cols-3" : "xl:grid-cols-4"}`}>
           {/* Gender */}
           <div className="bg-white rounded-xl border border-gray-200 p-5">
             <ChartCardHeader
@@ -753,6 +589,10 @@ export default function PengurusDashboardPage() {
               unknown={summary.genderStats.unknown}
             />
           </div>
+
+          {showTypeChart && (
+            <TypeDistributionChart typeStats={summary.typeStats} className="xl:col-span-2" />
+          )}
 
           {/* Age Distribution */}
           <div className="bg-white rounded-xl border border-gray-200 p-5">
@@ -819,48 +659,28 @@ export default function PengurusDashboardPage() {
           </div>
 
           {/* Religion Distribution */}
-          {summary.agamaStats && Object.keys(summary.agamaStats).length > 0 && (
-            <div className="bg-white rounded-xl border border-gray-200 p-5">
-              <ChartCardHeader
-                icon={LuHeart}
-                iconClass="text-rose-500"
-                title="Agama"
-                total={displayedTotal}
-              />
-              <div className="space-y-2">
-                {Object.entries(summary.agamaStats)
-                  .sort((a, b) => b[1] - a[1])
-                  .map(([agama, count]) => (
-                    <BarRow
-                      key={agama}
-                      label={agama}
-                      value={count}
-                      max={maxAgamaCount}
-                      total={displayedTotal}
-                      color="bg-rose-400"
-                    />
-                  ))}
-              </div>
+          <div className={`bg-white rounded-xl border border-gray-200 p-5 ${showTypeChart ? "md:col-span-2 xl:col-span-1" : ""}`}>
+            <ChartCardHeader
+              icon={LuHeart}
+              iconClass="text-rose-500"
+              title="Agama"
+              total={displayedTotal}
+            />
+            <div className="space-y-2">
+              {Object.entries(summary.agamaStats || {})
+                .sort((a, b) => b[1] - a[1])
+                .map(([agama, count]) => (
+                  <BarRow
+                    key={agama}
+                    label={agama}
+                    value={count}
+                    max={maxAgamaCount}
+                    total={displayedTotal}
+                    color="bg-rose-400"
+                  />
+                ))}
             </div>
-          )}
-        </div>
-      )}
-
-      {/* Kelembagaan Charts */}
-      {summary && (hasTypeStats || hasYearlyStats) && (
-        <div className="grid grid-cols-1 gap-4 xl:grid-cols-12" style={{ alignItems: 'stretch' }}>
-          {hasTypeStats && (
-            <TypeDistributionChart
-              typeStats={summary.typeStats}
-              className={hasYearlyStats ? "xl:col-span-4 flex flex-col" : "xl:col-span-12"}
-            />
-          )}
-          {hasYearlyStats && (
-            <YearlyPengurusChart
-              yearlyStats={summary.yearlyStats}
-              className={hasTypeStats ? "xl:col-span-8 flex flex-col" : "xl:col-span-12"}
-            />
-          )}
+          </div>
         </div>
       )}
 
@@ -963,14 +783,11 @@ export default function PengurusDashboardPage() {
         <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
           <div>
             <h3 className="font-semibold text-gray-800">
-              {tableTitle}
+              {currentTab.tableTitle}
               <span className="text-sm font-normal text-gray-500 ml-2">
                 ({formatNumber(pagination.total)} orang)
               </span>
             </h3>
-            <p className="mt-0.5 text-xs text-gray-500">
-              Status jabatan: {JABATAN_SCOPE_OPTIONS.find((o) => o.value === jabatanScope)?.label || jabatanScope}
-            </p>
           </div>
         </div>
         {loading ? (
@@ -981,7 +798,7 @@ export default function PengurusDashboardPage() {
         ) : data.length === 0 ? (
           <div className="p-8 text-center text-gray-400">
             <LuUsers className="w-10 h-10 mx-auto mb-2 opacity-50" />
-            <p>{emptyTableText}</p>
+            <p>Tidak ada data pada {currentTab.tableTitle.toLowerCase()}</p>
           </div>
         ) : (
           <div className="overflow-x-auto">
@@ -1160,14 +977,27 @@ function DonutRing({ percent, color }) {
   );
 }
 
-function StatCard({ icon: Icon, label, value, percent, caption, accent, onClick, clickable }) {
-  const Wrapper = clickable ? "button" : "div";
+function LoadingPanel({ text, className = "" }) {
   return (
-    <Wrapper
-      onClick={clickable ? onClick : undefined}
-      className={`rounded-2xl border ${accent.border} ${accent.bg} p-5 text-left ${
-        clickable ? "w-full cursor-pointer transition-shadow hover:shadow-md" : ""
+    <div className={`flex items-center justify-center rounded-xl border border-gray-200 bg-white ${className}`.trim()}>
+      <div className="text-center text-gray-400">
+        <LuRefreshCw className="mx-auto mb-2 h-6 w-6 animate-spin text-blue-500" />
+        <p className="text-sm">{text}</p>
+      </div>
+    </div>
+  );
+}
+
+function StatCard({ icon: Icon, label, value, percent, caption, accent, onClick, active, loading }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-pressed={active}
+      className={`w-full rounded-2xl border ${accent.border} ${accent.bg} p-5 text-left transition-shadow hover:shadow-md ${
+        active ? "ring-2 ring-offset-1 shadow-md" : ""
       }`}
+      style={active ? { "--tw-ring-color": accent.ring } : undefined}
     >
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
@@ -1177,14 +1007,20 @@ function StatCard({ icon: Icon, label, value, percent, caption, accent, onClick,
             </span>
             <span className="truncate text-sm font-semibold text-gray-700">{label}</span>
           </div>
-          <p className="mt-3 text-3xl font-bold tracking-tight text-gray-900">
-            {formatNumber(value)}
-          </p>
+          {loading ? (
+            <div className="mt-3 flex h-9 items-center">
+              <LuRefreshCw className={`h-5 w-5 animate-spin ${accent.text}`} />
+            </div>
+          ) : (
+            <p className="mt-3 text-3xl font-bold tracking-tight text-gray-900">
+              {formatNumber(value)}
+            </p>
+          )}
           {caption && <p className="mt-1.5 text-xs text-gray-500">{caption}</p>}
         </div>
-        <DonutRing percent={percent} color={accent.ring} />
+        {percent != null && !loading && <DonutRing percent={percent} color={accent.ring} />}
       </div>
-    </Wrapper>
+    </button>
   );
 }
 
@@ -1364,9 +1200,9 @@ function TypeDistributionChart({ typeStats, className = "" }) {
         iconClass="text-teal-500"
         title="Distribusi per Kelembagaan"
         total={total}
-        subtitle="Komposisi pengurus berdasarkan jenis kelembagaan pada filter statistik yang sedang aktif."
+        subtitle="Komposisi pengurus berdasarkan jenis kelembagaan."
       />
-      <div className="grid grid-cols-1 items-center gap-5 lg:grid-cols-2 xl:grid-cols-1">
+      <div className="grid grid-cols-1 items-center gap-5 sm:grid-cols-2">
         <div className="relative mx-auto h-56 w-56 max-w-full">
           <Doughnut data={chartData} options={chartOptions} />
           <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
@@ -1408,12 +1244,36 @@ const YEARLY_COLORS = {
   Lainnya: "#eab308",
 };
 
+// Tulis total tiap batang bertumpuk di atasnya; dataset yang disembunyikan lewat
+// legend tidak ikut dijumlah.
+const stackTotalsPlugin = {
+  id: "stackTotals",
+  afterDatasetsDraw(chart) {
+    const { ctx, data } = chart;
+    const visible = data.datasets.map((_, i) => i).filter((i) => chart.isDatasetVisible(i));
+    if (!visible.length) return;
+    ctx.save();
+    ctx.font = "600 11px sans-serif";
+    ctx.fillStyle = "#374151";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "bottom";
+    data.labels.forEach((_, index) => {
+      const total = visible.reduce((sum, i) => sum + (data.datasets[i].data[index] || 0), 0);
+      if (!total) return;
+      const bars = visible.map((i) => chart.getDatasetMeta(i).data[index]).filter(Boolean);
+      const top = Math.min(...bars.map((bar) => bar.y));
+      ctx.fillText(formatNumber(total), bars[0].x, top - 4);
+    });
+    ctx.restore();
+  },
+};
+
 function YearlyPengurusChart({ yearlyStats, className = "" }) {
   const MAIN_TYPES = ["RW", "RT", "Posyandu", "Karang Taruna", "LPM", "PKK", "Satlinmas"];
   const allYears = Object.keys(yearlyStats).sort();
   const [selectedYear, setSelectedYear] = useState("all");
-  // yearlyStats ikut berubah saat filter di atas berubah, jadi tahun yang dipilih
-  // bisa saja hilang dari data - jatuhkan kembali ke "semua tahun".
+  // yearlyStats bisa berubah saat refresh, jadi tahun yang dipilih bisa saja hilang
+  // dari data - jatuhkan kembali ke "semua tahun".
   const activeYear = allYears.includes(selectedYear) ? selectedYear : "all";
   const years = activeYear === "all" ? allYears : [activeYear];
 
@@ -1453,6 +1313,7 @@ function YearlyPengurusChart({ yearlyStats, className = "" }) {
   }));
 
   const chartData = { labels: years, datasets };
+  const grandTotal = datasets.reduce((sum, ds) => sum + ds.data.reduce((a, b) => a + b, 0), 0);
 
   const chartOptions = {
     responsive: true,
@@ -1475,6 +1336,7 @@ function YearlyPengurusChart({ yearlyStats, className = "" }) {
         cornerRadius: 8,
         callbacks: {
           label: (ctx) => ` ${ctx.dataset.label}: ${formatNumber(ctx.parsed.y)} pengurus`,
+          footer: (items) => `Total: ${formatNumber(items.reduce((sum, item) => sum + item.parsed.y, 0))} pengurus`,
         },
       },
     },
@@ -1487,6 +1349,7 @@ function YearlyPengurusChart({ yearlyStats, className = "" }) {
       y: {
         stacked: true,
         beginAtZero: true,
+        grace: "8%", // ruang untuk label total di atas batang
         grid: { color: "rgba(0,0,0,0.04)" },
         ticks: { font: { size: 11 }, precision: 0, callback: (value) => formatNumber(value) },
         title: { display: true, text: "Jumlah Pengurus", font: { size: 12 } },
@@ -1503,9 +1366,13 @@ function YearlyPengurusChart({ yearlyStats, className = "" }) {
             Jumlah Pengurus per Kelembagaan per Tahun
           </h3>
           <p className="mt-1 text-xs text-gray-400">
-            Jumlah pengurus sesuai filter statistik yang sedang dipilih.
+            Tren pengurus aktif terverifikasi tiap kelembagaan berdasarkan tahun input data. Tidak terpengaruh filter di bawah.
           </p>
         </div>
+        <div className="flex flex-shrink-0 items-center gap-3">
+        <span className="whitespace-nowrap text-xs text-gray-400">
+          Total <span className="text-base font-bold text-gray-800">{formatNumber(grandTotal)}</span>
+        </span>
         {allYears.length > 1 && (
           <div className="relative flex-shrink-0">
             <select
@@ -1521,9 +1388,10 @@ function YearlyPengurusChart({ yearlyStats, className = "" }) {
             <LuChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
           </div>
         )}
+        </div>
       </div>
-      <div className="min-h-[320px] flex-1">
-        <Bar data={chartData} options={chartOptions} />
+      <div className="h-[300px]">
+        <Bar data={chartData} options={chartOptions} plugins={[stackTotalsPlugin]} />
       </div>
     </div>
   );
