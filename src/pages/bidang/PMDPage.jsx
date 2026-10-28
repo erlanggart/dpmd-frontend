@@ -297,7 +297,7 @@ const PMDPage = () => {
     {
       id: 'akun-desa', tone: 'violet',
       title: 'Akun Operator Desa', short: 'Akun Desa',
-      desc: 'Buatkan akun petugas desa untuk mengelola kelembagaan',
+      desc: 'Buatkan akun petugas desa untuk mengelola kelembagaan dan produk hukum',
       icon: UserPlus,
       route: getPath('/bidang/pmd/akun-desa'),
       stat: { value: 'Kelembagaan', label: 'hak akses bidang ini' },
