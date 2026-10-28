@@ -922,6 +922,9 @@ export default function PengurusForm({
 										className="w-full bg-white/80 backdrop-blur-sm text-gray-900 focus:outline-none focus:ring-0 uppercase"
 									>
 										<option value="">PILIH PENDIDIKAN</option>
+										<option value="TIDAK SEKOLAH" className="text-gray-900 bg-white">
+											TIDAK SEKOLAH
+										</option>
 										<option value="SD" className="text-gray-900 bg-white">
 											SD
 										</option>

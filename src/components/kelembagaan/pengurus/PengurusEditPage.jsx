@@ -896,6 +896,7 @@ const PengurusEditPage = () => {
 									className="w-full border-2 border-gray-200 rounded-lg px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 bg-white/80 backdrop-blur-sm transition-all duration-200"
 								>
 									<option value="">Pilih pendidikan</option>
+									<option value="TIDAK SEKOLAH">TIDAK SEKOLAH</option>
 									<option value="SD">SD</option>
 									<option value="SMP">SMP</option>
 									<option value="SMA/SMK">SMA/SMK</option>
