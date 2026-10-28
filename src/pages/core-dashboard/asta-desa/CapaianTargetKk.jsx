@@ -23,7 +23,31 @@ import { GAYA_SUMBU, KEADAAN, SERI, angka, tanggalSingkat } from './warna';
 
 const desimal = (n) => Number(n ?? 0).toLocaleString('id-ID', { maximumFractionDigits: 1 });
 
+// Tambahan kecil (satu jam, satu hari) dari target ratusan ribu KK dibulatkan ke
+// 0%; jangan sampai terbaca "tidak ada input" padahal ada.
+const persenNaik = (p, n) => (n > 0 && p < 0.1 ? '<0,1%' : `${desimal(p)}%`);
+
 const HARI_PENDEK = ['Min', 'Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab'];
+
+// Kunci dan urutannya sama dengan `periode` dari ASTA DESA (TargetKk::periode):
+// hari ini per jam, minggu & bulan ini per hari, tahun ini per bulan.
+const PERIODE = [
+  ['hari', 'Hari ini'],
+  ['minggu', 'Minggu'],
+  ['bulan', 'Bulan'],
+  ['tahun', 'Tahun']
+];
+const KUNCI_SIMPAN = 'asta-desa:periode-target-kk';
+
+const bacaPeriode = () => {
+  try {
+    const simpan = localStorage.getItem(KUNCI_SIMPAN);
+    if (PERIODE.some(([k]) => k === simpan)) return simpan;
+  } catch {
+    // localStorage bisa tidak tersedia (mode privat) — pakai bawaan.
+  }
+  return 'minggu';
+};
 
 /**
  * Cincin capaian. Busurnya digambar dari 0 ke nilai sebenarnya saat pertama
@@ -65,18 +89,47 @@ const Cincin = ({ nilai }) => {
   );
 };
 
-const TooltipHarian = ({ active, payload }) => {
+const TooltipBatang = ({ active, payload }) => {
   if (!active || !payload?.length) return null;
-  const h = payload[0].payload;
+  const b = payload[0].payload;
   return (
     <div className="rounded-xl border border-slate-200 bg-white/97 px-3 py-2 shadow-lg backdrop-blur">
-      <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">{tanggalSingkat(h.tanggal)}</p>
-      <p className="mt-1 text-xs text-slate-700">
-        <span className="font-semibold tabular-nums text-slate-900">+{angka(h.jumlah)} KK</span> ·{' '}
-        <span className="tabular-nums">{desimal(h.persen)}% dari target</span>
-      </p>
+      <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">{b.label}</p>
+      {b.nanti ? (
+        <p className="mt-1 text-xs text-slate-400">Belum lewat</p>
+      ) : (
+        <p className="mt-1 text-xs text-slate-700">
+          <span className="font-semibold tabular-nums text-slate-900">+{angka(b.jumlah)} KK</span> ·{' '}
+          <span className="tabular-nums">{persenNaik(b.persen, b.jumlah)} dari target</span>
+        </p>
+      )}
     </div>
   );
+};
+
+/**
+ * Bentuk `periode` dari deret `harian`, untuk API ASTA DESA yang belum
+ * mengirim `periode`: satu deret 30 hari, tanpa tab.
+ */
+const periodeDariHarian = (harian) => {
+  const batang = harian.map((h, i, arr) => {
+    const d = new Date(`${h.tanggal}T00:00:00`);
+    const ini = i === arr.length - 1;
+    return {
+      ...h,
+      sumbu: ini ? 'Hari ini' : i % 5 === 0 ? `${HARI_PENDEK[d.getDay()]} ${d.getDate()}` : '',
+      label: tanggalSingkat(h.tanggal),
+      ini,
+      nanti: false
+    };
+  });
+  return {
+    judul: `${batang.length} hari terakhir`,
+    satuan: 'hari',
+    jumlah: batang.reduce((s, b) => s + b.jumlah, 0),
+    persen: batang.reduce((s, b) => s + b.persen, 0),
+    batang
+  };
 };
 
 const BarisKecamatan = ({ k }) => {
@@ -121,22 +174,25 @@ const BarisKecamatan = ({ k }) => {
 
 const CapaianTargetKk = ({ aktif = true }) => {
   const [semua, setSemua] = useState(false);
+  const [pilihan, setPilihan] = useState(bacaPeriode);
   // Sekali semenit, sama dengan umur cache endpoint ini di backend dan di ASTA
   // DESA — lebih sering hanya mengambil jawaban yang sama.
   const { data, memuat, galat, ambil } = useAstaDesa('/target-kk', { hari: 30 }, { aktif, segarkanTiapMs: 60 * 1000 });
 
-  const harian = useMemo(
-    () =>
-      (data?.harian || []).map((h, i, arr) => {
-        const d = new Date(`${h.tanggal}T00:00:00`);
-        return {
-          ...h,
-          label: i === arr.length - 1 ? 'Hari ini' : `${HARI_PENDEK[d.getDay()]} ${d.getDate()}`,
-          hariIni: i === arr.length - 1
-        };
-      }),
-    [data?.harian]
+  const adaTab = Boolean(data?.periode?.[pilihan]);
+  const periode = useMemo(
+    () => (adaTab ? data.periode[pilihan] : periodeDariHarian(data?.harian || [])),
+    [adaTab, data?.periode, data?.harian, pilihan]
   );
+
+  const pilih = (kunci) => {
+    setPilihan(kunci);
+    try {
+      localStorage.setItem(KUNCI_SIMPAN, kunci);
+    } catch {
+      // Tidak diingat — tidak masalah.
+    }
+  };
 
   const kecamatan = useMemo(
     () =>
@@ -179,14 +235,25 @@ const CapaianTargetKk = ({ aktif = true }) => {
         </div>
 
         <div className="grid grid-cols-2 gap-3">
-          <KartuAngka
-            icon={TrendingUp}
-            label="Hari ini"
-            nilai={r.hari_ini > 0 ? `+${angka(r.hari_ini)}` : '0'}
-            satuan="KK"
-            warna={KEADAAN.baik}
-            keterangan={`${r.hari_ini > 0 ? '+' : ''}${desimal(r.persen_hari_ini)}% dari target`}
-          />
+          {adaTab ? (
+            <KartuAngka
+              icon={TrendingUp}
+              label={periode.judul}
+              nilai={periode.jumlah > 0 ? `+${angka(periode.jumlah)}` : '0'}
+              satuan="KK"
+              warna={KEADAAN.baik}
+              keterangan={`${periode.jumlah > 0 ? '+' : ''}${persenNaik(periode.persen, periode.jumlah)} dari target`}
+            />
+          ) : (
+            <KartuAngka
+              icon={TrendingUp}
+              label="Hari ini"
+              nilai={r.hari_ini > 0 ? `+${angka(r.hari_ini)}` : '0'}
+              satuan="KK"
+              warna={KEADAAN.baik}
+              keterangan={`${r.hari_ini > 0 ? '+' : ''}${persenNaik(r.persen_hari_ini, r.hari_ini)} dari target`}
+            />
+          )}
           <KartuAngka
             icon={Target}
             label="Terkumpul"
@@ -212,19 +279,42 @@ const CapaianTargetKk = ({ aktif = true }) => {
         </div>
 
         <div>
-          <p className="mb-2 text-xs font-semibold text-slate-700">
-            Capaian per hari <span className="font-normal text-slate-400">(30 hari terakhir, % dari target)</span>
-          </p>
+          <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+            <p className="text-xs font-semibold text-slate-700">
+              Capaian per {periode.satuan}{' '}
+              <span className="font-normal text-slate-400">({periode.judul.toLowerCase()}, KK terinput)</span>
+            </p>
+            {adaTab && (
+              <div className="flex rounded-lg bg-slate-100 p-0.5" role="tablist">
+                {PERIODE.map(([kunci, nama]) => (
+                  <button
+                    key={kunci}
+                    type="button"
+                    role="tab"
+                    aria-selected={pilihan === kunci}
+                    onClick={() => pilih(kunci)}
+                    className={`rounded-md px-2.5 py-1 text-[11px] font-semibold transition-colors ${
+                      pilihan === kunci ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-800'
+                    }`}
+                  >
+                    {nama}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
           <div className="h-[200px] w-full">
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={harian} margin={{ top: 4, right: 4, left: -22, bottom: 0 }}>
+              <BarChart data={periode.batang} margin={{ top: 4, right: 4, left: -16, bottom: 0 }}>
                 <CartesianGrid stroke="#eef2f6" vertical={false} />
-                <XAxis dataKey="label" {...GAYA_SUMBU} interval="preserveStartEnd" minTickGap={18} />
-                <YAxis {...GAYA_SUMBU} width={48} tickFormatter={(v) => `${desimal(v)}%`} />
-                <Tooltip content={<TooltipHarian />} cursor={{ fill: '#f1f5f9' }} />
-                <Bar dataKey="persen" name="Capaian" radius={[4, 4, 0, 0]} animationDuration={900}>
-                  {harian.map((h) => (
-                    <Cell key={h.tanggal} fill={h.hariIni ? KEADAAN.baik : SERI[0]} />
+                {/* `sumbu` sudah dijarangkan oleh ASTA DESA untuk deret rapat (24 jam,
+                    31 hari), jadi setiap tick ditampilkan apa adanya. */}
+                <XAxis dataKey="sumbu" {...GAYA_SUMBU} interval={0} />
+                <YAxis {...GAYA_SUMBU} width={48} allowDecimals={false} tickFormatter={angka} />
+                <Tooltip content={<TooltipBatang />} cursor={{ fill: '#f1f5f9' }} />
+                <Bar dataKey="jumlah" name="KK terinput" radius={[4, 4, 0, 0]} animationDuration={900}>
+                  {periode.batang.map((b, i) => (
+                    <Cell key={`${pilihan}-${i}`} fill={b.ini ? KEADAAN.baik : SERI[0]} />
                   ))}
                 </Bar>
               </BarChart>
