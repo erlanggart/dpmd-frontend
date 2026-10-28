@@ -39,6 +39,7 @@ import { Galat, Memuat, Panel, PitaBasi } from './ui';
 import { segarkanSemua, useAstaDesa } from './useAstaDesa';
 import { angka, persen } from './warna';
 import RingkasanTab from './RingkasanTab';
+import CapaianTargetKk from './CapaianTargetKk';
 import SensusTab from './SensusTab';
 import DemografiTab from './DemografiTab';
 import PenggunaTab from './PenggunaTab';
@@ -262,13 +263,19 @@ const AstaDesaPage = ({ basePath = '/core-dashboard/asta-desa' }) => {
               </div>
             </nav>
 
+            {/* Capaian target berdiri sendiri di atas Ringkasan, dengan
+                pengambilannya sendiri: endpoint-nya ringan (agregat di ASTA
+                DESA) sehingga tidak perlu menunggu penyusuran ringkasan. */}
             {tab === 'ringkasan' && (
-              <RingkasanTab
-                data={ringkasan.data}
-                memuat={ringkasan.memuat}
-                galat={ringkasan.galat}
-                onUlang={ringkasan.ambil}
-              />
+              <div className="space-y-4">
+                <CapaianTargetKk aktif={Boolean(siap)} />
+                <RingkasanTab
+                  data={ringkasan.data}
+                  memuat={ringkasan.memuat}
+                  galat={ringkasan.galat}
+                  onUlang={ringkasan.ambil}
+                />
+              </div>
             )}
             {tab === 'sensus' && <SensusTab ringkasan={ringkasan.data} />}
             {tab === 'demografi' && (
