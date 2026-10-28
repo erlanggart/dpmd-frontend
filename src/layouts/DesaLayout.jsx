@@ -327,7 +327,7 @@ const DesaLayout = () => {
             : 'pb-20'
         }`}
       >
-        <div className="mx-auto w-full max-w-[1600px] p-4 sm:p-6">
+        <div className={`mx-auto w-full p-4 sm:p-6 ${location.pathname === '/desa/produk-hukum' ? '' : 'max-w-[1600px]'}`}>
           <Outlet />
         </div>
       </main>
