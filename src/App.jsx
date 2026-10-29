@@ -1753,6 +1753,9 @@ function App() {
                       element={<KelembagaanDetailPage />}
                     />
                     <Route path="pengurus/:id" element={<PengurusDetailPage />} />
+                    {/* SK lembaga/pengurus, baca saja. /pemdes/produk-hukum menolak kecamatan
+                        (khusus pegawai DPMD), jadi lewat /produk-hukum yang meloloskannya. */}
+                    <Route path="produk-hukum/:id" element={<ProdukHukumDetailPemdesPage apiPrefix="/produk-hukum" />} />
                   </Route>
                   <Route element={<KecamatanPermissionRoute permission="bumdes" />}>
                     <Route path="bumdes" element={<KecamatanBumdesPage />} />

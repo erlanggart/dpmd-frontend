@@ -1481,7 +1481,9 @@ const PengurusDetailPage = () => {
 										navigate(
 											canEditAsStaf
 												? `/bidang/pmd/produk-hukum/${pengurus.produk_hukum_id}`
-												: `/desa/produk-hukum/${pengurus.produk_hukum_id}`,
+												: isKecamatanUser
+													? `/kecamatan/produk-hukum/${pengurus.produk_hukum_id}`
+													: `/desa/produk-hukum/${pengurus.produk_hukum_id}`,
 										)
 									}
 									className="inline-flex items-center gap-2 px-4 py-2 bg-green-600 text-white text-xs font-semibold rounded-lg hover:bg-green-700 transition-colors flex-shrink-0"

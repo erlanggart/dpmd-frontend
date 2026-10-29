@@ -79,7 +79,11 @@ const ProfilCard = ({
 
 	const isAdmin = isSuperAdmin() || isAdminBidangPMD();
 	const getProdukHukumUrl = (id) =>
-		isAdmin ? `/pemdes/produk-hukum/${id}` : `/desa/produk-hukum/${id}`;
+		isAdmin
+			? `/pemdes/produk-hukum/${id}`
+			: isKecamatan?.()
+				? `/kecamatan/produk-hukum/${id}`
+				: `/desa/produk-hukum/${id}`;
 
 	// Staf bidang PMD (termasuk bendahara bidang 5) menyunting kapan saja;
 	// desa hanya dalam mode edit dan selama datanya belum terverifikasi.
