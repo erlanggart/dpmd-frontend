@@ -342,7 +342,7 @@ export const TANGGA_AREA = { id: "tangga", nama: "Tangga" };
 // (lorong/aula) di bawah sebagai penampung sisa.
 export const AREA_LAIN = [
 	{ id: "toilet1", nama: "Toilet", lantai: 0, rect: { x0: 13.2, x1: 15, z0: 1, z1: 4.8 } },
-	{ id: "pangrango", nama: "Ruang Rapat Pangrango", lantai: 0, rect: { x0: -15, x1: -8.3, z0: -5.4, z1: 1 } },
+	{ id: "pangrango", nama: "Ruang Rapat Pangrango", lantai: 0, rect: { x0: -15, x1: -8.3, z0: -2.6, z1: 3.8 } },
 	{ id: "arsip", nama: "Ruang Arsip", lantai: 0, rect: { x0: -8, x1: -2.8, z0: -6.4, z1: -0.65 } },
 	{ id: "kolam", nama: "Kolam Ikan Koki", lantai: 0, rect: { x0: -15, x1: -11.4, z0: -13, z1: -9.6 } },
 	{ id: "mushola", nama: "Mushola", lantai: 0, rect: { x0: -11.4, x1: -4.6, z0: -13, z1: -9.6 } },
@@ -439,7 +439,7 @@ export const BENDA = [
 		label: "Lihat videotron",
 		lantai: 0,
 		x: -12.2,
-		z: -4.8,
+		z: -2.0,
 		aksi: { jenis: "pesan", judul: "Ruang Rapat Pangrango", teks: "Ruang rapat dengan fasilitas yang sama seperti Ruang Rapat Halimun, lengkap dengan videotron." },
 	},
 	{

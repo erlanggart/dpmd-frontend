@@ -51,11 +51,11 @@ export const DINDING = [
 	...garis(0, "x", 4.8, 13.2, 15),
 	// tembok tengah berpintu (sisi kirinya terbuka: tangga & jalan ke Pangrango)
 	...garis(0, "x", 1, -3.9, 15, [[0.5, 2.4]]),
-	// Ruang Rapat Pangrango (pintu menghadap lorong), segaris tembok tengah supaya
-	// area di depan kolam ikan lapang
-	...garis(0, "x", 1, -15, -8.3, [[-13, 1.6]]),
-	...garis(0, "z", -8.3, -5.4, 1),
-	...garis(0, "x", -5.4, -15, -8.3),
+	// Ruang Rapat Pangrango (pintu menghadap lorong), dinding depannya segaris kaki
+	// tangga depan supaya area di depan kolam ikan lapang
+	...garis(0, "x", 3.8, -15, -8.3, [[-13, 1.6]]),
+	...garis(0, "z", -8.3, -2.6, 3.8),
+	...garis(0, "x", -2.6, -15, -8.3),
 	// Ruang Arsip (pintu di sisi kanan), dinding depannya menempel ujung belakang
 	// tangga depan.
 	...garis(0, "z", -8, -6.4, -0.65),
@@ -123,7 +123,7 @@ export const DAUN_PINTU = [
 	{ lantai: 0, x: 11.5, z: 7.3, lebar: 1.6, jenis: "kayu" },
 	{ lantai: 0, x: 13.2, z: 2.9, lebar: 1.1, jenis: "kayu", sumbu: "x" },
 	{ lantai: 0, x: 0.5, z: 1, lebar: 2.4, jenis: "kayu" },
-	{ lantai: 0, x: -13, z: 1, lebar: 1.6, jenis: "kayu" },
+	{ lantai: 0, x: -13, z: 3.8, lebar: 1.6, jenis: "kayu" },
 	{ lantai: 0, x: -2.8, z: -4, lebar: 1.4, jenis: "kayu", sumbu: "x" },
 	{ lantai: 0, x: -8.3, z: -9.6, lebar: 1.6, jenis: "kayu" },
 	{ lantai: 0, x: 2.8, z: -7, lebar: 1.6, jenis: "kayu", sumbu: "x" },
@@ -307,7 +307,7 @@ klaster(0, "kkd", -9.1, 9.6);
 klaster(0, "spked", 9.1, 9.6);
 klaster(0, "spked", 13.9, 9.6);
 
-ruangRapat(0, "pangrango", -10.5, -4.2, -1.0, true);
+ruangRapat(0, "pangrango", -10.5, -1.4, 1.8, true);
 ruangRapat(0, "salak", 6.3, -11.0, -2.2, true);
 ruangRapat(0, "salak", 11.5, -11.0, -2.2, false);
 
