@@ -528,9 +528,9 @@ function JendelaDalam({ lantai }) {
 				: [
 						["z", -11.5],
 						["z", 0],
-						["z", 7.75],
+						["z", 7.0],
 						["b", 2.3],
-						["b", 10.5],
+						["b", 11.8],
 					];
 		const dekat = (w, v) => hindar.some(([d, x]) => d === w && Math.abs(x - v) < 2.2);
 		const hasil = [];
@@ -577,16 +577,16 @@ const PAPAN_RUANG = [
 	[0, "RUANG RAPAT SALAK", "#7a2e2e", 2.64, 1.9, -4.8, -Math.PI / 2, 2.0],
 	[1, "RUANG KEPALA DINAS", "#5a3a24", -8.24, 2.35, 5.75, Math.PI / 2, 1.9],
 	[1, "PROLAP", "#0891b2", 2.1, 1.8, 7.14, Math.PI, 1.6],
-	[1, "KEUANGAN", "#16a34a", 7.75, 2.35, 7.14, Math.PI, 1.4],
-	[1, "SEKRETARIS DINAS", "#5a3a24", 11.75, 2.35, 7.14, Math.PI, 1.5],
-	[1, "TOILET", "#475569", 13.75, 2.35, 7.14, Math.PI, 0.9],
+	[1, "KEUANGAN", "#16a34a", 7.25, 2.35, 7.14, Math.PI, 1.2],
+	[1, "SEKRETARIS DINAS", "#5a3a24", 8.34, 2.35, 5.75, -Math.PI / 2, 1.5],
+	[1, "TOILET", "#475569", 10.09, 2.35, 2.75, -Math.PI / 2, 0.9],
 	[1, "PMD", "#db2777", 1.4, 1.8, 3.96, 0, 1.6],
 	[1, "PMD", "#db2777", -3.7, 2.35, -4.16, Math.PI, 1.2],
 	[1, "GUDANG ARSIP", "#5a4637", -9.34, 2.35, -8.75, Math.PI / 2, 1.3],
 	[1, "RUANG RAPAT HALIMUN", "#7a2e2e", -7.75, 2.35, 3.96, 0, 1.1],
 	[1, "DAPUR", "#8a5a2b", -7.2, 2.2, -9.44, 0, 1.0],
 	[1, "SEKRETARIAT", "#2563eb", 4.6, 2.35, -5.84, 0, 1.6],
-	[1, "PEMDES", "#0f766e", 9, 2.35, 3.96, 0, 1.2],
+	[1, "PEMDES", "#0f766e", 8.34, 2.35, 0.25, -Math.PI / 2, 1.2],
 ];
 
 function PosterRuang({ ruang }) {
