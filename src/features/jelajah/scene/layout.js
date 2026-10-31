@@ -93,9 +93,9 @@ export const DINDING = [
 	// Ruang Rapat Halimun (pintu menghadap Ruang Kepala Dinas) & Gudang Arsip di
 	// depan dapur (pintunya di samping, dekat pintu dapur)
 	// Halimun melebar sampai menempel tangga depan, dinding depannya segaris bibir
-	// tangga; Gudang Arsip di depan dapur
+	// tangga dan pintunya di dekat tangga; Gudang Arsip di depan dapur
 	...garis(1, "z", -6.95, -5.6, 3.8),
-	...garis(1, "x", 3.8, -15, -6.95, [[-11.5, 1.6]]),
+	...garis(1, "x", 3.8, -15, -6.95, [[-7.95, 1.4]]),
 	...garis(1, "x", -5.6, -15, -6.95),
 	...garis(1, "z", -9.5, -9.6, -5.6, [[-8.75, 1.2]]),
 	// Dapur di pojok belakang, menempel Halimun; tangga belakang tepat di sampingnya
@@ -128,7 +128,7 @@ export const DAUN_PINTU = [
 	{ lantai: 1, x: -0.9, z: 3.8, lebar: 1.4, jenis: "kayu" },
 	{ lantai: 1, x: -3.7, z: -4, lebar: 1.4, jenis: "kayu" },
 	{ lantai: 1, x: -9.5, z: -8.75, lebar: 1.2, jenis: "kayu", sumbu: "x" },
-	{ lantai: 1, x: -11.5, z: 3.8, lebar: 1.6, jenis: "kayu" },
+	{ lantai: 1, x: -7.95, z: 3.8, lebar: 1.4, jenis: "kayu" },
 	{ lantai: 1, x: -7.2, z: -9.6, lebar: 1.2, jenis: "kayu" },
 	{ lantai: 1, x: 4.6, z: -6, lebar: 1.4, jenis: "kayu" },
 	{ lantai: 1, x: 9, z: 4.5, lebar: 1.4, jenis: "kayu" },
