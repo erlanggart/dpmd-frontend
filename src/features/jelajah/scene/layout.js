@@ -66,9 +66,8 @@ export const DINDING = [
 	...garis(0, "z", -11.4, -13, -9.6),
 	...garis(0, "z", -4.6, -13, -9.6),
 	...garis(0, "x", -9.6, -11.4, -4.6, [[-8.3, 1.6]]),
-	// Ruang Rapat Salak (pintu di sisi kiri)
+	// Ruang Rapat Salak (pintu di sisi kiri) membentang sampai dinding kanan gedung
 	...garis(0, "z", 2.8, -13, 1, [[-7, 1.6]]),
-	...garis(0, "z", 9.8, -13, 1),
 
 	// ----- lantai 2 -----
 	...luar(1, false),
@@ -293,6 +292,7 @@ klaster(0, "spked", 13.9, 9.6);
 
 ruangRapat(0, "pangrango", -10.5, -5.5, -2.3, true);
 ruangRapat(0, "salak", 6.3, -11.0, -2.2, true);
+ruangRapat(0, "salak", 11.5, -11.0, -2.2, false);
 
 // Ruang Arsip: rak arsip berjajar dan satu meja petugas arsip dekat pintu.
 for (const z of [-5.8, -4.8, -3.8, -2.8]) perabot("lemari", 0, -7.55, z, Math.PI / 2, [0.5, 0.95]);

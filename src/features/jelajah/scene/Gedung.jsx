@@ -522,7 +522,7 @@ function JendelaDalam({ lantai }) {
 				? [
 						["z", -11.5],
 						["z", 11.5],
-						["b", 6.3],
+						["b", 8.9],
 						["b", -13.2],
 					]
 				: [
@@ -665,8 +665,8 @@ export default function Gedung({ daftarDinding, statistik }) {
 				{MEJA_RAPAT.filter((m) => m.lantai === 0).map((m, i) => (
 					<MejaRapat key={i} m={m} />
 				))}
-				<Videotron posisi={[6.3, 1.45, -12.83]} lebar={4.6} tinggi={2.0} slide={slideRapat("Salak")} />
-				<Videotron posisi={[-10.5, 1.45, -7.33]} lebar={4.0} tinggi={1.8} slide={slideRapat("Pangrango")} />
+				<Videotron posisi={[8.9, 1.5, -12.83]} lebar={6.0} tinggi={2.4} slide={slideRapat("Salak")} />
+				<Videotron posisi={[-10.5, 1.45, -6.43]} lebar={4.0} tinggi={1.8} slide={slideRapat("Pangrango")} />
 				<Kolam />
 			</GrupLantai>
 
