@@ -580,7 +580,7 @@ const PAPAN_RUANG = [
 	[1, "KEUANGAN", "#16a34a", 10.6, 1.8, 7.14, Math.PI, 1.8],
 	[1, "TOILET", "#475569", 12.64, 2.2, 5.75, -Math.PI / 2, 0.9],
 	[1, "PMD", "#db2777", 1.4, 1.8, 5.16, 0, 1.6],
-	[1, "PMD", "#db2777", -3.7, 2.35, -6.16, Math.PI, 1.2],
+	[1, "PMD", "#db2777", -3.7, 2.35, -4.16, Math.PI, 1.2],
 	[1, "GUDANG ARSIP", "#5a4637", -9.34, 2.35, -8.75, Math.PI / 2, 1.3],
 	[1, "RUANG RAPAT HALIMUN", "#7a2e2e", -13.6, 1.9, 4.66, 0, 2.2],
 	[1, "DAPUR", "#8a5a2b", -7.2, 2.2, -9.44, 0, 1.0],
@@ -682,7 +682,7 @@ export default function Gedung({ daftarDinding, statistik }) {
 				{MEJA_RAPAT.filter((m) => m.lantai === 1).map((m, i) => (
 					<MejaRapat key={i} m={m} />
 				))}
-				<Videotron posisi={[-12.25, 1.5, -5.43]} lebar={4.4} tinggi={2.0} slide={slideRapat("Halimun")} />
+				<Videotron posisi={[-11.0, 1.5, -5.43]} lebar={4.4} tinggi={2.0} slide={slideRapat("Halimun")} />
 			</GrupLantai>
 
 			{[0, 1].map((l) => (
