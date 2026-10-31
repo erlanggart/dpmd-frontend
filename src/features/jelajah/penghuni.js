@@ -214,6 +214,10 @@ export function susunPenghuni(data) {
 	const kadis = ambil((o) => o.kelas === "kadis");
 	const kepalaHalimun = slotBebas((s) => s.area === "halimun" && s.jenis === "kepalaRapat");
 	if (kadis && kepalaHalimun) taruh(kadis, kepalaHalimun);
+	// Sekretaris Dinas di ruangnya sendiri; bila lebih dari satu, sisanya ikut rapat.
+	const sekdis = ambil((o) => o.kelas === "sekdis");
+	const kursiSekdis = slotBebas((s) => s.jenis === "sekdis");
+	if (sekdis && kursiSekdis) taruh(sekdis, kursiSekdis);
 	for (const k of ["sekdis", "kabid", "kasubag", "ketuaTim"]) {
 		for (let o = ambil((x) => x.kelas === k); o; o = ambil((x) => x.kelas === k)) {
 			const s = slotBebas((t) => t.area === "halimun" && t.jenis === "rapat");

@@ -19,6 +19,7 @@ const LABEL_PENDUKUNG = {
 	arsip: "ARSIP",
 	kolam: "KOLAM",
 	kadis: "KADIS",
+	sekdis: "SEKDIS",
 	halimun: "HALIMUN",
 	dapur: "DAPUR",
 };
