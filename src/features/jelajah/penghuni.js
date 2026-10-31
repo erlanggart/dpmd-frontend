@@ -17,6 +17,7 @@ function kelas(p) {
 	const b = norm(p.bidang);
 	const st = norm(p.status_kepegawaian);
 	const es = norm(p.eselon);
+	// eselon "III.a" juga diawali "ii" — tanpa (?!i) Kabid terbaca Kepala Dinas
 	if (/kepala dinas/.test(j) || /^ii(?!i)/.test(es)) return "kadis";
 	if (/sekretaris( dinas)?$/.test(j)) return "sekdis";
 	if (/kepala bidang|^kabid/.test(j)) return "kabid";
@@ -209,17 +210,13 @@ export function susunPenghuni(data) {
 	};
 	const slotBebas = (pred) => slot.find((s) => !s.isi && pred(s));
 
-	// 1. Kadis memimpin rapat di Halimun. Pejabat lain di ruang kerjanya: Kabid &
-	//    Ketua Tim di ruang bidangnya, Sekdis & Kasubag di ruang masing-masing; bila
-	//    ruangnya tidak ada, ikut rapat di Halimun.
+	// 1. Rapat pimpinan di Halimun: Kadis memimpin; Sekdis, Kabid, Kasubag, Ketua Tim ikut.
 	const kadis = ambil((o) => o.kelas === "kadis");
 	const kepalaHalimun = slotBebas((s) => s.area === "halimun" && s.jenis === "kepalaRapat");
 	if (kadis && kepalaHalimun) taruh(kadis, kepalaHalimun);
 	for (const k of ["sekdis", "kabid", "kasubag", "ketuaTim"]) {
 		for (let o = ambil((x) => x.kelas === k); o; o = ambil((x) => x.kelas === k)) {
-			const s =
-				slotBebas((t) => t.jenis === k && (k === "sekdis" || k === "kasubag" || t.area === o.ruang)) ||
-				slotBebas((t) => t.area === "halimun" && t.jenis === "rapat");
+			const s = slotBebas((t) => t.area === "halimun" && t.jenis === "rapat");
 			if (!s) break;
 			taruh(o, s);
 		}

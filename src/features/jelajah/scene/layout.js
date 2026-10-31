@@ -36,125 +36,93 @@ const luar = (l, pintuDepan) => [
 export const DINDING = [
 	// ----- lantai 1 -----
 	...luar(0, true),
-	// Lobi (14 × 7 m, ruang terbesar) diapit KKD & SPKED. Pintu kedua bidang ada di
-	// dinding samping lobi; pintu kaca di belakang lobi menuju lorong & tangga.
-	...garis(0, "z", -7, 0, 12, [[7.25, 1.4]]),
-	...garis(0, "z", 7, 1, 12, [[8.1, 1.4]]),
-	...garis(0, "x", 5, -7, 7, [
+	// deretan depan: KKD – lobi – SPKED. Lobi ruang terbesar (16 × 6 m) dan lebih
+	// dalam dari KKD/SPKED; pintu kaca kiri/kanan di dinding belakangnya.
+	...garis(0, "z", -8, 6, 12),
+	...garis(0, "z", 8, 6, 12),
+	...garis(0, "x", 6, -8, 8, [
 		[-5, 2],
 		[5, 2],
 	]),
-	// KKD: ruang Kepala Bidang & Ketua Tim di sisi depan (dekat jendela muka)
-	...garis(0, "x", 8.6, -15, -7, [
-		[-12.25, 1.2],
-		[-8.25, 1.2],
-	]),
-	...garis(0, "z", -11.1, 8.6, 12),
-	// SPKED: sama, dicerminkan
-	...garis(0, "x", 9.0, 7, 15, [
-		[8.25, 1.2],
-		[12.25, 1.2],
-	]),
-	...garis(0, "z", 11.1, 9.0, 12),
-	// toilet di ujung kanan lorong belakang lobi
-	...garis(0, "z", 4.2, 1, 3.4, [[2.2, 1.0]]),
-	...garis(0, "x", 3.4, 4.2, 7),
-	// tembok tengah berpintu (sisi kirinya terbuka: tangga); sekaligus dinding belakang SPKED
+	...garis(0, "x", 7.3, -15, -8, [[-11.5, 1.6]]),
+	...garis(0, "x", 7.3, 8, 15, [[11.5, 1.6]]),
+	// toilet di ujung kanan lorong
+	...garis(0, "z", 13.2, 1, 4.8, [[2.9, 1.1]]),
+	...garis(0, "x", 4.8, 13.2, 15),
+	// tembok tengah berpintu (sisi kirinya terbuka: tangga & jalan ke Pangrango)
 	...garis(0, "x", 1, -3.9, 15, [[0.5, 2.4]]),
-	// Ruang Rapat Pangrango: dinding depannya = dinding belakang KKD, pintu di sisi
-	// kanan (dicapai lewat belakang tangga)
-	...garis(0, "x", 0, -15, -7),
-	...garis(0, "z", -8.3, -6.6, 0, [[-0.9, 1.2]]),
+	// Ruang Rapat Pangrango (pintu menghadap depan)
+	...garis(0, "x", 0, -15, -8.3, [[-13, 1.6]]),
+	...garis(0, "z", -8.3, -6.6, 0),
 	...garis(0, "x", -6.6, -15, -8.3),
-	// Ruang Arsip (pintu di sisi kanan). Ramping supaya jalan di sampingnya lega.
-	...garis(0, "z", -8, -6.4, -2.0),
-	...garis(0, "z", -2.8, -6.4, -2.0, [[-4, 1.4]]),
-	...garis(0, "x", -2.0, -8, -2.8),
+	// Ruang Arsip (pintu di sisi kanan). Lebih ramping supaya jalan di sampingnya
+	// (menuju mushola & kolam) lega.
+	...garis(0, "z", -8, -6.4, -1.5),
+	...garis(0, "z", -2.8, -6.4, -1.5, [[-4, 1.4]]),
+	...garis(0, "x", -1.5, -8, -2.8),
 	...garis(0, "x", -6.4, -8, -2.8),
-	// Mushola (pintu menghadap depan) di sebelah kolam ikan koki; lorong ±3 m di depannya.
+	// Mushola (pintu menghadap depan) di sebelah kolam ikan koki; lorong ±3 m di
+	// depannya, antara mushola dan Ruang Rapat Pangrango/Arsip.
 	...garis(0, "z", -11.4, -13, -9.6),
 	...garis(0, "z", -4.6, -13, -9.6),
 	...garis(0, "x", -9.6, -11.4, -4.6, [[-8.3, 1.6]]),
-	// Ruang Rapat Salak (pintu di sisi kiri) melebar sampai dinding kanan gedung
+	// Ruang Rapat Salak (pintu di sisi kiri)
 	...garis(0, "z", 2.8, -13, 1, [[-7, 1.6]]),
+	...garis(0, "z", 9.8, -13, 1),
 
 	// ----- lantai 2 -----
 	...luar(1, false),
-	// deretan depan: Kepala Dinas – Prolap – Keuangan – Kasubag Umpeg – toilet
 	...garis(1, "z", -8, 7.3, 12),
-	...garis(1, "z", 0, 7.3, 12),
-	...garis(1, "z", 9, 7.3, 12),
+	...garis(1, "z", -4, 7.3, 12),
+	// Prolap & Keuangan berimpit, hanya dipisah satu tembok
+	...garis(1, "z", 4, 7.3, 12),
 	...garis(1, "z", 12.8, 4.5, 12, [[5.5, 1.1]]),
-	...garis(1, "x", 7.3, -15, 12.8, [
-		[-11.5, 1.6],
-		[-4.5, 1.4],
-		[3.5, 1.4],
-		[10.9, 1.2],
+	...garis(1, "x", 7.3, -15, -8, [[-11.5, 1.6]]),
+	...garis(1, "x", 7.3, -4, 12.8, [
+		[0, 1.6],
+		[8.4, 1.6],
 	]),
-	// PMD tepat di samping tangga depan, melebar ke kanan; ruang Kabid & Ketua Tim di ujungnya
-	...garis(1, "x", 5.6, -3.9, 9, [[1.9, 1.4]]),
-	...garis(1, "x", -1, -3.9, 9),
-	...garis(1, "z", -3.9, -1, 5.6),
-	...garis(1, "z", 9, -1, 5.6),
-	...garis(1, "z", 5.4, -1, 5.6, [
-		[0.75, 1.2],
-		[3.25, 1.2],
-	]),
-	...garis(1, "x", 2.3, 5.4, 9),
+	// PMD tepat di samping kanan tangga depan
+	...garis(1, "x", 5, -3.9, 3.1, [[-0.4, 1.6]]),
+	...garis(1, "z", -3.9, 0.5, 5),
+	...garis(1, "z", 3.1, 0.5, 5),
+	...garis(1, "x", 0.5, -3.9, 3.1),
 	// Ruang Rapat Halimun (pintu menghadap Ruang Kepala Dinas)
 	...garis(1, "z", -9.5, -13, 4.5),
 	...garis(1, "x", 4.5, -15, -9.5, [[-11.5, 1.6]]),
 	// Dapur di pojok belakang, menempel Halimun; tangga belakang tepat di sampingnya
 	...garis(1, "z", -4.6, -13, -9.6),
 	...garis(1, "x", -9.6, -9.5, -4.6, [[-7.2, 1.2]]),
-	// Sekretariat (+ ruang Sekretaris Dinas) & Pemdes (+ ruang Kabid & Ketua Tim)
+	// Sekretariat (melebar sampai sisi tangga belakang), Pemdes
 	...garis(1, "z", -1.4, -13, -2.5),
-	...garis(1, "z", 6, -13, -2.5),
-	...garis(1, "x", -2.5, -1.4, 15, [
-		[2.3, 1.4],
-		[11.9, 1.4],
-	]),
-	...garis(1, "x", -9.6, -1.4, 2.2, [[1.25, 1.2]]),
-	...garis(1, "z", 2.2, -13, -9.6),
-	...garis(1, "x", -10.6, 6, 15, [
-		[9.25, 1.2],
-		[12.75, 1.2],
-	]),
-	...garis(1, "z", 10.4, -13, -10.6),
+	...garis(1, "z", 9, -13, -2.5),
+	...garis(1, "x", -2.5, -1.4, 9, [[3.8, 1.6]]),
+	...garis(1, "z", 11, -13, 4.5, [[2.5, 1.6]]),
+	...garis(1, "x", 4.5, 11, 15),
 ];
 
 // Daun pintu. Pintu kaca bergeser, pintu kayu berayun; keduanya terbuka sendiri
 // saat ada orang mendekat dan tidak ikut tabrakan.
 export const DAUN_PINTU = [
-	{ lantai: 0, x: -5, z: 5, lebar: 2, jenis: "kaca" },
-	{ lantai: 0, x: 5, z: 5, lebar: 2, jenis: "kaca" },
-	{ lantai: 0, x: -7, z: 7.25, lebar: 1.4, jenis: "kayu", sumbu: "x" },
-	{ lantai: 0, x: 7, z: 8.1, lebar: 1.4, jenis: "kayu", sumbu: "x" },
-	{ lantai: 0, x: -12.25, z: 8.6, lebar: 1.2, jenis: "kayu" },
-	{ lantai: 0, x: -8.25, z: 8.6, lebar: 1.2, jenis: "kayu" },
-	{ lantai: 0, x: 8.25, z: 9.0, lebar: 1.2, jenis: "kayu" },
-	{ lantai: 0, x: 12.25, z: 9.0, lebar: 1.2, jenis: "kayu" },
-	{ lantai: 0, x: 4.2, z: 2.2, lebar: 1.0, jenis: "kayu", sumbu: "x" },
+	{ lantai: 0, x: -5, z: 6, lebar: 2, jenis: "kaca" },
+	{ lantai: 0, x: 5, z: 6, lebar: 2, jenis: "kaca" },
+	{ lantai: 0, x: -11.5, z: 7.3, lebar: 1.6, jenis: "kayu" },
+	{ lantai: 0, x: 11.5, z: 7.3, lebar: 1.6, jenis: "kayu" },
+	{ lantai: 0, x: 13.2, z: 2.9, lebar: 1.1, jenis: "kayu", sumbu: "x" },
 	{ lantai: 0, x: 0.5, z: 1, lebar: 2.4, jenis: "kayu" },
-	{ lantai: 0, x: -8.3, z: -0.9, lebar: 1.2, jenis: "kayu", sumbu: "x" },
+	{ lantai: 0, x: -13, z: 0, lebar: 1.6, jenis: "kayu" },
 	{ lantai: 0, x: -2.8, z: -4, lebar: 1.4, jenis: "kayu", sumbu: "x" },
 	{ lantai: 0, x: -8.3, z: -9.6, lebar: 1.6, jenis: "kayu" },
 	{ lantai: 0, x: 2.8, z: -7, lebar: 1.6, jenis: "kayu", sumbu: "x" },
 	{ lantai: 1, x: -11.5, z: 7.3, lebar: 1.6, jenis: "kayu" },
-	{ lantai: 1, x: -4.5, z: 7.3, lebar: 1.4, jenis: "kayu" },
-	{ lantai: 1, x: 3.5, z: 7.3, lebar: 1.4, jenis: "kayu" },
-	{ lantai: 1, x: 10.9, z: 7.3, lebar: 1.2, jenis: "kayu" },
+	{ lantai: 1, x: 0, z: 7.3, lebar: 1.6, jenis: "kayu" },
+	{ lantai: 1, x: 8.4, z: 7.3, lebar: 1.6, jenis: "kayu" },
 	{ lantai: 1, x: 12.8, z: 5.5, lebar: 1.1, jenis: "kayu", sumbu: "x" },
-	{ lantai: 1, x: 1.9, z: 5.6, lebar: 1.4, jenis: "kayu" },
-	{ lantai: 1, x: 5.4, z: 0.75, lebar: 1.2, jenis: "kayu", sumbu: "x" },
-	{ lantai: 1, x: 5.4, z: 3.25, lebar: 1.2, jenis: "kayu", sumbu: "x" },
+	{ lantai: 1, x: -0.4, z: 5, lebar: 1.6, jenis: "kayu" },
 	{ lantai: 1, x: -11.5, z: 4.5, lebar: 1.6, jenis: "kayu" },
 	{ lantai: 1, x: -7.2, z: -9.6, lebar: 1.2, jenis: "kayu" },
-	{ lantai: 1, x: 2.3, z: -2.5, lebar: 1.4, jenis: "kayu" },
-	{ lantai: 1, x: 1.25, z: -9.6, lebar: 1.2, jenis: "kayu" },
-	{ lantai: 1, x: 11.9, z: -2.5, lebar: 1.4, jenis: "kayu" },
-	{ lantai: 1, x: 9.25, z: -10.6, lebar: 1.2, jenis: "kayu" },
-	{ lantai: 1, x: 12.75, z: -10.6, lebar: 1.2, jenis: "kayu" },
+	{ lantai: 1, x: 3.8, z: -2.5, lebar: 1.6, jenis: "kayu" },
+	{ lantai: 1, x: 11, z: 2.5, lebar: 1.6, jenis: "kayu", sumbu: "x" },
 ];
 
 // ---------- tangga ----------
@@ -259,13 +227,13 @@ const kotakPadat = (lantai, x, z, lx, lz) => PADAT.push({ lantai, x0: x - lx / 2
 
 // Satu kursi kerja lengkap: kursi, meja di depannya, monitor + keyboard, dan
 // (bila terisi) pegawai yang sedang bekerja.
-function kursiKerja(lantai, area, x, z, rot, terisi, aktivitas = "mengetik", jenis = "meja") {
+function kursiKerja(lantai, area, x, z, rot, terisi, aktivitas = "mengetik") {
 	PERABOT.push({ jenis: "kursi", x, z, rot, lantai });
 	const [mx, mz] = maju(rot, 0.65);
 	PERABOT.push({ jenis: "meja", x: x + mx, z: z + mz, rot, lantai });
 	const [nx, nz] = maju(rot, 0.88);
 	PERABOT.push({ jenis: "monitor", x: x + nx, z: z + nz, rot, lantai });
-	PEGAWAI.push({ x, z, rot, lantai, area, pose: "duduk", aktivitas, jenis, terisi, penampilan: penampilanPNS() });
+	PEGAWAI.push({ x, z, rot, lantai, area, pose: "duduk", aktivitas, jenis: "meja", terisi, penampilan: penampilanPNS() });
 }
 
 // Klaster dua meja saling berhadapan dengan sekat di tengah (searah sumbu z).
@@ -274,21 +242,6 @@ function klaster(lantai, area, cx, cz, isi = 0.8) {
 	kursiKerja(lantai, area, cx, cz - 1.05, 0, acak() < isi);
 	PERABOT.push({ jenis: "sekat", x: cx, z: cz, rot: 0, lantai });
 	kotakPadat(lantai, cx, cz, 1.6, 2.7);
-}
-
-// Deret `n` klaster berjajar searah x mulai dari tepi kiri `x0` (pusat deret di z `cz`).
-function bangku(lantai, area, x0, cz, n) {
-	for (let i = 0; i < n; i++) klaster(lantai, area, x0 + 0.8 + i * 1.65, cz);
-}
-
-// Meja pejabat (Kabid, Sekdis, Kasubag): kursi eksekutif di (x, z) menghadap `rot`,
-// meja pimpinan di depannya, dan slot pejabatnya.
-function mejaPejabat(lantai, area, jenis, x, z, rot) {
-	const [mx, mz] = maju(rot, 0.85);
-	const tegak = Math.abs(Math.sin(rot)) > 0.5;
-	perabot("mejaPimpinan", lantai, x + mx, z + mz, rot, tegak ? [1.0, 2.4] : [2.4, 1.0]);
-	perabot("kursiEksekutif", lantai, x, z, rot);
-	PEGAWAI.push({ x, z, rot, lantai, area, pose: "duduk", aktivitas: "mengetik", jenis, terisi: true, penampilan: penampilanPNS({ kacamata: true }) });
 }
 
 // Meja layanan petugas + dua kursi tamu.
@@ -333,33 +286,22 @@ const perabot = (jenis, lantai, x, z, rot = 0, padat = null) => {
 for (const r of RUANGAN) mejaLayanan(r);
 
 // --- lantai 1 ---
-// KKD & SPKED: dua deret meja (12 meja), ruang Kabid & Ketua Tim di sisi depan.
-bangku(0, "kkd", -14.8, 1.5, 3);
-bangku(0, "kkd", -14.8, 5.3, 3);
-mejaPejabat(0, "kkd", "kabid", -13.05, 11.2, Math.PI);
-perabot("lemari", 0, -14.55, 9.6, Math.PI / 2, [0.5, 0.95]);
-kursiKerja(0, "kkd", -10.0, 11.25, Math.PI, true, "mengetik", "ketuaTim");
-kursiKerja(0, "kkd", -8.1, 11.25, Math.PI, true, "mengetik", "ketuaTim");
-bangku(0, "spked", 9.9, 2.5, 3);
-bangku(0, "spked", 9.9, 6.3, 3);
-mejaPejabat(0, "spked", "kabid", 13.05, 11.2, Math.PI);
-perabot("lemari", 0, 14.55, 10.0, -Math.PI / 2, [0.5, 0.95]);
-kursiKerja(0, "spked", 8.1, 11.25, Math.PI, true, "mengetik", "ketuaTim");
-kursiKerja(0, "spked", 10.0, 11.25, Math.PI, true, "mengetik", "ketuaTim");
+klaster(0, "kkd", -13.9, 9.6);
+klaster(0, "kkd", -9.1, 9.6);
+klaster(0, "spked", 9.1, 9.6);
+klaster(0, "spked", 13.9, 9.6);
 
 ruangRapat(0, "pangrango", -10.5, -5.5, -2.3, true);
-// Salak membentang sampai dinding kanan: dua meja rapat berdampingan.
 ruangRapat(0, "salak", 6.3, -11.0, -2.2, true);
-ruangRapat(0, "salak", 11.5, -11.0, -2.2, false);
 
 // Ruang Arsip: rak arsip berjajar dan satu meja petugas arsip dekat pintu.
-for (const z of [-5.8, -4.8, -3.8, -2.85]) perabot("lemari", 0, -7.55, z, Math.PI / 2, [0.5, 0.95]);
+for (const z of [-5.8, -4.8, -3.8, -2.8]) perabot("lemari", 0, -7.55, z, Math.PI / 2, [0.5, 0.95]);
 for (const z of [-5.5, -4.5]) {
 	perabot("lemari", 0, -5.6, z, Math.PI / 2, [0.5, 0.95]);
 	perabot("lemari", 0, -5.1, z, -Math.PI / 2, [0.5, 0.95]);
 }
-kursiKerja(0, "arsip", -4.2, -2.8, Math.PI / 2, true);
-kotakPadat(0, -3.55, -2.8, 0.8, 1.6);
+kursiKerja(0, "arsip", -4.2, -2.3, Math.PI / 2, true);
+kotakPadat(0, -3.55, -2.3, 0.8, 1.6);
 
 // Kolam ikan koki di pojok kiri belakang (tidak bisa dimasuki).
 export const KOLAM = { x0: -15, x1: -11.4, z0: -13, z1: -9.6 };
@@ -371,28 +313,19 @@ for (let x = -10.8; x <= -5.3; x += 0.9) for (const z of [-12.2, -11.0]) SAJADAH
 perabot("rak", 0, -5.3, -10.2, Math.PI, [1.0, 0.4]);
 
 // --- lantai 2 ---
-// Prolap & Keuangan (deret depan) dan Kasubag Umpeg.
-bangku(1, "prolap", -7.8, 10.3, 3);
-bangku(1, "keuangan", 0.2, 10.3, 4);
-mejaPejabat(1, "kasubag", "kasubag", 10.9, 11.2, Math.PI);
-perabot("lemari", 1, 12.35, 8.6, -Math.PI / 2, [0.5, 0.95]);
-// PMD: dua deret meja; ruang Kabid & Ketua Tim di ujung kanan.
-bangku(1, "pmd", -3.75, 0.45, 3);
-bangku(1, "pmd", -3.75, 4.15, 3);
-mejaPejabat(1, "pmd", "kabid", 8.3, 0.65, -Math.PI / 2);
-kursiKerja(1, "pmd", 6.3, 5.0, Math.PI, true, "mengetik", "ketuaTim");
-kursiKerja(1, "pmd", 8.1, 5.0, Math.PI, true, "mengetik", "ketuaTim");
-// Sekretariat + ruang Sekretaris Dinas.
-bangku(1, "sekretariat", -1.25, -6.2, 3);
-mejaPejabat(1, "sekretariat", "sekdis", 0.4, -12.2, 0);
-perabot("lemari", 1, 5.6, -6.2, -Math.PI / 2, [0.5, 0.95]);
-perabot("lemari", 1, 5.6, -7.2, -Math.PI / 2, [0.5, 0.95]);
-// Pemdes: dua deret meja (14 meja); ruang Kabid & Ketua Tim di belakang.
-bangku(1, "pemdes", 6.3, -7.95, 4);
-bangku(1, "pemdes", 6.3, -4.0, 3);
-mejaPejabat(1, "pemdes", "kabid", 7.4, -12.3, 0);
-kursiKerja(1, "pemdes", 11.6, -12.3, 0, true, "mengetik", "ketuaTim");
-kursiKerja(1, "pemdes", 13.6, -12.3, 0, true, "mengetik", "ketuaTim");
+klaster(1, "prolap", -2.7, 9.6);
+klaster(1, "prolap", 2.7, 9.6);
+klaster(1, "keuangan", 5.9, 9.6);
+klaster(1, "keuangan", 11.0, 9.6);
+klaster(1, "pmd", -2.85, 2.7);
+klaster(1, "pmd", 2.05, 2.7);
+klaster(1, "sekretariat", 0.2, -10.4);
+klaster(1, "sekretariat", 3.8, -10.4);
+klaster(1, "sekretariat", 7.4, -10.4);
+klaster(1, "pemdes", 13, -6.0);
+klaster(1, "pemdes", 13, -9.8);
+perabot("lemari", 1, 8.4, -5.0, -Math.PI / 2, [0.5, 0.95]);
+perabot("lemari", 1, 14.6, 2.6, -Math.PI / 2, [0.5, 0.95]);
 ruangRapat(1, "halimun", -12.25, -10.2, 1.4, true);
 
 // Ruang Kepala Dinas: meja pimpinan, kursi, sofa tamu, lemari, ajudan.
@@ -420,28 +353,32 @@ perabot("kulkas", 1, -5.15, -11.0, -Math.PI / 2, [0.7, 0.7]);
 PEGAWAI.push({ x: -7.6, z: -11.7, rot: Math.PI, lantai: 1, area: "dapur", pose: "diam", aktivitas: "berdiri", jenis: "dapur", terisi: true, penampilan: penampilanPNS() });
 
 // --- lobi ---
-perabot("mejaResepsionis", 0, 0, 6.8, Math.PI, [4.8, 0.9]);
-perabot("kursi", 0, 0, 5.6, 0);
-perabot("sofa", 0, -6.55, 9.9, Math.PI / 2, [0.85, 2.0]);
-perabot("sofa", 0, 6.55, 9.9, -Math.PI / 2, [0.85, 2.0]);
-perabot("mejaKopi", 0, -5.5, 9.9, Math.PI / 2, [0.55, 0.9]);
-perabot("mejaKopi", 0, 5.5, 9.9, Math.PI / 2, [0.55, 0.9]);
-perabot("dispenser", 0, 6.6, 11.5, -Math.PI / 2, [0.45, 0.45]);
-perabot("kios", 0, -6.6, 11.5, Math.PI / 2, [0.5, 0.6]);
-perabot("tanaman", 0, -6.5, 5.55, 0, [0.6, 0.6]);
-perabot("tanaman", 0, 6.5, 5.55, 0, [0.6, 0.6]);
+perabot("mejaResepsionis", 0, 0, 7.8, Math.PI, [4.8, 0.9]);
+perabot("kursi", 0, 0, 6.6, 0);
+perabot("sofa", 0, -7.55, 9.6, Math.PI / 2, [0.85, 2.0]);
+perabot("sofa", 0, 7.55, 9.6, -Math.PI / 2, [0.85, 2.0]);
+perabot("mejaKopi", 0, -6.5, 9.6, Math.PI / 2, [0.55, 0.9]);
+perabot("mejaKopi", 0, 6.5, 9.6, Math.PI / 2, [0.55, 0.9]);
+perabot("dispenser", 0, 7.6, 11.5, -Math.PI / 2, [0.45, 0.45]);
+perabot("kios", 0, -7.6, 11.5, Math.PI / 2, [0.5, 0.6]);
+perabot("tanaman", 0, -7.5, 6.55, 0, [0.6, 0.6]);
+perabot("tanaman", 0, 7.5, 6.55, 0, [0.6, 0.6]);
 
 // --- lorong lantai 1: bangku tunggu & pojok kopi tamu menempel tembok tengah ---
-perabot("sofa", 0, -2.5, 1.6, 0, [2.0, 0.85]);
-perabot("mejaKopiTamu", 0, 3.0, 1.45, 0, [1.0, 0.55]);
+perabot("sofa", 0, 4.2, 1.6, 0, [2.0, 0.85]);
+perabot("mejaKopiTamu", 0, 9.5, 1.45, 0, [1.0, 0.55]);
 
 // Toilet: wastafel (lantai 1 & 2) dan bilik (lantai 2, ruangnya lebih panjang).
-perabot("wastafel", 0, 6.6, 2.0, -Math.PI / 2, [0.5, 0.8]);
+perabot("wastafel", 0, 14.6, 4.1, -Math.PI / 2, [0.5, 0.8]);
 perabot("wastafel", 1, 14.6, 10.8, -Math.PI / 2, [0.5, 0.8]);
 perabot("bilik", 1, 14.0, 8.0, 0, [1.9, 1.4]);
 
 // Tanaman di lorong & ruang.
 for (const [l, x, z] of [
+	[0, -14.4, 1.6],
+	[0, 12.6, 1.6],
+	[0, -8.6, 6.75],
+	[0, 8.6, 6.75],
 	[1, -14.5, 11.5],
 	[1, -8.9, -8.9],
 ]) {
@@ -449,8 +386,8 @@ for (const [l, x, z] of [
 }
 
 // Pengunjung (warga) di lobi: dua menunggu di sofa, satu di depan resepsionis.
-PEGAWAI.push({ x: -6.45, z: 9.5, rot: Math.PI / 2, lantai: 0, area: "lobi", pose: "duduk", aktivitas: "menunggu", jenis: "tamu", terisi: true, penampilan: penampilanWarga() });
-PEGAWAI.push({ x: 6.45, z: 10.3, rot: -Math.PI / 2, lantai: 0, area: "lobi", pose: "duduk", aktivitas: "menunggu", jenis: "tamu", terisi: true, penampilan: penampilanWarga() });
+PEGAWAI.push({ x: -7.45, z: 9.2, rot: Math.PI / 2, lantai: 0, area: "lobi", pose: "duduk", aktivitas: "menunggu", jenis: "tamu", terisi: true, penampilan: penampilanWarga() });
+PEGAWAI.push({ x: 7.45, z: 10.0, rot: -Math.PI / 2, lantai: 0, area: "lobi", pose: "duduk", aktivitas: "menunggu", jenis: "tamu", terisi: true, penampilan: penampilanWarga() });
 PEGAWAI.push({ x: 1.9, z: 9.6, rot: Math.PI, lantai: 0, area: "lobi", pose: "diam", aktivitas: "berdiri", jenis: "tamu", terisi: true, penampilan: penampilanWarga() });
 // Dua pegawai berdiskusi membawa dokumen di area terbuka lantai 2, dekat tangga.
 PEGAWAI.push({ x: -7.6, z: 2.6, rot: -Math.PI / 2, lantai: 1, area: "aula2", pose: "diam", aktivitas: "diskusi", jenis: "berdiri", terisi: true, penampilan: penampilanPNS({ map: true }) });
@@ -464,21 +401,21 @@ for (const [l, x, z, rot, area] of [
 	[0, 3.0, 28.5, -Math.PI / 2, "luar"],
 	[0, 14.6, 21.5, -Math.PI / 2, "luar"],
 	[1, -6.0, 6.4, Math.PI, "aula2"],
-	[0, -3.4, 3.0, Math.PI / 2, "lorong1"],
+	[0, -13.5, 5.6, Math.PI / 2, "lorong1"],
 ]) {
 	PEGAWAI.push({ x, z, rot, lantai: l, area, pose: "diam", aktivitas: "jaga", jenis: "jaga", terisi: z < 15 || x > 14, penampilan: penampilanPNS({ seragam: "satpam", perempuan: false, jilbab: null, rok: false }) });
 }
 // Petugas kebersihan mengepel di toilet & lorong, menyapu halaman.
 for (const [l, x, z, rot, area, alat] of [
-	[0, 5.4, 1.8, Math.PI / 2, "toilet1", "pel"],
+	[0, 14.1, 1.9, -Math.PI / 2, "toilet1", "pel"],
 	[1, 13.6, 7.0, Math.PI, "toilet2", "pel"],
-	[0, 2.0, 3.6, Math.PI / 2, "lorong1", "pel"],
+	[0, -2.0, 4.6, Math.PI / 2, "lorong1", "pel"],
 	[1, -8.0, 0.4, 0, "aula2", "pel"],
 	[0, -9.0, 24.5, 0.6, "luar", "sapu"],
 	[0, 9.5, 25.0, -0.5, "luar", "sapu"],
 	[0, -0.6, -9.8, Math.PI / 2, "belakang1", "pel"],
 ]) {
-	PEGAWAI.push({ x, z, rot, lantai: l, area, pose: "jalan", aktivitas: "mengepel", jenis: "bersih", terisi: area === "toilet1", penampilan: penampilanPNS({ seragam: "kebersihan", alat, map: false, rok: false }) });
+	PEGAWAI.push({ x, z, rot, lantai: l, area, pose: "jalan", aktivitas: "mengepel", jenis: "bersih", terisi: l === 0 && x > 13, penampilan: penampilanPNS({ seragam: "kebersihan", alat, map: false, rok: false }) });
 }
 
 for (const p of PEGAWAI) if (p.pose === "diam" && p.jenis !== "jaga") kotakPadat(p.lantai, p.x, p.z, 0.6, 0.6);
@@ -491,11 +428,11 @@ export const PEJALAN = [
 		area: "lobi",
 		jenis: "staf",
 		titik: [
-			[-5.0, 4.2],
+			[-5.0, 4.9],
 			[-4.6, 10.9],
 			[4.6, 10.9],
-			[5.0, 4.2],
-			[0.5, 2.6],
+			[5.0, 4.9],
+			[0.5, 3.0],
 		],
 		penampilan: penampilanPNS({ map: true }),
 	},
@@ -504,8 +441,8 @@ export const PEJALAN = [
 		area: "lorong1",
 		jenis: "staf",
 		titik: [
-			[-3.0, 4.3],
-			[3.6, 4.3],
+			[-13.5, 4.8],
+			[12.0, 4.8],
 		],
 		penampilan: penampilanPNS({ map: true }),
 	},
@@ -515,9 +452,9 @@ export const PEJALAN = [
 		jenis: "staf",
 		titik: [
 			[-8.0, -1.8],
-			[1.6, -1.75],
-			[10.9, -1.75],
-			[10.9, 6.4],
+			[1.6, -1.5],
+			[10, -1.0],
+			[10, 6.4],
 			[1.2, 6.4],
 		],
 		penampilan: penampilanPNS({ map: true }),
