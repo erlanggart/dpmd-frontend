@@ -12,6 +12,7 @@
 
 import axios from "axios";
 import { API_ENDPOINTS } from "../config/apiConfig";
+import { ambilToken } from "./tokenSesi";
 
 /** Baca muatan JWT. Bagian tengahnya base64url, bukan base64 biasa. */
 const bacaMuatanJwt = (token) => {
@@ -91,7 +92,10 @@ export const perbaruiSesiKedaluwarsa = async () => {
 	if (pembaruanBerjalan) return pembaruanBerjalan;
 
 	pembaruanBerjalan = (async () => {
-		const tokenLama = localStorage.getItem("expressToken");
+		// Lewat ambilToken: bila browser membuang localStorage, token di memori
+		// masih bisa ditukar. Membaca localStorage saja di sini dulu berarti
+		// "tidak ada token" → sesi dianggap ditolak → user dikeluarkan.
+		const tokenLama = ambilToken();
 		if (!tokenLama || tokenLama === "VPN_ACCESS_TOKEN") {
 			return { status: "ditolak", code: "SESSION_INVALID" };
 		}

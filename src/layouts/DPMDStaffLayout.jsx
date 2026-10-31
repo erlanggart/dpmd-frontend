@@ -23,6 +23,8 @@ import toast from 'react-hot-toast';
 import api from "../api";
 import { ambilToken } from "../utils/tokenSesi";
 import { getAvatarUrl } from '../utils/avatarUtils';
+import { bisaPresensi } from "../utils/presensi";
+import { useSegarkanProfilPegawai } from "../hooks/useSegarkanProfilPegawai";
 
 // ============================================
 // RESPONSIVE HOOK
@@ -218,6 +220,8 @@ const BIDANG_SUBMENUS = {
 // ============================================
 const DPMDStaffLayout = () => {
 	const { user: authUser, isCheckingSession } = useAuth();
+	// Status kepegawaian dkk. ikut segar walau sesi dibuat berbulan-bulan lalu.
+	useSegarkanProfilPegawai();
 	const [showMenu, setShowMenu] = React.useState(false);
 	const [showNotifications, setShowNotifications] = React.useState(false);
 	const [notifications, setNotifications] = React.useState([]);
@@ -496,9 +500,8 @@ const DPMDStaffLayout = () => {
 
 	// Mobile bottom nav - 3 items: Home, Aksi Cepat (FAB), Profil
 	const userBidang = BIDANG_ROUTES[user.bidang_id];
-	const ABSENSI_ELIGIBLE_STATUS = ['PPPK Paruh Waktu', 'Tenaga Alih Daya', 'Tenaga Keamanan', 'Tenaga Kebersihan'];
-	const userStatus = user.status_kepegawaian || authUser?.status_kepegawaian;
-	const isAbsensiEligible = ABSENSI_ELIGIBLE_STATUS.includes(userStatus);
+	// Sesi di memori didahulukan: salinan di localStorage bisa tertinggal atau dibuang browser.
+	const isAbsensiEligible = bisaPresensi(authUser?.status_kepegawaian) || bisaPresensi(user.status_kepegawaian);
 	const bottomNavItems = [
 		{ path: "/dpmd/dashboard", label: "Home", icon: FiHome },
 		{ label: "Aksi Cepat", isMain: true, isQuickAction: true },

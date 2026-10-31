@@ -1,4 +1,5 @@
 // Session Persistence Utility for PWA
+import { clearPageCache } from './pageCache';
 // Ensures user session persists across app closes and device restarts
 
 // Debounce timer to prevent excessive backups
@@ -90,6 +91,15 @@ export const performFullLogout = async () => {
   
   // Set flag FIRST so restore doesn't kick in on reload
   setLogoutFlag();
+
+  // Kosongkan sesi di memori (AuthContext) SEKARANG, sebelum menunggu apa pun.
+  // Tanpa ini, selama pembersihan cache/IndexedDB berjalan, layout sudah tidak
+  // melihat token di localStorage dan melempar ke "/", sementara "/" masih
+  // melihat user di memori dan melempar balik ke dashboard — bolak-balik sampai
+  // muat ulang, yang di PWA tampak sebagai layar putih setelah menekan Keluar.
+  try {
+    window.dispatchEvent(new Event('sesiBerakhir'));
+  } catch { /* ignore */ }
   
   // Clear localStorage
   localStorage.removeItem('authSession');
@@ -104,6 +114,7 @@ export const performFullLogout = async () => {
   // Buang cache response /api supaya akun berikutnya di perangkat ini tidak
   // kebagian data akun yang baru saja keluar.
   await clearApiResponseCache();
+  clearPageCache();
 
   // Clear IndexedDB
   try {

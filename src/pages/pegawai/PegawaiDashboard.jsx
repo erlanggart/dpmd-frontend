@@ -10,8 +10,10 @@ import {
 import api from "../../api";
 import { getUserAvatarUrl } from "../../utils/avatarUtils";
 import { pressAnimation } from "../../utils/animations";
+import { useAuth } from "../../context/AuthContext";
+import { bisaPresensi } from "../../utils/presensi";
 
-const ABSENSI_ELIGIBLE_STATUS = ['PPPK Paruh Waktu', 'Tenaga Alih Daya', 'Tenaga Keamanan', 'Tenaga Kebersihan'];
+
 
 const fmtJam = (value) => {
 	if (!value) return "--:--:--";
@@ -30,7 +32,8 @@ const PegawaiDashboard = () => {
 	const [todayData, setTodayData] = useState(null);
 	const [now, setNow] = useState(new Date());
 
-	const isAbsensiEligible = ABSENSI_ELIGIBLE_STATUS.includes(user.status_kepegawaian);
+	const { user: authUser } = useAuth();
+	const isAbsensiEligible = bisaPresensi(authUser?.status_kepegawaian) || bisaPresensi(user.status_kepegawaian);
 
 	// Live clock
 	useEffect(() => {

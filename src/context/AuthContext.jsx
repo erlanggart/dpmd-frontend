@@ -4,6 +4,7 @@ import { clearAllSessionData, backupSessionToIndexedDB, restoreSessionFromIndexe
 import { resetDesaPermissionRefresh } from "../hooks/useDesaPermissions";
 import { resetKecamatanPermissionRefresh } from "../hooks/useKecamatanPermissions";
 import { setTokenMemori } from "../utils/tokenSesi";
+import { resetSegarkanProfilPegawai } from "../hooks/useSegarkanProfilPegawai";
 
 // 1. Membuat Context
 const AuthContext = createContext(null);
@@ -179,6 +180,20 @@ export const AuthProvider = ({ children }) => {
 		return () => window.removeEventListener('sessionUpdated', ikutiTokenBaru);
 	}, []);
 
+	// Logout bisa dimulai dari mana saja (layout memanggil performFullLogout
+	// langsung). performFullLogout memancarkan "sesiBerakhir" sebelum menunggu
+	// apa pun; sesi di memori dikosongkan saat itu juga supaya rute "/" dan
+	// layout sepakat bahwa user sudah keluar.
+	useEffect(() => {
+		const kosongkan = () => {
+			setTokenMemori(null);
+			setUser(null);
+			setExpressToken(null);
+		};
+		window.addEventListener('sesiBerakhir', kosongkan);
+		return () => window.removeEventListener('sesiBerakhir', kosongkan);
+	}, []);
+
 	// Activity monitoring - just for tracking, NO EXPIRY CHECK
 	// BACKUP on EVERY user interaction for maximum reliability
 	useEffect(() => {
@@ -327,11 +342,11 @@ export const AuthProvider = ({ children }) => {
 	// Fungsi untuk menghapus data saat logout
 	const logout = async () => {
 		// Use performFullLogout to clear everything including IndexedDB + set logout flag
+		// performFullLogout langsung mengosongkan state lewat event "sesiBerakhir".
 		await performFullLogout();
 		resetDesaPermissionRefresh();
 		resetKecamatanPermissionRefresh();
-		setUser(null);
-		setExpressToken(null);
+		resetSegarkanProfilPegawai();
 		console.log('[Auth] User logged out, all session data cleared');
 	};
 

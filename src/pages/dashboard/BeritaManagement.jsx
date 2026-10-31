@@ -3,7 +3,6 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import axios from 'axios';
 import { useDropzone } from 'react-dropzone';
 import Swal from 'sweetalert2';
-import { performFullLogout } from '../../utils/sessionPersistence';
 import {
   FiCalendar,
   FiDownload,
@@ -230,13 +229,8 @@ const BeritaManagement = () => {
       } else if (error.response?.status === 401) {
         Swal.fire({
           icon: 'error',
-          title: 'Sesi Berakhir',
-          text: 'Silakan login kembali.',
-          confirmButtonText: 'Login'
-        }).then(() => {
-          performFullLogout().then(() => {
-            window.location.href = '/';
-          });
+          title: 'Tidak dapat memuat berita',
+          text: 'Koneksi ke server terputus sebentar. Silakan coba lagi.',
         });
       } else {
         Swal.fire({ icon: 'error', title: 'Gagal', text: 'Gagal memuat data berita' });

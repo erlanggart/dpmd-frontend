@@ -14,6 +14,7 @@
     "@hookform/resolvers": "^5.2.2",
     "@mediapipe/selfie_segmentation": "^0.1.1675465747",
     "@react-spring/web": "^10.0.3",
+    "@react-three/fiber": "^9.8.2",
     "@tailwindcss/vite": "^4.1.13",
     "axios": "^1.12.2",
     "canvas-confetti": "^1.9.4",
@@ -55,6 +56,7 @@
     "sweetalert2": "^11.23.0",
     "swiper": "^12.0.1",
     "tailwindcss": "^4.1.13",
+    "three": "^0.180.0",
     "uuid": "^13.0.0",
     "xlsx": "^0.18.5",
     "zod": "^4.1.9"

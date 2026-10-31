@@ -11,6 +11,8 @@ import { toast } from 'react-hot-toast';
 import { getAvatarUrl } from '../../utils/avatarUtils';
 import AvatarCropModal from '../../components/AvatarCropModal';
 import { convertAvatarToWebp, validateAvatarInput } from '../../utils/avatarImage';
+import { normalisasiStatus } from "../../utils/presensi";
+import { useAuth } from "../../context/AuthContext";
 
 const STATUS_OPTIONS = [
   { value: '', label: '— Pilih —' },
@@ -89,6 +91,7 @@ const ProfilePage = () => {
   const navigate = useNavigate();
   const fileInputRef = useRef(null);
   const [user, setUser] = useState(JSON.parse(localStorage.getItem('user') || '{}'));
+  const { logout } = useAuth();
   const [avatarUrl, setAvatarUrl] = useState(getAvatarUrl(user.avatar));
   const [isUploadingPhoto, setIsUploadingPhoto] = useState(false);
   const [activeTab, setActiveTab] = useState('personal');
@@ -170,11 +173,14 @@ const ProfilePage = () => {
 
   const statusLabel = (s) => s?.replace(/_/g, ' ') || null;
 
-  const handleLogout = () => {
-    localStorage.removeItem('expressToken');
-    localStorage.removeItem('user');
+  // Dulu hanya membuang dua kunci localStorage lalu pindah ke "/": sesi di memori
+  // & IndexedDB masih utuh, jadi "/" langsung mengembalikan user ke dashboard dan
+  // tombol ini terasa tidak bekerja. Sekarang lewat alur logout yang sama dengan
+  // tombol Keluar di layout.
+  const handleLogout = async () => {
+    await logout();
     toast.success('Berhasil keluar');
-    navigate('/');
+    navigate('/', { replace: true });
   };
 
   const handleSaveAccount = async () => {
@@ -209,7 +215,7 @@ const ProfilePage = () => {
         initPegawaiForm(res.data.data);
         setEditingSection(null);
         toast.success('Data kepegawaian berhasil diperbarui!');
-        const updated = { ...user, nip: pegawaiForm.nip, jabatan: pegawaiForm.jabatan, status_kepegawaian: pegawaiForm.status_kepegawaian, tanggal_lahir: pegawaiForm.tanggal_lahir, pangkat: pegawaiForm.pangkat, golongan: pegawaiForm.golongan };
+        const updated = { ...user, nip: pegawaiForm.nip, jabatan: pegawaiForm.jabatan, status_kepegawaian: normalisasiStatus(pegawaiForm.status_kepegawaian), tanggal_lahir: pegawaiForm.tanggal_lahir, pangkat: pegawaiForm.pangkat, golongan: pegawaiForm.golongan };
         setUser(updated);
         localStorage.setItem('user', JSON.stringify(updated));
         window.dispatchEvent(new Event('userProfileUpdated'));

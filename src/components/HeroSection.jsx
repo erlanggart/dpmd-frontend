@@ -8,7 +8,7 @@ import { Autoplay, EffectFade } from "swiper/modules";
 import "swiper/css";
 import "swiper/css/effect-fade";
 
-import { FiArrowRight, FiChevronDown } from "react-icons/fi";
+import { FiArrowRight, FiChevronDown, FiCompass } from "react-icons/fi";
 
 const HeroSection = () => {
 	const [gallery, setGallery] = useState([]);
@@ -157,6 +157,13 @@ const HeroSection = () => {
 							>
 								Lihat Bantuan Keuangan
 								<FiArrowRight className="group-hover:translate-x-1 transition-transform" />
+							</Link>
+							<Link
+								to="/jelajah"
+								className="group inline-flex items-center justify-center gap-2 sm:gap-3 bg-white/10 backdrop-blur-md border border-white/20 text-white font-bold px-5 py-2.5 sm:px-8 sm:py-4 text-sm sm:text-base rounded-xl sm:rounded-2xl hover:bg-white/20 transform hover:-translate-y-0.5 transition-all duration-300"
+							>
+								<FiCompass className="group-hover:rotate-45 transition-transform" />
+								Jelajahi Kantor 3D
 							</Link>
 						</motion.div>
 					</div>

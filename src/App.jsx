@@ -322,6 +322,8 @@ const CoreDashboardPublic = lazy(
 const PasarBumdesPublicPage = lazy(
   () => import("./pages/PasarBumdesPublicPage"),
 );
+// Tur 3D kantor DPMD (tanpa login) — dibuka dari tombol di hero landing page.
+const JelajahPage = lazy(() => import("./features/jelajah/JelajahPage"));
 const AparaturDesaPage = lazy(
   () => import("./pages/desa/aparatur-desa/AparaturDesaPage"),
 );
@@ -1075,6 +1077,7 @@ function App() {
                 {/* Pasar BUM Desa — etalase produk & wisata BUM Desa untuk umum,
                     tanpa login. Sejajar dengan /bantuan-keuangan. */}
                 <Route path="/pasar-bumdes" element={<PasarBumdesPublicPage />} />
+                <Route path="/jelajah" element={<JelajahPage />} />
                 <Route
                   path="/public-dashboard"
                   element={<CoreDashboardPublic />}

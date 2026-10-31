@@ -67,6 +67,8 @@ export default defineConfig({
 					if (id.includes('fabric')) return 'fabric';
 					if (id.includes('chart.js') || id.includes('recharts') || id.includes('d3-')) return 'charts';
 					if (id.includes('framer-motion')) return 'motion';
+					// three.js hanya dipakai tur /jelajah; dipisah agar tidak terbawa ke chunk lain.
+					if (/[\\/]node_modules[\\/](three|@react-three)[\\/]/.test(id)) return 'three';
 					return undefined;
 				},
 			},
@@ -82,6 +84,9 @@ export default defineConfig({
 			includeAssets: ['favicon.ico', 'robots.txt', 'logo-dpmd.png', 'logo-dpmd-96.png', 'logo-dpmd-192.png', 'logo-dpmd-512.png', 'dpmd.mp3'],
 			workbox: {
 				globPatterns: ['**/*.{js,css,html,ico,png,svg,jpg,jpeg,woff,woff2,mp3}'],
+				// Chunk tur 3D tidak di-precache: tanpa ini setiap pemasang PWA ikut
+				// mengunduh three.js walau tak pernah membuka /jelajah.
+				globIgnores: ['**/node_modules/**/*', '**/three-*.js', '**/KantorScene-*.js'],
 				// Exclude static file paths from navigateFallback to let nginx/backend handle them
 				navigateFallbackDenylist: [/^\/api\//, /^\/storage\//, /^\/uploads\//, /^\/public\//, /\/version\.json$/],
 				// Custom SW will be injected by inject-custom-sw.js script
@@ -239,6 +244,12 @@ export default defineConfig({
 			"/storage": {
 				target: "http://localhost:3001",
 				changeOrigin: true,
+			},
+			// socket.io (chat, meeting, jelajah bersama); di produksi diteruskan nginx.
+			"/socket.io": {
+				target: "http://localhost:3001",
+				changeOrigin: true,
+				ws: true,
 			},
 		},
 	},
