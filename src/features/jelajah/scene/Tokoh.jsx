@@ -4,6 +4,11 @@ import { posisi } from "../jelajahStore";
 import { BAHAN_ORANG, buangOrang, rakitOrang } from "./orang";
 
 const sudutDekat = (dari, ke) => dari + Math.atan2(Math.sin(ke - dari), Math.cos(ke - dari));
+// Tampak bila dirinya dan semua induknya tampak (lantai lain / di balik dinding = tidak).
+const tampak = (o) => {
+	for (let p = o; p; p = p.parent) if (!p.visible) return false;
+	return true;
+};
 
 // Satu tokoh manusia, menghadap +z.
 // - pose "jalan": kaki & lengan berayun mengikuti `gerak.current` = { laju 0..1, fase }.
@@ -24,8 +29,11 @@ export default function Tokoh({ penampilan, pose = "jalan", gerak, aktivitas, as
 	const kki = useRef();
 	const kka = useRef();
 	const geser = useMemo(() => Math.random() * 20, []);
+	const akar = useRef();
 
 	useFrame(({ clock }, dt) => {
+		// tokoh yang tidak tergambar tidak perlu dianimasikan
+		if (!tampak(akar.current)) return;
 		const t = clock.elapsedTime + geser;
 
 		// --- kepala: menoleh ke pengunjung, atau gerak santai sesuai aktivitas ---
@@ -118,7 +126,7 @@ export default function Tokoh({ penampilan, pose = "jalan", gerak, aktivitas, as
 	});
 
 	return (
-		<group>
+		<group ref={akar}>
 			{bayangan && pose !== "duduk" && (
 				<mesh rotation-x={-Math.PI / 2} position-y={0.015}>
 					<circleGeometry args={[0.4, 16]} />

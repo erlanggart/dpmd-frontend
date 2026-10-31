@@ -1,5 +1,5 @@
 import { useSyncExternalStore } from "react";
-import { TITIK_MULAI } from "./kantorConfig";
+import { GEDUNG, TITIK_MULAI } from "./kantorConfig";
 
 // Jembatan antara loop 3D (useFrame, ±60 kali per detik) dan UI React.
 // Nilai yang berubah tiap frame dibaca langsung dari objek mutable di bawah;
@@ -15,6 +15,10 @@ export const kendali = { arah: { x: 0, y: 0 }, lari: false, lariAnalog: false, p
 
 // Posisi pemain terkini (dibaca minimap, pintu otomatis, dan pegawai yang menoleh).
 export const posisi = { x: TITIK_MULAI.x, y: 0, z: TITIK_MULAI.z, rot: TITIK_MULAI.rot, lantai: 0 };
+
+// Pengunjung di luar gedung (halaman/teras): isi ruang-ruang di dalam tertutup dinding,
+// jadi pegawai & petugas di sana tidak perlu digambar.
+export const diLuarGedung = () => posisi.y < 0.9 && (posisi.x < GEDUNG.x0 || posisi.x > GEDUNG.x1 || posisi.z < GEDUNG.z0 || posisi.z > GEDUNG.z1);
 
 // Posisi pegawai yang sedang berjalan, supaya pintu juga membuka untuk mereka.
 export const posisiPejalan = [];

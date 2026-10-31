@@ -1,7 +1,7 @@
 import { useMemo, useRef } from "react";
 import { useFrame } from "@react-three/fiber";
 import { LOBI, RUANGAN, TINGGI_LANTAI, titikDepanPetugas } from "../kantorConfig";
-import { ambilKeadaan, kendali, posisi } from "../jelajahStore";
+import { ambilKeadaan, diLuarGedung, kendali, posisi } from "../jelajahStore";
 import Tokoh from "./Tokoh";
 
 // Petugas layanan tiap bidang (dan resepsionis): berseragam PDH, berdiri di
@@ -20,6 +20,7 @@ const PENAMPILAN = {
 const sudutDekat = (dari, ke) => dari + Math.atan2(Math.sin(ke - dari), Math.cos(ke - dari));
 
 function SatuPetugas({ area, sudahDikunjungi, data }) {
+	const akar = useRef();
 	const tubuh = useRef();
 	const penanda = useRef();
 	const cincin = useRef();
@@ -31,6 +32,9 @@ function SatuPetugas({ area, sudahDikunjungi, data }) {
 	const duduk = area.id === "lobi";
 
 	useFrame(({ clock }, dt) => {
+		// petugas di ruang bidang tertutup dinding bila pengunjung masih di luar gedung
+		akar.current.visible = area.id === "lobi" || !diLuarGedung();
+		if (!akar.current.visible) return;
 		const t = clock.elapsedTime;
 		// Badan berputar ke pengunjung yang mendekat (di lantai yang sama), lalu kembali.
 		const jarak = Math.hypot(posisi.x - x, posisi.z - z);
@@ -57,7 +61,7 @@ function SatuPetugas({ area, sudahDikunjungi, data }) {
 	};
 
 	return (
-		<group position={[x, area.lantai * TINGGI_LANTAI, z]}>
+		<group ref={akar} position={[x, area.lantai * TINGGI_LANTAI, z]}>
 			<group ref={tubuh} rotation-y={hadapAwal} onClick={bukaSaatTiba}>
 				{duduk ? (
 					<Tokoh penampilan={penampilan} pose="duduk" aktivitas="mengetik" asal={{ x, z, rot: hadapAwal, lantai: area.lantai }} />

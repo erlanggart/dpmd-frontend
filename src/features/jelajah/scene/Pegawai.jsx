@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef } from "react";
 import { useFrame } from "@react-three/fiber";
 import { CanvasTexture, SRGBColorSpace } from "three";
 import { RUANGAN, TINGGI_LANTAI } from "../kantorConfig";
-import { posisi, posisiPejalan } from "../jelajahStore";
+import { diLuarGedung, posisi, posisiPejalan } from "../jelajahStore";
 import { cariJalur, tinggiTanah } from "./layout";
 import Tokoh from "./Tokoh";
 
@@ -159,14 +159,23 @@ function Pejalan({ data, indeks }) {
 	);
 }
 
+const TAMPAK_DARI_LUAR = new Set(["luar", "lobi", "lorong1"]);
+
 export default function Pegawai({ lantai, penghuni }) {
 	const daftar = useMemo(() => penghuni.orang.filter((p) => p.lantai === lantai), [penghuni, lantai]);
 	const pejalan = useMemo(() => penghuni.pejalan.map((p, i) => [p, i]).filter(([p]) => p.lantai === lantai), [penghuni, lantai]);
 	const sprite = useRef();
 	const balon = useBalon();
 	const aktif = useRef({ siapa: null, putaran: new Map() });
+	const grupOrang = useRef([]);
 
 	useFrame(() => {
+		// dari luar gedung hanya halaman, lobi, dan lorong yang terlihat (lewat pintu kaca)
+		const luar = diLuarGedung();
+		daftar.forEach((o, i) => {
+			const g = grupOrang.current[i];
+			if (g) g.visible = !luar || TAMPAK_DARI_LUAR.has(o.area);
+		});
 		const sp = sprite.current;
 		if (posisi.lantai !== lantai) {
 			sp.visible = false;
@@ -209,7 +218,7 @@ export default function Pegawai({ lantai, penghuni }) {
 	return (
 		<group>
 			{daftar.map((o, i) => (
-				<group key={i} position={[o.x, lantai ? lantai * TINGGI_LANTAI : tinggiTanah(o.x, o.z), o.z]} rotation-y={o.rot}>
+				<group key={i} ref={(g) => (grupOrang.current[i] = g)} position={[o.x, lantai ? lantai * TINGGI_LANTAI : tinggiTanah(o.x, o.z), o.z]} rotation-y={o.rot}>
 					<Tokoh
 						penampilan={o.penampilan}
 						pose={o.pose}
