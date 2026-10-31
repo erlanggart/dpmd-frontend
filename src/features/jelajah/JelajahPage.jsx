@@ -167,7 +167,7 @@ export default function JelajahPage() {
 	// Jelajah bersama tamu lain
 	const [profil, setProfil] = useState(null);
 	const penampilan = useMemo(() => (profil ? penampilanAvatar(profil) : undefined), [profil]);
-	const { daftar: tamuLain, obrolan, sapaan, status: statusMp, galat: galatMp } = useMultipemain();
+	const { daftar: tamuLain, obrolan, sapaan, status: statusMp, galat: galatMp, ruang: ruangMp } = useMultipemain();
 	const [ketik, setKetik] = useState(null);
 	const [pilihEmote, setPilihEmote] = useState(false);
 	const [kini, setKini] = useState(() => Date.now());
@@ -426,7 +426,7 @@ export default function JelajahPage() {
 									className="flex h-10 items-center gap-1.5 rounded-xl bg-white/90 px-2.5 text-sm font-semibold text-slate-800 shadow-md ring-1 ring-black/5 backdrop-blur sm:px-3"
 									title={
 										statusMp === "tersambung"
-											? `${tamuLain.length + 1} tamu sedang menjelajah: ${[profil.nama, ...tamuLain.map((t) => t.nama)].join(", ")}`
+											? `${ruangMp ? `Kantor #${ruangMp} · ` : ""}${tamuLain.length + 1} tamu sedang menjelajah: ${[profil.nama, ...tamuLain.map((t) => t.nama)].join(", ")}`
 											: galatMp || "Belum tersambung dengan tamu lain"
 									}
 								>

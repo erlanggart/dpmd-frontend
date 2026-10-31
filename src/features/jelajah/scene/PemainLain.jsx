@@ -16,6 +16,31 @@ const H = TINGGI_LANTAI;
 const FONT = '"Segoe UI", system-ui, -apple-system, Roboto, sans-serif';
 const EMOJI = { lambai: "👋", jempol: "👍", tepuk: "👏", tawa: "😂", hati: "❤️" };
 const sudutDekat = (dari, ke) => dari + Math.atan2(Math.sin(ke - dari), Math.cos(ke - dari));
+// Posisi tamu lain diputar TUNDA ms di belakang waktu nyata dan diinterpolasi di antara
+// dua kiriman server (±10x/detik), jadi tetap mulus walau paket datang tak teratur.
+// Bila kiriman terlambat, gerak diteruskan sebentar (maks. EKSTRA ms) lalu berhenti.
+const TUNDA = 120;
+const EKSTRA = 150;
+
+function sasaranJejak(j, s, kini) {
+	if (!j?.length) return s;
+	const rt = kini - TUNDA;
+	if (rt <= j[0].t) return j[0];
+	for (let i = j.length - 2; i >= 0; i--) {
+		const a = j[i];
+		const b = j[i + 1];
+		if (rt >= a.t && rt <= b.t) {
+			const f = (rt - a.t) / Math.max(1, b.t - a.t);
+			return { x: a.x + (b.x - a.x) * f, y: a.y + (b.y - a.y) * f, z: a.z + (b.z - a.z) * f, rot: a.rot + (sudutDekat(a.rot, b.rot) - a.rot) * f };
+		}
+	}
+	const b = j[j.length - 1];
+	const a = j[j.length - 2];
+	const lewat = rt - b.t;
+	if (!a || lewat > EKSTRA) return b;
+	const f = lewat / Math.max(1, b.t - a.t);
+	return { x: b.x + (b.x - a.x) * f, y: b.y, z: b.z + (b.z - a.z) * f, rot: b.rot };
+}
 // Lantai pemain lain tampak bila lantai itu juga sedang ditampilkan (sama dengan GrupLantai).
 const lantaiTampak = (y) => (y > H / 2 ? posisi.y > 0.9 : posisi.y < 2.6);
 
@@ -150,7 +175,7 @@ function Tamu({ id, nama, jk, avatar, kulit }) {
 	const label = useKanvas(512, 72);
 	const spLabel = useRef();
 	const gerak = useRef({ laju: 0, fase: 0, udara: false, isyarat: null });
-	const tampil = useRef({ x: 0, y: 0, z: 0, rot: 0, ada: false });
+	const tampil = useRef({ x: 0, y: 0, z: 0, rot: 0, ada: false, laju: 0 });
 	const tinggi = useRef(2.1);
 	const lihat = useRef(false);
 
@@ -168,22 +193,26 @@ function Tamu({ id, nama, jk, avatar, kulit }) {
 			return;
 		}
 		const t = tampil.current;
-		const jauh = Math.hypot(s.x - t.x, s.z - t.z);
-		if (!t.ada || jauh > 5 || Math.abs(s.y - t.y) > 2) {
-			Object.assign(t, { x: s.x, y: s.y, z: s.z, rot: s.rot, ada: true });
+		const q = sasaranJejak(p.jejak, s, performance.now());
+		const jauh = Math.hypot(q.x - t.x, q.z - t.z);
+		if (!t.ada || jauh > 5 || Math.abs(q.y - t.y) > 2) {
+			Object.assign(t, { x: q.x, y: q.y, z: q.z, rot: q.rot, ada: true });
 		} else {
-			const f = 1 - Math.exp(-12 * dt);
-			t.x += (s.x - t.x) * f;
-			t.y += (s.y - t.y) * f;
-			t.z += (s.z - t.z) * f;
-			t.rot += (sudutDekat(t.rot, s.rot) - t.rot) * f;
+			// sasaran sudah mulus; pelembut kecil hanya meredam koreksi ekstrapolasi
+			const f = 1 - Math.exp(-25 * dt);
+			t.x += (q.x - t.x) * f;
+			t.y += (q.y - t.y) * f;
+			t.z += (q.z - t.z) * f;
+			t.rot += (sudutDekat(t.rot, q.rot) - t.rot) * f;
 		}
+		// laju nyata (m/detik) dari perpindahan tampilan, untuk animasi kaki
+		t.laju += (Math.hypot(t.x - g.position.x, t.z - g.position.z) / Math.max(dt, 1e-3) - t.laju) * (1 - Math.exp(-10 * dt));
 		g.position.set(t.x, t.y, t.z);
 		g.rotation.y = t.rot;
 
 		// Animasi kaki dari laju sebenarnya.
 		// Berlari bila tamu itu menekan lari (langkah lebar & cepat), selain itu berjalan.
-		const bergerak = jauh > 0.04;
+		const bergerak = t.laju > 0.4;
 		const gr = gerak.current;
 		gr.laju += ((bergerak ? (s.lari ? 1 : 0.7) : 0) - gr.laju) * (1 - Math.exp(-8 * dt));
 		if (bergerak) gr.fase += dt * (s.lari ? 13 : 9);

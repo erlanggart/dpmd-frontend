@@ -13,15 +13,15 @@ const JEDA_KIRIM = 100;
 const LAMA_UCAP = 7000;
 const LAMA_EMOTE = 2600;
 const MAKS_OBROLAN = 40;
-// Tab yang ditinggal lebih lama dari ini melepas kursinya (server hanya 10 tamu).
+// Tab yang ditinggal lebih lama dari ini melepas kursinya (tiap ruang maks. 10 tamu).
 const LEPAS_SAAT_TERSEMBUNYI_MS = 2 * 60 * 1000;
 
-// id → { profil, s: keadaan terakhir dari server, ucap, emote }
+// id → { profil, s: keadaan terakhir dari server, jejak: [{t,x,y,z,rot}] untuk interpolasi, ucap, emote }
 export const pemainLain = new Map();
 // Balon chat & emote milik pemain sendiri, digambar di atas kepalanya.
 export const diriSendiri = { ucap: null, emote: null };
 
-let ringkas = { status: "mati", id: null, daftar: [], obrolan: [], sapaan: null, galat: null };
+let ringkas = { status: "mati", id: null, ruang: null, daftar: [], obrolan: [], sapaan: null, galat: null };
 const pendengar = new Set();
 function ubah(patch) {
 	ringkas = { ...ringkas, ...patch };
@@ -76,7 +76,7 @@ export async function sambungJelajah(profil) {
 	s.on("connect_error", (e) => {
 		const pesan =
 			e?.message === "penuh"
-				? "Jelajah bersama sedang penuh (maks. 10 tamu). Anda tetap bisa menjelajah sendiri."
+				? "Jelajah bersama sedang penuh (maks. 60 tamu). Anda tetap bisa menjelajah sendiri."
 				: e?.message === "terlalu-banyak"
 					? "Terlalu banyak tamu dari jaringan ini."
 					: null;
@@ -95,7 +95,7 @@ export async function sambungJelajah(profil) {
 			const kend = kendaraanDariId(id);
 			if (kend && posisi.kend !== kend) Object.assign(kend, { x: k.x, z: k.z, rot: k.rot });
 		}
-		ubah({ status: "tersambung", id: m.id, daftar: daftarDariMap(), galat: null });
+		ubah({ status: "tersambung", id: m.id, ruang: m.ruang ?? null, daftar: daftarDariMap(), galat: null });
 	});
 	s.on("masuk", (p) => {
 		pemainLain.set(p.id, { profil: { nama: p.nama, jk: p.jk, avatar: p.avatar, kulit: p.kulit }, s: p.s });
@@ -110,9 +110,15 @@ export async function sambungJelajah(profil) {
 		tambahObrolan({ sistem: true, teks: `${p.profil.nama} meninggalkan kantor`, waktu: Date.now() });
 	});
 	s.on("posisi", (daftar) => {
+		const kini = performance.now();
 		for (const { id, s: st } of daftar) {
 			const p = pemainLain.get(id);
-			if (p) p.s = st;
+			if (!p) continue;
+			p.s = st;
+			// riwayat singkat untuk diputar sedikit di belakang waktu nyata (lihat PemainLain)
+			const j = (p.jejak ||= []);
+			j.push({ t: kini, x: st.x, y: st.y, z: st.z, rot: st.rot });
+			if (j.length > 12) j.shift();
 		}
 	});
 	s.on("ucap", (m) => {
@@ -171,7 +177,7 @@ export async function sambungJelajah(profil) {
 export function putusJelajah() {
 	generasi++;
 	if (!socket) {
-		if (ringkas.status !== "mati") ubah({ status: "mati", id: null, daftar: [], sapaan: null });
+		if (ringkas.status !== "mati") ubah({ status: "mati", id: null, ruang: null, daftar: [], sapaan: null });
 		return;
 	}
 	clearInterval(pengirim);
@@ -187,7 +193,7 @@ export function putusJelajah() {
 	pemainLain.clear();
 	diriSendiri.ucap = null;
 	diriSendiri.emote = null;
-	ubah({ status: "mati", id: null, daftar: [], sapaan: null });
+	ubah({ status: "mati", id: null, ruang: null, daftar: [], sapaan: null });
 }
 
 export function kirimUcap(teks) {
