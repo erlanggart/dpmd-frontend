@@ -9,6 +9,10 @@
  * gelap — gaya sorotan terminal.
  */
 
+/* Font: JetBrains Mono (teks) + Orbitron (judul & angka besar). Sumber sama
+   dengan Poppins di index.css (Google Fonts). */
+@import url("https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700;800&family=Orbitron:wght@600;700;800;900&display=swap");
+
 .kali-ops,
 .kali-shell {
 	--k-bg: #020604;
@@ -151,12 +155,15 @@
 
 .kali-ops {
 	position: relative;
+	/* Tabel/baris panjang di tab lama tidak boleh membuat seluruh halaman
+	   bisa digeser ke samping di HP; masing-masing punya wadah gulir sendiri. */
+	overflow-x: clip;
 	min-height: 100vh;
 	background:
 		radial-gradient(ellipse 80% 50% at 50% -10%, rgba(0, 255, 65, 0.08), transparent 60%),
 		var(--k-bg);
 	color: var(--k-text);
-	font-family: "JetBrains Mono", "Fira Code", "Cascadia Code", ui-monospace, Consolas, "Liberation Mono", monospace;
+	font-family: "JetBrains Mono", ui-monospace, Consolas, "Liberation Mono", monospace;
 	font-feature-settings: "calt" 0;
 	color-scheme: dark;
 }
@@ -398,4 +405,96 @@ body.kali-swal .swal2-cancel {
 	background: #0b1b11 !important;
 	color: #a3e4b8 !important;
 	border: 1px solid #1d4a2d !important;
+}
+
+/* ─────────── Tipografi tampilan ─────────── */
+.kali-display {
+	font-family: "Orbitron", "JetBrains Mono", ui-monospace, monospace;
+	letter-spacing: 0.06em;
+}
+
+/* Judul utama dengan bayangan RGB-split tipis yang sesekali bergeser. */
+.kali-glitch {
+	position: relative;
+	text-shadow: 0 0 10px rgba(0, 255, 65, 0.55), 0 0 28px rgba(0, 255, 65, 0.25);
+}
+.kali-glitch::before,
+.kali-glitch::after {
+	content: attr(data-teks);
+	position: absolute;
+	inset: 0;
+	pointer-events: none;
+	opacity: 0;
+}
+.kali-glitch::before {
+	color: #ff3b4e;
+	animation: kali-glitch-a 6s infinite steps(1);
+}
+.kali-glitch::after {
+	color: #22d3ee;
+	animation: kali-glitch-b 6s infinite steps(1);
+}
+@keyframes kali-glitch-a {
+	0%, 92%, 100% { opacity: 0; transform: none; }
+	93% { opacity: 0.7; transform: translate(-2px, 1px); clip-path: inset(10% 0 55% 0); }
+	95% { opacity: 0.7; transform: translate(2px, -1px); clip-path: inset(60% 0 8% 0); }
+}
+@keyframes kali-glitch-b {
+	0%, 93%, 100% { opacity: 0; transform: none; }
+	94% { opacity: 0.6; transform: translate(2px, 0); clip-path: inset(30% 0 40% 0); }
+	96% { opacity: 0.6; transform: translate(-1px, 1px); clip-path: inset(75% 0 2% 0); }
+}
+
+/* ─────────── HUD di atas globe ─────────── */
+.kali-hud {
+	background: linear-gradient(180deg, rgba(3, 14, 7, 0.82), rgba(2, 8, 4, 0.7));
+	border: 1px solid rgba(0, 255, 65, 0.22);
+	box-shadow: inset 0 0 24px rgba(0, 255, 65, 0.05), 0 0 22px -10px rgba(0, 255, 65, 0.45);
+	backdrop-filter: blur(4px);
+}
+.kali-hud-label {
+	font-size: 9.5px;
+	font-weight: 700;
+	letter-spacing: 0.24em;
+	text-transform: uppercase;
+	color: #5fa577;
+}
+
+/* Meter bersegmen di header. */
+.kali-segmen {
+	display: grid;
+	grid-template-columns: repeat(24, minmax(0, 1fr));
+	gap: 2px;
+	height: 10px;
+}
+.kali-segmen > i {
+	display: block;
+	background: #0b1b11;
+}
+.kali-segmen > i.on {
+	background: currentColor;
+	box-shadow: 0 0 6px currentColor;
+}
+
+/* Pita berjalan di bawah globe. */
+.kali-ticker {
+	display: flex;
+	gap: 2.5rem;
+	width: max-content;
+	animation: kali-jalan 60s linear infinite;
+}
+.kali-ticker:hover {
+	animation-play-state: paused;
+}
+@keyframes kali-jalan {
+	from { transform: translateX(0); }
+	to { transform: translateX(-50%); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.kali-glitch::before,
+	.kali-glitch::after,
+	.kali-ticker {
+		animation: none;
+	}
 }

@@ -1,9 +1,10 @@
 // src/pages/superadmin/server/serverUi.jsx
 //
 // Komponen & format bersama halaman Manajemen Server. Warna seri grafik
-// mengikuti palet kategorikal tervalidasi (biru, ungu, aqua, oranye), dan
-// warna status (baik/waspada/kritis) dicadangkan khusus untuk kondisi —
-// selalu disertai ikon + label, tidak pernah warna saja.
+// memakai palet terminal satu keluarga (hijau neon, cyan, teal, mint, lime,
+// amber) supaya semua tab serasi; nama kunci lama (biru, ungu, …) dipertahankan
+// agar pemanggil tidak berubah. Warna status (baik/waspada/kritis) dicadangkan
+// khusus untuk kondisi — selalu disertai ikon + label, tidak pernah warna saja.
 
 import React from "react";
 import {
@@ -18,13 +19,13 @@ import {
 import { FiAlertOctagon, FiAlertTriangle, FiCheckCircle, FiHelpCircle, FiInfo } from "react-icons/fi";
 
 export const SERI = {
-	biru: "#00ff41",
-	oranye: "#ff8c33",
-	aqua: "#22d3ee",
-	kuning: "#ffbf1f",
-	magenta: "#ff6bcb",
+	biru: "#00ff41", // hijau neon (seri utama)
+	oranye: "#ffb020", // amber
+	aqua: "#2ee6c5", // teal
+	kuning: "#e6ff4d", // lime
+	magenta: "#7dffb0", // mint
 	hijau: "#2cff8a",
-	ungu: "#b794ff",
+	ungu: "#00d9ff", // cyan
 	merah: "#ff4d5e",
 };
 

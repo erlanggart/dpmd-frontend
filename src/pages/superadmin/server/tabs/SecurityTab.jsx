@@ -51,10 +51,10 @@ const RENTANG = [
 ];
 
 const TINGKAT = {
-	aman: { judul: "Aman", teks: "Tidak ada aktivitas mencurigakan yang berarti dalam 1 jam terakhir.", kelas: "from-emerald-600 to-emerald-700", icon: FiCheckCircle },
-	waspada: { judul: "Waspada", teks: "Ada aktivitas mencurigakan ringan (pemindaian/login gagal). Sistem terus memantau.", kelas: "from-amber-500 to-amber-600", icon: FiEye },
-	tinggi: { judul: "Ancaman Tinggi", teks: "Beberapa serangan serius terdeteksi dalam 1 jam terakhir. Periksa IP penyerang di bawah.", kelas: "from-orange-600 to-red-600", icon: FiAlertTriangle },
-	kritis: { judul: "Kritis — Sedang Diserang", teks: "Serangan intens sedang berlangsung. Pertimbangkan memblokir IP penyerang dan memperketat ambang auto-block.", kelas: "from-red-600 to-red-800", icon: FiAlertOctagon },
+	aman: { judul: "Aman", teks: "Tidak ada aktivitas mencurigakan yang berarti dalam 1 jam terakhir.", kelas: "from-emerald-100 via-black to-black border-emerald-500 text-emerald-700 shadow-[0_0_30px_-8px_rgba(0,255,65,.5)]", icon: FiCheckCircle },
+	waspada: { judul: "Waspada", teks: "Ada aktivitas mencurigakan ringan (pemindaian/login gagal). Sistem terus memantau.", kelas: "from-amber-100 via-black to-black border-amber-500 text-amber-700 shadow-[0_0_30px_-8px_rgba(255,176,0,.5)]", icon: FiEye },
+	tinggi: { judul: "Ancaman Tinggi", teks: "Beberapa serangan serius terdeteksi dalam 1 jam terakhir. Periksa IP penyerang di bawah.", kelas: "from-orange-100 via-black to-black border-orange-500 text-orange-700 shadow-[0_0_30px_-8px_rgba(255,127,31,.5)]", icon: FiAlertTriangle },
+	kritis: { judul: "Kritis — Sedang Diserang", teks: "Serangan intens sedang berlangsung. Pertimbangkan memblokir IP penyerang dan memperketat ambang auto-block.", kelas: "from-red-100 via-black to-black border-red-500 text-red-700 shadow-[0_0_36px_-6px_rgba(255,59,78,.6)]", icon: FiAlertOctagon },
 };
 
 const SUMBER = { app: "Aplikasi", nginx: "Nginx", ssh: "SSH" };
@@ -256,20 +256,20 @@ const SecurityTab = () => {
 	return (
 		<div className="space-y-4">
 			{/* Tingkat ancaman */}
-			<div className={`flex flex-wrap items-center justify-between gap-4 rounded-2xl bg-gradient-to-r ${t.kelas} p-5 text-white shadow`}>
+			<div className={`flex flex-wrap items-center justify-between gap-4 rounded-2xl border bg-gradient-to-r ${t.kelas} p-5`}>
 				<div className="flex items-start gap-3">
-					<span className="grid h-12 w-12 shrink-0 place-items-center rounded-xl bg-white/15">
+					<span className="grid h-12 w-12 shrink-0 place-items-center rounded-xl bg-black/50 ring-1 ring-current">
 						<TIcon className="h-6 w-6" />
 					</span>
 					<div>
-						<p className="text-xs font-semibold uppercase tracking-wider text-white/80">Tingkat ancaman saat ini</p>
-						<p className="text-2xl font-extrabold">{t.judul}</p>
-						<p className="mt-0.5 max-w-2xl text-sm text-white/90">{t.teks}</p>
+						<p className="text-xs font-semibold uppercase tracking-wider opacity-80">Tingkat ancaman saat ini</p>
+						<p className="kali-display text-2xl font-extrabold [text-shadow:0_0_14px_currentColor]">{t.judul}</p>
+						<p className="mt-0.5 max-w-2xl text-sm text-slate-700">{t.teks}</p>
 					</div>
 				</div>
 				<div className="flex items-center gap-2">
 					<PilihRentang value={rentang} onChange={setRentang} opsi={RENTANG} />
-					<button onClick={muatSemua} className="rounded-lg bg-white/15 p-2 hover:bg-white/25" title="Muat ulang">
+					<button onClick={muatSemua} className="kali-ikon" title="Muat ulang">
 						<FiRefreshCw className="h-4 w-4" />
 					</button>
 				</div>

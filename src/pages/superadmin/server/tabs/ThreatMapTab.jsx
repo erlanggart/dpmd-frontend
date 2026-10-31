@@ -8,7 +8,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Swal from "sweetalert2";
 import {
-	FiActivity,
 	FiCopy,
 	FiCrosshair,
 	FiGlobe,
@@ -22,7 +21,7 @@ import {
 } from "react-icons/fi";
 import api from "../../../../api";
 import HackerGlobe from "../HackerGlobe";
-import { Card, Galat, Memuat, PilihRentang, SeverityBadge, Stat, Toggle, formatAngka, pesanError, sejak, usePolling } from "../serverUi";
+import { Card, Galat, Memuat, PilihRentang, SeverityBadge, formatAngka, pesanError, sejak, usePolling } from "../serverUi";
 
 const RENTANG = [
 	{ value: "1h", label: "1j" },
@@ -324,13 +323,19 @@ const PanelNegara = ({ data, onChanged }) => {
 
 /* ───────────────────────── Umpan langsung ───────────────────────── */
 
-const UmpanLangsung = ({ onPilihIp, onBaru }) => {
+const UmpanLangsung = ({ onPilihIp, onBaru, onBaris }) => {
 	const [baris, setBaris] = useState([]);
 	const [jeda, setJeda] = useState(false);
 	const idTerakhir = useRef(0);
 	const barisBaru = useRef(new Set());
 	const onBaruRef = useRef(onBaru);
 	onBaruRef.current = onBaru;
+	const onBarisRef = useRef(onBaris);
+	onBarisRef.current = onBaris;
+
+	useEffect(() => {
+		onBarisRef.current?.(baris);
+	}, [baris]);
 
 	const muat = useCallback(async () => {
 		if (jeda) return;
@@ -339,7 +344,9 @@ const UmpanLangsung = ({ onPilihIp, onBaru }) => {
 			const res = await api.get(`${API}/events`, {
 				params: { limit: 40, range: "24h", geo: "1", ...(pertama ? {} : { since_id: idTerakhir.current }) },
 			});
-			const data = res.data?.data || [];
+			// Dua polling bisa bertumpuk (muat awal + interval); buang yang sudah
+			// pernah diterima supaya kejadian tidak muncul/ditembakkan dua kali.
+			const data = (res.data?.data || []).filter((e) => e.id > idTerakhir.current);
 			if (!data.length) return;
 			idTerakhir.current = Math.max(idTerakhir.current, ...data.map((e) => e.id));
 			barisBaru.current = new Set(data.map((e) => e.id));
@@ -523,7 +530,7 @@ const OverlayReplay = ({ r }) => {
 	const persen = ((r.pos - d.awal) / (d.akhir - d.awal)) * 100;
 	const tanggal = new Date(r.pos);
 	return (
-		<div className="pointer-events-none absolute inset-x-0 top-0 flex justify-center p-3">
+		<div className="pointer-events-none absolute inset-x-0 top-[132px] z-10 flex justify-center p-3">
 			<div className="pointer-events-auto w-full max-w-xl border border-red-200 bg-black/85 px-3 py-2 shadow-[0_0_24px_rgba(255,59,78,.25)]">
 				<div className="flex items-center justify-between gap-3 text-[11.5px]">
 					<span className="font-bold tracking-widest text-red-600">● REPLAY {d.range}</span>
@@ -565,6 +572,21 @@ const OverlayReplay = ({ r }) => {
 
 /* ───────────────────────── Tab ───────────────────────── */
 
+/** Tombol opsi kecil di HUD globe (busur, pengunjung, putar, alarm). */
+const ChipOpsi = ({ aktif, onClick, children, judul }) => (
+	<button
+		type="button"
+		onClick={onClick}
+		title={judul}
+		aria-pressed={aktif}
+		className={`px-2 py-1 text-[10.5px] font-bold uppercase tracking-wider ring-1 transition ${
+			aktif ? "bg-emerald-100 text-emerald-700 ring-emerald-500" : "bg-black/60 text-slate-500 ring-slate-300 hover:text-slate-800"
+		}`}
+	>
+		{children}
+	</button>
+);
+
 const ThreatMapTab = () => {
 	const [rentang, setRentang] = useState("24h");
 	const [data, setData] = useState(null);
@@ -573,6 +595,7 @@ const ThreatMapTab = () => {
 	const [pilih, setPilih] = useState(null);
 	const [opsi, setOpsi] = useState({ arcs: true, visitors: true, rotate: true, alarm: false });
 	const [live, setLive] = useState([]); // waktu tiba kejadian langsung (5 menit terakhir)
+	const [terbaru, setTerbaru] = useState([]); // baris umpan langsung untuk HUD & ticker
 	const globe = useRef(null);
 	const alarm = useRef(null);
 	if (!alarm.current) alarm.current = buatAlarm();
@@ -584,9 +607,9 @@ const ThreatMapTab = () => {
 	});
 	const replayAktif = !!replay.data;
 	// Globe menyesuaikan layar: penuh di desktop, tetap muat satu layar di HP.
-	const [tinggiGlobe, setTinggiGlobe] = useState(() => (typeof window !== "undefined" && window.innerWidth < 640 ? 360 : 560));
+	const [tinggiGlobe, setTinggiGlobe] = useState(() => (typeof window !== "undefined" && window.innerWidth < 640 ? 480 : 720));
 	useEffect(() => {
-		const ukur = () => setTinggiGlobe(window.innerWidth < 640 ? 360 : window.innerWidth < 1280 ? 480 : 560);
+		const ukur = () => setTinggiGlobe(window.innerWidth < 640 ? 480 : window.innerWidth < 1280 ? 620 : 720);
 		window.addEventListener("resize", ukur);
 		return () => window.removeEventListener("resize", ukur);
 	}, []);
@@ -652,24 +675,156 @@ const ThreatMapTab = () => {
 	if (!data) return <Memuat teks="Memetakan sumber serangan…" />;
 
 	const t = TINGKAT[ringkas?.threat_level] || TINGKAT.aman;
+	const negaraTeratas = data.countries.filter((c) => /^[A-Z]{2}$/.test(c.cc)).slice(0, 6);
+	const maksNegara = Math.max(1, ...negaraTeratas.map((c) => c.events));
+	const masuk = terbaru.slice(0, 7);
+	const isiTicker = terbaru.slice(0, 14);
+
+	// Arahkan globe ke negara: pakai lokasi IP penyerang pertama dari negara itu.
+	const fokusNegara = (cc) => {
+		const a = data.attackers.find((x) => x.geo?.cc === cc);
+		if (a) globe.current?.focus(a.geo.lat, a.geo.lon);
+	};
+
+	const hud = (
+		<div className="pointer-events-none absolute inset-0 z-[5] flex flex-col justify-between p-3 sm:p-4">
+			{/* Baris atas: tingkat ancaman · judul · kontrol */}
+			<div className="flex flex-wrap items-start justify-between gap-3">
+				<div className="kali-hud pointer-events-auto min-w-[200px] px-4 py-3">
+					<p className="kali-hud-label">Threat level</p>
+					<p className={`kali-display mt-1 text-3xl font-black [text-shadow:0_0_18px_currentColor] ${t.kelas}`}>{t.teks}</p>
+					<p className="mt-1 text-[11px] text-slate-600">
+						{ringkas?.last_hour ?? 0} kejadian/jam ·{" "}
+						<span className={live.length ? "font-bold text-red-600" : ""}>{live.length} live 5m</span>
+					</p>
+				</div>
+
+				<div className="hidden flex-col items-center pt-1 text-center xl:flex">
+					<p className="kali-display text-[13px] font-bold tracking-[0.5em] text-slate-900 [text-shadow:0_0_12px_rgba(0,255,65,.6)]">GLOBAL THREAT MAP</p>
+					<p className="mt-1 flex items-center gap-1.5 text-[10.5px] tracking-[0.2em] text-slate-500">
+						<span className="h-1.5 w-1.5 animate-pulse rounded-full bg-red-500" />
+						{replayAktif ? "MODE REPLAY" : "LIVE · DPMD KAB. BOGOR"}
+					</p>
+				</div>
+
+				<div className="kali-hud pointer-events-auto flex flex-col items-end gap-2 px-3 py-2.5">
+					<div className="flex flex-wrap items-center justify-end gap-1.5">
+						<PilihRentang value={rentang} onChange={setRentang} opsi={RENTANG} />
+						<button
+							onClick={() => replay.mulai(rentang)}
+							disabled={replay.memuat || replayAktif}
+							className="inline-flex items-center gap-1 bg-red-100 px-2.5 py-1 text-[11px] font-bold text-red-700 ring-1 ring-red-500 hover:shadow-[0_0_12px_rgba(255,59,78,.5)] disabled:opacity-40"
+							title="Putar ulang serangan pada rentang ini sebagai time-lapse"
+						>
+							<FiPlay className="h-3 w-3" /> {replay.memuat ? "memuat…" : "REPLAY"}
+						</button>
+						<button onClick={muat} className="kali-ikon" title="Muat ulang data peta">
+							<FiRefreshCw className="h-3.5 w-3.5" />
+						</button>
+					</div>
+					<div className="hidden flex-wrap justify-end gap-1 sm:flex">
+						<ChipOpsi aktif={opsi.arcs} onClick={() => setOpsi((o) => ({ ...o, arcs: !o.arcs }))} judul="Tampilkan busur dari penyerang ke server">
+							busur
+						</ChipOpsi>
+						<ChipOpsi aktif={opsi.visitors} onClick={() => setOpsi((o) => ({ ...o, visitors: !o.visitors }))} judul="Tampilkan IP pengunjung (hijau)">
+							pengunjung
+						</ChipOpsi>
+						<ChipOpsi aktif={opsi.rotate} onClick={() => setOpsi((o) => ({ ...o, rotate: !o.rotate }))} judul="Putar globe otomatis">
+							putar
+						</ChipOpsi>
+						<ChipOpsi
+							aktif={opsi.alarm}
+							onClick={() => {
+								// AudioContext hanya boleh dibuat dari gestur pengguna.
+								if (!opsi.alarm) alarm.current.siapkan();
+								setOpsi((o) => ({ ...o, alarm: !o.alarm }));
+							}}
+							judul="Bunyi bip saat serangan kritis/tinggi masuk"
+						>
+							{opsi.alarm ? "alarm on" : "alarm off"}
+						</ChipOpsi>
+					</div>
+				</div>
+			</div>
+
+			{/* Tengah: negara asal (kiri) · serangan masuk (kanan) */}
+			<div className="hidden flex-1 items-center justify-between gap-4 py-3 lg:flex">
+				<div className="kali-hud pointer-events-auto w-[230px] px-3 py-2.5">
+					<p className="kali-hud-label mb-2">Top origin</p>
+					{!negaraTeratas.length && <p className="text-[11px] text-slate-500">Belum ada data negara.</p>}
+					{negaraTeratas.map((c) => (
+						<button key={c.cc} onClick={() => fokusNegara(c.cc)} className="group mb-1.5 block w-full text-left" title={`Arahkan globe ke ${c.country}`}>
+							<span className="flex items-center justify-between text-[11.5px]">
+								<span className="truncate text-slate-700 group-hover:text-slate-900">
+									<b className="text-slate-900">{c.cc}</b> {c.country}
+								</span>
+								<span className={c.serius ? "text-red-600" : "text-slate-500"}>{formatAngka(c.events)}</span>
+							</span>
+							<span className="mt-0.5 block h-1 bg-slate-100">
+								<span
+									className={`block h-full ${c.serius ? "bg-red-500 shadow-[0_0_6px_rgba(255,59,78,.8)]" : "bg-emerald-500"}`}
+									style={{ width: `${(c.events / maksNegara) * 100}%` }}
+								/>
+							</span>
+						</button>
+					))}
+				</div>
+
+				<div className="kali-hud pointer-events-auto w-[290px] px-3 py-2.5">
+					<p className="kali-hud-label mb-2 flex items-center justify-between">
+						<span>Incoming</span>
+						<span className="flex items-center gap-1 normal-case tracking-normal text-red-600">
+							<span className="h-1.5 w-1.5 animate-pulse rounded-full bg-red-500" /> live
+						</span>
+					</p>
+					{!masuk.length && <p className="kali-kursor text-[11px] text-slate-500">menunggu serangan</p>}
+					{masuk.map((e) => (
+						<button key={e.id} onClick={() => pilihIp(e.ip_address)} className="mb-1 block w-full truncate text-left text-[11px] leading-snug hover:bg-slate-50">
+							<span className={`font-bold ${SEV_TEKS[e.severity]}`}>▲</span> <span className="text-slate-500">{new Date(e.created_at).toLocaleTimeString("id-ID")}</span>{" "}
+							<span className="text-blue-600">{e.ip_address}</span> <span className="text-slate-400">{e.geo?.cc || "··"}</span>
+							<span className="block truncate pl-3 text-slate-700">{e.label}</span>
+						</button>
+					))}
+				</div>
+			</div>
+
+			{/* Bawah: pita statistik + legenda */}
+			<div className="hidden space-y-2 sm:block">
+				<div className="kali-hud pointer-events-auto flex items-stretch overflow-x-auto [scrollbar-width:none]">
+					{[
+						{ k: "Penyerang", v: formatAngka(statistik.penyerang), h: `${statistik.terlokasi} terlokasi` },
+						{ k: "Negara", v: formatAngka(statistik.negara), h: "asal serangan" },
+						{ k: "Kejadian", v: formatAngka(statistik.kejadian), h: `rentang ${RENTANG.find((r) => r.value === rentang)?.label}` },
+						{ k: "Serius", v: formatAngka(statistik.serius), h: "kritis + tinggi", merah: statistik.serius > 0 },
+						{ k: "Diblokir", v: formatAngka(ringkas?.blocked_count ?? statistik.diblokir), h: "IP aktif" },
+						{ k: "Geo-block", v: data.blocked_countries.length ? data.blocked_countries.join(" ") : "—", h: "negara ditolak" },
+					].map((s, i) => (
+						<div key={s.k} className={`min-w-[110px] flex-1 px-4 py-2 ${i ? "border-l border-slate-200" : ""}`}>
+							<p className="kali-hud-label">{s.k}</p>
+							<p
+								className={`kali-display mt-0.5 truncate text-lg font-bold ${
+									s.merah ? "text-red-600 [text-shadow:0_0_12px_rgba(255,59,78,.6)]" : "text-slate-900 [text-shadow:0_0_10px_rgba(0,255,65,.5)]"
+								}`}
+							>
+								{s.v}
+							</p>
+							<p className="text-[10px] text-slate-500">{s.h}</p>
+						</div>
+					))}
+				</div>
+				<div className="flex flex-wrap items-center justify-between gap-2 pr-28 text-[10.5px] text-slate-500">
+					<p>
+						<span className="text-red-600">●</span> kritis <span className="ml-2 text-orange-600">●</span> tinggi <span className="ml-2 text-amber-600">●</span> sedang{" "}
+						<span className="ml-2 text-slate-400">✕</span> diblokir <span className="ml-2 text-emerald-600">●</span> pengunjung <span className="ml-2 text-blue-600">■</span> server
+					</p>
+					<p className="hidden sm:block">seret = putar · klik titik = intel &amp; blokir</p>
+				</div>
+			</div>
+		</div>
+	);
 
 	return (
 		<div className="space-y-4">
-			{/* Strip status */}
-			<div className="grid grid-cols-2 gap-2 sm:grid-cols-4 xl:grid-cols-7">
-				{[
-					{ k: "THREAT LEVEL", v: <span className={t.kelas}>{t.teks}</span>, h: `${ringkas?.last_hour ?? 0} kejadian/jam` },
-					{ k: "LIVE · 5 MNT", v: <span className={live.length ? "text-red-600" : ""}>{formatAngka(live.length)}</span>, h: "kejadian baru masuk" },
-					{ k: "PENYERANG", v: formatAngka(statistik.penyerang), h: `${statistik.terlokasi} terlokasi` },
-					{ k: "NEGARA", v: formatAngka(statistik.negara), h: "asal serangan" },
-					{ k: "KEJADIAN", v: formatAngka(statistik.kejadian), h: `${formatAngka(statistik.serius)} serius` },
-					{ k: "DIBLOKIR", v: formatAngka(ringkas?.blocked_count ?? statistik.diblokir), h: "IP aktif diblokir" },
-					{ k: "GEO-BLOCK", v: data.blocked_countries.length ? data.blocked_countries.join(" ") : "—", h: "negara ditolak" },
-				].map((s) => (
-					<Stat key={s.k} label={s.k} value={s.v} hint={s.h} />
-				))}
-			</div>
-
 			{!data.geo?.enabled ? (
 				<p className="border border-amber-200 bg-amber-50 px-3 py-2 text-[12px] text-amber-800">
 					Pencarian lokasi IP dimatikan (Pengaturan → Keamanan → Lokasi IP). Globe hanya menampilkan server.
@@ -685,95 +840,73 @@ const ThreatMapTab = () => {
 				</p>
 			) : null}
 
-			<div className="grid gap-4 xl:grid-cols-12">
-				<div className="xl:col-span-8">
-					<Card
-						title="> globe --live"
-						subtitle="Seret untuk memutar · klik titik untuk intel & aksi"
-						icon={FiActivity}
-						bodyClass="p-0"
-						actions={
-							<>
-								<PilihRentang value={rentang} onChange={setRentang} opsi={RENTANG} />
-								<button
-									onClick={() => replay.mulai(rentang)}
-									disabled={replay.memuat || replayAktif}
-									className="inline-flex items-center gap-1 border border-red-200 px-2 py-1 text-[11.5px] font-bold text-red-600 hover:bg-red-50 disabled:opacity-40"
-									title="Putar ulang serangan pada rentang ini sebagai time-lapse"
-								>
-									<FiPlay className="h-3 w-3" /> {replay.memuat ? "memuat…" : "replay"}
-								</button>
-								<button onClick={muat} className="kali-ikon" title="Muat ulang">
-									<FiRefreshCw className="h-3.5 w-3.5" />
-								</button>
-							</>
-						}
-					>
-						<div className="relative bg-black">
-							<HackerGlobe
-								ref={globe}
-								showStatic={!replayAktif}
-								overlay={replayAktif ? <OverlayReplay r={replay} /> : null}
-								attackers={data.attackers}
-								visitors={data.visitors}
-								server={data.server}
-								selectedIp={pilih?.ip}
-								onSelect={(d, jenis) => setPilih({ ...d, jenis })}
-								showArcs={opsi.arcs}
-								showVisitors={opsi.visitors}
-								autoRotate={opsi.rotate}
-								height={tinggiGlobe}
-							/>
-							<div className="pointer-events-none absolute bottom-2 left-3 space-y-0.5 text-[10.5px] text-slate-500">
-								<p><span className="text-red-600">●</span> kritis <span className="ml-2 text-orange-600">●</span> tinggi <span className="ml-2 text-amber-600">●</span> sedang <span className="ml-2 text-slate-400">✕</span> diblokir</p>
-								<p><span className="text-emerald-600">●</span> pengunjung <span className="ml-2 text-blue-600">■</span> server</p>
-							</div>
-						</div>
-						<div className="flex flex-wrap gap-x-6 border-t border-slate-100 px-4 py-1">
-							<div className="w-44"><Toggle checked={opsi.arcs} onChange={(v) => setOpsi((o) => ({ ...o, arcs: v }))} label="busur serangan" /></div>
-							<div className="w-44"><Toggle checked={opsi.visitors} onChange={(v) => setOpsi((o) => ({ ...o, visitors: v }))} label="pengunjung" /></div>
-							<div className="w-44"><Toggle checked={opsi.rotate} onChange={(v) => setOpsi((o) => ({ ...o, rotate: v }))} label="putar otomatis" /></div>
-							<div className="w-44">
-								<Toggle
-									checked={opsi.alarm}
-									onChange={(v) => {
-										// AudioContext hanya boleh dibuat dari gestur pengguna.
-										if (v) alarm.current.siapkan();
-										setOpsi((o) => ({ ...o, alarm: v }));
-									}}
-									label="alarm suara"
-								/>
-							</div>
-						</div>
-					</Card>
+			{/* Hero: globe penuh dengan HUD */}
+			<section className="kali-kartu relative overflow-hidden rounded-2xl border border-slate-200 bg-black">
+				<div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(0,255,65,.10),transparent_62%)]" />
+				<HackerGlobe
+					ref={globe}
+					showStatic={!replayAktif}
+					overlay={
+						<>
+							{hud}
+							{replayAktif && <OverlayReplay r={replay} />}
+						</>
+					}
+					attackers={data.attackers}
+					visitors={data.visitors}
+					server={data.server}
+					selectedIp={pilih?.ip}
+					onSelect={(d, jenis) => setPilih({ ...d, jenis })}
+					showArcs={opsi.arcs}
+					showVisitors={opsi.visitors}
+					autoRotate={opsi.rotate}
+					height={tinggiGlobe}
+					skala={tinggiGlobe < 600 ? 0.4 : 0.34}
+				/>
+				{/* Ticker serangan terbaru */}
+				<div className="relative overflow-hidden border-t border-slate-200 bg-black/80 py-1.5 text-[11px]">
+					<div className="kali-ticker whitespace-nowrap">
+						{(isiTicker.length ? [...isiTicker, ...isiTicker] : [null, null]).map((e, i) =>
+							e ? (
+								<span key={`${e.id}-${i}`} className="text-slate-600">
+									<span className={SEV_TEKS[e.severity]}>■ {e.severity.toUpperCase()}</span> {e.ip_address} [{e.geo?.cc || "··"}] {e.label}
+									{e.blocked ? <span className="text-red-600"> · DITOLAK</span> : null}
+								</span>
+							) : (
+								<span key={i} className="text-slate-500">
+									■ SISTEM MEMANTAU — BELUM ADA SERANGAN BARU · DETEKSI · WAF · HONEYPOT · AUTO-BLOCK AKTIF
+								</span>
+							),
+						)}
+					</div>
 				</div>
+			</section>
 
-				<div className="space-y-4 xl:col-span-4">
-					{pilih ? (
-						<IntelIp key={pilih.ip} item={pilih} onClose={() => setPilih(null)} onChanged={muat} />
-					) : (
-						<Card title="> top targets" subtitle="IP paling berbahaya — klik untuk intel" icon={FiCrosshair} bodyClass="p-0">
-							<ul className="max-h-[300px] divide-y divide-slate-100 overflow-auto text-[12px]">
-								{data.attackers.slice(0, 15).map((a) => (
-									<li key={a.ip}>
-										<button onClick={() => setPilih({ ...a, jenis: "attacker" })} className="flex w-full items-center gap-2 px-4 py-1.5 text-left hover:bg-slate-50">
-											<SeverityBadge severity={a.severity} />
-											<span className="w-[120px] shrink-0 truncate text-slate-800">{a.ip}</span>
-											<span className="w-6 shrink-0 text-slate-500">{a.geo?.cc || (a.private ? "LAN" : "··")}</span>
-											<span className="min-w-0 flex-1 truncate text-slate-500">{a.types.join(", ")}</span>
-											<span className={a.blocked ? "text-slate-400 line-through" : "text-slate-700"}>{a.n}</span>
-										</button>
-									</li>
-								))}
-								{!data.attackers.length && <li className="px-4 py-6 text-center text-xs text-slate-500">Tidak ada penyerang. Sistem bersih.</li>}
-							</ul>
-						</Card>
-					)}
-					<PanelNegara data={data} onChanged={muat} />
-				</div>
+			<div className="grid gap-4 xl:grid-cols-2 [&>*]:min-w-0">
+				{pilih ? (
+					<IntelIp key={pilih.ip} item={pilih} onClose={() => setPilih(null)} onChanged={muat} />
+				) : (
+					<Card title="top targets" subtitle="IP paling berbahaya — klik untuk intel & blokir" icon={FiCrosshair} bodyClass="p-0">
+						<ul className="max-h-[420px] divide-y divide-slate-100 overflow-auto text-[12px]">
+							{data.attackers.slice(0, 20).map((a) => (
+								<li key={a.ip}>
+									<button onClick={() => setPilih({ ...a, jenis: "attacker" })} className="flex w-full items-center gap-2 px-4 py-1.5 text-left hover:bg-slate-50">
+										<SeverityBadge severity={a.severity} />
+										<span className="w-[120px] shrink-0 truncate text-slate-800">{a.ip}</span>
+										<span className="w-6 shrink-0 text-slate-500">{a.geo?.cc || (a.private ? "LAN" : "··")}</span>
+										<span className="min-w-0 flex-1 truncate text-slate-500">{a.types.join(", ")}</span>
+										<span className={a.blocked ? "text-slate-400 line-through" : "text-slate-700"}>{a.n}</span>
+									</button>
+								</li>
+							))}
+							{!data.attackers.length && <li className="px-4 py-6 text-center text-xs text-slate-500">Tidak ada penyerang. Sistem bersih.</li>}
+						</ul>
+					</Card>
+				)}
+				<PanelNegara data={data} onChanged={muat} />
 			</div>
 
-			<UmpanLangsung onPilihIp={pilihIp} onBaru={tembakLangsung} />
+			<UmpanLangsung onPilihIp={pilihIp} onBaru={tembakLangsung} onBaris={setTerbaru} />
 		</div>
 	);
 };

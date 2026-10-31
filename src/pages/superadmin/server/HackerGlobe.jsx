@@ -39,7 +39,9 @@ const buatBusur = (a, b, n = 40) => {
 	const vb = keVektor(b.lat, b.lon);
 	const dot = Math.min(1, Math.max(-1, va[0] * vb[0] + va[1] * vb[1] + va[2] * vb[2]));
 	const sudut = Math.acos(dot);
-	const tinggi = Math.min(0.45, 0.08 + sudut * 0.16);
+	// Busur rendah: serangan dari jauh tetap menempel di bola, tidak melingkar
+	// keluar layar.
+	const tinggi = Math.min(0.2, 0.04 + sudut * 0.075);
 	const titik = [];
 	for (let i = 0; i <= n; i += 1) {
 		const t = i / n;
@@ -76,6 +78,7 @@ const HackerGlobe = forwardRef(function HackerGlobe(
 		showVisitors = true,
 		showStatic = true,
 		autoRotate = true,
+		skala = 0.4, // radius bola terhadap sisi terpendek kanvas
 		overlay = null,
 	},
 	ref,
@@ -160,7 +163,7 @@ const HackerGlobe = forwardRef(function HackerGlobe(
 	const lapisanRef = useRef(lapisan);
 	lapisanRef.current = lapisan;
 	const opsiRef = useRef({ showArcs, showVisitors, autoRotate, selectedIp });
-	opsiRef.current = { showArcs, showVisitors, showStatic, autoRotate, selectedIp };
+	opsiRef.current = { showArcs, showVisitors, showStatic, autoRotate, selectedIp, skala };
 	const onSelectRef = useRef(onSelect);
 	onSelectRef.current = onSelect;
 
@@ -186,6 +189,7 @@ const HackerGlobe = forwardRef(function HackerGlobe(
 		let tinggi = 0;
 		let dpr = 1;
 		let raf = 0;
+		let bintang = [];
 		let lalu = performance.now();
 
 		const ukur = () => {
@@ -196,6 +200,8 @@ const HackerGlobe = forwardRef(function HackerGlobe(
 			cv.height = Math.round(tinggi * dpr);
 			cv.style.width = `${lebar}px`;
 			cv.style.height = `${tinggi}px`;
+			// Bintang latar: posisi tetap per ukuran, berkelip pelan.
+			bintang = Array.from({ length: Math.round((lebar * tinggi) / 2600) }, () => [Math.random() * lebar * dpr, Math.random() * tinggi * dpr, Math.random() * 1.3 + 0.3, Math.random() * 6]);
 		};
 		ukur();
 		const ro = new ResizeObserver(ukur);
@@ -233,7 +239,7 @@ const HackerGlobe = forwardRef(function HackerGlobe(
 			const H = tinggi * dpr;
 			const cx = W / 2;
 			const cy = H / 2;
-			const R = Math.min(W, H) * 0.43 * k.zoom;
+			const R = Math.min(W, H) * opsi.skala * k.zoom;
 			const lc = k.lonC * RAD;
 			const sinC = Math.sin(k.latC * RAD);
 			const cosC = Math.cos(k.latC * RAD);
@@ -252,6 +258,50 @@ const HackerGlobe = forwardRef(function HackerGlobe(
 			};
 
 			ctx.clearRect(0, 0, W, H);
+
+			// Bintang latar
+			for (const [bx, by, br, bf] of bintang) {
+				ctx.fillStyle = `rgba(180,255,200,${0.25 + 0.35 * Math.abs(Math.sin(kini / 1400 + bf))})`;
+				ctx.fillRect(bx, by, br * dpr, br * dpr);
+			}
+
+			// Cincin HUD: skala derajat berputar pelan + dua busur sorot
+			{
+				const rc = R * 1.1;
+				const putar = (kini / 1000) * 0.08;
+				ctx.strokeStyle = "rgba(0,255,65,0.16)";
+				ctx.lineWidth = 1 * dpr;
+				ctx.beginPath();
+				ctx.arc(cx, cy, rc, 0, Math.PI * 2);
+				ctx.stroke();
+				for (let d = 0; d < 360; d += 5) {
+					const a = d * RAD + putar;
+					const panjang = d % 30 === 0 ? 9 : 4;
+					ctx.strokeStyle = d % 30 === 0 ? "rgba(0,255,65,0.55)" : "rgba(0,255,65,0.22)";
+					ctx.beginPath();
+					ctx.moveTo(cx + Math.cos(a) * rc, cy + Math.sin(a) * rc);
+					ctx.lineTo(cx + Math.cos(a) * (rc + panjang * dpr), cy + Math.sin(a) * (rc + panjang * dpr));
+					ctx.stroke();
+				}
+				ctx.font = `${8.5 * dpr}px "JetBrains Mono", monospace`;
+				ctx.fillStyle = "rgba(0,255,65,0.45)";
+				ctx.textAlign = "center";
+				ctx.textBaseline = "middle";
+				for (let d = 0; d < 360; d += 30) {
+					const a = d * RAD + putar;
+					ctx.fillText(String(d).padStart(3, "0"), cx + Math.cos(a) * (rc + 20 * dpr), cy + Math.sin(a) * (rc + 20 * dpr));
+				}
+				ctx.textAlign = "start";
+				ctx.lineWidth = 2.5 * dpr;
+				ctx.strokeStyle = "rgba(0,255,65,0.6)";
+				ctx.beginPath();
+				ctx.arc(cx, cy, rc + 3 * dpr, -putar * 3, -putar * 3 + 0.6);
+				ctx.stroke();
+				ctx.strokeStyle = "rgba(34,211,238,0.55)";
+				ctx.beginPath();
+				ctx.arc(cx, cy, rc + 3 * dpr, Math.PI - putar * 3, Math.PI - putar * 3 + 0.35);
+				ctx.stroke();
+			}
 
 			// Atmosfer & bola
 			const atm = ctx.createRadialGradient(cx, cy, R * 0.9, cx, cy, R * 1.28);
@@ -532,7 +582,7 @@ const HackerGlobe = forwardRef(function HackerGlobe(
 		};
 		const gerak = (e) => {
 			if (k.seret) {
-				const R = Math.min(lebar, tinggi) * 0.43 * k.zoom;
+				const R = Math.min(lebar, tinggi) * opsiRef.current.skala * k.zoom;
 				const dx = e.clientX - k.seret.x;
 				const dy = e.clientY - k.seret.y;
 				k.seret.pindah = Math.max(k.seret.pindah, Math.hypot(dx, dy));
@@ -598,7 +648,7 @@ const HackerGlobe = forwardRef(function HackerGlobe(
 			<canvas ref={kanvas} className="absolute inset-0 touch-none" style={{ cursor: "grab" }} />
 			{overlay}
 
-			<div className="absolute right-2 top-2 flex flex-col gap-1">
+			<div className="absolute bottom-3 right-3 z-20 flex gap-1">
 				<button type="button" onClick={() => setZoom((z) => Math.min(2.6, z * 1.25))} className="kali-ikon" title="Perbesar">+</button>
 				<button type="button" onClick={() => setZoom((z) => Math.max(0.6, z / 1.25))} className="kali-ikon" title="Perkecil">−</button>
 				<button

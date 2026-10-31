@@ -104,23 +104,35 @@ const HujanMatriks = () => {
 	return <canvas ref={ref} className="pointer-events-none absolute inset-0 h-full w-full opacity-[0.22]" aria-hidden="true" />;
 };
 
-/** Meter ASCII: CPU [██████░░░░] 61% */
+/** Meter bersegmen: 24 sel bercahaya, kuning ≥75%, merah ≥90%. */
 const Meter = ({ label, persen, teks }) => {
 	const p = persen === null || persen === undefined ? null : Math.max(0, Math.min(100, persen));
-	const isi = p === null ? 0 : Math.round(p / 10);
+	const isi = p === null ? 0 : Math.round((p / 100) * 24);
 	const warna = p === null ? "text-slate-500" : p >= 90 ? "text-red-600" : p >= 75 ? "text-amber-600" : "text-slate-900";
 	return (
-		<div className="min-w-0 whitespace-nowrap text-[12px]">
-			<span className="text-slate-500">{label} </span>
-			<span className={warna}>
-				[{"█".repeat(isi)}
-				<span className="text-slate-300">{"░".repeat(10 - isi)}</span>]
-			</span>{" "}
-			<span className="font-bold text-slate-800">{p === null ? "--" : `${Math.round(p)}%`}</span>
-			{teks && <span className="ml-1 text-[11px] text-slate-500">{teks}</span>}
+		<div className="kali-hud min-w-0 px-3 py-2">
+			<div className="flex items-baseline justify-between gap-2">
+				<span className="kali-hud-label">{label}</span>
+				<span className={`kali-display text-xl font-bold tabular-nums [text-shadow:0_0_12px_currentColor] ${warna}`}>{p === null ? "--" : `${Math.round(p)}%`}</span>
+			</div>
+			<div className={`kali-segmen mt-1.5 ${warna}`} role="meter" aria-label={label} aria-valuenow={p ?? undefined} aria-valuemin={0} aria-valuemax={100}>
+				{Array.from({ length: 24 }, (_, i) => (
+					<i key={i} className={i < isi ? "on" : ""} />
+				))}
+			</div>
+			<p className="mt-1 truncate text-[10.5px] text-slate-500">{teks || " "}</p>
 		</div>
 	);
 };
+
+/** Kotak angka HUD untuk nilai non-persen (jaringan, aplikasi). */
+const Angka = ({ label, nilai, teks }) => (
+	<div className="kali-hud min-w-0 px-3 py-2">
+		<span className="kali-hud-label">{label}</span>
+		<p className="kali-display mt-0.5 truncate text-[15px] font-bold text-slate-900 [text-shadow:0_0_10px_rgba(0,255,65,.5)]">{nilai}</p>
+		<p className="mt-0.5 truncate text-[10.5px] text-slate-500">{teks || " "}</p>
+	</div>
+);
 
 const KetikJudul = ({ teks }) => {
 	const [n, setN] = useState(0);
@@ -223,7 +235,7 @@ const ServerManagementPage = () => {
 								<p className="text-[12px] text-slate-500">
 									└─# <span className="text-slate-800">./dpmd-ops --monitor --defend</span>
 								</p>
-								<h1 className="kali-glow mt-2 text-2xl font-extrabold tracking-wider text-slate-900 sm:text-3xl">
+								<h1 className="kali-display kali-glitch mt-2 text-2xl font-black text-slate-900 sm:text-4xl" data-teks="MANAJEMEN SERVER">
 									<KetikJudul teks="MANAJEMEN SERVER" />
 								</h1>
 								<p className="mt-1 text-[12.5px] text-slate-600">
@@ -241,7 +253,10 @@ const ServerManagementPage = () => {
 									<span className="h-1.5 w-1.5 rounded-full bg-current" />
 									{STATUS.teks}
 								</span>
-								<p className="kali-glow text-lg font-bold tabular-nums text-slate-900">{jam.toLocaleTimeString("id-ID")}</p>
+								<p className="kali-display kali-glow text-2xl font-bold tabular-nums text-slate-900">{jam.toLocaleTimeString("id-ID")}</p>
+								<p className="-mt-1.5 text-[10.5px] tracking-[0.2em] text-slate-500">
+									{jam.toLocaleDateString("id-ID", { weekday: "long", day: "2-digit", month: "short", year: "numeric" }).toUpperCase()}
+								</p>
 								<button
 									onClick={muat}
 									disabled={memuat}
@@ -254,20 +269,17 @@ const ServerManagementPage = () => {
 							</div>
 						</div>
 
-						<div className="mt-4 grid grid-cols-1 gap-x-6 gap-y-1 border-t border-slate-200 pt-3 sm:grid-cols-2 xl:grid-cols-5">
-							<Meter label="CPU " persen={l?.cpu} teks={l ? `load ${l.load?.[0]}` : ""} />
-							<Meter label="MEM " persen={l?.memory?.percent} teks={l ? formatBytes(l.memory?.used) : ""} />
-							<Meter label="DISK" persen={l?.disk?.percent} teks={l?.disk ? `${formatBytes(l.disk.free)} free` : ""} />
-							<div className="whitespace-nowrap text-[12px]">
-								<span className="text-slate-500">NET </span>
-								<span className="text-slate-800">↓{formatBytes(l?.network?.rx_rate)}/s ↑{formatBytes(l?.network?.tx_rate)}/s</span>
-							</div>
-							<div className="whitespace-nowrap text-[12px]">
-								<span className="text-slate-500">APP </span>
-								<span className="text-slate-800">
-									{overview ? `${overview.apps.online}/${overview.apps.total} pm2 · ${overview.traffic.rpm} rpm · db ${overview.database?.connected ? `${overview.database.latency_ms}ms` : "DOWN"}` : "--"}
-								</span>
-							</div>
+						<div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-3 xl:grid-cols-6">
+							<Meter label="CPU" persen={l?.cpu} teks={l ? `${sys?.cpu_cores || "-"} core · load ${l.load?.[0]}` : ""} />
+							<Meter label="Memori" persen={l?.memory?.percent} teks={l ? `${formatBytes(l.memory?.used)} / ${formatBytes(l.memory?.total)}` : ""} />
+							<Meter label="Disk" persen={l?.disk?.percent} teks={l?.disk ? `${formatBytes(l.disk.free)} bebas` : ""} />
+							<Angka label="Jaringan" nilai={`↓${formatBytes(l?.network?.rx_rate)}/s`} teks={`↑ ${formatBytes(l?.network?.tx_rate)}/s keluar`} />
+							<Angka label="Trafik" nilai={overview ? `${overview.traffic.rpm} rpm` : "--"} teks={overview ? `p95 ${overview.traffic.p95 ?? "-"} ms` : ""} />
+							<Angka
+								label="Layanan"
+								nilai={overview ? `${overview.apps.online}/${overview.apps.total} pm2` : "--"}
+								teks={overview ? `database ${overview.database?.connected ? `${overview.database.latency_ms} ms` : "TERPUTUS"}` : ""}
+							/>
 						</div>
 					</div>
 

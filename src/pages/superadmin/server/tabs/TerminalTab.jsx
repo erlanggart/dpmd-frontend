@@ -16,12 +16,15 @@ import { formatAngka, formatBytes, formatDurasi, pesanError } from "../serverUi"
 const B = "/superadmin/server";
 const KUNCI_RIWAYAT = "dpmd.kali.history";
 
-const PANJI = String.raw`
- ____  ____  __  __ ____       ___  ____  ____
-|  _ \|  _ \|  \/  |  _ \     / _ \|  _ \/ ___|
-| | | | |_) | |\/| | | | |   | | | | |_) \___ \
-| |_| |  __/| |  | | |_| |   | |_| |  __/ ___) |
-|____/|_|   |_|  |_|____/     \___/|_|   |____/
+// Huruf blok "DPMD OPS" — hanya █ dan garis kotak, tampil rapi di font
+// monospace apa pun (huruf ASCII garis miring mudah bergeser).
+const PANJI = `
+██████╗ ██████╗ ███╗   ███╗██████╗      ██████╗ ██████╗ ███████╗
+██╔══██╗██╔══██╗████╗ ████║██╔══██╗    ██╔═══██╗██╔══██╗██╔════╝
+██║  ██║██████╔╝██╔████╔██║██║  ██║    ██║   ██║██████╔╝███████╗
+██║  ██║██╔═══╝ ██║╚██╔╝██║██║  ██║    ██║   ██║██╔═══╝ ╚════██║
+██████╔╝██║     ██║ ╚═╝ ██║██████╔╝    ╚██████╔╝██║     ███████║
+╚═════╝ ╚═╝     ╚═╝     ╚═╝╚═════╝      ╚═════╝ ╚═╝     ╚══════╝
 `;
 
 const pad = (s, n) => {
@@ -528,7 +531,7 @@ const WARNA_BARIS = {
 	warn: "text-amber-600",
 	err: "text-red-600",
 	dim: "text-slate-500",
-	neon: "text-slate-900 kali-glow",
+	neon: "text-slate-900 leading-[1.1] [text-shadow:0_0_5px_rgba(0,255,65,.4)]",
 };
 
 const sambutan = () => [
