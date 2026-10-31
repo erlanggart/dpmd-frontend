@@ -2,7 +2,7 @@ import { useRef } from "react";
 import { FiChevronDown, FiChevronLeft, FiChevronRight, FiChevronUp } from "react-icons/fi";
 import { kendali } from "../jelajahStore";
 
-const JARI_JARI = 52;
+const JARI_JARI = 44;
 const PANAH = [
 	{ arah: "atas", Ikon: FiChevronUp, kelas: "left-1/2 top-1.5", dasar: "translate(-50%, 0)" },
 	{ arah: "bawah", Ikon: FiChevronDown, kelas: "bottom-1.5 left-1/2", dasar: "translate(-50%, 0)" },
@@ -60,7 +60,7 @@ export default function Joystick() {
 
 	return (
 		<div
-			className="relative h-36 w-36 touch-none select-none rounded-full bg-slate-900/35 shadow-2xl ring-1 ring-white/35 backdrop-blur-md"
+			className="relative h-32 w-32 touch-none select-none rounded-full bg-slate-900/25 shadow-2xl ring-1 ring-white/35 backdrop-blur-md"
 			role="presentation"
 			onPointerDown={(e) => {
 				if (idPointer.current !== null) return;
@@ -74,7 +74,7 @@ export default function Joystick() {
 			onPointerUp={lepas}
 			onPointerCancel={lepas}
 		>
-			<div className="pointer-events-none absolute inset-5 rounded-full border border-dashed border-white/30" />
+			<div className="pointer-events-none absolute inset-4 rounded-full border border-dashed border-white/30" />
 			{PANAH.map(({ arah, Ikon, kelas, dasar }) => (
 				<span
 					key={arah}
@@ -87,12 +87,12 @@ export default function Joystick() {
 					className={`pointer-events-none absolute text-white opacity-55 transition-all duration-100 ${kelas}`}
 					style={{ transform: dasar }}
 				>
-					<Ikon className="h-6 w-6 drop-shadow" />
+					<Ikon className="h-5 w-5 drop-shadow" />
 				</span>
 			))}
 			<div
 				ref={kenop}
-				className="pointer-events-none absolute left-1/2 top-1/2 -ml-8 -mt-8 flex h-16 w-16 items-center justify-center rounded-full bg-gradient-to-b from-white to-slate-200 shadow-xl ring-2 ring-white/70 transition-transform duration-75"
+				className="pointer-events-none absolute left-1/2 top-1/2 -ml-7 -mt-7 flex h-14 w-14 items-center justify-center rounded-full bg-gradient-to-b from-white to-slate-200 shadow-xl ring-2 ring-white/70 transition-transform duration-75"
 			>
 				<div className="h-5 w-5 rounded-full bg-[rgb(var(--color-primary))]/80" />
 			</div>

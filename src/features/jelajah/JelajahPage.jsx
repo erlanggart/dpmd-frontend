@@ -10,10 +10,7 @@ import {
 	FiMenu,
 	FiMessageCircle,
 	FiNavigation,
-	FiRotateCcw,
-	FiRotateCw,
 	FiX,
-	FiZap,
 	FiArrowUp,
 	FiMessageSquare,
 	FiSend,
@@ -162,7 +159,6 @@ export default function JelajahPage() {
 	const [gagal3D, setGagal3D] = useState(false);
 	const [pesan, setPesan] = useState(null);
 	const [antrean, setAntrean] = useState(null);
-	const [lari, setLari] = useState(false);
 	const [dataPegawai, setDataPegawai] = useState(null);
 	// Pegawai DPMD sungguhan ditempatkan ke kursi, ruang rapat, pos jaga, dst.
 	const penghuni = useMemo(() => susunPenghuni(dataPegawai), [dataPegawai]);
@@ -175,6 +171,8 @@ export default function JelajahPage() {
 	const [ketik, setKetik] = useState(null);
 	const [pilihEmote, setPilihEmote] = useState(false);
 	const [kini, setKini] = useState(() => Date.now());
+	// Di HP petunjuk awal hanya tampil sebentar supaya layar tetap lega.
+	const [mulaiPada, setMulaiPada] = useState(0);
 
 	// Hook untuk uji otomatis di browser — hanya ada di mode dev, tidak ikut ke build produksi.
 	useEffect(() => {
@@ -334,7 +332,8 @@ export default function JelajahPage() {
 	const mulai3D = (profilBaru) => {
 		if (profilBaru?.nama) setProfil(profilBaru);
 		resetJelajah();
-		setLari(false);
+		setMulaiPada(Date.now());
+		setKini(Date.now());
 		setMode("3d");
 	};
 
@@ -503,7 +502,7 @@ export default function JelajahPage() {
 					{!jeda && (
 						<div
 							className={`pointer-events-none absolute inset-x-0 flex justify-center ${
-								sentuh ? "bottom-[calc(14.5rem+env(safe-area-inset-bottom))] px-4" : "bottom-6 px-40"
+								sentuh ? "top-[6.25rem] px-16" : "bottom-6 px-40"
 							}`}
 						>
 							{sasaran ? (
@@ -518,8 +517,9 @@ export default function JelajahPage() {
 								)
 							) : (
 								area === "luar" &&
-								!berkendara && (
-									<p className="rounded-full bg-slate-900/60 px-4 py-2 text-center text-xs text-white backdrop-blur sm:text-sm">
+								!berkendara &&
+								(!sentuh || kini - mulaiPada < 12000) && (
+									<p className="rounded-full bg-slate-900/55 px-3.5 py-1.5 text-center text-[11px] text-white backdrop-blur sm:px-4 sm:py-2 sm:text-sm">
 										{sentuh ? "Geser analog atau ketuk lantai" : "Jalan dengan WASD, atau klik lantai"} untuk menuju pintu masuk
 									</p>
 								)
@@ -639,31 +639,38 @@ export default function JelajahPage() {
 						)}
 					</AnimatePresence>
 
-					{/* --- kontrol layar sentuh: analog arah + lari di kiri, kamera + aksi di kanan --- */}
+					{/* --- kontrol layar sentuh: analog di kiri (dorong penuh = lari); di kanan tombol
+					     aksi bila ada, loncat, lalu chat & emote paling bawah. Kamera cukup digeser jari. --- */}
 					{sentuh && !jeda && (
-						<div className="pointer-events-none absolute inset-x-0 bottom-0 flex items-end justify-between px-4 pb-[max(1.25rem,env(safe-area-inset-bottom))]">
-							<div className="pointer-events-auto flex flex-col items-center gap-2">
+						<div className="pointer-events-none absolute inset-x-0 bottom-0 flex items-end justify-between px-3 pb-[max(1rem,env(safe-area-inset-bottom))]">
+							<div className="pointer-events-auto">
+								<Joystick />
+							</div>
+							<div className="pointer-events-auto flex flex-col items-end gap-2.5">
+								{sasaran && (
+									<button
+										onClick={() => bukaPanel(sasaran.id)}
+										className="flex h-16 w-16 flex-col items-center justify-center rounded-full text-white shadow-2xl ring-4 ring-white/70"
+										style={{ background: sasaran.warna }}
+										aria-label={sasaran.label}
+									>
+										<FiMessageCircle className="h-5 w-5" />
+										<span className="mt-0.5 text-[11px] font-bold leading-none">{sasaran.tombol}</span>
+									</button>
+								)}
+								{modeMain === "jalan" && (
+									<button
+										onClick={() => (kendali.loncat = true)}
+										aria-label="Loncat"
+										className="flex h-12 w-12 items-center justify-center rounded-full bg-slate-900/40 text-white shadow-lg ring-1 ring-white/30 backdrop-blur active:bg-slate-900/70"
+									>
+										<FiArrowUp className="h-5 w-5" />
+									</button>
+								)}
 								{statusMp === "tersambung" && (
 									<div className="relative flex gap-2">
-										<button
-											onClick={() => setKetik("")}
-											aria-label="Chat dengan tamu lain"
-											className="flex h-10 w-10 items-center justify-center rounded-full bg-slate-900/45 text-white shadow-lg ring-1 ring-white/30 backdrop-blur active:bg-slate-900/70"
-										>
-											<FiMessageSquare className="h-4 w-4" />
-										</button>
-										<button
-											onClick={() => setPilihEmote((v) => !v)}
-											aria-label="Emote"
-											aria-expanded={pilihEmote}
-											className={`flex h-10 w-10 items-center justify-center rounded-full shadow-lg ring-1 backdrop-blur ${
-												pilihEmote ? "bg-amber-400 text-slate-900 ring-amber-200" : "bg-slate-900/45 text-white ring-white/30"
-											}`}
-										>
-											<FiSmile className="h-4 w-4" />
-										</button>
 										{pilihEmote && (
-											<div className="absolute bottom-12 left-0 flex gap-1 rounded-2xl bg-white/95 p-1.5 shadow-xl">
+											<div className="absolute bottom-12 right-0 flex gap-1 rounded-2xl bg-white/95 p-1.5 shadow-xl">
 												{EMOTE.map(([jenis, ikon, label]) => (
 													<button
 														key={jenis}
@@ -679,66 +686,25 @@ export default function JelajahPage() {
 												))}
 											</div>
 										)}
+										<button
+											onClick={() => setKetik("")}
+											aria-label="Chat dengan tamu lain"
+											className="flex h-10 w-10 items-center justify-center rounded-full bg-slate-900/40 text-white shadow-lg ring-1 ring-white/30 backdrop-blur active:bg-slate-900/70"
+										>
+											<FiMessageSquare className="h-4 w-4" />
+										</button>
+										<button
+											onClick={() => setPilihEmote((v) => !v)}
+											aria-label="Emote"
+											aria-expanded={pilihEmote}
+											className={`flex h-10 w-10 items-center justify-center rounded-full shadow-lg ring-1 backdrop-blur ${
+												pilihEmote ? "bg-amber-400 text-slate-900 ring-amber-200" : "bg-slate-900/40 text-white ring-white/30"
+											}`}
+										>
+											<FiSmile className="h-4 w-4" />
+										</button>
 									</div>
 								)}
-								<button
-									onClick={() => {
-										kendali.lari = !lari;
-										setLari(!lari);
-									}}
-									aria-pressed={lari}
-									className={`flex h-9 items-center gap-1.5 rounded-full px-4 text-xs font-bold shadow-lg ring-1 backdrop-blur transition ${
-										lari ? "bg-amber-400 text-slate-900 ring-amber-200" : "bg-slate-900/45 text-white ring-white/30"
-									}`}
-								>
-									<FiZap className="h-4 w-4" /> {berkendara ? "Turbo" : lari ? "Berlari" : "Lari"}
-								</button>
-								<Joystick />
-							</div>
-							<div className="pointer-events-auto flex flex-col items-center gap-3">
-								{modeMain === "jalan" && (
-									<button
-										onClick={() => (kendali.loncat = true)}
-										aria-label="Loncat"
-										className="flex h-14 w-14 flex-col items-center justify-center rounded-full bg-slate-900/45 text-white shadow-lg ring-1 ring-white/30 backdrop-blur active:bg-slate-900/70"
-									>
-										<FiArrowUp className="h-5 w-5" />
-										<span className="text-[10px] font-bold">Loncat</span>
-									</button>
-								)}
-								{sasaran ? (
-									<button
-										onClick={() => bukaPanel(sasaran.id)}
-										className="flex h-20 w-20 flex-col items-center justify-center rounded-full text-white shadow-2xl ring-4 ring-white/70"
-										style={{ background: sasaran.warna }}
-										aria-label={sasaran.label}
-									>
-										<FiMessageCircle className="h-6 w-6" />
-										<span className="mt-0.5 text-xs font-bold">{sasaran.tombol}</span>
-									</button>
-								) : (
-									<div className="h-20 w-20" aria-hidden="true" />
-								)}
-								<div className="flex gap-2">
-									{[
-										[-1, FiRotateCcw, "Putar kamera ke kiri"],
-										[1, FiRotateCw, "Putar kamera ke kanan"],
-									].map(([arah, Ikon, label]) => (
-										<button
-											key={arah}
-											aria-label={label}
-											onPointerDown={(e) => {
-												e.currentTarget.setPointerCapture(e.pointerId);
-												kendali.putar = arah;
-											}}
-											onPointerUp={() => (kendali.putar = 0)}
-											onPointerCancel={() => (kendali.putar = 0)}
-											className="flex h-12 w-12 touch-none items-center justify-center rounded-full bg-slate-900/45 text-white shadow-lg ring-1 ring-white/30 backdrop-blur active:bg-slate-900/70"
-										>
-											<Ikon className="h-5 w-5" />
-										</button>
-									))}
-								</div>
 							</div>
 						</div>
 					)}
@@ -819,7 +785,7 @@ export default function JelajahPage() {
 					<ul className="space-y-2 text-sm text-slate-700">
 						{(sentuh
 							? [
-									["Analog kiri", "berjalan; dorong sampai tepi atau tekan Lari untuk berlari"],
+									["Analog kiri", "berjalan; dorong sampai tepi untuk berlari"],
 									["Tombol ⟲ ⟳", "memutar kamera"],
 									["Seret layar", "memutar kamera"],
 									["Ketuk lantai / petugas", "berjalan otomatis ke sana"],
