@@ -89,31 +89,47 @@ function PelatLantai2() {
 
 // ---------- dinding (dipudarkan bila menghalangi kamera) ----------
 
+// Satu dinding = satu draw call: sisi atas yang lebih gelap memakai warna per titik,
+// bukan material tersendiri per sisi kotak (yang memecahnya jadi 6 draw call).
+const WARNA_SISI = new Color("#f1ece2");
+const WARNA_ATAS = new Color("#b3a48a");
+function geometriDinding(lx, lz) {
+	const g = new BoxGeometry(lx, TINGGI_DINDING, lz);
+	const normal = g.attributes.normal;
+	const arr = new Float32Array(normal.count * 3);
+	for (let i = 0; i < normal.count; i++) {
+		const w = normal.getY(i) > 0.5 ? WARNA_ATAS : WARNA_SISI;
+		arr.set([w.r, w.g, w.b], i * 3);
+	}
+	g.setAttribute("color", new Float32BufferAttribute(arr, 3));
+	return g;
+}
+
 function Dinding({ lantai, daftarRef }) {
 	const data = useMemo(() => DINDING.filter((d) => d.lantai === lantai), [lantai]);
-	const bahan = useMemo(
-		() =>
-			data.map(() => {
-				const sisi = new MeshStandardMaterial({ color: "#f1ece2", transparent: true });
-				const atas = new MeshStandardMaterial({ color: "#b3a48a", transparent: true });
-				return [sisi, sisi, atas, sisi, sisi, sisi];
+	// Material tersendiri per dinding supaya bisa dipudarkan satu per satu.
+	const isi = useMemo(() => data.map((d) => ({ geom: geometriDinding(d.lx, d.lz), bahan: new MeshStandardMaterial({ vertexColors: true }) })), [data]);
+	useEffect(
+		() => () =>
+			isi.forEach(({ geom, bahan }) => {
+				geom.dispose();
+				bahan.dispose();
 			}),
-		[data],
+		[isi],
 	);
 	return data.map((d, i) => (
 		<mesh
 			key={i}
 			position={[d.x, TINGGI_DINDING / 2, d.z]}
-			material={bahan[i]}
+			geometry={isi[i].geom}
+			material={isi[i].bahan}
 			ref={(m) => {
 				if (m) {
-					m.userData.bahan = [bahan[i][0], bahan[i][2]];
+					m.userData.bahan = [isi[i].bahan];
 					daftarRef.current[lantai][i] = m;
 				}
 			}}
-		>
-			<boxGeometry args={[d.lx, TINGGI_DINDING, d.lz]} />
-		</mesh>
+		/>
 	));
 }
 

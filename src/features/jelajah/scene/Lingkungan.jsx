@@ -4,6 +4,7 @@ import { Object3D } from "three";
 import { ANAK_TANGGA, FONDASI, PILAR, POHON, PONDASI, SEMAK, TANAH, TERAS, TIANG_BENDERA } from "./layout";
 import { teksturPaving } from "./tekstur";
 import Papan from "./Papan";
+import Gabung from "./Gabung";
 import PagarDepan from "./PagarDepan";
 import Parkiran from "./Parkiran";
 
@@ -97,7 +98,6 @@ function Kanopi({ daftarDinding }) {
 		const mesh = [];
 		grup.current.traverse((o) => {
 			if (!o.isMesh) return;
-			o.material.transparent = true;
 			o.userData.bahan = [o.material];
 			mesh.push(o);
 		});
@@ -209,18 +209,23 @@ export default function Lingkungan({ daftarDinding }) {
 					<meshStandardMaterial map={paving} />
 				</mesh>
 				<Parkiran />
-				<PagarDepan />
-				{/* semak di depan gedung */}
-				{SEMAK.map(([x, z]) => (
-					<mesh key={x} position={[x, 0.35, z]}>
-						<icosahedronGeometry args={[0.6, 0]} />
-						<meshStandardMaterial color="#3f8a4f" flatShading />
-					</mesh>
-				))}
+				{/* benda statis dipanggang jadi beberapa draw call saja */}
+				<Gabung>
+					<PagarDepan />
+					{/* semak di depan gedung */}
+					{SEMAK.map(([x, z]) => (
+						<mesh key={x} position={[x, 0.35, z]}>
+							<icosahedronGeometry args={[0.6, 0]} />
+							<meshStandardMaterial color="#3f8a4f" flatShading />
+						</mesh>
+					))}
+				</Gabung>
 				<Pepohonan />
 				<Bendera />
 			</group>
-			<PondasiTeras />
+			<Gabung>
+				<PondasiTeras />
+			</Gabung>
 			<Kanopi daftarDinding={daftarDinding} />
 		</group>
 	);

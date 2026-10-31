@@ -525,9 +525,16 @@ export default function Pemain({ daftarDinding, penghuni, penampilan = PENAMPILA
 			for (const md of dinding) {
 				const target = kena?.has(md) ? 0.15 : 1;
 				for (const bahan of md.userData.bahan) {
-					if (Math.abs(bahan.opacity - target) < 0.001) continue;
-					bahan.opacity += (target - bahan.opacity) * f;
+					if (bahan.opacity === target) continue;
+					bahan.opacity = Math.abs(target - bahan.opacity) < 0.01 ? target : bahan.opacity + (target - bahan.opacity) * f;
 					bahan.depthWrite = bahan.opacity > 0.95;
+					// hanya yang sedang pudar ikut antrean transparan; dinding utuh digambar opak (lebih
+					// murah). Ganti transparan = ganti varian shader (define OPAQUE), jadi perlu needsUpdate.
+					const tembus = bahan.opacity < 1;
+					if (bahan.transparent !== tembus) {
+						bahan.transparent = tembus;
+						bahan.needsUpdate = true;
+					}
 				}
 			}
 		}

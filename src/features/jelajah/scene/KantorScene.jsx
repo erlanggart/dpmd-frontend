@@ -21,6 +21,10 @@ export default function KantorScene({ statistik, dikunjungi, jeda, penghuni, pen
 			camera={{ fov: 50, near: 0.1, far: 170, position: [0, 8, 40] }}
 			gl={{ antialias: true, powerPreference: "high-performance" }}
 			style={{ touchAction: "none" }}
+			onCreated={({ gl, scene }) => {
+				// dev: statistik render untuk uji performa otomatis
+				if (import.meta.env.DEV) Object.assign(window, { __gl: gl, __adegan: scene });
+			}}
 		>
 			<color attach="background" args={["#cfe6f1"]} />
 			<fog attach="fog" args={["#cfe6f1", 50, 120]} />

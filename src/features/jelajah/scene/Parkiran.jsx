@@ -1,26 +1,30 @@
-import { useMemo, useRef } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import { useFrame } from "@react-three/fiber";
 import { KENDARAAN } from "./kendaraan";
 import { MOBIL, PAGAR_BATA, PARKIRAN, RUMAH_TETANGGA } from "./layout";
+import { BoxGeometry, CylinderGeometry, MeshStandardMaterial } from "three";
+import Gabung from "./Gabung";
+import { BAHAN_WARNA, gabung, kotak, warnai } from "./geometri";
 import { teksturPavingParkir } from "./tekstur";
 
 // Halaman depan kantor: parkiran berpaving, mobil dan motor (bisa dikemudikan
 // pengunjung), pagar bata di sisi kiri, dan rumah tetangga di sisi kanan.
 
-// Roda: silinder dengan "jari" agar putarannya terlihat.
-function Roda({ r, lebar, akar }) {
-	return (
-		<group ref={akar}>
-			<mesh rotation-z={Math.PI / 2}>
-				<cylinderGeometry args={[r, r, lebar, 14]} />
-				<meshStandardMaterial color="#141414" />
-			</mesh>
-			<mesh>
-				<boxGeometry args={[lebar + 0.01, r * 1.4, 0.06]} />
-				<meshStandardMaterial color="#8a8f96" metalness={0.5} roughness={0.4} />
-			</mesh>
-		</group>
-	);
+// Kendaraan digabung per bagian yang bergerak bersama: badan (1 draw call), pintu
+// sopir, setang, dan tiap roda — bukan satu mesh per potongan.
+const BAHAN_KENDARAAN = new MeshStandardMaterial({ vertexColors: true, metalness: 0.3, roughness: 0.45 });
+
+// Roda: ban + "jari" agar putarannya terlihat; geometrinya dipakai bersama.
+const geomRoda = (r, lebar) =>
+	gabung([
+		warnai(new CylinderGeometry(r, r, lebar, 14), "#141414", { r: [0, 0, Math.PI / 2] }),
+		kotak([lebar + 0.01, r * 1.4, 0.06], "#8a8f96", [0, 0, 0]),
+	]);
+const RODA_MOBIL = geomRoda(0.33, 0.24);
+const RODA_MOTOR = geomRoda(0.3, 0.12);
+
+function Roda({ geom, akar }) {
+	return <mesh ref={akar} geometry={geom} material={BAHAN_KENDARAAN} />;
 }
 
 // Mobil setir kanan: pintu sopir (sisi -x lokal) berengsel di tepi depannya dan
@@ -29,6 +33,27 @@ function Mobil({ k }) {
 	const grup = useRef();
 	const pintu = useRef();
 	const roda = useRef([]);
+	const geom = useMemo(
+		() => ({
+			badan: gabung([
+				kotak([1.8, 0.62, 4], k.warna, [0, 0.62, 0]),
+				// kabin kaca + atap
+				kotak([1.6, 0.55, 2.2], "#1e262c", [0, 1.2, -0.25]),
+				kotak([1.62, 0.08, 1.9], k.warna, [0, 1.5, -0.3]),
+				// lampu depan & belakang
+				...[-0.6, 0.6].map((lx) => kotak([0.38, 0.14, 0.03], "#fff8e0", [lx, 0.72, 2.01])),
+				...[-0.65, 0.65].map((lx) => kotak([0.32, 0.12, 0.03], "#c81e1e", [lx, 0.75, -2.01])),
+			]),
+			// pintu sopir: engsel di tepi depan (z = 0.95), daun mengarah ke belakang
+			pintu: gabung([
+				kotak([0.06, 0.6, 1.1], k.warna, [-0.02, 0.62, -0.55]),
+				kotak([0.05, 0.5, 1.0], "#26313a", [-0.02, 1.18, -0.55]),
+				kotak([0.03, 0.04, 0.16], "#c9ccce", [-0.07, 0.8, -0.9]),
+			]),
+		}),
+		[k.warna],
+	);
+	useEffect(() => () => Object.values(geom).forEach((g) => g.dispose()), [geom]);
 	useFrame(() => {
 		grup.current.position.set(k.x, 0, k.z);
 		grup.current.rotation.y = k.rot;
@@ -42,47 +67,10 @@ function Mobil({ k }) {
 	});
 	return (
 		<group ref={grup}>
-			<mesh position-y={0.62}>
-				<boxGeometry args={[1.8, 0.62, 4]} />
-				<meshStandardMaterial color={k.warna} metalness={0.3} roughness={0.45} />
-			</mesh>
-			{/* kabin kaca + atap */}
-			<mesh position={[0, 1.2, -0.25]}>
-				<boxGeometry args={[1.6, 0.55, 2.2]} />
-				<meshStandardMaterial color="#1e262c" metalness={0.4} roughness={0.2} />
-			</mesh>
-			<mesh position={[0, 1.5, -0.3]}>
-				<boxGeometry args={[1.62, 0.08, 1.9]} />
-				<meshStandardMaterial color={k.warna} metalness={0.3} roughness={0.45} />
-			</mesh>
-			{/* pintu sopir: engsel di tepi depan (z = 0.95), daun mengarah ke belakang */}
+			<mesh geometry={geom.badan} material={BAHAN_KENDARAAN} />
 			<group ref={pintu} position={[-0.92, 0, 0.95]}>
-				<mesh position={[-0.02, 0.62, -0.55]}>
-					<boxGeometry args={[0.06, 0.6, 1.1]} />
-					<meshStandardMaterial color={k.warna} metalness={0.3} roughness={0.45} />
-				</mesh>
-				<mesh position={[-0.02, 1.18, -0.55]}>
-					<boxGeometry args={[0.05, 0.5, 1.0]} />
-					<meshStandardMaterial color="#26313a" metalness={0.4} roughness={0.2} />
-				</mesh>
-				<mesh position={[-0.07, 0.8, -0.9]}>
-					<boxGeometry args={[0.03, 0.04, 0.16]} />
-					<meshStandardMaterial color="#c9ccce" metalness={0.6} />
-				</mesh>
+				<mesh geometry={geom.pintu} material={BAHAN_KENDARAAN} />
 			</group>
-			{/* lampu depan & belakang */}
-			{[-0.6, 0.6].map((lx) => (
-				<mesh key={lx} position={[lx, 0.72, 2.01]}>
-					<boxGeometry args={[0.38, 0.14, 0.03]} />
-					<meshStandardMaterial color="#fff6d6" emissive="#fff1c2" emissiveIntensity={0.5} />
-				</mesh>
-			))}
-			{[-0.65, 0.65].map((lx) => (
-				<mesh key={`b${lx}`} position={[lx, 0.75, -2.01]}>
-					<boxGeometry args={[0.32, 0.12, 0.03]} />
-					<meshStandardMaterial color="#b91c1c" emissive="#7f1d1d" emissiveIntensity={0.4} />
-				</mesh>
-			))}
 			{[
 				[-0.86, 1.3],
 				[0.86, 1.3],
@@ -90,7 +78,7 @@ function Mobil({ k }) {
 				[0.86, -1.3],
 			].map(([rx, rz], i) => (
 				<group key={i} position={[rx, 0.33, rz]}>
-					<Roda r={0.33} lebar={0.24} akar={(w) => (roda.current[i] = w)} />
+					<Roda geom={RODA_MOBIL} akar={(w) => (roda.current[i] = w)} />
 				</group>
 			))}
 		</group>
@@ -103,6 +91,18 @@ function Motor({ k }) {
 	const badan = useRef();
 	const stang = useRef();
 	const roda = useRef([]);
+	const geom = useMemo(
+		() => ({
+			badan: gabung([kotak([0.3, 0.42, 1.3], k.warna, [0, 0.62, 0]), kotak([0.28, 0.1, 0.65], "#1b1b1b", [0, 0.88, -0.15])]),
+			stang: gabung([
+				kotak([0.62, 0.05, 0.05], "#2a2a2a", [0, 1.05, 0]),
+				warnai(new BoxGeometry(0.06, 0.45, 0.06), "#9aa0a6", { p: [0, 0.85, 0.05], r: [-0.3, 0, 0] }),
+				kotak([0.16, 0.1, 0.04], "#fff8e0", [0, 0.98, 0.14]),
+			]),
+		}),
+		[k.warna],
+	);
+	useEffect(() => () => Object.values(geom).forEach((g) => g.dispose()), [geom]);
 	useFrame(() => {
 		grup.current.position.set(k.x, 0, k.z);
 		grup.current.rotation.y = k.rot;
@@ -113,31 +113,13 @@ function Motor({ k }) {
 	return (
 		<group ref={grup}>
 			<group ref={badan}>
-				<mesh position-y={0.62}>
-					<boxGeometry args={[0.3, 0.42, 1.3]} />
-					<meshStandardMaterial color={k.warna} />
-				</mesh>
-				<mesh position={[0, 0.88, -0.15]}>
-					<boxGeometry args={[0.28, 0.1, 0.65]} />
-					<meshStandardMaterial color="#1b1b1b" />
-				</mesh>
+				<mesh geometry={geom.badan} material={BAHAN_KENDARAAN} />
 				<group ref={stang} position={[0, 0, 0.6]}>
-					<mesh position-y={1.05}>
-						<boxGeometry args={[0.62, 0.05, 0.05]} />
-						<meshStandardMaterial color="#2a2a2a" />
-					</mesh>
-					<mesh position={[0, 0.85, 0.05]} rotation-x={-0.3}>
-						<boxGeometry args={[0.06, 0.45, 0.06]} />
-						<meshStandardMaterial color="#9aa0a6" metalness={0.5} />
-					</mesh>
-					<mesh position={[0, 0.98, 0.14]}>
-						<boxGeometry args={[0.16, 0.1, 0.04]} />
-						<meshStandardMaterial color="#fff6d6" emissive="#fff1c2" emissiveIntensity={0.5} />
-					</mesh>
+					<mesh geometry={geom.stang} material={BAHAN_KENDARAAN} />
 				</group>
 				{[0.62, -0.62].map((rz, i) => (
 					<group key={rz} position={[0, 0.3, rz]}>
-						<Roda r={0.3} lebar={0.12} akar={(w) => (roda.current[i] = w)} />
+						<Roda geom={RODA_MOTOR} akar={(w) => (roda.current[i] = w)} />
 					</group>
 				))}
 			</group>
@@ -203,7 +185,7 @@ export default function Parkiran() {
 			hasil.push(xs[i] - 1.35);
 			if (i === xs.length - 1 || xs[i + 1] - xs[i] > 3) hasil.push(xs[i] + 1.35);
 		}
-		return hasil;
+		return gabung(hasil.map((gx) => kotak([0.1, 0.01, 4.6], "#f4efe4", [gx, 0.012, 18])));
 	}, []);
 	const p = PARKIRAN;
 	const paving = useMemo(() => teksturPavingParkir([(p.x1 - p.x0) / 1.6, (p.z1 - p.z0) / 1.6]), [p]);
@@ -214,15 +196,12 @@ export default function Parkiran() {
 				<planeGeometry args={[p.x1 - p.x0, p.z1 - p.z0]} />
 				<meshStandardMaterial map={paving} />
 			</mesh>
-			{garis.map((gx) => (
-				<mesh key={gx} rotation-x={-Math.PI / 2} position={[gx, 0.012, 18]}>
-					<planeGeometry args={[0.1, 4.6]} />
-					<meshBasicMaterial color="#f4efe4" />
-				</mesh>
-			))}
+			<mesh geometry={garis} material={BAHAN_WARNA} />
 			{KENDARAAN.map((k) => (k.jenis === "mobil" ? <Mobil key={k.id} k={k} /> : <Motor key={k.id} k={k} />))}
-			<PagarBata />
-			<RumahTetangga />
+			<Gabung>
+				<PagarBata />
+				<RumahTetangga />
+			</Gabung>
 		</group>
 	);
 }
