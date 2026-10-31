@@ -72,12 +72,11 @@ export const DINDING = [
 	// ----- lantai 2 -----
 	...luar(1, false),
 	...garis(1, "z", -8, 7.3, 12),
-	...garis(1, "z", -4, 7.3, 12),
 	// Prolap & Keuangan berimpit, hanya dipisah satu tembok
 	...garis(1, "z", 4, 7.3, 12),
 	...garis(1, "z", 12.8, 4.5, 12, [[5.5, 1.1]]),
 	...garis(1, "x", 7.3, -15, -8, [[-11.5, 1.6]]),
-	...garis(1, "x", 7.3, -4, 12.8, [
+	...garis(1, "x", 7.3, -8, 12.8, [
 		[0, 1.6],
 		[8.4, 1.6],
 	]),
@@ -87,11 +86,11 @@ export const DINDING = [
 	...garis(1, "z", 3.1, 0.5, 5),
 	...garis(1, "x", 0.5, -3.9, 3.1),
 	// Ruang Rapat Halimun (pintu menghadap Ruang Kepala Dinas)
-	...garis(1, "z", -9.5, -13, 4.5),
+	...garis(1, "z", -9.5, -9.6, 4.5),
 	...garis(1, "x", 4.5, -15, -9.5, [[-11.5, 1.6]]),
 	// Dapur di pojok belakang, menempel Halimun; tangga belakang tepat di sampingnya
 	...garis(1, "z", -4.6, -13, -9.6),
-	...garis(1, "x", -9.6, -9.5, -4.6, [[-7.2, 1.2]]),
+	...garis(1, "x", -9.6, -15, -4.6, [[-7.2, 1.2]]),
 	// Sekretariat (melebar sampai sisi tangga belakang), Pemdes
 	...garis(1, "z", -1.4, -13, -2.5),
 	...garis(1, "z", 9, -13, -2.5),
@@ -313,8 +312,10 @@ for (let x = -10.8; x <= -5.3; x += 0.9) for (const z of [-12.2, -11.0]) SAJADAH
 perabot("rak", 0, -5.3, -10.2, Math.PI, [1.0, 0.4]);
 
 // --- lantai 2 ---
-klaster(1, "prolap", -2.7, 9.6);
-klaster(1, "prolap", 2.7, 9.6);
+// deret meja Prolap agak ke belakang supaya lorong di depannya lega
+klaster(1, "prolap", -6.3, 10.1);
+klaster(1, "prolap", -2.7, 10.1);
+klaster(1, "prolap", 2.7, 10.1);
 klaster(1, "keuangan", 5.9, 9.6);
 klaster(1, "keuangan", 11.0, 9.6);
 klaster(1, "pmd", -2.85, 2.7);
@@ -326,7 +327,7 @@ klaster(1, "pemdes", 13, -6.0);
 klaster(1, "pemdes", 13, -9.8);
 perabot("lemari", 1, 8.4, -5.0, -Math.PI / 2, [0.5, 0.95]);
 perabot("lemari", 1, 14.6, 2.6, -Math.PI / 2, [0.5, 0.95]);
-ruangRapat(1, "halimun", -12.25, -10.2, 1.4, true);
+ruangRapat(1, "halimun", -12.25, -8.0, 1.4, true);
 
 // Ruang Kepala Dinas: meja pimpinan, kursi, sofa tamu, lemari, ajudan.
 perabot("mejaPimpinan", 1, -11.5, 10.6, Math.PI, [2.4, 1.0]);
@@ -350,6 +351,10 @@ PEGAWAI.push({
 // Dapur: meja dapur, kulkas, pegawai menyeduh minuman.
 perabot("mejaDapur", 1, -7.05, -12.55, 0, [3.3, 0.6]);
 perabot("kulkas", 1, -5.15, -11.0, -Math.PI / 2, [0.7, 0.7]);
+// dapur membentang sepanjang dinding belakang sampai ujung kiri: meja dapur kedua & pantry
+perabot("mejaDapur", 1, -12.2, -12.55, 0, [3.3, 0.6]);
+perabot("lemari", 1, -14.6, -11.2, Math.PI / 2, [0.5, 0.95]);
+perabot("dispenser", 1, -10.0, -12.6, 0, [0.45, 0.45]);
 PEGAWAI.push({ x: -7.6, z: -11.7, rot: Math.PI, lantai: 1, area: "dapur", pose: "diam", aktivitas: "berdiri", jenis: "dapur", terisi: true, penampilan: penampilanPNS() });
 
 // --- lobi ---

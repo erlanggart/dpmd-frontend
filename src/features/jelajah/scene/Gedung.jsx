@@ -529,7 +529,6 @@ function JendelaDalam({ lantai }) {
 						["z", -11.5],
 						["z", 0],
 						["z", 8.4],
-						["b", -12.25],
 						["b", 3.8],
 						["b", 13],
 					];
@@ -680,7 +679,7 @@ export default function Gedung({ daftarDinding, statistik }) {
 				{MEJA_RAPAT.filter((m) => m.lantai === 1).map((m, i) => (
 					<MejaRapat key={i} m={m} />
 				))}
-				<Videotron posisi={[-12.25, 1.5, -12.83]} lebar={4.4} tinggi={2.0} slide={slideRapat("Halimun")} />
+				<Videotron posisi={[-12.25, 1.5, -9.43]} lebar={4.4} tinggi={2.0} slide={slideRapat("Halimun")} />
 			</GrupLantai>
 
 			{[0, 1].map((l) => (

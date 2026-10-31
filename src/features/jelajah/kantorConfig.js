@@ -138,7 +138,7 @@ export const RUANGAN = [
 		singkatan: "PROLAP",
 		warna: "#0891b2",
 		lantai: 1,
-		rect: { x0: -4, x1: 4, z0: 7.3, z1: 12 },
+		rect: { x0: -8, x1: 4, z0: 7.3, z1: 12 },
 		pintu: { x: 0, z: 7.3 },
 		npc: { x: 0, z: 11.1, arah: [0, -1] },
 		petugas: "Petugas Prolap",
@@ -348,8 +348,8 @@ export const AREA_LAIN = [
 	{ id: "belakang1", nama: "Area Belakang", lantai: 0, rect: { x0: -15, x1: 2.8, z0: -13, z1: 1 } },
 	{ id: "kadis", nama: "Ruang Kepala Dinas", lantai: 1, rect: { x0: -15, x1: -8, z0: 7.3, z1: 12 } },
 	{ id: "toilet2", nama: "Toilet", lantai: 1, rect: { x0: 12.8, x1: 15, z0: 4.5, z1: 12 } },
-	{ id: "halimun", nama: "Ruang Rapat Halimun", lantai: 1, rect: { x0: -15, x1: -9.5, z0: -13, z1: 4.5 } },
-	{ id: "dapur", nama: "Dapur", lantai: 1, rect: { x0: -9.5, x1: -4.6, z0: -13, z1: -9.6 } },
+	{ id: "halimun", nama: "Ruang Rapat Halimun", lantai: 1, rect: { x0: -15, x1: -9.5, z0: -9.6, z1: 4.5 } },
+	{ id: "dapur", nama: "Dapur", lantai: 1, rect: { x0: -15, x1: -4.6, z0: -13, z1: -9.6 } },
 	{ id: "aula2", nama: "Lantai 2", lantai: 1, rect: { x0: -15, x1: 15, z0: -13, z1: 12 } },
 ];
 
@@ -442,7 +442,7 @@ export const BENDA = [
 		label: "Lihat videotron",
 		lantai: 1,
 		x: -12.25,
-		z: -12,
+		z: -8.8,
 		aksi: { jenis: "pesan", judul: "Ruang Rapat Halimun", teks: "Ruang rapat utama dengan fasilitas rapat mewah dan videotron. Rapat sedang berlangsung — mohon tidak mengganggu." },
 	},
 	{
