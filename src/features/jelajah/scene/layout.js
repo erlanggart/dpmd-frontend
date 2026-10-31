@@ -71,12 +71,13 @@ export const DINDING = [
 
 	// ----- lantai 2 -----
 	...luar(1, false),
-	...garis(1, "z", -8, 7.3, 12),
+	// Ruang Kepala Dinas: membentang ke belakang sampai dinding Halimun; pintunya di
+	// samping kanan dekat pojok belakang, membuka ke lorong di depan Prolap.
+	...garis(1, "z", -8.4, 3.8, 12, [[5.75, 1.2]]),
 	// Prolap & Keuangan berimpit, hanya dipisah satu tembok
 	...garis(1, "z", 4, 7.3, 12),
 	...garis(1, "z", 12.8, 4.5, 12, [[5.75, 1.2]]),
-	...garis(1, "x", 7.3, -15, -8, [[-11.5, 1.6]]),
-	...garis(1, "x", 7.3, -8, 12.8, [
+	...garis(1, "x", 7.3, -8.4, 12.8, [
 		[0, 1.6],
 		[8.4, 1.6],
 	]),
@@ -95,7 +96,7 @@ export const DINDING = [
 	// Halimun melebar sampai menempel tangga depan, dinding depannya segaris bibir
 	// tangga dan pintunya di dekat tangga; Gudang Arsip di depan dapur
 	...garis(1, "z", -6.95, -5.6, 3.8),
-	...garis(1, "x", 3.8, -15, -6.95, [[-7.95, 1.4]]),
+	...garis(1, "x", 3.8, -15, -6.95, [[-7.75, 1.2]]),
 	...garis(1, "x", -5.6, -15, -6.95),
 	...garis(1, "z", -9.5, -9.6, -5.6, [[-8.75, 1.2]]),
 	// Dapur di pojok belakang, menempel Halimun; tangga belakang tepat di sampingnya
@@ -121,14 +122,14 @@ export const DAUN_PINTU = [
 	{ lantai: 0, x: -2.8, z: -4, lebar: 1.4, jenis: "kayu", sumbu: "x" },
 	{ lantai: 0, x: -8.3, z: -9.6, lebar: 1.6, jenis: "kayu" },
 	{ lantai: 0, x: 2.8, z: -7, lebar: 1.6, jenis: "kayu", sumbu: "x" },
-	{ lantai: 1, x: -11.5, z: 7.3, lebar: 1.6, jenis: "kayu" },
+	{ lantai: 1, x: -8.4, z: 5.75, lebar: 1.2, jenis: "kayu", sumbu: "x" },
 	{ lantai: 1, x: 0, z: 7.3, lebar: 1.6, jenis: "kayu" },
 	{ lantai: 1, x: 8.4, z: 7.3, lebar: 1.6, jenis: "kayu" },
 	{ lantai: 1, x: 12.8, z: 5.75, lebar: 1.2, jenis: "kayu", sumbu: "x" },
 	{ lantai: 1, x: -0.9, z: 3.8, lebar: 1.4, jenis: "kayu" },
 	{ lantai: 1, x: -3.7, z: -4, lebar: 1.4, jenis: "kayu" },
 	{ lantai: 1, x: -9.5, z: -8.75, lebar: 1.2, jenis: "kayu", sumbu: "x" },
-	{ lantai: 1, x: -7.95, z: 3.8, lebar: 1.4, jenis: "kayu" },
+	{ lantai: 1, x: -7.75, z: 3.8, lebar: 1.2, jenis: "kayu" },
 	{ lantai: 1, x: -7.2, z: -9.6, lebar: 1.2, jenis: "kayu" },
 	{ lantai: 1, x: 4.6, z: -6, lebar: 1.4, jenis: "kayu" },
 	{ lantai: 1, x: 9, z: 4.5, lebar: 1.4, jenis: "kayu" },
@@ -342,15 +343,17 @@ for (const z of [-7.6, -6.6]) perabot("lemari", 1, -14.6, z, Math.PI / 2, [0.5, 
 perabot("lemari", 1, 14.6, 2.6, -Math.PI / 2, [0.5, 0.95]);
 ruangRapat(1, "halimun", -11.0, -4.0, 1.4, true);
 
-// Ruang Kepala Dinas: meja pimpinan, kursi, sofa tamu, lemari, ajudan.
-perabot("mejaPimpinan", 1, -11.5, 10.6, Math.PI, [2.4, 1.0]);
-perabot("kursiEksekutif", 1, -11.5, 11.45, Math.PI);
-perabot("sofa", 1, -14.4, 9.3, Math.PI / 2, [0.85, 2.0]);
-perabot("mejaKopi", 1, -13.2, 9.3, Math.PI / 2, [0.55, 0.9]);
-perabot("lemari", 1, -8.6, 11.4, -Math.PI / 2, [0.5, 0.95]);
+// Ruang Kepala Dinas (menghadap Prolap): meja pimpinan, lemari di belakang kursi,
+// sofa tamu di sisi depan, ajudan berjaga dekat pintu.
+perabot("mejaPimpinan", 1, -12.75, 8.3, Math.PI / 2, [1.0, 2.4]);
+perabot("kursiEksekutif", 1, -13.6, 8.3, Math.PI / 2);
+perabot("lemari", 1, -14.6, 6.6, Math.PI / 2, [0.5, 0.95]);
+perabot("lemari", 1, -14.6, 10.0, Math.PI / 2, [0.5, 0.95]);
+perabot("sofa", 1, -11.0, 11.4, Math.PI, [2.0, 0.85]);
+perabot("mejaKopi", 1, -11.0, 10.4, 0, [0.9, 0.55]);
 PEGAWAI.push({
-	x: -9.6,
-	z: 9.6,
+	x: -9.4,
+	z: 4.8,
 	rot: -Math.PI / 2,
 	lantai: 1,
 	area: "kadis",
