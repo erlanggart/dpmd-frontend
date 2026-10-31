@@ -431,12 +431,16 @@ PEGAWAI.push({ x: 1.9, z: 9.6, rot: Math.PI, lantai: 0, area: "lobi", pose: "dia
 PEGAWAI.push({ x: 4.6, z: -3.4, rot: 0, lantai: 1, area: "aula2", pose: "diam", aktivitas: "diskusi", jenis: "berdiri", terisi: true, penampilan: penampilanPNS({ map: true }) });
 PEGAWAI.push({ x: 4.6, z: -2.6, rot: Math.PI, lantai: 1, area: "aula2", pose: "diam", aktivitas: "diskusi", jenis: "berdiri", terisi: true, penampilan: penampilanPNS({ map: true }) });
 
+// Pos satpam di samping gerbang: satu satpam duduk berjaga menghadap gerbang.
+perabot("meja", 0, 13.65, 26.2, -Math.PI / 2);
+perabot("kursi", 0, 14.4, 26.2, -Math.PI / 2);
+PEGAWAI.push({ x: 14.4, z: 26.2, rot: -Math.PI / 2, lantai: 0, area: "luar", pose: "duduk", aktivitas: "menunggu", jenis: "jaga", terisi: true, penampilan: penampilanPNS({ seragam: "satpam", perempuan: false, jilbab: null, rok: false }) });
 // Satpam berjaga di depan pintu, di lobi, di gerbang, di parkiran, dan di lantai 2.
 for (const [l, x, z, rot, area] of [
 	[0, -3.5, 14.5, 0, "luar"],
 	[0, 3.5, 14.5, 0, "luar"],
 	[0, -2.9, 11.3, Math.PI, "lobi"],
-	[0, 3.0, 28.5, -Math.PI / 2, "luar"],
+	[0, 13.2, 23.9, -Math.PI / 2, "luar"],
 	[0, 14.6, 21.5, -Math.PI / 2, "luar"],
 	[1, -6.0, 6.4, Math.PI, "aula2"],
 	[0, -13.5, 5.6, Math.PI / 2, "lorong1"],
@@ -546,8 +550,25 @@ export const MOBIL = [
 	{ x: 9.4, warna: "#5b5f64" },
 ].map((m) => ({ ...m, z: 18 }));
 export const MOTOR = [10.9, 11.7, 12.5, 13.3, 14.1].map((x, i) => ({ x, z: 18, warna: i % 2 ? "#2b2b2e" : "#c4532d" }));
-export const PAGAR_BATA = { x: -15.4, z0: 12.4, z1: 26, tinggi: 1.4 };
+export const PAGAR_BATA = { x: -15.4, z0: 12.4, z1: 28, tinggi: 1.4 };
 export const RUMAH_TETANGGA = { x: 27, z: 2, lx: 8, lz: 9, tinggi: 5 };
+
+// Pagar depan seperti kantor aslinya: dinding abu-abu berlis hijau dengan lubang
+// tegak, tiang batu tiap ±3 m, gerbang geser di kanan (terbuka, daunnya tergeser
+// ke kiri di balik pagar), pos satpam di samping gerbang, papan nama dinas di kiri.
+// Di luar pagar: bak tanaman, trotoar berkanstin hitam-putih, lalu jalan aspal.
+export const PAGAR_DEPAN = { z: 28, x0: -15.6, x1: 20.5, gerbang: [6, 12], tinggi: 1.6 };
+export const PAGAR_KANAN = { x: 20.5, z0: 8, z1: 28 };
+export const POS_SATPAM = { x: 14.4, z: 25.9, lx: 3.6, lz: 3.0, tinggi: 2.6 };
+export const PAPAN_NAMA = { x: -7, z: 28.75 };
+export const JALAN = { trotoar: 29.4, kanstin: 31.3, aspal0: 31.6, aspal1: 39.6 };
+const TIANG_GERBANG = 0.35; // setengah lebar tiang batu di kedua sisi gerbang
+
+// Ruas pagar (tanpa bukaan gerbang) sebagai [x0, x1] di sepanjang z PAGAR_DEPAN.
+export const RUAS_PAGAR_DEPAN = [
+	[PAGAR_DEPAN.x0, PAGAR_DEPAN.gerbang[0] - TIANG_GERBANG],
+	[PAGAR_DEPAN.gerbang[1] + TIANG_GERBANG, PAGAR_DEPAN.x1],
+];
 
 function acakBiji(seed) {
 	let s = seed;
@@ -557,9 +578,9 @@ function acakBiji(seed) {
 export const POHON = (() => {
 	const r = acakBiji(42);
 	const hasil = [];
-	for (let z = 26; z <= 44; z += 4.5) {
-		for (const sisi of [-1, 1]) hasil.push([sisi * (10 + r() * 7), z + r() * 2, 0.8 + r() * 0.5]);
-	}
+	// pohon peneduh di bak tanaman depan pagar & di seberang jalan
+	for (const x of [-13.8, -3.6, 2.6, 17.5]) hasil.push([x, 29.0, 1.1 + r() * 0.3]);
+	for (let x = -26; x <= 26; x += 7) hasil.push([x + r() * 2, 43 + r() * 2, 0.9 + r() * 0.4]);
 	for (let z = -14; z <= 8; z += 5) {
 		for (const sisi of [-1, 1]) hasil.push([sisi * (18 + r() * 4), z + r() * 2, 0.8 + r() * 0.5]);
 	}
@@ -584,6 +605,14 @@ export const PENGHALANG = [0, 1].map((l) => [
 				titik(TIANG_BENDERA.x, TIANG_BENDERA.z, 0.15),
 				...SEMAK.map(([x, z]) => titik(x, z, 0.5)),
 				{ x0: PAGAR_BATA.x - 0.2, x1: PAGAR_BATA.x + 0.2, z0: PAGAR_BATA.z0, z1: PAGAR_BATA.z1 },
+				...RUAS_PAGAR_DEPAN.map(([x0, x1]) => ({ x0, x1, z0: PAGAR_DEPAN.z - 0.2, z1: PAGAR_DEPAN.z + 0.2 })),
+				{ x0: PAGAR_KANAN.x - 0.2, x1: PAGAR_KANAN.x + 0.2, z0: PAGAR_KANAN.z0, z1: PAGAR_KANAN.z1 },
+				...PAGAR_DEPAN.gerbang.map((x) => titik(x, PAGAR_DEPAN.z, TIANG_GERBANG)),
+				// daun gerbang yang terbuka, tergeser di balik pagar kiri gerbang
+				{ x0: PAGAR_DEPAN.gerbang[0] * 2 - PAGAR_DEPAN.gerbang[1] + 0.2, x1: PAGAR_DEPAN.gerbang[0] + 0.2, z0: PAGAR_DEPAN.z - 0.55, z1: PAGAR_DEPAN.z - 0.35 },
+				dariKotak(POS_SATPAM),
+				titik(PAPAN_NAMA.x - 1.3, PAPAN_NAMA.z, 0.12),
+				titik(PAPAN_NAMA.x + 1.3, PAPAN_NAMA.z, 0.12),
 				dariKotak(RUMAH_TETANGGA),
 				...POHON.map(([x, z]) => titik(x, z, 0.5)),
 			]

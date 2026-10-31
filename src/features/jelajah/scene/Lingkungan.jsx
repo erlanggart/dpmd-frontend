@@ -2,8 +2,9 @@ import { useEffect, useLayoutEffect, useMemo, useRef } from "react";
 import { useFrame } from "@react-three/fiber";
 import { Object3D } from "three";
 import { PILAR, POHON, SEMAK, TIANG_BENDERA } from "./layout";
-import { teksturPaving, teksturPavingJalan } from "./tekstur";
+import { teksturPaving } from "./tekstur";
 import Papan from "./Papan";
+import PagarDepan from "./PagarDepan";
 import Parkiran from "./Parkiran";
 
 // Pohon digambar sebagai InstancedMesh (batang, daun, bak tanam, rumput dalam bak):
@@ -133,7 +134,6 @@ function Kanopi({ daftarDinding }) {
 export default function Lingkungan({ daftarDinding }) {
 	// Seluruh halaman berpaving blok; satu ubin tekstur = 1,6 m.
 	const paving = useMemo(() => teksturPaving([180 / 1.6, 180 / 1.6]), []);
-	const pavingJalan = useMemo(() => teksturPavingJalan([4 / 1.6, 25 / 1.6]), []);
 
 	return (
 		<group>
@@ -141,12 +141,8 @@ export default function Lingkungan({ daftarDinding }) {
 				<planeGeometry args={[180, 180]} />
 				<meshStandardMaterial map={paving} />
 			</mesh>
-			{/* jalur pejalan kaki berpaving terang dari gerbang menuju parkiran */}
-			<mesh rotation-x={-Math.PI / 2} position={[0, 0.006, 35.5]}>
-				<planeGeometry args={[4, 25]} />
-				<meshStandardMaterial map={pavingJalan} />
-			</mesh>
 			<Parkiran />
+			<PagarDepan />
 			{/* fondasi gedung */}
 			<mesh position={[0, -0.05, -0.5]}>
 				<boxGeometry args={[30.6, 0.1, 25.6]} />

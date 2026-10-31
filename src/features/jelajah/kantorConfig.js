@@ -477,7 +477,8 @@ export const BENDA = [
 ];
 
 // Titik mulai: di halaman depan, menghadap pintu masuk.
-export const TITIK_MULAI = { x: 0, z: 30, rot: Math.PI, yaw: 0, lantai: 0 };
+// Pengunjung tiba di trotoar depan gerbang.
+export const TITIK_MULAI = { x: 9, z: 30.4, rot: Math.PI, yaw: 0, lantai: 0 };
 
 export const SEMUA_AREA = [...RUANGAN, LOBI, ...AREA_LAIN];
 export const AREA_PER_ID = Object.fromEntries([...SEMUA_AREA, HALAMAN, TANGGA_AREA].map((a) => [a.id, a]));
