@@ -204,9 +204,12 @@ export const RUANGAN = [
 		singkatan: "PMD",
 		warna: "#db2777",
 		lantai: 1,
-		rect: { x0: -3.9, x1: 3.1, z0: 0.5, z1: 5 },
-		pintu: { x: -0.4, z: 5 },
-		npc: { x: -0.4, z: 1.1, arah: [0, 1] },
+		// bentuk ㄱ: rect = bagian belakang, rect2 = kaki kanan
+		rect: { x0: -6.8, x1: 3.1, z0: -6, z1: -1 },
+		rect2: { x0: -3.9, x1: 3.1, z0: -1, z1: 5 },
+		pintu: { x: -0.9, z: 5 },
+		npc: { x: 1.2, z: 1.0, arah: [0, 1] },
+		poster: { x: 2.93, z: 1.0, rot: -Math.PI / 2 },
 		petugas: "Petugas Bidang PMD",
 		sapaan:
 			"Desa kuat karena warganya aktif. Kami mendampingi lembaga-lembaga kemasyarakatan di setiap desa.",
@@ -246,9 +249,9 @@ export const RUANGAN = [
 		singkatan: "SEKRETARIAT",
 		warna: "#2563eb",
 		lantai: 1,
-		rect: { x0: -1.4, x1: 9, z0: -13, z1: -2.5 },
-		pintu: { x: 3.8, z: -2.5 },
-		npc: { x: 3.8, z: -7.6, arah: [0, 1] },
+		rect: { x0: -1.4, x1: 6, z0: -13, z1: -6 },
+		pintu: { x: 4.6, z: -6 },
+		npc: { x: 2.3, z: -12.5, arah: [0, 1] },
 		petugas: "Petugas Sekretariat",
 		sapaan:
 			"Halo! Semua urusan administrasi dinas bermuara di sini, mulai dari surat masuk sampai data kepegawaian.",
@@ -294,9 +297,9 @@ export const RUANGAN = [
 		singkatan: "PEMDES",
 		warna: "#0f766e",
 		lantai: 1,
-		rect: { x0: 11, x1: 15, z0: -13, z1: 4.5 },
-		pintu: { x: 11, z: 2.5, sumbu: "x" },
-		npc: { x: 13, z: -2.5, arah: [0, 1] },
+		rect: { x0: 6, x1: 15, z0: -13, z1: 4.5 },
+		pintu: { x: 9, z: 4.5 },
+		npc: { x: 10.5, z: 0.5, arah: [0, 1] },
 		petugas: "Petugas Bidang Pemdes",
 		sapaan:
 			"Selamat datang! Kami menjaga agar data dan tata kelola pemerintahan di setiap desa tetap rapi dan sah.",
@@ -348,7 +351,8 @@ export const AREA_LAIN = [
 	{ id: "belakang1", nama: "Area Belakang", lantai: 0, rect: { x0: -15, x1: 2.8, z0: -13, z1: 1 } },
 	{ id: "kadis", nama: "Ruang Kepala Dinas", lantai: 1, rect: { x0: -15, x1: -8, z0: 7.3, z1: 12 } },
 	{ id: "toilet2", nama: "Toilet", lantai: 1, rect: { x0: 12.8, x1: 15, z0: 4.5, z1: 12 } },
-	{ id: "halimun", nama: "Ruang Rapat Halimun", lantai: 1, rect: { x0: -15, x1: -9.5, z0: -9.6, z1: 4.5 } },
+	{ id: "halimun", nama: "Ruang Rapat Halimun", lantai: 1, rect: { x0: -15, x1: -9.5, z0: -5.6, z1: 4.5 } },
+	{ id: "gudang2", nama: "Gudang Arsip Lt. 2", lantai: 1, rect: { x0: -15, x1: -9.5, z0: -9.6, z1: -5.6 } },
 	{ id: "dapur", nama: "Dapur", lantai: 1, rect: { x0: -15, x1: -4.6, z0: -13, z1: -9.6 } },
 	{ id: "aula2", nama: "Lantai 2", lantai: 1, rect: { x0: -15, x1: 15, z0: -13, z1: 12 } },
 ];
@@ -442,7 +446,7 @@ export const BENDA = [
 		label: "Lihat videotron",
 		lantai: 1,
 		x: -12.25,
-		z: -8.8,
+		z: -4.8,
 		aksi: { jenis: "pesan", judul: "Ruang Rapat Halimun", teks: "Ruang rapat utama dengan fasilitas rapat mewah dan videotron. Rapat sedang berlangsung — mohon tidak mengganggu." },
 	},
 	{
@@ -483,8 +487,9 @@ export const GEDUNG = { x0: -15, x1: 15, z0: -13, z1: 12 };
 // gedung tetapi di ruang tertutup (tak bisa dimasuki) → null.
 export function cariArea(x, z, lantai = 0) {
 	for (const a of SEMUA_AREA) {
-		const r = a.rect;
-		if (a.lantai === lantai && x >= r.x0 && x <= r.x1 && z >= r.z0 && z <= r.z1) return a;
+		if (a.lantai !== lantai) continue;
+		// ruang berbentuk L punya kotak kedua (rect2)
+		for (const r of a.rect2 ? [a.rect, a.rect2] : [a.rect]) if (x >= r.x0 && x <= r.x1 && z >= r.z0 && z <= r.z1) return a;
 	}
 	const g = GEDUNG;
 	const diDalam = x > g.x0 && x < g.x1 && z > g.z0 && z < g.z1;

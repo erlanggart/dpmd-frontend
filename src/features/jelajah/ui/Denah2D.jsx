@@ -43,6 +43,17 @@ function Denah({ lantai, dikunjungi, onBuka }) {
 					Tangga
 				</div>
 			))}
+			{/* kotak kedua ruang berbentuk L (mis. PMD) */}
+			{ruang
+				.filter((r) => r.rect2)
+				.map((r) => (
+					<div
+						key={`${r.id}-2`}
+						aria-hidden="true"
+						className="pointer-events-none absolute border-2"
+						style={{ ...letak(r.rect2), background: `${r.warna}26`, borderColor: r.warna }}
+					/>
+				))}
 			{ruang.map((r) => {
 				const sudah = dikunjungi.has(r.id);
 				return (

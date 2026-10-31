@@ -72,13 +72,16 @@ export default function Minimap({ area, lantai, dikunjungi, onPilih, className =
 					return (
 						<g key={r.id} onClick={() => onPilih(r.id)} className="cursor-pointer">
 							<title>{`Pindah ke ${r.nama}`}</title>
-							<rect
-								{...persegi(r.rect)}
-								fill={r.warna}
-								fillOpacity={aktif ? 0.5 : 0.22}
-								stroke={r.warna}
-								strokeWidth={aktif ? 0.4 : 0.2}
-							/>
+							{[r.rect, r.rect2].filter(Boolean).map((k, i) => (
+								<rect
+									key={i}
+									{...persegi(k)}
+									fill={r.warna}
+									fillOpacity={aktif ? 0.5 : 0.22}
+									stroke={r.warna}
+									strokeWidth={aktif ? 0.4 : 0.2}
+								/>
+							))}
 							<text
 								x={(r.rect.x0 + r.rect.x1) / 2}
 								y={(r.rect.z0 + r.rect.z1) / 2}
