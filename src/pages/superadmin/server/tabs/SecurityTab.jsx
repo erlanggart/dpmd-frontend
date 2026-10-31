@@ -295,24 +295,24 @@ const SecurityTab = () => {
 					<div style={{ height: 240 }}>
 						<ResponsiveContainer width="100%" height="100%">
 							<BarChart data={ringkas.timeline} margin={{ top: 6, right: 8, left: -14, bottom: 0 }}>
-								<CartesianGrid stroke="#eef2f6" vertical={false} />
+								<CartesianGrid stroke="#0f2a18" vertical={false} />
 								<XAxis
 									dataKey="t"
 									tickFormatter={(v) => (harian ? new Date(v).toLocaleDateString("id-ID", { day: "2-digit", month: "short" }) : new Date(v).toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" }))}
-									tick={{ fontSize: 10.5, fill: "#64748b" }}
+									tick={{ fontSize: 10.5, fill: "#5fa577" }}
 									axisLine={false}
 									tickLine={false}
 									minTickGap={30}
 								/>
-								<YAxis allowDecimals={false} tick={{ fontSize: 10.5, fill: "#64748b" }} axisLine={false} tickLine={false} width={44} />
-								<Tooltip cursor={{ fill: "#f1f5f9" }} content={<TooltipSerangan harian={harian} />} />
+								<YAxis allowDecimals={false} tick={{ fontSize: 10.5, fill: "#5fa577" }} axisLine={false} tickLine={false} width={44} />
+								<Tooltip cursor={{ fill: "rgba(0,255,65,0.06)" }} content={<TooltipSerangan harian={harian} />} />
 								{["low", "medium", "high", "critical"].map((k, i, arr) => (
 									<BarRc
 										key={k}
 										dataKey={k}
 										stackId="s"
 										fill={SEVERITY[k].warna}
-										stroke="#fff"
+										stroke="#020604"
 										strokeWidth={1}
 										radius={i === arr.length - 1 ? [4, 4, 0, 0] : 0}
 										maxBarSize={28}

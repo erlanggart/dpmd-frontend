@@ -1,0 +1,320 @@
+/*
+ * Tema "Kali" untuk halaman Manajemen Server: terminal hijau di atas hitam.
+ *
+ * Tailwind v4 menulis setiap utilitas warna sebagai var(--color-*), jadi
+ * cukup mendefinisikan ulang skala warna di dalam .kali-ops dan seluruh tab
+ * (yang ditulis dengan bg-white / text-slate-*) ikut bertema tanpa disunting
+ * satu per satu. Skala dibalik: 50–300 menjadi latar gelap, 500–900 menjadi
+ * teks terang. bg-slate-900 (tombol terpilih) menjadi hijau neon dengan teks
+ * gelap — gaya sorotan terminal.
+ */
+
+.kali-ops {
+	--k-bg: #020604;
+	--k-panel: #050e08;
+	--k-line: #143a22;
+	--k-neon: #00ff41;
+	--k-text: #b6f5c8;
+	--k-mute: #5fa577;
+
+	--color-white: #050e08;
+	--color-black: #000;
+
+	--color-slate-50: #07130b;
+	--color-slate-100: #0b1b11;
+	--color-slate-200: #143a22;
+	--color-slate-300: #1d4a2d;
+	--color-slate-400: #3d7a53;
+	--color-slate-500: #5fa577;
+	--color-slate-600: #7fc497;
+	--color-slate-700: #a3e4b8;
+	--color-slate-800: #c8f7d6;
+	--color-slate-900: #00ff41;
+	--color-slate-950: #010402;
+
+	--color-gray-50: var(--color-slate-50);
+	--color-gray-100: var(--color-slate-100);
+	--color-gray-200: var(--color-slate-200);
+	--color-gray-300: var(--color-slate-300);
+	--color-gray-400: var(--color-slate-400);
+	--color-gray-500: var(--color-slate-500);
+	--color-gray-600: var(--color-slate-600);
+	--color-gray-700: var(--color-slate-700);
+	--color-gray-800: var(--color-slate-800);
+	--color-gray-900: var(--color-slate-900);
+
+	--color-emerald-50: #04200f;
+	--color-emerald-100: #062a15;
+	--color-emerald-200: #0d4a26;
+	--color-emerald-300: #5dffa0;
+	--color-emerald-400: #2cff8a;
+	--color-emerald-500: #00e676;
+	--color-emerald-600: #00ff7f;
+	--color-emerald-700: #4dffa6;
+	--color-emerald-800: #8affc4;
+	--color-emerald-900: #bfffe0;
+	--color-green-50: var(--color-emerald-50);
+	--color-green-100: var(--color-emerald-100);
+	--color-green-200: var(--color-emerald-200);
+	--color-green-500: var(--color-emerald-500);
+	--color-green-600: var(--color-emerald-600);
+	--color-green-700: var(--color-emerald-700);
+
+	--color-red-50: #250709;
+	--color-red-100: #350a0f;
+	--color-red-200: #6b1a24;
+	--color-red-300: #ff8a94;
+	--color-red-400: #ff6b78;
+	--color-red-500: #ff3b4e;
+	--color-red-600: #ff4d5e;
+	--color-red-700: #ff7a86;
+	--color-red-800: #ffa3ab;
+	--color-red-900: #ffd0d4;
+	--color-rose-50: var(--color-red-50);
+	--color-rose-600: var(--color-red-600);
+
+	--color-amber-50: #1f1603;
+	--color-amber-100: #2e2105;
+	--color-amber-200: #5c430a;
+	--color-amber-300: #ffd166;
+	--color-amber-400: #ffc53d;
+	--color-amber-500: #ffb000;
+	--color-amber-600: #ffbf1f;
+	--color-amber-700: #ffcf57;
+	--color-amber-800: #ffdc85;
+	--color-amber-900: #ffeab5;
+	--color-amber-950: #120c01;
+	--color-yellow-50: var(--color-amber-50);
+	--color-yellow-100: var(--color-amber-100);
+	--color-yellow-500: var(--color-amber-500);
+	--color-yellow-600: var(--color-amber-600);
+	--color-yellow-700: var(--color-amber-700);
+
+	--color-orange-50: #261005;
+	--color-orange-100: #361707;
+	--color-orange-200: #6b2f0e;
+	--color-orange-300: #ffb27a;
+	--color-orange-400: #ff9a4d;
+	--color-orange-500: #ff7f1f;
+	--color-orange-600: #ff8c33;
+	--color-orange-700: #ffa35c;
+	--color-orange-800: #ffbd8a;
+	--color-orange-900: #ffd9bd;
+
+	--color-blue-50: #031a1f;
+	--color-blue-100: #05242b;
+	--color-blue-200: #0b4552;
+	--color-blue-300: #7fe9ff;
+	--color-blue-400: #4ddcff;
+	--color-blue-500: #19d3ff;
+	--color-blue-600: #22d3ee;
+	--color-blue-700: #5ee6f5;
+	--color-blue-800: #9af1fa;
+	--color-blue-900: #ccf8fc;
+	--color-sky-50: var(--color-blue-50);
+	--color-sky-100: var(--color-blue-100);
+	--color-sky-200: var(--color-blue-200);
+	--color-sky-500: var(--color-blue-500);
+	--color-sky-600: var(--color-blue-600);
+	--color-sky-700: var(--color-blue-700);
+	--color-cyan-50: var(--color-blue-50);
+	--color-cyan-600: var(--color-blue-600);
+	--color-cyan-700: var(--color-blue-700);
+	--color-indigo-50: var(--color-blue-50);
+	--color-indigo-600: var(--color-blue-600);
+	--color-indigo-700: var(--color-blue-700);
+
+	--color-violet-50: #150a26;
+	--color-violet-100: #1d0f36;
+	--color-violet-200: #3a1d6b;
+	--color-violet-500: #a77bff;
+	--color-violet-600: #b794ff;
+	--color-violet-700: #c9adff;
+	--color-purple-50: var(--color-violet-50);
+	--color-purple-600: var(--color-violet-600);
+	--color-purple-700: var(--color-violet-700);
+
+	position: relative;
+	min-height: 100vh;
+	background:
+		radial-gradient(ellipse 80% 50% at 50% -10%, rgba(0, 255, 65, 0.08), transparent 60%),
+		var(--k-bg);
+	color: var(--k-text);
+	font-family: "JetBrains Mono", "Fira Code", "Cascadia Code", ui-monospace, Consolas, "Liberation Mono", monospace;
+	font-feature-settings: "calt" 0;
+	color-scheme: dark;
+}
+
+/* Garis pindai CRT tipis — dekorasi, tidak menangkap klik. */
+.kali-ops::before {
+	content: "";
+	position: absolute;
+	inset: 0;
+	pointer-events: none;
+	z-index: 0;
+	background: repeating-linear-gradient(to bottom, rgba(0, 255, 65, 0.025) 0 1px, transparent 1px 3px);
+}
+.kali-ops > * {
+	position: relative;
+	z-index: 1;
+}
+
+.kali-ops h1,
+.kali-ops h2,
+.kali-ops h3 {
+	text-shadow: 0 0 10px rgba(0, 255, 65, 0.35);
+	letter-spacing: 0.01em;
+}
+
+.kali-ops section {
+	box-shadow: 0 0 0 1px rgba(0, 255, 65, 0.04), 0 0 24px -12px rgba(0, 255, 65, 0.25);
+}
+
+/* Lapisan latar modal tetap gelap (slate-900 di sini = hijau neon). */
+.kali-ops .bg-slate-900\/60,
+.kali-ops .bg-slate-900\/50 {
+	background-color: rgba(0, 0, 0, 0.72);
+	backdrop-filter: blur(2px);
+}
+
+/* Kotak log & cuplikan perintah: hitam pekat, teks hijau. */
+.kali-ops .bg-slate-950,
+.kali-ops pre.bg-slate-900 {
+	background-color: #000 !important;
+	color: #7dff9f;
+	border: 1px solid var(--k-line);
+}
+.kali-ops .bg-slate-950 .text-slate-200,
+.kali-ops .bg-slate-950 .text-slate-300,
+.kali-ops .bg-slate-950.text-slate-200 {
+	color: #9dffb6;
+}
+
+.kali-ops input,
+.kali-ops select,
+.kali-ops textarea {
+	background-color: #020a05;
+	color: var(--k-text);
+	border-color: var(--k-line);
+	caret-color: var(--k-neon);
+}
+.kali-ops input::placeholder,
+.kali-ops textarea::placeholder {
+	color: #3d7a53;
+}
+.kali-ops input:focus,
+.kali-ops select:focus,
+.kali-ops textarea:focus {
+	outline: none;
+	border-color: var(--k-neon);
+	box-shadow: 0 0 0 1px var(--k-neon), 0 0 12px rgba(0, 255, 65, 0.25);
+}
+
+.kali-ops ::selection {
+	background: var(--k-neon);
+	color: #000;
+}
+
+.kali-ops ::-webkit-scrollbar {
+	width: 9px;
+	height: 9px;
+}
+.kali-ops ::-webkit-scrollbar-track {
+	background: #020604;
+}
+.kali-ops ::-webkit-scrollbar-thumb {
+	background: #143a22;
+	border-radius: 0;
+}
+.kali-ops ::-webkit-scrollbar-thumb:hover {
+	background: #00ff41;
+}
+
+/* Tombol ikon kecil (globe, konsol). */
+.kali-ikon {
+	display: grid;
+	place-items: center;
+	width: 28px;
+	height: 28px;
+	border: 1px solid #1d4a2d;
+	background: rgba(2, 10, 5, 0.85);
+	color: #00ff41;
+	font-size: 15px;
+	line-height: 1;
+	transition: all 0.15s;
+}
+.kali-ikon:hover {
+	border-color: #00ff41;
+	box-shadow: 0 0 10px rgba(0, 255, 65, 0.4);
+}
+
+.kali-glow {
+	text-shadow: 0 0 6px rgba(0, 255, 65, 0.8), 0 0 18px rgba(0, 255, 65, 0.35);
+}
+
+.kali-kursor::after {
+	content: "█";
+	margin-left: 2px;
+	animation: kali-kedip 1s steps(1) infinite;
+}
+
+@keyframes kali-kedip {
+	50% {
+		opacity: 0;
+	}
+}
+
+@keyframes kali-masuk {
+	from {
+		opacity: 0;
+		transform: translateX(-6px);
+		background-color: rgba(0, 255, 65, 0.18);
+	}
+	to {
+		opacity: 1;
+		transform: none;
+	}
+}
+.kali-baru {
+	animation: kali-masuk 0.6s ease-out;
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.kali-kursor::after,
+	.kali-baru {
+		animation: none;
+	}
+}
+
+/* SweetAlert dipasang di <body>, di luar .kali-ops; kelas body ini dipasang
+   selama halaman Manajemen Server terbuka. */
+body.kali-swal .swal2-popup {
+	background: #050e08;
+	color: #b6f5c8;
+	border: 1px solid #1d4a2d;
+	border-radius: 6px;
+	font-family: "JetBrains Mono", ui-monospace, Consolas, monospace;
+	box-shadow: 0 0 40px rgba(0, 255, 65, 0.15);
+}
+body.kali-swal .swal2-title {
+	color: #00ff41;
+}
+body.kali-swal .swal2-html-container {
+	color: #b6f5c8;
+}
+body.kali-swal .swal2-input,
+body.kali-swal .swal2-select,
+body.kali-swal .swal2-textarea {
+	background: #020a05;
+	color: #b6f5c8;
+	border-color: #1d4a2d;
+}
+body.kali-swal .swal2-confirm {
+	font-weight: 700;
+	border: 1px solid rgba(255, 255, 255, 0.15) !important;
+}
+body.kali-swal .swal2-cancel {
+	background: #0b1b11 !important;
+	color: #a3e4b8 !important;
+	border: 1px solid #1d4a2d !important;
+}

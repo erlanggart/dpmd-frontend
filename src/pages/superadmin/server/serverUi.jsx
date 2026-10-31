@@ -18,14 +18,14 @@ import {
 import { FiAlertOctagon, FiAlertTriangle, FiCheckCircle, FiHelpCircle, FiInfo } from "react-icons/fi";
 
 export const SERI = {
-	biru: "#2a78d6",
-	oranye: "#eb6834",
-	aqua: "#1baf7a",
-	kuning: "#eda100",
-	magenta: "#e87ba4",
-	hijau: "#008300",
-	ungu: "#4a3aa7",
-	merah: "#e34948",
+	biru: "#00ff41",
+	oranye: "#ff8c33",
+	aqua: "#22d3ee",
+	kuning: "#ffbf1f",
+	magenta: "#ff6bcb",
+	hijau: "#2cff8a",
+	ungu: "#b794ff",
+	merah: "#ff4d5e",
 };
 
 export const STATUS_WARNA = {
@@ -37,10 +37,10 @@ export const STATUS_WARNA = {
 };
 
 export const SEVERITY = {
-	critical: { label: "Kritis", warna: "#c62828", kelas: "bg-red-100 text-red-800 ring-red-200" },
-	high: { label: "Tinggi", warna: "#eb6834", kelas: "bg-orange-100 text-orange-800 ring-orange-200" },
-	medium: { label: "Sedang", warna: "#eda100", kelas: "bg-amber-100 text-amber-800 ring-amber-200" },
-	low: { label: "Rendah", warna: "#94a3b8", kelas: "bg-slate-100 text-slate-700 ring-slate-200" },
+	critical: { label: "Kritis", warna: "#ff3b4e", kelas: "bg-red-100 text-red-800 ring-red-200" },
+	high: { label: "Tinggi", warna: "#ff8c33", kelas: "bg-orange-100 text-orange-800 ring-orange-200" },
+	medium: { label: "Sedang", warna: "#ffbf1f", kelas: "bg-amber-100 text-amber-800 ring-amber-200" },
+	low: { label: "Rendah", warna: "#3d7a53", kelas: "bg-slate-100 text-slate-700 ring-slate-200" },
 };
 
 export const pesanError = (error, cadangan = "Terjadi kesalahan.") =>
@@ -144,13 +144,13 @@ export const SeverityBadge = ({ severity }) => {
 export const Gauge = ({ value, label, detail, ambang = 85, warna = SERI.biru }) => {
 	const v = Math.max(0, Math.min(100, Number(value) || 0));
 	const tingkat = tingkatDari(value, ambang);
-	const warnaIsi = tingkat === "kritis" ? "#e34948" : tingkat === "waspada" ? "#eda100" : warna;
+	const warnaIsi = tingkat === "kritis" ? "#ff4d5e" : tingkat === "waspada" ? "#ffbf1f" : warna;
 	const r = 52;
 	const keliling = Math.PI * r;
 	return (
 		<div className="flex flex-col items-center text-center">
 			<svg viewBox="0 0 128 74" className="w-full max-w-[170px]" role="img" aria-label={`${label} ${v}%`}>
-				<path d="M12 66 A52 52 0 0 1 116 66" fill="none" stroke="#e2e8f0" strokeWidth="11" strokeLinecap="round" />
+				<path d="M12 66 A52 52 0 0 1 116 66" fill="none" stroke="#0b1b11" strokeWidth="11" strokeLinecap="round" />
 				<path
 					d="M12 66 A52 52 0 0 1 116 66"
 					fill="none"
@@ -302,17 +302,17 @@ export const GrafikArea = ({
 							</linearGradient>
 						))}
 					</defs>
-					<CartesianGrid stroke="#eef2f6" vertical={false} />
+					<CartesianGrid stroke="#0f2a18" vertical={false} />
 					<XAxis
 						dataKey="t"
 						tickFormatter={tickFormat || jamSaja}
-						tick={{ fontSize: 10.5, fill: "#64748b" }}
+						tick={{ fontSize: 10.5, fill: "#5fa577" }}
 						axisLine={false}
 						tickLine={false}
 						minTickGap={36}
 					/>
 					<YAxis
-						tick={{ fontSize: 10.5, fill: "#64748b" }}
+						tick={{ fontSize: 10.5, fill: "#5fa577" }}
 						axisLine={false}
 						tickLine={false}
 						width={52}
@@ -320,7 +320,7 @@ export const GrafikArea = ({
 						tickFormatter={(v) => (format ? format(v) : `${v}${satuan || ""}`)}
 					/>
 					<Tooltip
-						cursor={{ stroke: "#94a3b8", strokeDasharray: "3 3" }}
+						cursor={{ stroke: "#00ff41", strokeDasharray: "3 3" }}
 						content={<TooltipGrafik format={format} satuan={satuan} labelFormat={labelFormat} />}
 					/>
 					{series.map((s) => (
@@ -335,7 +335,7 @@ export const GrafikArea = ({
 							stackId={stacked ? "1" : undefined}
 							isAnimationActive={false}
 							dot={false}
-							activeDot={{ r: 4, strokeWidth: 2, stroke: "#fff" }}
+							activeDot={{ r: 4, strokeWidth: 2, stroke: "#020604" }}
 							connectNulls
 						/>
 					))}

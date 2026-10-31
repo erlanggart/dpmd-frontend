@@ -30,6 +30,7 @@ const SettingsTab = () => {
 	const [bawaan, setBawaan] = useState(null);
 	const [ipSaya, setIpSaya] = useState("");
 	const [whitelist, setWhitelist] = useState("");
+	const [negara, setNegara] = useState("");
 	const [galat, setGalat] = useState(null);
 	const [simpan, setSimpan] = useState(false);
 
@@ -42,6 +43,7 @@ const SettingsTab = () => {
 				setBawaan(d.defaults);
 				setIpSaya(d.your_ip);
 				setWhitelist((d.config.security.whitelist || []).join("\n"));
+				setNegara((d.config.security.blocked_countries || []).join(", "));
 				setGalat(null);
 			})
 			.catch((e) => setGalat(pesanError(e)));
@@ -57,10 +59,15 @@ const SettingsTab = () => {
 		try {
 			const body = {
 				...cfg,
-				security: { ...cfg.security, whitelist: whitelist.split(/[\n,]/).map((s) => s.trim()).filter(Boolean) },
+				security: {
+					...cfg.security,
+					whitelist: whitelist.split(/[\n,]/).map((s) => s.trim()).filter(Boolean),
+					blocked_countries: negara.split(/[\s,]+/).map((s) => s.trim()).filter(Boolean),
+				},
 			};
 			const r = await api.put("/superadmin/server/config", body);
 			setCfg(r.data?.data);
+			setNegara((r.data?.data?.security?.blocked_countries || []).join(", "));
 			Swal.fire({ icon: "success", title: "Pengaturan disimpan", timer: 1500, showConfirmButton: false });
 		} catch (e) {
 			Swal.fire({ icon: "error", title: "Gagal menyimpan", text: pesanError(e) });
@@ -74,6 +81,7 @@ const SettingsTab = () => {
 		if (!ok.isConfirmed) return;
 		setCfg({ ...bawaan, monitors: cfg.monitors });
 		setWhitelist(bawaan.security.whitelist.join("\n"));
+		setNegara("");
 	};
 
 	if (galat && !cfg) return <Galat pesan={galat} onRetry={muat} />;
@@ -134,6 +142,25 @@ const SettingsTab = () => {
 							label="Pindai log nginx & SSH"
 							hint="Deteksi serangan yang tidak sampai ke aplikasi (bila berkas log ada di server ini)."
 						/>
+						<Toggle
+							checked={k.geo_lookup}
+							onChange={(v) => set("security", "geo_lookup", v)}
+							label="Lokasi IP (Peta Ancaman)"
+							hint="Cari negara/kota/ISP IP publik lewat ip-api.com (disimpan 30 hari). Dipakai globe dan blokir negara."
+						/>
+						<label className="block py-2">
+							<span className="block text-sm font-semibold text-slate-700">Blokir negara (geo-block)</span>
+							<span className="mt-0.5 block text-xs text-slate-500">
+								Kode ISO 2 huruf, pisahkan koma, mis. <code>CN, RU</code>. Request anonim dari negara ini ditolak; pengguna yang login tetap bisa masuk. ID tidak boleh diblokir.
+							</span>
+							<input
+								value={negara}
+								onChange={(e) => setNegara(e.target.value.toUpperCase())}
+								disabled={!k.geo_lookup}
+								placeholder="kosong = tidak ada"
+								className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 font-mono text-xs disabled:opacity-50"
+							/>
+						</label>
 					</div>
 					<div className="space-y-4">
 						<div className="grid gap-4 sm:grid-cols-2">
