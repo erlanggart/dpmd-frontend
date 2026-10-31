@@ -205,10 +205,10 @@ export const RUANGAN = [
 		warna: "#db2777",
 		lantai: 1,
 		// bentuk ㄱ: rect = bagian belakang, rect2 = kaki kanan
-		rect: { x0: -7, x1: 3.1, z0: -4, z1: -1 },
-		rect2: { x0: -3.9, x1: 3.1, z0: -1, z1: 5 },
-		pintu: { x: -0.9, z: 5 },
-		npc: { x: 1.2, z: 1.0, arah: [0, 1] },
+		rect: { x0: -6.95, x1: 3.1, z0: -4, z1: -1 },
+		rect2: { x0: -4.05, x1: 3.1, z0: -1, z1: 3.8 },
+		pintu: { x: -0.9, z: 3.8 },
+		npc: { x: 1.2, z: -0.2, arah: [0, 1] },
 		poster: { x: 2.93, z: 1.0, rot: -Math.PI / 2 },
 		petugas: "Petugas Bidang PMD",
 		sapaan:
@@ -351,7 +351,7 @@ export const AREA_LAIN = [
 	{ id: "belakang1", nama: "Area Belakang", lantai: 0, rect: { x0: -15, x1: 2.8, z0: -13, z1: 1 } },
 	{ id: "kadis", nama: "Ruang Kepala Dinas", lantai: 1, rect: { x0: -15, x1: -8, z0: 7.3, z1: 12 } },
 	{ id: "toilet2", nama: "Toilet", lantai: 1, rect: { x0: 12.8, x1: 15, z0: 4.5, z1: 12 } },
-	{ id: "halimun", nama: "Ruang Rapat Halimun", lantai: 1, rect: { x0: -15, x1: -7, z0: -5.6, z1: 4.5 } },
+	{ id: "halimun", nama: "Ruang Rapat Halimun", lantai: 1, rect: { x0: -15, x1: -6.95, z0: -5.6, z1: 3.8 } },
 	{ id: "gudang2", nama: "Gudang Arsip Lt. 2", lantai: 1, rect: { x0: -15, x1: -9.5, z0: -9.6, z1: -5.6 } },
 	{ id: "dapur", nama: "Dapur", lantai: 1, rect: { x0: -15, x1: -4.6, z0: -13, z1: -9.6 } },
 	{ id: "aula2", nama: "Lantai 2", lantai: 1, rect: { x0: -15, x1: 15, z0: -13, z1: 12 } },

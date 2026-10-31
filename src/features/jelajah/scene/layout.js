@@ -83,19 +83,20 @@ export const DINDING = [
 	// PMD berbentuk ㄱ: bagian atasnya membentang di belakang tangga depan sampai
 	// dinding Ruang Rapat Halimun; kakinya di samping tangga depan (pintu depan).
 	// Di belakangnya ada jalan ke dapur (pintu belakang PMD ke jalan itu).
-	...garis(1, "x", -4, -7, 3.1, [[-3.7, 1.4]]),
-	...garis(1, "x", -1, -7, -3.9),
-	...garis(1, "z", -3.9, -1, 5),
-	...garis(1, "z", 3.1, -4, 5),
+	...garis(1, "x", -4, -6.95, 3.1, [[-3.7, 1.4]]),
+	...garis(1, "x", -1, -6.95, -4.05),
+	...garis(1, "z", -4.05, -1, 3.8),
+	...garis(1, "z", 3.1, -4, 3.8),
 	// dinding depan Sekretariat (pintu ke lorong antara PMD & Pemdes)
 	...garis(1, "x", -6, -1.4, 6, [[4.6, 1.4]]),
-	...garis(1, "x", 5, -3.9, 3.1, [[-0.9, 1.4]]),
+	...garis(1, "x", 3.8, -4.05, 3.1, [[-0.9, 1.4]]),
 	// Ruang Rapat Halimun (pintu menghadap Ruang Kepala Dinas) & Gudang Arsip di
 	// depan dapur (pintunya di samping, dekat pintu dapur)
-	// Halimun melebar sampai menempel tangga depan; Gudang Arsip di depan dapur
-	...garis(1, "z", -7, -5.6, 4.5),
-	...garis(1, "x", 4.5, -15, -7, [[-11.5, 1.6]]),
-	...garis(1, "x", -5.6, -15, -7),
+	// Halimun melebar sampai menempel tangga depan, dinding depannya segaris bibir
+	// tangga; Gudang Arsip di depan dapur
+	...garis(1, "z", -6.95, -5.6, 3.8),
+	...garis(1, "x", 3.8, -15, -6.95, [[-11.5, 1.6]]),
+	...garis(1, "x", -5.6, -15, -6.95),
 	...garis(1, "z", -9.5, -9.6, -5.6, [[-8.75, 1.2]]),
 	// Dapur di pojok belakang, menempel Halimun; tangga belakang tepat di sampingnya
 	...garis(1, "z", -4.6, -13, -9.6),
@@ -124,10 +125,10 @@ export const DAUN_PINTU = [
 	{ lantai: 1, x: 0, z: 7.3, lebar: 1.6, jenis: "kayu" },
 	{ lantai: 1, x: 8.4, z: 7.3, lebar: 1.6, jenis: "kayu" },
 	{ lantai: 1, x: 12.8, z: 5.75, lebar: 1.2, jenis: "kayu", sumbu: "x" },
-	{ lantai: 1, x: -0.9, z: 5, lebar: 1.4, jenis: "kayu" },
+	{ lantai: 1, x: -0.9, z: 3.8, lebar: 1.4, jenis: "kayu" },
 	{ lantai: 1, x: -3.7, z: -4, lebar: 1.4, jenis: "kayu" },
 	{ lantai: 1, x: -9.5, z: -8.75, lebar: 1.2, jenis: "kayu", sumbu: "x" },
-	{ lantai: 1, x: -11.5, z: 4.5, lebar: 1.6, jenis: "kayu" },
+	{ lantai: 1, x: -11.5, z: 3.8, lebar: 1.6, jenis: "kayu" },
 	{ lantai: 1, x: -7.2, z: -9.6, lebar: 1.2, jenis: "kayu" },
 	{ lantai: 1, x: 4.6, z: -6, lebar: 1.4, jenis: "kayu" },
 	{ lantai: 1, x: 9, z: 4.5, lebar: 1.4, jenis: "kayu" },
@@ -330,7 +331,7 @@ klaster(1, "keuangan", 5.9, 9.6);
 klaster(1, "keuangan", 11.0, 9.6);
 // PMD: deret meja di bagian belakang, satu klaster & meja layanan di kaki depan.
 for (const x of [-6.0, -1.8, 1.6]) klaster(1, "pmd", x, -2.5);
-klaster(1, "pmd", -2.85, 2.7);
+klaster(1, "pmd", -2.85, 1.9);
 // Sekretariat: klaster mengapit meja layanan.
 for (const x of [-0.45, 5.05]) klaster(1, "sekretariat", x, -9.4);
 // Pemdes: dua deret meja.
