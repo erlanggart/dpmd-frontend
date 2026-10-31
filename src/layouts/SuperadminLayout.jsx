@@ -247,8 +247,10 @@ const SuperadminLayout = () => {
 		{ label: "Profil", icon: FiUser, path: "/superadmin/profile" },
 	];
 
+	// Halaman Manajemen Server bertema terminal: sidebar ikut memakai variabel
+	// warnanya (.kali-shell di pages/superadmin/server/kali.css) supaya serasi.
 	return (
-		<div className="min-h-screen bg-slate-50">
+		<div className={`min-h-screen bg-slate-50 ${location.pathname.startsWith("/superadmin/server") ? "kali-shell" : ""}`}>
 			{confirmDialog}
 
 			{isDesktop && (

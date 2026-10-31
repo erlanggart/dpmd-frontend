@@ -102,27 +102,38 @@ export const tingkatDari = (persen, ambang = 85) => {
 	return "baik";
 };
 
-export const Card = ({ title, subtitle, icon: Icon, actions, children, className = "", bodyClass = "p-4 sm:p-5" }) => (
-	<section className={`rounded-2xl border border-slate-200/80 bg-white shadow-sm ${className}`}>
-		{(title || actions) && (
-			<header className="flex flex-wrap items-start justify-between gap-3 border-b border-slate-100 px-4 py-3 sm:px-5">
-				<div className="flex min-w-0 items-start gap-2.5">
-					{Icon && (
-						<span className="mt-0.5 grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-slate-100 text-slate-600">
-							<Icon className="h-4 w-4" />
-						</span>
-					)}
-					<div className="min-w-0">
-						<h3 className="text-[15px] font-bold text-slate-800">{title}</h3>
-						{subtitle && <p className="mt-0.5 text-xs text-slate-500">{subtitle}</p>}
+/**
+ * Kartu bergaya jendela terminal: judul diawali prompt "▸", ikon dalam kotak
+ * neon, dan aksen sudut HUD (.kali-kartu di kali.css). Dipakai semua tab,
+ * jadi tampilan seluruh halaman seragam dari satu tempat ini.
+ */
+export const Card = ({ title, subtitle, icon: Icon, actions, children, className = "", bodyClass = "p-4 sm:p-5" }) => {
+	const judul = typeof title === "string" ? title.replace(/^>\s*/, "") : title;
+	return (
+		<section className={`kali-kartu rounded-2xl border border-slate-200 bg-white ${className}`}>
+			{(title || actions) && (
+				<header className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 bg-gradient-to-r from-slate-100 to-transparent px-4 py-2.5 sm:px-5">
+					<div className="flex min-w-0 items-center gap-2.5">
+						{Icon && (
+							<span className="grid h-7 w-7 shrink-0 place-items-center rounded border border-slate-300 bg-black text-slate-900">
+								<Icon className="h-3.5 w-3.5" />
+							</span>
+						)}
+						<div className="min-w-0">
+							<h3 className="truncate text-[14px] font-bold text-slate-800">
+								<span className="mr-1.5 text-slate-900">▸</span>
+								{judul}
+							</h3>
+							{subtitle && <p className="mt-0.5 text-[11.5px] text-slate-500">{subtitle}</p>}
+						</div>
 					</div>
-				</div>
-				{actions && <div className="flex flex-wrap items-center gap-2">{actions}</div>}
-			</header>
-		)}
-		<div className={bodyClass}>{children}</div>
-	</section>
-);
+					{actions && <div className="flex flex-wrap items-center gap-2">{actions}</div>}
+				</header>
+			)}
+			<div className={bodyClass}>{children}</div>
+		</section>
+	);
+};
 
 export const StatusBadge = ({ tingkat = "netral", label, className = "" }) => {
 	const w = STATUS_WARNA[tingkat] || STATUS_WARNA.netral;
@@ -183,16 +194,16 @@ export const Stat = ({ label, value, hint, icon: Icon, tone = "slate" }) => {
 		violet: "bg-violet-50 text-violet-600",
 	};
 	return (
-		<div className="flex items-start gap-3 rounded-xl border border-slate-200/80 bg-white p-3.5">
+		<div className="kali-kartu flex items-start gap-3 rounded-xl border border-slate-200 bg-white p-3">
 			{Icon && (
-				<span className={`grid h-9 w-9 shrink-0 place-items-center rounded-lg ${tones[tone] || tones.slate}`}>
+				<span className={`grid h-8 w-8 shrink-0 place-items-center rounded ${tones[tone] || tones.slate}`}>
 					<Icon className="h-4 w-4" />
 				</span>
 			)}
 			<div className="min-w-0">
-				<p className="text-[11.5px] font-medium uppercase tracking-wide text-slate-500">{label}</p>
-				<p className="mt-0.5 truncate text-lg font-extrabold text-slate-800">{value}</p>
-				{hint && <p className="mt-0.5 text-[11.5px] text-slate-500">{hint}</p>}
+				<p className="truncate text-[10.5px] font-semibold uppercase tracking-[0.16em] text-slate-500">{label}</p>
+				<p className="kali-glow mt-0.5 truncate text-xl font-extrabold text-slate-900">{value}</p>
+				{hint && <p className="mt-0.5 truncate text-[11px] text-slate-500" title={typeof hint === "string" ? hint : undefined}>{hint}</p>}
 			</div>
 		</div>
 	);
@@ -201,10 +212,10 @@ export const Stat = ({ label, value, hint, icon: Icon, tone = "slate" }) => {
 export const Bar = ({ percent, tingkat, className = "h-2" }) => {
 	const p = Math.max(0, Math.min(100, Number(percent) || 0));
 	const t = tingkat || tingkatDari(p);
-	const warna = t === "kritis" ? "bg-red-500" : t === "waspada" ? "bg-amber-500" : "bg-blue-600";
+	const warna = t === "kritis" ? "bg-red-500" : t === "waspada" ? "bg-amber-500" : "bg-emerald-500";
 	return (
-		<div className={`w-full overflow-hidden rounded-full bg-slate-100 ${className}`}>
-			<div className={`h-full rounded-full ${warna}`} style={{ width: `${p}%`, transition: "width .5s ease" }} />
+		<div className={`w-full overflow-hidden rounded-sm bg-slate-100 ${className}`}>
+			<div className={`h-full ${warna}`} style={{ width: `${p}%`, transition: "width .5s ease" }} />
 		</div>
 	);
 };
@@ -221,9 +232,13 @@ export const Toggle = ({ checked, onChange, label, hint, disabled }) => (
 			aria-checked={!!checked}
 			disabled={disabled}
 			onClick={() => onChange(!checked)}
-			className={`relative mt-0.5 h-6 w-11 shrink-0 rounded-full transition ${checked ? "bg-blue-600" : "bg-slate-300"}`}
+			className={`relative mt-0.5 h-6 w-11 shrink-0 rounded-full border transition ${
+				checked ? "border-emerald-500 bg-emerald-200 shadow-[0_0_10px_rgba(0,255,65,.35)]" : "border-slate-300 bg-slate-100"
+			}`}
 		>
-			<span className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-all ${checked ? "left-[22px]" : "left-0.5"}`} />
+			<span
+				className={`absolute top-[3px] h-4 w-4 rounded-full transition-all ${checked ? "left-[22px] bg-emerald-500" : "left-[3px] bg-slate-400"}`}
+			/>
 		</button>
 	</label>
 );
@@ -237,9 +252,9 @@ export const Kosong = ({ icon: Icon = FiInfo, title, text }) => (
 );
 
 export const Memuat = ({ teks = "Memuat data server…" }) => (
-	<div className="flex items-center justify-center gap-2 py-12 text-sm text-slate-500">
-		<span className="h-4 w-4 animate-spin rounded-full border-2 border-slate-300 border-t-blue-600" />
-		{teks}
+	<div className="flex items-center justify-center gap-2 py-12 text-sm text-slate-500" role="status">
+		<span className="h-4 w-4 animate-spin rounded-full border-2 border-slate-300 border-t-emerald-500" />
+		<span className="kali-kursor">{teks}</span>
 	</div>
 );
 
@@ -357,13 +372,14 @@ export const Legenda = ({ items }) => (
 );
 
 export const PilihRentang = ({ value, onChange, opsi }) => (
-	<div className="inline-flex rounded-lg bg-slate-100 p-0.5">
+	<div className="inline-flex rounded border border-slate-200 bg-black p-0.5" role="group">
 		{opsi.map((o) => (
 			<button
 				key={o.value}
 				onClick={() => onChange(o.value)}
-				className={`rounded-md px-2.5 py-1 text-xs font-semibold transition ${
-					value === o.value ? "bg-white text-slate-900 shadow-sm" : "text-slate-500 hover:text-slate-700"
+				aria-pressed={value === o.value}
+				className={`rounded-sm px-2.5 py-1 text-xs font-semibold transition ${
+					value === o.value ? "bg-slate-900 text-white shadow-[0_0_10px_rgba(0,255,65,.35)]" : "text-slate-500 hover:bg-slate-100 hover:text-slate-800"
 				}`}
 			>
 				{o.label}
@@ -396,12 +412,12 @@ export const usePolling = (fn, intervalMs, deps = []) => {
 
 export const Tombol = ({ children, onClick, variant = "light", disabled, icon: Icon, className = "", type = "button", title }) => {
 	const v = {
-		light: "bg-white text-slate-700 ring-1 ring-slate-200 hover:bg-slate-50",
-		dark: "bg-slate-900 text-white hover:bg-slate-800",
-		primary: "bg-blue-600 text-white hover:bg-blue-700",
-		danger: "bg-red-600 text-white hover:bg-red-700",
+		light: "bg-black text-slate-700 ring-1 ring-slate-300 hover:text-slate-900 hover:ring-slate-900",
+		dark: "bg-slate-900 text-white hover:shadow-[0_0_14px_rgba(0,255,65,.45)]",
+		primary: "bg-emerald-500 text-white hover:shadow-[0_0_14px_rgba(0,255,65,.45)]",
+		danger: "bg-red-600 text-white hover:shadow-[0_0_14px_rgba(255,59,78,.45)]",
 		dangerLight: "bg-red-50 text-red-700 ring-1 ring-red-200 hover:bg-red-100",
-		ghost: "text-slate-600 hover:bg-slate-100",
+		ghost: "text-slate-600 hover:bg-slate-100 hover:text-slate-900",
 	};
 	return (
 		<button
@@ -409,7 +425,7 @@ export const Tombol = ({ children, onClick, variant = "light", disabled, icon: I
 			title={title}
 			onClick={onClick}
 			disabled={disabled}
-			className={`inline-flex items-center justify-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold transition disabled:cursor-not-allowed disabled:opacity-50 ${v[variant]} ${className}`}
+			className={`inline-flex items-center justify-center gap-1.5 rounded px-3 py-1.5 text-xs font-bold transition disabled:cursor-not-allowed disabled:opacity-50 ${v[variant]} ${className}`}
 		>
 			{Icon && <Icon className="h-3.5 w-3.5" />}
 			{children}

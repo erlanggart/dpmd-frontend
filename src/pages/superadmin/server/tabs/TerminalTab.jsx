@@ -65,6 +65,7 @@ const TAB_ALIAS = {
 	log: "log",
 	logs: "log",
 	settings: "pengaturan",
+	audit: "audit",
 	pengaturan: "pengaturan",
 };
 
@@ -453,7 +454,7 @@ const PERINTAH = {
 	},
 
 	open: {
-		pakai: "open <map|apps|pve|storage|db|security|traffic|logs|settings>",
+		pakai: "open <map|audit|apps|pve|storage|db|security|traffic|logs|settings>",
 		ringkas: "buka tab lain",
 		jalankan: async ([nama], io) => {
 			const tab = TAB_ALIAS[nama];
@@ -469,6 +470,55 @@ const PERINTAH = {
 	},
 
 	date: { ringkas: "waktu server", jalankan: async (_a, io) => io.cetak(new Date((await api.get(`${B}/overview`)).data?.data?.server_time).toString()) },
+
+	audit: {
+		pakai: "audit [--fresh]",
+		ringkas: "audit keamanan server (skor A–F + perbaikan)",
+		jalankan: async ([opsi], io) => {
+			io.cetak("[*] memindai konfigurasi keamanan…", "dim");
+			const d = (await api.get(`${B}/audit`, { params: opsi === "--fresh" ? { refresh: "1" } : {} })).data?.data;
+			io.cetak(`NILAI ${d.grade} · skor ${d.score}/100 · fail ${d.counts.fail} · warn ${d.counts.warn} · lulus ${d.counts.pass}`, d.grade <= "B" ? "ok" : d.grade === "C" ? "warn" : "err");
+			const tag = { fail: "[FAIL]", warn: "[WARN]", info: "[INFO]", pass: "[ OK ]", skip: "[SKIP]" };
+			const jenis = { fail: "err", warn: "warn", info: "out", pass: "ok", skip: "dim" };
+			d.checks.forEach((c) => {
+				io.cetak(`${tag[c.status]} ${pad(c.kategori, 11)} ${c.judul} — ${c.detail}`, jenis[c.status]);
+				if (c.perintah && (c.status === "fail" || c.status === "warn")) io.cetak(c.perintah.split("\n").map((b) => `         $ ${b}`).join("\n"), "dim");
+			});
+			io.cetak('Detail & tombol salin: "open audit".', "dim");
+		},
+	},
+
+	watch: {
+		pakai: "watch [critical|high|medium|low]",
+		ringkas: "pantau serangan langsung (Ctrl+C berhenti)",
+		jalankan: async ([sev], io) => {
+			io.cetak(`[*] memantau kejadian keamanan${sev ? ` ≥ ${sev}` : ""}… tekan Ctrl+C untuk berhenti`, "neon");
+			const peringkat = { low: 0, medium: 1, high: 2, critical: 3 };
+			const ambang = peringkat[sev] ?? 0;
+			const awal = (await api.get(`${B}/security/events`, { params: { limit: 1, range: "24h" } })).data?.data || [];
+			let idAkhir = awal[0]?.id || 0;
+			let total = 0;
+			while (!io.signal.aborted) {
+				await new Promise((r) => {
+					const t = setTimeout(r, 3000);
+					io.signal.addEventListener("abort", () => { clearTimeout(t); r(); }, { once: true });
+				});
+				if (io.signal.aborted) break;
+				try {
+					const data = (await api.get(`${B}/security/events`, { params: { limit: 100, range: "24h", since_id: idAkhir, geo: "1" } })).data?.data || [];
+					if (data.length) idAkhir = Math.max(idAkhir, ...data.map((e) => e.id));
+					[...data].reverse().filter((e) => (peringkat[e.severity] ?? 0) >= ambang).forEach((e) => {
+						total += 1;
+						const j = { critical: "err", high: "err", medium: "warn" }[e.severity] || "dim";
+						io.cetak(`${new Date(e.created_at).toLocaleTimeString("id-ID")} ${pad(e.severity.toUpperCase(), 9)}${pad(e.ip_address, 40)}${pad(e.geo?.cc || "··", 4)}${e.label}  ${e.path || e.detail || ""}${e.blocked ? "  [DITOLAK]" : ""}`, j);
+					});
+				} catch (e) {
+					io.cetak(`[-] ${pesanError(e)} (mencoba lagi)`, "warn");
+				}
+			}
+			io.cetak(`[*] berhenti. ${total} kejadian tertangkap.`, "dim");
+		},
+	},
 };
 
 const WARNA_BARIS = {
@@ -501,6 +551,7 @@ const TerminalTab = ({ onNavigate }) => {
 		}
 	});
 	const posRiwayat = useRef(-1);
+	const batal = useRef(null); // AbortController perintah yang sedang berjalan
 	const kotak = useRef(null);
 	const input = useRef(null);
 	const kandidat = useRef({ pm2: [], vmid: [] });
@@ -542,8 +593,11 @@ const TerminalTab = ({ onNavigate }) => {
 			cetak(`${nama}: perintah tidak ditemukan. ketik "help".`, "err");
 			return;
 		}
+		const pembatal = new AbortController();
+		batal.current = pembatal;
 		const io = {
 			cetak,
+			signal: pembatal.signal,
 			bersihkan: () => setBaris([]),
 			riwayat: () => riwayat,
 			bukaTab: (t) => onNavigate?.(t),
@@ -556,8 +610,9 @@ const TerminalTab = ({ onNavigate }) => {
 		try {
 			await def.jalankan(args, io);
 		} catch (e) {
-			cetak(`[-] ${pesanError(e)}`, "err");
+			if (!pembatal.signal.aborted) cetak(`[-] ${pesanError(e)}`, "err");
 		} finally {
+			batal.current = null;
 			setSibuk(false);
 			setTimeout(() => input.current?.focus(), 0);
 		}
@@ -630,12 +685,16 @@ const TerminalTab = ({ onNavigate }) => {
 				setTanya(null);
 				r("");
 			}
+			batal.current?.abort();
 			cetak(`${masukan}^C`, "dim");
 			setMasukan("");
 		}
 	};
 
-	const cepat = ["neofetch", "threats", "events 15", "top", "blocklist", "ct list", "logs error 30", "monitors"];
+	// Berhenti memantau saat pindah tab.
+	useEffect(() => () => batal.current?.abort(), []);
+
+	const cepat = ["neofetch", "audit", "watch", "threats", "events 15", "top", "blocklist", "ct list", "logs error 30", "monitors"];
 
 	return (
 		<div className="space-y-2">
@@ -670,7 +729,7 @@ const TerminalTab = ({ onNavigate }) => {
 						value={masukan}
 						onChange={(e) => setMasukan(e.target.value)}
 						onKeyDown={onKey}
-						disabled={sibuk && !tanya}
+						placeholder={sibuk && !tanya ? "berjalan… Ctrl+C untuk berhenti" : ""}
 						spellCheck={false}
 						autoComplete="off"
 						autoCapitalize="off"

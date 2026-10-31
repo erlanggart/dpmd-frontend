@@ -143,6 +143,12 @@ const SettingsTab = () => {
 							hint="Deteksi serangan yang tidak sampai ke aplikasi (bila berkas log ada di server ini)."
 						/>
 						<Toggle
+							checked={k.honeypot}
+							onChange={(v) => set("security", "honeypot", v)}
+							label="Honeypot (blokir instan)"
+							hint={`IP anonim yang meminta jalur jebakan (/.env, /.git/config, /wp-login.php, /phpmyadmin, …) langsung diblokir ${Math.round((k.honeypot_block_minutes || 1440) / 60)} jam. Jalur ini tidak pernah dipakai pengguna sah.`}
+						/>
+						<Toggle
 							checked={k.geo_lookup}
 							onChange={(v) => set("security", "geo_lookup", v)}
 							label="Lokasi IP (Peta Ancaman)"
@@ -168,6 +174,7 @@ const SettingsTab = () => {
 							<Angka label="Jendela hitung" value={k.auto_block_window_minutes} onChange={(v) => set("security", "auto_block_window_minutes", v)} satuan="menit" min={1} />
 							<Angka label="Lama blokir otomatis" value={k.auto_block_duration_minutes} onChange={(v) => set("security", "auto_block_duration_minutes", v)} satuan="menit" min={1} />
 							<Angka label="Simpan jejak serangan" value={k.retention_days} onChange={(v) => set("security", "retention_days", v)} satuan="hari" min={1} max={365} />
+							<Angka label="Lama blokir honeypot" value={k.honeypot_block_minutes} onChange={(v) => set("security", "honeypot_block_minutes", v)} satuan="menit" min={1} />
 						</div>
 						<label className="block">
 							<span className="text-sm font-semibold text-slate-700">Whitelist IP (tidak pernah diblokir)</span>

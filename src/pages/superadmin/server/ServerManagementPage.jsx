@@ -15,6 +15,7 @@ import {
 	FiActivity,
 	FiBarChart2,
 	FiBox,
+	FiCheckSquare,
 	FiDatabase,
 	FiFileText,
 	FiGlobe,
@@ -31,6 +32,7 @@ import "./kali.css";
 
 const ThreatMapTab = lazy(() => import("./tabs/ThreatMapTab"));
 const TerminalTab = lazy(() => import("./tabs/TerminalTab"));
+const AuditTab = lazy(() => import("./tabs/AuditTab"));
 const OverviewTab = lazy(() => import("./tabs/OverviewTab"));
 const ProxmoxTab = lazy(() => import("./tabs/ProxmoxTab"));
 const AppsTab = lazy(() => import("./tabs/AppsTab"));
@@ -41,18 +43,20 @@ const TrafficTab = lazy(() => import("./tabs/TrafficTab"));
 const LogsTab = lazy(() => import("./tabs/LogsTab"));
 const SettingsTab = lazy(() => import("./tabs/SettingsTab"));
 
+// Urutan = nomor pintasan Alt+1…9 (lihat useEffect keyboard di bawah).
 const TABS = [
-	{ key: "peta-ancaman", label: "Peta Ancaman", icon: FiGlobe },
-	{ key: "terminal", label: "Terminal", icon: FiTerminal },
-	{ key: "ringkasan", label: "Ringkasan", icon: FiActivity },
-	{ key: "semua-aplikasi", label: "Semua Aplikasi", icon: FiLayers },
-	{ key: "aplikasi", label: "Proses & Layanan", icon: FiBox },
-	{ key: "storage", label: "Storage", icon: FiHardDrive },
-	{ key: "database", label: "Database", icon: FiDatabase },
-	{ key: "keamanan", label: "Keamanan", icon: FiShield },
-	{ key: "trafik", label: "Trafik", icon: FiBarChart2 },
-	{ key: "log", label: "Log", icon: FiFileText },
-	{ key: "pengaturan", label: "Pengaturan", icon: FiSettings },
+	{ key: "peta-ancaman", grup: "PANTAU", label: "Peta Ancaman", icon: FiGlobe, desc: "Asal serangan di seluruh dunia secara langsung. Klik titik untuk intel IP dan memblokir; replay untuk memutar ulang." },
+	{ key: "ringkasan", grup: "PANTAU", label: "Ringkasan", icon: FiActivity, desc: "Kondisi mesin, aplikasi, database, dan peringatan aktif dalam satu layar." },
+	{ key: "trafik", grup: "PANTAU", label: "Trafik", icon: FiBarChart2, desc: "Jumlah request, rute terlambat, rute error, dan IP paling aktif." },
+	{ key: "log", grup: "PANTAU", label: "Log", icon: FiFileText, desc: "Baca log aplikasi, deploy, nginx, dan SSH langsung dari server." },
+	{ key: "keamanan", grup: "PERTAHANAN", label: "Keamanan", icon: FiShield, desc: "Jejak serangan lengkap, IP penyerang teratas, dan daftar blokir." },
+	{ key: "audit", grup: "PERTAHANAN", label: "Audit", icon: FiCheckSquare, desc: "Periksa celah konfigurasi server (SSH, firewall, port, update, TLS) dan dapatkan perintah perbaikannya." },
+	{ key: "terminal", grup: "PERTAHANAN", label: "Terminal", icon: FiTerminal, desc: 'Kendalikan server dengan perintah: blokir IP, restart aplikasi, whois, pantau langsung. Ketik "help".' },
+	{ key: "semua-aplikasi", grup: "SISTEM", label: "Semua Aplikasi", icon: FiLayers, desc: "Semua container/VM Proxmox: status, sumber daya, nyalakan/matikan." },
+	{ key: "aplikasi", grup: "SISTEM", label: "Proses & Layanan", icon: FiBox, desc: "Proses PM2, layanan systemd, port, dan monitor uptime." },
+	{ key: "storage", grup: "SISTEM", label: "Storage", icon: FiHardDrive, desc: "Pemakaian disk, kuota unggahan, dan pembersihan berkas." },
+	{ key: "database", grup: "SISTEM", label: "Database", icon: FiDatabase, desc: "Koneksi, query lambat, dan tabel terbesar MySQL." },
+	{ key: "pengaturan", grup: "SISTEM", label: "Pengaturan", icon: FiSettings, desc: "Ambang peringatan, kuota, perlindungan, honeypot, dan blokir negara." },
 ];
 
 /** Hujan karakter ala Matrix di latar header. Ringan: ±20 fps, berhenti saat tersembunyi. */
@@ -174,6 +178,22 @@ const ServerManagementPage = () => {
 		[params, setParams],
 	);
 
+	// Alt+1…9 → pindah tab (urutan TABS). Event.code dipakai supaya tetap
+	// jalan di tata letak keyboard yang mengubah Alt+angka menjadi simbol.
+	useEffect(() => {
+		const onKey = (e) => {
+			if (!e.altKey || e.ctrlKey || e.metaKey) return;
+			const m = /^Digit([1-9])$/.exec(e.code);
+			if (!m) return;
+			const t = TABS[Number(m[1]) - 1];
+			if (!t) return;
+			e.preventDefault();
+			pilihTab(t.key);
+		};
+		window.addEventListener("keydown", onKey);
+		return () => window.removeEventListener("keydown", onKey);
+	}, [pilihTab]);
+
 	const peringatan = overview?.alerts || [];
 	const kritis = peringatan.filter((a) => a.level === "critical").length;
 	const status = galat ? "offline" : kritis ? "kritis" : peringatan.length ? "waspada" : overview ? "sehat" : "memuat";
@@ -251,29 +271,48 @@ const ServerManagementPage = () => {
 						</div>
 					</div>
 
-					{/* Tab */}
-					<nav className="relative flex gap-0.5 overflow-x-auto border-t border-slate-200 bg-black/70 px-2 [scrollbar-width:none]">
-						{TABS.map((t) => {
+					{/* Tab — dikelompokkan supaya mudah dicari */}
+					<nav className="relative flex items-stretch overflow-x-auto border-t border-slate-200 bg-black/70 px-2 [scrollbar-width:none]" aria-label="Bagian Manajemen Server">
+						{TABS.map((t, i) => {
 							const Icon = t.icon;
 							const aktif = t.key === tab;
 							const lencana = t.key === "ringkasan" && peringatan.length ? peringatan.length : null;
+							const grupBaru = i === 0 || TABS[i - 1].grup !== t.grup;
 							return (
-								<button
-									key={t.key}
-									onClick={() => pilihTab(t.key)}
-									className={`inline-flex shrink-0 items-center gap-1.5 border-b-2 px-3 py-2.5 text-[12.5px] font-semibold transition ${
-										aktif ? "border-slate-900 bg-slate-100 text-slate-900" : "border-transparent text-slate-500 hover:bg-slate-50 hover:text-slate-800"
-									}`}
-								>
-									<Icon className="h-3.5 w-3.5" />
-									{aktif ? `[ ${t.label} ]` : t.label}
-									{lencana && (
-										<span className={`px-1.5 text-[10.5px] font-bold ${kritis ? "bg-red-500 text-white" : "bg-amber-400 text-amber-950"}`}>{lencana}</span>
+								<React.Fragment key={t.key}>
+									{grupBaru && (
+										<span className={`flex shrink-0 items-center pr-1.5 text-[9.5px] font-bold tracking-[0.22em] text-slate-400 ${i ? "ml-2 border-l border-slate-200 pl-3" : "pl-1"}`}>
+											{t.grup}
+										</span>
 									)}
-								</button>
+									<button
+										onClick={() => pilihTab(t.key)}
+										title={`${t.desc}${i < 9 ? ` (Alt+${i + 1})` : ""}`}
+										aria-current={aktif ? "page" : undefined}
+										className={`inline-flex shrink-0 items-center gap-1.5 border-b-2 px-3 py-2.5 text-[12.5px] font-semibold transition ${
+											aktif ? "border-slate-900 bg-slate-100 text-slate-900" : "border-transparent text-slate-500 hover:bg-slate-50 hover:text-slate-800"
+										}`}
+									>
+										<Icon className="h-3.5 w-3.5" />
+										{t.label}
+										{lencana && (
+											<span className={`px-1.5 text-[10.5px] font-bold ${kritis ? "bg-red-500 text-white" : "bg-amber-400 text-amber-950"}`}>{lencana}</span>
+										)}
+										{i < 9 && <span className="kali-kbd hidden xl:inline-grid">{i + 1}</span>}
+									</button>
+								</React.Fragment>
 							);
 						})}
 					</nav>
+				</div>
+
+				{/* Lokasi + penjelasan singkat tab aktif */}
+				<div className="flex flex-wrap items-baseline gap-x-3 gap-y-1 px-1 text-[12px]">
+					<span className="text-slate-500">
+						~/server-ops/<span className="font-bold text-slate-900">{tab}</span>$
+					</span>
+					<span className="text-slate-600">{TABS.find((t) => t.key === tab)?.desc}</span>
+					<span className="ml-auto hidden text-[11px] text-slate-400 lg:inline">Alt+1…9 pindah tab</span>
 				</div>
 
 				{galat && overview && (
@@ -285,6 +324,7 @@ const ServerManagementPage = () => {
 				<Suspense fallback={<Memuat />}>
 					{tab === "peta-ancaman" && <ThreatMapTab />}
 					{tab === "terminal" && <TerminalTab onNavigate={pilihTab} />}
+					{tab === "audit" && <AuditTab />}
 					{tab === "ringkasan" && <OverviewTab data={overview} galat={!overview ? galat : null} onRetry={muat} onNavigate={pilihTab} />}
 					{tab === "semua-aplikasi" && <ProxmoxTab />}
 					{tab === "aplikasi" && <AppsTab />}

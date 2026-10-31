@@ -10,7 +10,7 @@
 // tersembunyi atau globe keluar layar, dan putar otomatis dimatikan bila
 // pengguna memilih "kurangi gerakan".
 
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { forwardRef, useEffect, useImperativeHandle, useMemo, useRef, useState } from "react";
 import { titikDaratan } from "./landMask";
 
 const RAD = Math.PI / 180;
@@ -61,17 +61,25 @@ const buatBusur = (a, b, n = 40) => {
 const kurangiGerak = () =>
 	typeof window !== "undefined" && window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
 
-const HackerGlobe = ({
-	attackers = [],
-	visitors = [],
-	server,
-	selectedIp,
-	onSelect,
-	height = 520,
-	showArcs = true,
-	showVisitors = true,
-	autoRotate = true,
-}) => {
+const DURASI_TEMBAK = 1.5; // detik busur berjalan dari asal ke server
+const DURASI_DAMPAK = 0.9;
+
+const HackerGlobe = forwardRef(function HackerGlobe(
+	{
+		attackers = [],
+		visitors = [],
+		server,
+		selectedIp,
+		onSelect,
+		height = 520,
+		showArcs = true,
+		showVisitors = true,
+		showStatic = true,
+		autoRotate = true,
+		overlay = null,
+	},
+	ref,
+) {
 	const wadah = useRef(null);
 	const kanvas = useRef(null);
 	const keadaan = useRef({
@@ -85,7 +93,30 @@ const HackerGlobe = ({
 		target: null,
 		terlihat: true,
 		tanda: [],
+		tembakan: [], // serangan langsung/replay: { busur, warna, lat, lon, mulai }
+		dampak: 0, // waktu dampak terakhir di server (untuk kilatan merah)
 	});
+
+	// strike({ lat, lon, sev }) — tembakkan satu serangan ke server. Dipakai
+	// umpan langsung dan replay; tidak memicu render React.
+	useImperativeHandle(ref, () => ({
+		strike: ({ lat, lon, sev }) => {
+			if (lat === null || lat === undefined || lon === null || lon === undefined) return;
+			const k = keadaan.current;
+			const sv = lapisanRef.current.sv;
+			k.tembakan.push({
+				busur: buatBusur({ lat, lon }, sv, 36),
+				warna: WARNA[sev] || (sev === "low" ? [0, 255, 102] : WARNA.medium),
+				lat,
+				lon,
+				mulai: performance.now(),
+			});
+			if (k.tembakan.length > 90) k.tembakan.splice(0, k.tembakan.length - 90);
+		},
+		focus: (lat, lon) => {
+			keadaan.current.target = { lon, lat: Math.max(-60, Math.min(60, lat)) };
+		},
+	}));
 	const [tip, setTip] = useState(null);
 	const [zoom, setZoom] = useState(1);
 
@@ -129,7 +160,7 @@ const HackerGlobe = ({
 	const lapisanRef = useRef(lapisan);
 	lapisanRef.current = lapisan;
 	const opsiRef = useRef({ showArcs, showVisitors, autoRotate, selectedIp });
-	opsiRef.current = { showArcs, showVisitors, autoRotate, selectedIp };
+	opsiRef.current = { showArcs, showVisitors, showStatic, autoRotate, selectedIp };
 	const onSelectRef = useRef(onSelect);
 	onSelectRef.current = onSelect;
 
@@ -286,7 +317,7 @@ const HackerGlobe = ({
 			const waktu = kini / 1000;
 
 			// Busur serangan + komet berjalan
-			if (opsi.showArcs) {
+			if (opsi.showArcs && opsi.showStatic) {
 				for (const a of L.serang) {
 					if (!a.busur) continue;
 					const pts = a.busur.map(([la, lo, r]) => proyeksi(la, lo, r));
@@ -331,7 +362,7 @@ const HackerGlobe = ({
 			}
 
 			// Penyerang
-			for (const a of L.serang) {
+			for (const a of opsi.showStatic ? L.serang : []) {
 				const [x, y, z] = proyeksi(a.lat * RAD, a.lon * RAD);
 				if (z <= 0) continue;
 				const r = a.ukuran * dpr;
@@ -403,6 +434,62 @@ const HackerGlobe = ({
 					ctx.fillStyle = rgba(WARNA.server, 0.95);
 					ctx.fillText(L.sv.label || "SERVER", x + 10 * dpr, y + 12 * dpr);
 					tanda.push({ x, y, r: 10 * dpr, jenis: "server", data: L.sv });
+				}
+			}
+
+			// Serangan langsung / replay: busur terang dengan kepala komet, kilatan
+			// di titik asal, lalu cincin dampak di server.
+			if (k.tembakan.length) {
+				const sisa = [];
+				for (const s of k.tembakan) {
+					const umur = (kini - s.mulai) / 1000;
+					if (umur > DURASI_TEMBAK + DURASI_DAMPAK) continue;
+					sisa.push(s);
+					const pts = s.busur.map(([la, lo, r]) => proyeksi(la, lo, r));
+					const maju = Math.min(1, umur / DURASI_TEMBAK);
+					const ujung = Math.floor(maju * (pts.length - 1));
+					const ekor = Math.max(0, ujung - 14);
+					const pudar = umur > DURASI_TEMBAK ? 1 - (umur - DURASI_TEMBAK) / DURASI_DAMPAK : 1;
+					ctx.shadowColor = rgba(s.warna, 0.9);
+					ctx.shadowBlur = 8 * dpr;
+					for (let j = ekor; j < ujung; j += 1) {
+						const p1 = pts[j];
+						const p2 = pts[j + 1];
+						if (!p1[3] || !p2[3]) continue;
+						ctx.strokeStyle = rgba(s.warna, ((j - ekor + 1) / 15) * pudar);
+						ctx.lineWidth = 2.6 * dpr;
+						ctx.beginPath();
+						ctx.moveTo(p1[0], p1[1]);
+						ctx.lineTo(p2[0], p2[1]);
+						ctx.stroke();
+					}
+					ctx.shadowBlur = 0;
+					if (umur < 0.7) {
+						const [x, y, z] = proyeksi(s.lat * RAD, s.lon * RAD);
+						if (z > 0) {
+							ctx.strokeStyle = rgba(s.warna, 1 - umur / 0.7);
+							ctx.lineWidth = 2 * dpr;
+							ctx.beginPath();
+							ctx.arc(x, y, (3 + umur * 26) * dpr, 0, Math.PI * 2);
+							ctx.stroke();
+						}
+					}
+					if (umur >= DURASI_TEMBAK && !s.tiba) {
+						s.tiba = true;
+						k.dampak = kini;
+					}
+				}
+				k.tembakan = sisa;
+			}
+			if (kini - k.dampak < 700) {
+				const [x, y, z] = proyeksi(L.sv.lat * RAD, L.sv.lon * RAD);
+				if (z > 0) {
+					const d = (kini - k.dampak) / 700;
+					ctx.strokeStyle = `rgba(255,59,78,${1 - d})`;
+					ctx.lineWidth = 2.5 * dpr;
+					ctx.beginPath();
+					ctx.arc(x, y, (6 + d * 34) * dpr, 0, Math.PI * 2);
+					ctx.stroke();
 				}
 			}
 
@@ -509,6 +596,7 @@ const HackerGlobe = ({
 	return (
 		<div ref={wadah} className="relative w-full select-none" style={{ height }}>
 			<canvas ref={kanvas} className="absolute inset-0 touch-none" style={{ cursor: "grab" }} />
+			{overlay}
 
 			<div className="absolute right-2 top-2 flex flex-col gap-1">
 				<button type="button" onClick={() => setZoom((z) => Math.min(2.6, z * 1.25))} className="kali-ikon" title="Perbesar">+</button>
@@ -558,6 +646,6 @@ const HackerGlobe = ({
 			)}
 		</div>
 	);
-};
+});
 
 export default HackerGlobe;

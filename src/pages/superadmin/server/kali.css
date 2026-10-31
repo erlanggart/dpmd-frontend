@@ -9,7 +9,8 @@
  * gelap — gaya sorotan terminal.
  */
 
-.kali-ops {
+.kali-ops,
+.kali-shell {
 	--k-bg: #020604;
 	--k-panel: #050e08;
 	--k-line: #143a22;
@@ -133,7 +134,22 @@
 	--color-purple-50: var(--color-violet-50);
 	--color-purple-600: var(--color-violet-600);
 	--color-purple-700: var(--color-violet-700);
+	--color-rose-50: var(--color-red-50);
+	--color-rose-600: var(--color-red-600);
 
+	color-scheme: dark;
+}
+
+/* Sidebar & navigasi bawah layout superadmin saat halaman ini terbuka. */
+.kali-shell {
+	background: var(--k-bg);
+}
+.kali-shell > aside,
+.kali-shell aside {
+	box-shadow: 1px 0 0 rgba(0, 255, 65, 0.08), 8px 0 30px -18px rgba(0, 255, 65, 0.25);
+}
+
+.kali-ops {
 	position: relative;
 	min-height: 100vh;
 	background:
@@ -166,8 +182,73 @@
 	letter-spacing: 0.01em;
 }
 
-.kali-ops section {
-	box-shadow: 0 0 0 1px rgba(0, 255, 65, 0.04), 0 0 24px -12px rgba(0, 255, 65, 0.25);
+/* Sudut seragam: tab lama memakai rounded-2xl/xl, komponen baru bersudut —
+   disamakan ke radius kecil supaya satu halaman terasa satu sistem. */
+.kali-ops .rounded-2xl,
+.kali-ops .rounded-3xl {
+	border-radius: 6px;
+}
+.kali-ops .rounded-xl {
+	border-radius: 5px;
+}
+.kali-ops .rounded-lg {
+	border-radius: 4px;
+}
+
+/* Kartu bergaya HUD: aksen sudut kiri-atas & kanan-bawah. */
+.kali-kartu {
+	position: relative;
+	box-shadow: 0 0 0 1px rgba(0, 255, 65, 0.03), 0 0 28px -14px rgba(0, 255, 65, 0.28);
+	transition: box-shadow 0.2s, border-color 0.2s;
+}
+.kali-kartu:hover {
+	border-color: #1d4a2d;
+	box-shadow: 0 0 0 1px rgba(0, 255, 65, 0.06), 0 0 32px -12px rgba(0, 255, 65, 0.4);
+}
+.kali-kartu::before,
+.kali-kartu::after {
+	content: "";
+	position: absolute;
+	width: 10px;
+	height: 10px;
+	pointer-events: none;
+	border-color: var(--k-neon);
+	opacity: 0.75;
+}
+.kali-kartu::before {
+	top: -1px;
+	left: -1px;
+	border-top: 2px solid;
+	border-left: 2px solid;
+	border-top-left-radius: 6px;
+}
+.kali-kartu::after {
+	bottom: -1px;
+	right: -1px;
+	border-bottom: 2px solid;
+	border-right: 2px solid;
+	border-bottom-right-radius: 6px;
+}
+
+/* Fokus keyboard terlihat jelas di semua tombol/tautan. */
+.kali-ops button:focus-visible,
+.kali-ops a:focus-visible,
+.kali-ops [role="switch"]:focus-visible {
+	outline: 2px solid var(--k-neon);
+	outline-offset: 2px;
+}
+
+/* Petunjuk pintasan keyboard (Alt+angka) di tab navigasi. */
+.kali-kbd {
+	display: inline-grid;
+	place-items: center;
+	min-width: 16px;
+	height: 16px;
+	padding: 0 3px;
+	border: 1px solid #1d4a2d;
+	font-size: 9.5px;
+	line-height: 1;
+	color: #5fa577;
 }
 
 /* Lapisan latar modal tetap gelap (slate-900 di sini = hijau neon). */

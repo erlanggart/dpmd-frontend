@@ -13,6 +13,7 @@ import {
 	FiCrosshair,
 	FiGlobe,
 	FiLock,
+	FiPlay,
 	FiRefreshCw,
 	FiSlash,
 	FiTerminal,
@@ -21,7 +22,7 @@ import {
 } from "react-icons/fi";
 import api from "../../../../api";
 import HackerGlobe from "../HackerGlobe";
-import { Card, Galat, Memuat, PilihRentang, SeverityBadge, Toggle, formatAngka, pesanError, sejak, usePolling } from "../serverUi";
+import { Card, Galat, Memuat, PilihRentang, SeverityBadge, Stat, Toggle, formatAngka, pesanError, sejak, usePolling } from "../serverUi";
 
 const RENTANG = [
 	{ value: "1h", label: "1j" },
@@ -323,34 +324,39 @@ const PanelNegara = ({ data, onChanged }) => {
 
 /* ───────────────────────── Umpan langsung ───────────────────────── */
 
-const UmpanLangsung = ({ onPilihIp }) => {
+const UmpanLangsung = ({ onPilihIp, onBaru }) => {
 	const [baris, setBaris] = useState([]);
 	const [jeda, setJeda] = useState(false);
 	const idTerakhir = useRef(0);
 	const barisBaru = useRef(new Set());
+	const onBaruRef = useRef(onBaru);
+	onBaruRef.current = onBaru;
 
 	const muat = useCallback(async () => {
 		if (jeda) return;
 		try {
+			const pertama = !idTerakhir.current;
 			const res = await api.get(`${API}/events`, {
-				params: { limit: 40, range: "24h", geo: "1", ...(idTerakhir.current ? { since_id: idTerakhir.current } : {}) },
+				params: { limit: 40, range: "24h", geo: "1", ...(pertama ? {} : { since_id: idTerakhir.current }) },
 			});
 			const data = res.data?.data || [];
 			if (!data.length) return;
 			idTerakhir.current = Math.max(idTerakhir.current, ...data.map((e) => e.id));
 			barisBaru.current = new Set(data.map((e) => e.id));
 			setBaris((lama) => [...data, ...lama].slice(0, 120));
+			// Muatan pertama = riwayat, bukan serangan baru — tidak ditembakkan.
+			if (!pertama) onBaruRef.current?.([...data].reverse());
 		} catch {
 			/* umpan diam saja bila gagal; header halaman sudah menandai offline */
 		}
 	}, [jeda]);
 
-	usePolling(muat, 4000, [jeda]);
+	usePolling(muat, 3000, [jeda]);
 
 	return (
 		<Card
 			title="> tail -f /var/log/dpmd/security"
-			subtitle="Kejadian keamanan masuk secara langsung (tiap 4 detik)"
+			subtitle="Kejadian keamanan masuk secara langsung (tiap 3 detik) dan ditembakkan ke globe"
 			icon={FiTerminal}
 			bodyClass="p-0"
 			actions={
@@ -382,6 +388,181 @@ const UmpanLangsung = ({ onPilihIp }) => {
 	);
 };
 
+/* ───────────────────────── Alarm & replay ───────────────────────── */
+
+/** Bunyi "bip" pendek lewat WebAudio — tanpa berkas suara. */
+const buatAlarm = () => {
+	let ctx = null;
+	let terakhir = 0;
+	return {
+		siapkan: () => {
+			try {
+				ctx = ctx || new (window.AudioContext || window.webkitAudioContext)();
+				if (ctx.state === "suspended") ctx.resume();
+			} catch {
+				ctx = null;
+			}
+		},
+		bunyi: (sev) => {
+			if (!ctx || Date.now() - terakhir < 350) return;
+			terakhir = Date.now();
+			const o = ctx.createOscillator();
+			const g = ctx.createGain();
+			o.type = "square";
+			o.frequency.value = sev === "critical" ? 880 : 620;
+			g.gain.setValueAtTime(0.0001, ctx.currentTime);
+			g.gain.exponentialRampToValueAtTime(0.06, ctx.currentTime + 0.01);
+			g.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.18);
+			o.connect(g).connect(ctx.destination);
+			o.start();
+			o.stop(ctx.currentTime + 0.2);
+		},
+	};
+};
+
+const LAJU = [
+	{ v: 30, l: "30 dtk" },
+	{ v: 60, l: "1 mnt" },
+	{ v: 180, l: "3 mnt" },
+];
+
+/**
+ * Replay: memutar ulang kejadian ber-lokasi dalam rentang waktu sebagai
+ * time-lapse. Seluruh rentang dimampatkan menjadi `durasi` detik; setiap
+ * kejadian ditembakkan ke globe saat kursor waktu melewatinya.
+ */
+const useReplay = (globe, onTembak) => {
+	const [data, setData] = useState(null);
+	const [pos, setPos] = useState(0);
+	const [main, setMain] = useState(false);
+	const [durasi, setDurasi] = useState(60);
+	const [memuat, setMemuat] = useState(false);
+	const posRef = useRef(0);
+	const idxRef = useRef(0);
+	const onTembakRef = useRef(onTembak);
+	onTembakRef.current = onTembak;
+
+	const mulai = async (range) => {
+		setMemuat(true);
+		try {
+			const res = await api.get(`${API}/timeline`, { params: { range } });
+			const d = res.data?.data;
+			const awal = d.events.length ? d.events[0].t : Date.now() - 3600000;
+			const akhir = d.events.length ? d.events[d.events.length - 1].t : Date.now();
+			const isi = { ...d, awal, akhir: Math.max(akhir, awal + 60000) };
+			setData(isi);
+			posRef.current = awal;
+			idxRef.current = 0;
+			setPos(awal);
+			setMain(d.events.length > 0);
+			if (!d.events.length) Swal.fire({ icon: "info", title: "Belum ada data replay", text: "Belum ada kejadian ber-lokasi pada rentang ini." });
+		} catch (e) {
+			gagal(e);
+		} finally {
+			setMemuat(false);
+		}
+	};
+
+	const geser = (t) => {
+		if (!data) return;
+		posRef.current = t;
+		// Lompat tanpa menembakkan kejadian yang dilewati.
+		idxRef.current = data.events.findIndex((e) => e.t > t);
+		if (idxRef.current < 0) idxRef.current = data.events.length;
+		setPos(t);
+	};
+
+	const keluar = () => {
+		setMain(false);
+		setData(null);
+	};
+
+	useEffect(() => {
+		if (!main || !data) return undefined;
+		let raf = 0;
+		let lalu = performance.now();
+		let render = 0;
+		const laju = (data.akhir - data.awal) / durasi; // ms data per detik nyata
+		const langkah = (kini) => {
+			const dt = Math.min(0.1, (kini - lalu) / 1000);
+			lalu = kini;
+			posRef.current += dt * laju;
+			let tembak = 0;
+			while (idxRef.current < data.events.length && data.events[idxRef.current].t <= posRef.current) {
+				const e = data.events[idxRef.current];
+				// Maks 20 tembakan per frame supaya lonjakan serangan tetap terbaca.
+				if (tembak < 20) {
+					globe.current?.strike({ lat: e.lat, lon: e.lon, sev: e.sev });
+					onTembakRef.current?.(e);
+				}
+				tembak += 1;
+				idxRef.current += 1;
+			}
+			if (posRef.current >= data.akhir) {
+				posRef.current = data.akhir;
+				setPos(data.akhir);
+				setMain(false);
+				return;
+			}
+			if (kini - render > 100) {
+				render = kini;
+				setPos(posRef.current);
+			}
+			raf = requestAnimationFrame(langkah);
+		};
+		raf = requestAnimationFrame(langkah);
+		return () => cancelAnimationFrame(raf);
+	}, [main, data, durasi, globe]);
+
+	const terjadi = data ? data.events.filter((e) => e.t <= pos).length : 0;
+	return { data, pos, main, setMain, durasi, setDurasi, memuat, mulai, geser, keluar, terjadi, ulang: () => geser(data?.awal || 0) };
+};
+
+const OverlayReplay = ({ r }) => {
+	const d = r.data;
+	const persen = ((r.pos - d.awal) / (d.akhir - d.awal)) * 100;
+	const tanggal = new Date(r.pos);
+	return (
+		<div className="pointer-events-none absolute inset-x-0 top-0 flex justify-center p-3">
+			<div className="pointer-events-auto w-full max-w-xl border border-red-200 bg-black/85 px-3 py-2 shadow-[0_0_24px_rgba(255,59,78,.25)]">
+				<div className="flex items-center justify-between gap-3 text-[11.5px]">
+					<span className="font-bold tracking-widest text-red-600">● REPLAY {d.range}</span>
+					<span className="kali-glow text-base font-bold tabular-nums text-slate-900">
+						{tanggal.toLocaleDateString("id-ID", { day: "2-digit", month: "short" })} {tanggal.toLocaleTimeString("id-ID")}
+					</span>
+					<span className="text-slate-500">
+						{formatAngka(r.terjadi)}/{formatAngka(d.events.length)}
+					</span>
+				</div>
+				<input
+					type="range"
+					min={d.awal}
+					max={d.akhir}
+					value={r.pos}
+					onChange={(e) => r.geser(Number(e.target.value))}
+					className="mt-1.5 w-full accent-[#ff3b4e]"
+					aria-label="Posisi waktu replay"
+				/>
+				<div className="mt-1 flex flex-wrap items-center gap-1.5 text-[11px]">
+					<button onClick={() => (r.pos >= d.akhir ? (r.ulang(), r.setMain(true)) : r.setMain(!r.main))} className="border border-slate-300 px-2 py-0.5 text-slate-800 hover:border-slate-900">
+						{r.main ? "❚❚ jeda" : r.pos >= d.akhir ? "↺ ulang" : "▶ putar"}
+					</button>
+					<span className="ml-1 text-slate-500">durasi:</span>
+					{LAJU.map((l) => (
+						<button key={l.v} onClick={() => r.setDurasi(l.v)} className={`px-1.5 py-0.5 ${r.durasi === l.v ? "bg-slate-900 text-white" : "text-slate-600 hover:text-slate-900"}`}>
+							{l.l}
+						</button>
+					))}
+					<span className="ml-auto text-slate-500">{Math.round(persen)}%</span>
+					<button onClick={r.keluar} className="border border-red-200 px-2 py-0.5 text-red-600 hover:bg-red-50">
+						✕ keluar
+					</button>
+				</div>
+			</div>
+		</div>
+	);
+};
+
 /* ───────────────────────── Tab ───────────────────────── */
 
 const ThreatMapTab = () => {
@@ -390,7 +571,46 @@ const ThreatMapTab = () => {
 	const [ringkas, setRingkas] = useState(null);
 	const [galat, setGalat] = useState(null);
 	const [pilih, setPilih] = useState(null);
-	const [opsi, setOpsi] = useState({ arcs: true, visitors: true, rotate: true });
+	const [opsi, setOpsi] = useState({ arcs: true, visitors: true, rotate: true, alarm: false });
+	const [live, setLive] = useState([]); // waktu tiba kejadian langsung (5 menit terakhir)
+	const globe = useRef(null);
+	const alarm = useRef(null);
+	if (!alarm.current) alarm.current = buatAlarm();
+	const opsiRef = useRef(opsi);
+	opsiRef.current = opsi;
+
+	const replay = useReplay(globe, (e) => {
+		if (opsiRef.current.alarm && (e.sev === "critical" || e.sev === "high")) alarm.current.bunyi(e.sev);
+	});
+	const replayAktif = !!replay.data;
+	// Globe menyesuaikan layar: penuh di desktop, tetap muat satu layar di HP.
+	const [tinggiGlobe, setTinggiGlobe] = useState(() => (typeof window !== "undefined" && window.innerWidth < 640 ? 360 : 560));
+	useEffect(() => {
+		const ukur = () => setTinggiGlobe(window.innerWidth < 640 ? 360 : window.innerWidth < 1280 ? 480 : 560);
+		window.addEventListener("resize", ukur);
+		return () => window.removeEventListener("resize", ukur);
+	}, []);
+
+	// Kejadian baru dari umpan → tembakkan ke globe (berjeda supaya terbaca).
+	const tembakLangsung = useCallback(
+		(daftar) => {
+			const kini = Date.now();
+			setLive((l) => [...l.filter((t) => kini - t < 300000), ...daftar.map(() => kini)]);
+			if (replayAktif) return;
+			daftar.slice(-25).forEach((e, i) => {
+				setTimeout(() => {
+					globe.current?.strike({ lat: e.geo?.lat, lon: e.geo?.lon, sev: e.severity });
+					if (opsiRef.current.alarm && (e.severity === "critical" || e.severity === "high")) alarm.current.bunyi(e.severity);
+				}, i * 220);
+			});
+		},
+		[replayAktif],
+	);
+
+	useEffect(() => {
+		const id = setInterval(() => setLive((l) => l.filter((t) => Date.now() - t < 300000)), 15000);
+		return () => clearInterval(id);
+	}, []);
 
 	const muat = useCallback(async () => {
 		try {
@@ -436,20 +656,17 @@ const ThreatMapTab = () => {
 	return (
 		<div className="space-y-4">
 			{/* Strip status */}
-			<div className="grid grid-cols-2 gap-2 sm:grid-cols-3 xl:grid-cols-6">
+			<div className="grid grid-cols-2 gap-2 sm:grid-cols-4 xl:grid-cols-7">
 				{[
 					{ k: "THREAT LEVEL", v: <span className={t.kelas}>{t.teks}</span>, h: `${ringkas?.last_hour ?? 0} kejadian/jam` },
+					{ k: "LIVE · 5 MNT", v: <span className={live.length ? "text-red-600" : ""}>{formatAngka(live.length)}</span>, h: "kejadian baru masuk" },
 					{ k: "PENYERANG", v: formatAngka(statistik.penyerang), h: `${statistik.terlokasi} terlokasi` },
 					{ k: "NEGARA", v: formatAngka(statistik.negara), h: "asal serangan" },
 					{ k: "KEJADIAN", v: formatAngka(statistik.kejadian), h: `${formatAngka(statistik.serius)} serius` },
 					{ k: "DIBLOKIR", v: formatAngka(ringkas?.blocked_count ?? statistik.diblokir), h: "IP aktif diblokir" },
 					{ k: "GEO-BLOCK", v: data.blocked_countries.length ? data.blocked_countries.join(" ") : "—", h: "negara ditolak" },
 				].map((s) => (
-					<div key={s.k} className="border border-slate-200 bg-white px-3 py-2.5">
-						<p className="text-[10.5px] tracking-[0.18em] text-slate-500">{s.k}</p>
-						<p className="kali-glow mt-0.5 truncate text-xl font-extrabold text-slate-900">{s.v}</p>
-						<p className="text-[11px] text-slate-500">{s.h}</p>
-					</div>
+					<Stat key={s.k} label={s.k} value={s.v} hint={s.h} />
 				))}
 			</div>
 
@@ -478,6 +695,14 @@ const ThreatMapTab = () => {
 						actions={
 							<>
 								<PilihRentang value={rentang} onChange={setRentang} opsi={RENTANG} />
+								<button
+									onClick={() => replay.mulai(rentang)}
+									disabled={replay.memuat || replayAktif}
+									className="inline-flex items-center gap-1 border border-red-200 px-2 py-1 text-[11.5px] font-bold text-red-600 hover:bg-red-50 disabled:opacity-40"
+									title="Putar ulang serangan pada rentang ini sebagai time-lapse"
+								>
+									<FiPlay className="h-3 w-3" /> {replay.memuat ? "memuat…" : "replay"}
+								</button>
 								<button onClick={muat} className="kali-ikon" title="Muat ulang">
 									<FiRefreshCw className="h-3.5 w-3.5" />
 								</button>
@@ -486,6 +711,9 @@ const ThreatMapTab = () => {
 					>
 						<div className="relative bg-black">
 							<HackerGlobe
+								ref={globe}
+								showStatic={!replayAktif}
+								overlay={replayAktif ? <OverlayReplay r={replay} /> : null}
 								attackers={data.attackers}
 								visitors={data.visitors}
 								server={data.server}
@@ -494,7 +722,7 @@ const ThreatMapTab = () => {
 								showArcs={opsi.arcs}
 								showVisitors={opsi.visitors}
 								autoRotate={opsi.rotate}
-								height={560}
+								height={tinggiGlobe}
 							/>
 							<div className="pointer-events-none absolute bottom-2 left-3 space-y-0.5 text-[10.5px] text-slate-500">
 								<p><span className="text-red-600">●</span> kritis <span className="ml-2 text-orange-600">●</span> tinggi <span className="ml-2 text-amber-600">●</span> sedang <span className="ml-2 text-slate-400">✕</span> diblokir</p>
@@ -505,6 +733,17 @@ const ThreatMapTab = () => {
 							<div className="w-44"><Toggle checked={opsi.arcs} onChange={(v) => setOpsi((o) => ({ ...o, arcs: v }))} label="busur serangan" /></div>
 							<div className="w-44"><Toggle checked={opsi.visitors} onChange={(v) => setOpsi((o) => ({ ...o, visitors: v }))} label="pengunjung" /></div>
 							<div className="w-44"><Toggle checked={opsi.rotate} onChange={(v) => setOpsi((o) => ({ ...o, rotate: v }))} label="putar otomatis" /></div>
+							<div className="w-44">
+								<Toggle
+									checked={opsi.alarm}
+									onChange={(v) => {
+										// AudioContext hanya boleh dibuat dari gestur pengguna.
+										if (v) alarm.current.siapkan();
+										setOpsi((o) => ({ ...o, alarm: v }));
+									}}
+									label="alarm suara"
+								/>
+							</div>
 						</div>
 					</Card>
 				</div>
@@ -534,7 +773,7 @@ const ThreatMapTab = () => {
 				</div>
 			</div>
 
-			<UmpanLangsung onPilihIp={pilihIp} />
+			<UmpanLangsung onPilihIp={pilihIp} onBaru={tembakLangsung} />
 		</div>
 	);
 };
