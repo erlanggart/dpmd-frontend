@@ -1,6 +1,7 @@
 ﻿// src/components/AnimatedIcon.jsx
 import React from 'react';
 import {
+  Building2,
   LayoutDashboard,
   Users,
   Briefcase,
@@ -66,6 +67,7 @@ const ICON_MAP = {
   archive: Archive,
   camera: Camera,
   shopping: ShoppingBag,
+  building: Building2,
 };
 
 const AnimatedIcon = ({ type, isActive, isHovered, className = 'w-5 h-5' }) => {

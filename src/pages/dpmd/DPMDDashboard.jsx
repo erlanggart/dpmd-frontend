@@ -749,9 +749,17 @@ const DPMDDashboard = () => {
       }
     ];
 
+    // Tur 3D kantor, ada di Aksi Cepat setiap pegawai.
+    const jelajah = {
+      icon: Building2,
+      label: 'Jelajahi Kantor',
+      color: 'teal',
+      onClick: () => navigate('/jelajah')
+    };
+
     // Role-specific actions
     if (role === 'kepala_dinas') {
-      return commonActions;
+      return [...commonActions, jelajah];
     }
 
     if (role === 'sekretaris_dinas' || role === 'kepala_bidang') {
@@ -770,11 +778,12 @@ const DPMDDashboard = () => {
           label: 'Produk Hukum',
           color: 'cyan',
           onClick: () => navigate(`${basePath}/produk-hukum`)
-        }
+        },
+        jelajah
       ];
     }
 
-    return commonActions;
+    return [...commonActions, jelajah];
   }, [role, config.primaryColor, navigate, getBidangPath, isAbsensiEligible, unreadMessages]);
 
   // ==================== HELPERS ====================

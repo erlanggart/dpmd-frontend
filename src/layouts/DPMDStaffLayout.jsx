@@ -496,6 +496,8 @@ const DPMDStaffLayout = () => {
 		{ path: "/dpmd/bank-surat", label: "Bank Surat", icon: 'archive' },
 		{ path: "/dpmd/video-meeting", label: "Video Meeting", icon: 'video' },
 		{ path: "/dpmd/pesan", label: "Pesan", icon: 'chatbot' },
+		// Tur 3D kantor (halaman publik /jelajah) — untuk semua pegawai.
+		{ path: "/jelajah", label: "Jelajahi Kantor", icon: 'building' },
 	];
 
 	// Mobile bottom nav - 3 items: Home, Aksi Cepat (FAB), Profil
@@ -514,7 +516,7 @@ const DPMDStaffLayout = () => {
 		const groups = [
 			{
 				title: "Utama",
-				items: [byPath("/dpmd/dashboard"), byPath("/core-dashboard/dashboard")],
+				items: [byPath("/dpmd/dashboard"), byPath("/core-dashboard/dashboard"), byPath("/jelajah")],
 			},
 			{
 				title: "Pekerjaan",
