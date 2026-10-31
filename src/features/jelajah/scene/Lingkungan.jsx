@@ -5,6 +5,7 @@ import { ANAK_TANGGA, FONDASI, PILAR, POHON, PONDASI, SEMAK, TANAH, TERAS, TIANG
 import { teksturPaving } from "./tekstur";
 import Papan from "./Papan";
 import Gabung from "./Gabung";
+import JalanHidup from "./JalanHidup";
 import PagarDepan from "./PagarDepan";
 import Parkiran from "./Parkiran";
 
@@ -222,6 +223,7 @@ export default function Lingkungan({ daftarDinding }) {
 				</Gabung>
 				<Pepohonan />
 				<Bendera />
+				<JalanHidup />
 			</group>
 			<Gabung>
 				<PondasiTeras />

@@ -6,6 +6,7 @@ import Lingkungan from "./Lingkungan";
 import Pegawai from "./Pegawai";
 import Pemain from "./Pemain";
 import PemainLain from "./PemainLain";
+import SiangMalam from "./SiangMalam";
 import Petugas from "./Petugas";
 
 const DPR_MAKS = Math.min(typeof window === "undefined" ? 1 : window.devicePixelRatio || 1, 1.5);
@@ -63,8 +64,7 @@ export default function KantorScene({ statistik, dikunjungi, jeda, penghuni, pen
 		>
 			<color attach="background" args={["#cfe6f1"]} />
 			<fog attach="fog" args={["#cfe6f1", 50, 120]} />
-			<hemisphereLight args={["#ffffff", "#a8a49b", 1.15]} />
-			<directionalLight position={[12, 25, 10]} intensity={1.5} color="#fff3dc" />
+			<SiangMalam />
 
 			<KualitasOtomatis />
 			<Lingkungan daftarDinding={daftarDinding} />

@@ -12,6 +12,7 @@ import {
 import { ambilKeadaan, posisi } from "../jelajahStore";
 import { TINGGI_DINDING } from "./layout";
 import Papan from "./Papan";
+import { suasana } from "./suasana";
 import Videotron from "./Videotron";
 
 // Tampak luar gedung DPMD mengikuti foto kantor: dua lantai berwarna arang, atap
@@ -126,8 +127,13 @@ function teksturGenteng() {
 	return t;
 }
 
+// Jendela kaca gelap di siang hari; malam hari lampu ruangan di baliknya menyala.
 function Jendela() {
 	const ref = useRef();
+	const bahan = useRef();
+	useFrame(() => {
+		bahan.current.emissiveIntensity = suasana.malam * 0.85;
+	});
 	useLayoutEffect(() => {
 		const o = new Object3D();
 		JENDELA.forEach(([x, y, z, w, h, ry], i) => {
@@ -142,7 +148,7 @@ function Jendela() {
 	return (
 		<instancedMesh ref={ref} args={[null, null, JENDELA.length]}>
 			<planeGeometry args={[1, 1]} />
-			<meshStandardMaterial color="#1f2428" metalness={0.35} roughness={0.25} />
+			<meshStandardMaterial ref={bahan} color="#1f2428" metalness={0.35} roughness={0.25} emissive="#ffcf7a" emissiveIntensity={0} />
 		</instancedMesh>
 	);
 }
@@ -164,9 +170,7 @@ function Cangkang({ statistik }) {
 	useEffect(() => {
 		const daftar = new Set();
 		grup.current.traverse((o) => {
-			if (!o.material) return;
-			o.material.transparent = true;
-			daftar.add(o.material);
+			if (o.material) daftar.add(o.material);
 		});
 		bahan.current = [...daftar];
 	}, []);
@@ -180,6 +184,12 @@ function Cangkang({ statistik }) {
 		for (const m of bahan.current) {
 			m.opacity = t;
 			m.depthWrite = t > 0.95;
+			// opak saat utuh (lebih murah); ganti transparan = ganti varian shader
+			const tembus = t < 0.999;
+			if (m.transparent !== tembus) {
+				m.transparent = tembus;
+				m.needsUpdate = true;
+			}
 		}
 	});
 

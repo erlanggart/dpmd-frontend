@@ -7,6 +7,9 @@ import {
 	FiGrid,
 	FiHelpCircle,
 	FiMap,
+	FiMoon,
+	FiSun,
+	FiClock,
 	FiMenu,
 	FiMessageCircle,
 	FiNavigation,
@@ -23,6 +26,7 @@ import { kendaraanDariId } from "./scene/kendaraan";
 import { kirimEmote, kirimUcap, putusJelajah, sambungJelajah, sapaPemain, tutupSapaan, useMultipemain } from "./multipemain";
 import { AREA_PER_ID, BENDA, HALAMAN, LOBI, RUANGAN, TITIK_MULAI, titikDepanPetugas } from "./kantorConfig";
 import { kendali, posisi as posisiPemain, resetJelajah, useKeadaan } from "./jelajahStore";
+import { suasana } from "./scene/suasana";
 import { susunPenghuni } from "./penghuni";
 import InfoPanel from "./ui/InfoPanel";
 import Minimap from "./ui/Minimap";
@@ -173,6 +177,15 @@ export default function JelajahPage() {
 	const [kini, setKini] = useState(() => Date.now());
 	// Di HP petunjuk awal hanya tampil sebentar supaya layar tetap lega.
 	const [mulaiPada, setMulaiPada] = useState(0);
+	// Suasana: ikuti jam WIB (null), atau dipaksa "siang"/"malam".
+	const [modeSuasana, setModeSuasana] = useState(suasana.paksa);
+	const gantiSuasana = () => {
+		const urutan = [null, "siang", "malam"];
+		const baru = urutan[(urutan.indexOf(modeSuasana) + 1) % urutan.length];
+		suasana.paksa = baru;
+		setModeSuasana(baru);
+	};
+	const [IkonSuasana, labelSuasana] = modeSuasana === "siang" ? [FiSun, "Siang"] : modeSuasana === "malam" ? [FiMoon, "Malam"] : [FiClock, "Ikuti jam"];
 
 	// Hook untuk uji otomatis di browser — hanya ada di mode dev, tidak ikut ke build produksi.
 	useEffect(() => {
@@ -452,6 +465,9 @@ export default function JelajahPage() {
 								</TombolIkon>
 								<TombolIkon label={peta ? "Sembunyikan peta (M)" : "Tampilkan peta (M)"} aktif={peta} onClick={() => setPeta((v) => !v)}>
 									<FiMap />
+								</TombolIkon>
+								<TombolIkon label={`Suasana: ${labelSuasana} (ketuk untuk ganti)`} aktif={modeSuasana !== null} onClick={gantiSuasana}>
+									<IkonSuasana />
 								</TombolIkon>
 								<TombolIkon label="Denah 2D" onClick={() => setMode("2d")}>
 									<FiGrid />
@@ -736,6 +752,7 @@ export default function JelajahPage() {
 								},
 							],
 							[FiGrid, "Denah 2D", "Versi tanpa 3D", () => setMode("2d")],
+							[IkonSuasana, `Suasana: ${labelSuasana}`, "Ketuk untuk ganti siang/malam", gantiSuasana],
 							[FiHelpCircle, "Cara bermain", "Kontrol & tips", () => setMenu("bantuan")],
 						].map(([Ikon, judul, ket, aksi]) => (
 							<button
