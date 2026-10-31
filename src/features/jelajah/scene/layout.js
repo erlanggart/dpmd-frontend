@@ -431,14 +431,13 @@ PEGAWAI.push({ x: 1.9, z: 9.6, rot: Math.PI, lantai: 0, area: "lobi", pose: "dia
 PEGAWAI.push({ x: 4.6, z: -3.4, rot: 0, lantai: 1, area: "aula2", pose: "diam", aktivitas: "diskusi", jenis: "berdiri", terisi: true, penampilan: penampilanPNS({ map: true }) });
 PEGAWAI.push({ x: 4.6, z: -2.6, rot: Math.PI, lantai: 1, area: "aula2", pose: "diam", aktivitas: "diskusi", jenis: "berdiri", terisi: true, penampilan: penampilanPNS({ map: true }) });
 
-// Pos satpam di samping gerbang: satu satpam duduk berjaga menghadap gerbang.
-perabot("meja", 0, 13.65, 26.2, -Math.PI / 2);
-perabot("kursi", 0, 14.4, 26.2, -Math.PI / 2);
+// Pos satpam di samping gerbang: satu satpam duduk berjaga menghadap gerbang
+// (meja & kursinya digambar bersama pos, di ketinggian halaman).
 PEGAWAI.push({ x: 14.4, z: 26.2, rot: -Math.PI / 2, lantai: 0, area: "luar", pose: "duduk", aktivitas: "menunggu", jenis: "jaga", terisi: true, penampilan: penampilanPNS({ seragam: "satpam", perempuan: false, jilbab: null, rok: false }) });
 // Satpam berjaga di depan pintu, di lobi, di gerbang, di parkiran, dan di lantai 2.
 for (const [l, x, z, rot, area] of [
-	[0, -3.5, 14.5, 0, "luar"],
-	[0, 3.5, 14.5, 0, "luar"],
+	[0, -2.9, 13.6, 0, "luar"],
+	[0, 2.9, 13.6, 0, "luar"],
 	[0, -2.9, 11.3, Math.PI, "lobi"],
 	[0, 13.2, 23.9, -Math.PI / 2, "luar"],
 	[0, 14.6, 21.5, -Math.PI / 2, "luar"],
@@ -534,9 +533,32 @@ export const PEJALAN = [
 
 // ---------- halaman depan ----------
 
+// Gedung berdiri di atas pondasi semen: lantai gedung tetap y = 0, seluruh halaman
+// FONDASI m lebih rendah. Satu-satunya jalan naik: anak tangga selebar teras di
+// depan lobi, lalu teras berkanopi sampai pintu kaca.
+export const FONDASI = 0.6;
+export const TANAH = -FONDASI;
+export const PONDASI = { x0: -15.4, x1: 15.4, z0: -13.4, z1: 12.4 };
+export const TERAS = { x0: -4.6, x1: 4.6, z0: 12, z1: 15.2 };
+export const ANAK_TANGGA = { n: 2, dalam: 0.45 }; // dua pijakan di depan teras, tiap naik 0,2 m
+
+// Tinggi pijakan lantai 1 di (x, z): 0 di atas pondasi & teras, bertingkat di anak
+// tangga, TANAH di halaman.
+export function tinggiTanah(x, z) {
+	const p = PONDASI;
+	if (x >= p.x0 && x <= p.x1 && z >= p.z0 && z <= p.z1) return 0;
+	const t = TERAS;
+	if (x >= t.x0 && x <= t.x1 && z >= t.z0) {
+		if (z <= t.z1) return 0;
+		const i = Math.ceil((z - t.z1) / ANAK_TANGGA.dalam);
+		if (i <= ANAK_TANGGA.n) return (-FONDASI * i) / (ANAK_TANGGA.n + 1);
+	}
+	return TANAH;
+}
+
 export const PILAR = [
-	{ x: -2.7, z: 13.6 },
-	{ x: 2.7, z: 13.6 },
+	{ x: -3.9, z: 14.75 },
+	{ x: 3.9, z: 14.75 },
 ];
 export const TIANG_BENDERA = { x: -11.5, z: 25.5 };
 export const SEMAK = [-13, -10.5, -8, -5.5, 5.5, 8, 10.5, 13].map((x) => [x, 13]);
@@ -602,6 +624,8 @@ export const PENGHALANG = [0, 1].map((l) => [
 	...(l === 0
 		? [
 				...PILAR.map((p) => titik(p.x, p.z, 0.25)),
+				// bak tanaman di kedua sisi teras & anak tangga (tepi pondasi tidak bisa dituruni)
+				...[TERAS.x0 - 0.15, TERAS.x1 + 0.15].map((x) => ({ x0: x - 0.15, x1: x + 0.15, z0: TERAS.z0 + 0.4, z1: TERAS.z1 + ANAK_TANGGA.n * ANAK_TANGGA.dalam })),
 				titik(TIANG_BENDERA.x, TIANG_BENDERA.z, 0.15),
 				...SEMAK.map(([x, z]) => titik(x, z, 0.5)),
 				{ x0: PAGAR_BATA.x - 0.2, x1: PAGAR_BATA.x + 0.2, z0: PAGAR_BATA.z0, z1: PAGAR_BATA.z1 },
@@ -623,7 +647,7 @@ export const BATAS_DUNIA = { x0: -34, x1: 34, z0: -22, z1: 48 };
 
 // Penghalang khusus kendaraan: mobil/motor tidak boleh masuk lewat pintu lobi.
 // (Mobil & motor sendiri dinamis — tabrakannya ada di kendaraan.js.)
-export const PENGHALANG_KENDARAAN = [{ x0: -2.4, x1: 2.4, z0: 11.5, z1: 14.4 }];
+export const PENGHALANG_KENDARAAN = [{ x0: TERAS.x0 - 0.3, x1: TERAS.x1 + 0.3, z0: 11.5, z1: TERAS.z1 + ANAK_TANGGA.n * ANAK_TANGGA.dalam + 0.2 }];
 
 export function tabrakKendaraanStatis(x, z, r) {
 	if (tabrak(x, z, 0, r)) return true;
@@ -651,8 +675,9 @@ export function langkah(yLama, x, z) {
 		return y !== null && Math.abs(y - yLama) < 0.6 ? y : null;
 	}
 	const lantai = yLama > H / 2 ? 1 : 0;
-	const y = lantai * H;
-	if (Math.abs(y - yLama) > 0.6) return null;
+	const y = lantai ? H : tinggiTanah(x, z);
+	// anak tangga 0,2 m bisa dinaiki; tepi pondasi (0,6 m) tidak
+	if (Math.abs(y - yLama) > 0.3) return null;
 	return tabrak(x, z, lantai) ? null : y;
 }
 

@@ -202,6 +202,25 @@ function PosSatpam() {
 					))}
 				</group>
 			))}
+			{/* meja jaga menghadap kaca gerbang & kursi satpam (di slot pegawai 14.4, 26.2) */}
+			<group position={[14.4 - x, 0, 26.2 - z]}>
+				<mesh position={[-0.7, 0.74, 0]}>
+					<boxGeometry args={[0.6, 0.05, 1.2]} />
+					<meshStandardMaterial color="#8a6a4a" />
+				</mesh>
+				<mesh position={[-0.95, 0.37, 0]}>
+					<boxGeometry args={[0.05, 0.72, 1.1]} />
+					<meshStandardMaterial color="#6f5238" />
+				</mesh>
+				<mesh position={[0, 0.45, 0]}>
+					<boxGeometry args={[0.45, 0.06, 0.45]} />
+					<meshStandardMaterial color="#2a2d31" />
+				</mesh>
+				<mesh position={[0.22, 0.75, 0]}>
+					<boxGeometry args={[0.05, 0.6, 0.45]} />
+					<meshStandardMaterial color="#2a2d31" />
+				</mesh>
+			</group>
 			{/* plafon & atap limas */}
 			<mesh position-y={tinggi + 0.03}>
 				<boxGeometry args={[lx + 0.6, 0.06, lz + 0.6]} />

@@ -1,7 +1,7 @@
 import { useEffect, useLayoutEffect, useMemo, useRef } from "react";
 import { useFrame } from "@react-three/fiber";
 import { Object3D } from "three";
-import { PILAR, POHON, SEMAK, TIANG_BENDERA } from "./layout";
+import { ANAK_TANGGA, FONDASI, PILAR, POHON, PONDASI, SEMAK, TANAH, TERAS, TIANG_BENDERA } from "./layout";
 import { teksturPaving } from "./tekstur";
 import Papan from "./Papan";
 import PagarDepan from "./PagarDepan";
@@ -108,25 +108,90 @@ function Kanopi({ daftarDinding }) {
 		return () => mesh.forEach((m) => daftar.splice(daftar.indexOf(m), 1));
 	}, [daftarDinding]);
 
+	// Atap datar menaungi seluruh teras; lis depannya bertuliskan nama dinas.
+	const t = TERAS;
+	const lebar = t.x1 - t.x0 - 0.4;
+	const dalam = t.z1 - t.z0 - 0.1;
 	return (
 		<group ref={grup}>
 			{PILAR.map((p) => (
-				<mesh key={p.x} position={[p.x, 1.25, p.z]}>
-					<boxGeometry args={[0.45, 2.5, 0.45]} />
+				<mesh key={p.x} position={[p.x, 1.45, p.z]}>
+					<boxGeometry args={[0.4, 2.9, 0.4]} />
 					<meshStandardMaterial color="#b6cf78" />
 				</mesh>
 			))}
-			<mesh position={[0, 2.85, 13.15]}>
-				<boxGeometry args={[7.6, 0.7, 1.6]} />
+			<mesh position={[0, 3.0, t.z0 + dalam / 2]}>
+				<boxGeometry args={[lebar, 0.22, dalam]} />
+				<meshStandardMaterial color="#e9e6dd" />
+			</mesh>
+			<mesh position={[0, 3.0, t.z0 + dalam]}>
+				<boxGeometry args={[lebar + 0.1, 0.62, 0.14]} />
 				<meshStandardMaterial color="#9fb766" />
 			</mesh>
 			<Papan
-				posisi={[0, 2.85, 13.96]}
+				posisi={[0, 3.0, t.z0 + dalam + 0.08]}
 				lebar={7.5}
-				tinggi={0.66}
+				tinggi={0.52}
 				latar="#d6e5a3"
 				baris={[{ teks: "DINAS PEMBERDAYAAN MASYARAKAT DAN DESA", ukuran: 0.34, tebal: true, warna: "#1d2a1a", y: 0.54 }]}
 			/>
+		</group>
+	);
+}
+
+// Pondasi semen di bawah gedung, teras depan lobi (lantai granit), dua anak tangga
+// selebar teras, dan bak tanaman di kedua sisinya.
+function PondasiTeras() {
+	const p = PONDASI;
+	const t = TERAS;
+	const { n, dalam } = ANAK_TANGGA;
+	const naik = FONDASI / (n + 1);
+	const lebarTeras = t.x1 - t.x0;
+	return (
+		<group>
+			<mesh position={[(p.x0 + p.x1) / 2, -FONDASI / 2 - 0.005, (p.z0 + p.z1) / 2]}>
+				<boxGeometry args={[p.x1 - p.x0, FONDASI, p.z1 - p.z0]} />
+				<meshStandardMaterial color="#a9a59c" />
+			</mesh>
+			{/* teras */}
+			<mesh position={[0, -FONDASI / 2 - 0.005, (t.z0 + t.z1) / 2]}>
+				<boxGeometry args={[lebarTeras, FONDASI, t.z1 - t.z0]} />
+				<meshStandardMaterial color="#a9a59c" />
+			</mesh>
+			<mesh rotation-x={-Math.PI / 2} position={[0, 0.004, (p.z1 + t.z1) / 2]}>
+				<planeGeometry args={[lebarTeras, t.z1 - p.z1]} />
+				<meshStandardMaterial color="#d8d3c8" roughness={0.5} />
+			</mesh>
+			{/* anak tangga: pijakan ke-i turun naik × i */}
+			{Array.from({ length: n }, (_, i) => {
+				const atas = -naik * (i + 1);
+				const tinggi = atas - TANAH;
+				return (
+					<mesh key={i} position={[0, TANAH + tinggi / 2 - 0.005, t.z1 + dalam * (i + 0.5)]}>
+						<boxGeometry args={[lebarTeras, tinggi, dalam]} />
+						<meshStandardMaterial color={i % 2 ? "#c4c0b6" : "#cfcac0"} />
+					</mesh>
+				);
+			})}
+			{/* bak tanaman di sisi teras */}
+			{[t.x0 - 0.15, t.x1 + 0.15].map((x) => {
+				const z0 = t.z0 + 0.4;
+				const z1 = t.z1 + n * dalam;
+				return (
+					<group key={x}>
+						<mesh position={[x, TANAH + 0.5, (z0 + z1) / 2]}>
+							<boxGeometry args={[0.3, 1.0, z1 - z0]} />
+							<meshStandardMaterial color="#8f8c84" />
+						</mesh>
+						{[0.25, 0.5, 0.75].map((f) => (
+							<mesh key={f} position={[x, 0.62, z0 + (z1 - z0) * f]}>
+								<icosahedronGeometry args={[0.28, 0]} />
+								<meshStandardMaterial color="#3f8a4f" flatShading />
+							</mesh>
+						))}
+					</group>
+				);
+			})}
 		</group>
 	);
 }
@@ -137,26 +202,25 @@ export default function Lingkungan({ daftarDinding }) {
 
 	return (
 		<group>
-			<mesh rotation-x={-Math.PI / 2} position-y={-0.01}>
-				<planeGeometry args={[180, 180]} />
-				<meshStandardMaterial map={paving} />
-			</mesh>
-			<Parkiran />
-			<PagarDepan />
-			{/* fondasi gedung */}
-			<mesh position={[0, -0.05, -0.5]}>
-				<boxGeometry args={[30.6, 0.1, 25.6]} />
-				<meshStandardMaterial color="#bfb39b" />
-			</mesh>
-			{/* semak di depan gedung */}
-			{SEMAK.map(([x, z]) => (
-				<mesh key={x} position={[x, 0.35, z]}>
-					<icosahedronGeometry args={[0.6, 0]} />
-					<meshStandardMaterial color="#3f8a4f" flatShading />
+			{/* seluruh halaman satu pondasi lebih rendah dari lantai gedung */}
+			<group position-y={TANAH}>
+				<mesh rotation-x={-Math.PI / 2} position-y={-0.01}>
+					<planeGeometry args={[180, 180]} />
+					<meshStandardMaterial map={paving} />
 				</mesh>
-			))}
-			<Pepohonan />
-			<Bendera />
+				<Parkiran />
+				<PagarDepan />
+				{/* semak di depan gedung */}
+				{SEMAK.map(([x, z]) => (
+					<mesh key={x} position={[x, 0.35, z]}>
+						<icosahedronGeometry args={[0.6, 0]} />
+						<meshStandardMaterial color="#3f8a4f" flatShading />
+					</mesh>
+				))}
+				<Pepohonan />
+				<Bendera />
+			</group>
+			<PondasiTeras />
 			<Kanopi daftarDinding={daftarDinding} />
 		</group>
 	);

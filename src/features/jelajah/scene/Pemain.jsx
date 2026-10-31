@@ -4,7 +4,7 @@ import { Raycaster, Vector3 } from "three";
 import { BENDA, LOBI, RUANGAN, TINGGI_LANTAI, TITIK_MULAI, cariArea } from "../kantorConfig";
 import { kendali, posisi, setKeadaan } from "../jelajahStore";
 import { KENDARAAN, kendaraanDariId, keDunia, lingkaran, resetKendaraan, tabrakKendaraan, titikNaik } from "./kendaraan";
-import { PERABOT, cariJalur, langkah, tabrakKendaraanStatis, tanggaDi } from "./layout";
+import { PERABOT, TANAH, cariJalur, langkah, tabrakKendaraanStatis, tanggaDi, tinggiTanah } from "./layout";
 import { diriSendiri, kendaraanDipakaiLain, pemainLain } from "../multipemain";
 import Tokoh from "./Tokoh";
 
@@ -145,7 +145,7 @@ export default function Pemain({ daftarDinding, penghuni, penampilan = PENAMPILA
 				}
 				mode.current = { jenis: "jalan", t: 0, k: null, kursi: null, dari: null };
 			}
-			p.set(t.x, (t.lantai || 0) * H, t.z);
+			p.set(t.x, t.lantai ? t.lantai * H : tinggiTanah(t.x, t.z), t.z);
 			g.rotation.y = t.rot;
 			k.yaw = t.yaw;
 			k.lompat = true;
@@ -356,7 +356,7 @@ export default function Pemain({ daftarDinding, penghuni, penampilan = PENAMPILA
 			if (kend.jenis === "motor") kend.miring = -kend.setir * Math.min(1, Math.abs(kend.laju) / 8) * 0.35;
 			// pengemudi mengikuti kendaraan
 			const jok = kend.jenis === "mobil" ? keDunia(kend, -0.4, 0.1) : keDunia(kend, 0, -0.12);
-			p.set(jok.x, 0, jok.z);
+			p.set(jok.x, TANAH, jok.z);
 			g.rotation.y = kend.rot;
 			// kamera berangsur ke belakang kendaraan saat melaju
 			if (Math.abs(kend.laju) > 0.5) {
@@ -374,8 +374,8 @@ export default function Pemain({ daftarDinding, penghuni, penampilan = PENAMPILA
 				if (md.t >= 0.4 && !md.keluar) {
 					// berdiri di samping pintu (atau di belakang mobil bila sisi pintu terhalang)
 					const pilihan = [titikNaik(kend), keDunia(kend, 1.3, 0.35), keDunia(kend, 0, -2.8)];
-					const ke = pilihan.find((q) => langkah(0, q.x, q.z) !== null && !tabrakKendaraan(q.x, q.z, 0.38)) || pilihan[0];
-					p.set(ke.x, 0, ke.z);
+					const ke = pilihan.find((q) => langkah(TANAH, q.x, q.z) !== null && !tabrakKendaraan(q.x, q.z, 0.38)) || pilihan[0];
+					p.set(ke.x, TANAH, ke.z);
 					g.rotation.y = kend.rot - Math.PI / 2;
 					md.keluar = true;
 				}
@@ -386,8 +386,8 @@ export default function Pemain({ daftarDinding, penghuni, penampilan = PENAMPILA
 				}
 			} else {
 				const pilihan = [titikNaik(kend), keDunia(kend, 0.7, 0), keDunia(kend, 0, -1.3)];
-				const ke = pilihan.find((q) => langkah(0, q.x, q.z) !== null && !tabrakKendaraan(q.x, q.z, 0.38)) || pilihan[0];
-				p.set(ke.x, 0, ke.z);
+				const ke = pilihan.find((q) => langkah(TANAH, q.x, q.z) !== null && !tabrakKendaraan(q.x, q.z, 0.38)) || pilihan[0];
+				p.set(ke.x, TANAH, ke.z);
 				kend.miring = 0.12;
 				mode.current = { jenis: "jalan", t: 0, k: null, kursi: null, dari: null };
 			}
@@ -428,7 +428,7 @@ export default function Pemain({ daftarDinding, penghuni, penampilan = PENAMPILA
 
 		const tujuanAkhir = rute.current?.titik[rute.current.titik.length - 1];
 		penandaTujuan.current.visible = !!tujuanAkhir;
-		if (tujuanAkhir) penandaTujuan.current.position.set(tujuanAkhir.x, lantai * H + 0.03, tujuanAkhir.z);
+		if (tujuanAkhir) penandaTujuan.current.position.set(tujuanAkhir.x, (lantai ? lantai * H : tinggiTanah(tujuanAkhir.x, tujuanAkhir.z)) + 0.03, tujuanAkhir.z);
 
 		const area = diTangga ? "tangga" : cariArea(p.x, p.z, lantai)?.id ?? (lantai ? "aula2" : "belakang1");
 		let dekat = null;
@@ -468,7 +468,7 @@ export default function Pemain({ daftarDinding, penghuni, penampilan = PENAMPILA
 		setKeadaan({ area, lantai, dekat, mode: modeUi });
 
 		// Bidang klik mengikuti lantai tempat pemain berada.
-		bidangKlik.current.position.y = lantai * H + 0.02;
+		bidangKlik.current.position.y = (lantai ? lantai * H : tinggiTanah(p.x, p.z)) + 0.02;
 
 		// --- kamera orang ketiga ---
 		// Di halaman kamera lebih landai dan memandang lebih tinggi supaya tampak depan
@@ -542,7 +542,7 @@ export default function Pemain({ daftarDinding, penghuni, penampilan = PENAMPILA
 
 	return (
 		<>
-			<group ref={grup} position={[TITIK_MULAI.x, 0, TITIK_MULAI.z]} rotation-y={TITIK_MULAI.rot}>
+			<group ref={grup} position={[TITIK_MULAI.x, tinggiTanah(TITIK_MULAI.x, TITIK_MULAI.z), TITIK_MULAI.z]} rotation-y={TITIK_MULAI.rot}>
 				<group ref={badanLoncat}>
 					<group ref={tokohJalan}>
 						<Tokoh penampilan={penampilan} pose="jalan" gerak={gerak} />

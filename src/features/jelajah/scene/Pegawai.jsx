@@ -3,7 +3,7 @@ import { useFrame } from "@react-three/fiber";
 import { CanvasTexture, SRGBColorSpace } from "three";
 import { RUANGAN, TINGGI_LANTAI } from "../kantorConfig";
 import { posisi, posisiPejalan } from "../jelajahStore";
-import { cariJalur } from "./layout";
+import { cariJalur, tinggiTanah } from "./layout";
 import Tokoh from "./Tokoh";
 
 // Penghuni kantor (hasil susunPenghuni): pegawai yang bekerja di mejanya, rapat,
@@ -209,7 +209,7 @@ export default function Pegawai({ lantai, penghuni }) {
 	return (
 		<group>
 			{daftar.map((o, i) => (
-				<group key={i} position={[o.x, lantai * TINGGI_LANTAI, o.z]} rotation-y={o.rot}>
+				<group key={i} position={[o.x, lantai ? lantai * TINGGI_LANTAI : tinggiTanah(o.x, o.z), o.z]} rotation-y={o.rot}>
 					<Tokoh
 						penampilan={o.penampilan}
 						pose={o.pose}
