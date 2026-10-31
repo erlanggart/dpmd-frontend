@@ -407,18 +407,18 @@ function Lobi({ statistik }) {
 		<group>
 			{/* panel kayu di dinding belakang lobi, mengapit dinding sambutan */}
 			{[-3.5, 3.5].map((x) => (
-				<mesh key={x} position={[x, 1.2, 6.17]}>
+				<mesh key={x} position={[x, 1.2, 5.17]}>
 					<planeGeometry args={[1.0, 2.4]} />
 					<meshStandardMaterial map={kayu} />
 				</mesh>
 			))}
 			{/* dinding sambutan: bingkai batu, panel marmer, lambang, lampu hangat */}
-			<mesh position={[0, 1.45, 6.3]}>
+			<mesh position={[0, 1.45, 5.3]}>
 				<boxGeometry args={[6.0, 2.9, 0.3]} />
 				<meshStandardMaterial map={batu} />
 			</mesh>
 			<Papan
-				posisi={[0, 1.65, 6.46]}
+				posisi={[0, 1.65, 5.46]}
 				lebar={4.4}
 				tinggi={1.9}
 				latar="#ece7df"
@@ -431,19 +431,19 @@ function Lobi({ statistik }) {
 					{ teks: "KABUPATEN BOGOR", ukuran: 0.12, tebal: true, warna: "#3a3a3a", y: 0.73 },
 				]}
 			/>
-			<mesh position={[0, 2.3, 6.47]}>
+			<mesh position={[0, 2.3, 5.47]}>
 				<planeGeometry args={[0.38, 0.44]} />
 				<meshBasicMaterial map={lambang} transparent toneMapped={false} />
 			</mesh>
 			{[-2.3, 2.3].map((x) => (
-				<mesh key={x} position={[x, 1.65, 6.47]}>
+				<mesh key={x} position={[x, 1.65, 5.47]}>
 					<boxGeometry args={[0.05, 1.9, 0.02]} />
 					<meshBasicMaterial color="#ffe1a0" toneMapped={false} />
 				</mesh>
 			))}
 
 			{/* meja resepsionis: alas gelap, muka kayu berlampu, atas marmer */}
-			<group position={[0, 0, 7.8]}>
+			<group position={[0, 0, 6.8]}>
 				<mesh position-y={0.52}>
 					<boxGeometry args={[4.8, 1.04, 0.85]} />
 					<meshStandardMaterial color="#2f3237" />
@@ -467,7 +467,7 @@ function Lobi({ statistik }) {
 
 			{/* papan statistik (dinding kanan) & papan panduan (dinding kiri) */}
 			<Papan
-				posisi={[7.83, 1.75, 8.3]}
+				posisi={[6.83, 1.75, 8.6]}
 				rotasi={-Math.PI / 2}
 				lebar={1.9}
 				tinggi={1.0}
@@ -481,7 +481,7 @@ function Lobi({ statistik }) {
 				]}
 			/>
 			<Papan
-				posisi={[-7.83, 1.7, 10.4]}
+				posisi={[-6.83, 1.7, 10.4]}
 				rotasi={Math.PI / 2}
 				lebar={1.6}
 				tinggi={1.1}
@@ -502,7 +502,7 @@ function Lobi({ statistik }) {
 			].map(([x, teks]) => (
 				<Papan
 					key={x}
-					posisi={[x, 2.2, 6.19]}
+					posisi={[x, 2.2, 5.19]}
 					lebar={2.0}
 					tinggi={0.36}
 					latar="#2b2f36"
@@ -520,18 +520,14 @@ function JendelaDalam({ lantai }) {
 		const hindar =
 			lantai === 0
 				? [
-						["z", -11.5],
-						["z", 11.5],
-						["b", 6.3],
+						["b", 8.9],
 						["b", -13.2],
 					]
 				: [
 						["z", -11.5],
-						["z", 0],
-						["z", 8.4],
 						["b", -12.25],
-						["b", 3.8],
-						["b", 13],
+						["b", 4.0],
+						["k", -4.0],
 					];
 		const dekat = (w, v) => hindar.some(([d, x]) => d === w && Math.abs(x - v) < 2.2);
 		const hasil = [];
@@ -539,7 +535,7 @@ function JendelaDalam({ lantai }) {
 		for (const x of [-12, -8, -4, 0, 4, 8, 12]) if (!dekat("b", x)) hasil.push([x, -12.84, 0]);
 		for (const z of [10, 6, 2, -2, -6, -10]) {
 			hasil.push([-14.84, z, Math.PI / 2]);
-			hasil.push([14.84, z, -Math.PI / 2]);
+			if (!dekat("k", z)) hasil.push([14.84, z, -Math.PI / 2]);
 		}
 		return hasil;
 	}, [lantai]);
@@ -567,34 +563,45 @@ function JendelaDalam({ lantai }) {
 
 // [teks, warna, x, y, z, rotasi, lebar]
 const PAPAN_RUANG = [
-	[0, "KKD", "#7c3aed", -9.6, 1.8, 7.14, Math.PI, 1.6],
-	[0, "SPKED", "#d97706", 9.6, 1.8, 7.14, Math.PI, 1.6],
-	[0, "TOILET", "#475569", 13.04, 2.2, 2.9, -Math.PI / 2, 0.9],
+	[0, "KKD", "#7c3aed", -6.84, 2.3, 7.25, Math.PI / 2, 1.6],
+	[0, "SPKED", "#d97706", 6.84, 2.3, 8.1, -Math.PI / 2, 1.6],
+	[0, "KEPALA BIDANG", "#7c3aed", -12.25, 2.3, 8.44, Math.PI, 1.5],
+	[0, "KETUA TIM", "#7c3aed", -8.25, 2.3, 8.44, Math.PI, 1.2],
+	[0, "KEPALA BIDANG", "#d97706", 12.25, 2.3, 8.84, Math.PI, 1.5],
+	[0, "KETUA TIM", "#d97706", 8.25, 2.3, 8.84, Math.PI, 1.2],
+	[0, "TOILET", "#475569", 4.04, 2.2, 2.2, -Math.PI / 2, 0.9],
 	[0, "AREA BELAKANG · RUANG RAPAT SALAK · ARSIP · MUSHOLA", "#1f6b50", 0.5, 2.2, 1.16, 0, 3.4],
 	[0, "← TANGGA KE LANTAI 2", "#1f6b50", -2.3, 1.8, 1.16, 0, 2.2],
-	[0, "RUANG RAPAT PANGRANGO", "#7a2e2e", -10.5, 1.9, 0.16, 0, 2.4],
-	[0, "RUANG ARSIP", "#5a4637", -2.64, 1.9, -2.4, Math.PI / 2, 1.4],
+	[0, "RUANG RAPAT PANGRANGO", "#7a2e2e", -8.14, 2.3, -2.6, Math.PI / 2, 2.2],
+	[0, "RUANG ARSIP", "#5a4637", -2.64, 1.9, -2.7, Math.PI / 2, 1.4],
 	[0, "MUSHOLA", "#1f6b4a", -8.3, 2.2, -9.44, 0, 1.2],
 	[0, "RUANG RAPAT SALAK", "#7a2e2e", 2.64, 1.9, -4.8, -Math.PI / 2, 2.0],
 	[1, "RUANG KEPALA DINAS", "#5a3a24", -9.4, 1.8, 7.14, Math.PI, 2.1],
-	[1, "PROLAP", "#0891b2", 2.1, 1.8, 7.14, Math.PI, 1.6],
-	[1, "KEUANGAN", "#16a34a", 10.6, 1.8, 7.14, Math.PI, 1.8],
+	[1, "PROLAP", "#0891b2", -6.3, 1.8, 7.14, Math.PI, 1.6],
+	[1, "KEUANGAN", "#16a34a", 1.6, 1.8, 7.14, Math.PI, 1.8],
+	[1, "KASUBAG UMPEG", "#2563eb", 10.9, 2.3, 7.14, Math.PI, 1.6],
 	[1, "TOILET", "#475569", 12.64, 2.2, 5.5, -Math.PI / 2, 0.9],
-	[1, "PMD", "#db2777", 1.7, 1.8, 5.16, 0, 1.6],
+	[1, "PMD", "#db2777", 0.0, 1.8, 5.76, 0, 1.6],
+	[1, "KEPALA BIDANG", "#db2777", 5.24, 2.3, 0.75, -Math.PI / 2, 1.4],
+	[1, "KETUA TIM", "#db2777", 5.24, 2.3, 3.25, -Math.PI / 2, 1.2],
 	[1, "RUANG RAPAT HALIMUN", "#7a2e2e", -13.6, 1.9, 4.66, 0, 2.2],
 	[1, "DAPUR", "#8a5a2b", -7.2, 2.2, -9.44, 0, 1.0],
-	[1, "SEKRETARIAT", "#2563eb", 6.3, 1.8, -2.34, 0, 1.8],
-	[1, "PEMDES", "#0f766e", 10.84, 1.8, 0.8, -Math.PI / 2, 1.6],
+	[1, "SEKRETARIAT", "#2563eb", 4.5, 1.8, -2.34, 0, 1.8],
+	[1, "SEKRETARIS DINAS", "#2563eb", 1.25, 2.3, -9.44, 0, 1.6],
+	[1, "PEMDES", "#0f766e", 9.4, 1.8, -2.34, 0, 1.6],
+	[1, "KEPALA BIDANG", "#0f766e", 9.25, 2.3, -10.44, 0, 1.4],
+	[1, "KETUA TIM", "#0f766e", 12.75, 2.3, -10.44, 0, 1.2],
 ];
 
 function PosterRuang({ ruang }) {
-	const { npc, warna, singkatan, nama, rect } = ruang;
+	const { npc, warna, singkatan, nama, rect, poster } = ruang;
 	const [dx, dz] = npc.arah;
 	const jarak = dz < 0 ? rect.z1 - npc.z : dz > 0 ? npc.z - rect.z0 : dx > 0 ? npc.x - rect.x0 : rect.x1 - npc.x;
+	// `poster` menimpa letak bawaan (di dinding tepat di belakang petugas).
 	return (
 		<Papan
-			posisi={[npc.x - dx * (jarak - 0.17), 1.7, npc.z - dz * (jarak - 0.17)]}
-			rotasi={Math.atan2(dx, dz)}
+			posisi={poster ? [poster.x, 1.7, poster.z] : [npc.x - dx * (jarak - 0.17), 1.7, npc.z - dz * (jarak - 0.17)]}
+			rotasi={poster ? poster.rot : Math.atan2(dx, dz)}
 			lebar={2.8}
 			tinggi={0.95}
 			latar={warna}
@@ -665,7 +672,7 @@ export default function Gedung({ daftarDinding, statistik }) {
 				{MEJA_RAPAT.filter((m) => m.lantai === 0).map((m, i) => (
 					<MejaRapat key={i} m={m} />
 				))}
-				<Videotron posisi={[6.3, 1.45, -12.83]} lebar={4.6} tinggi={2.0} slide={slideRapat("Salak")} />
+				<Videotron posisi={[8.9, 1.5, -12.83]} lebar={6.0} tinggi={2.4} slide={slideRapat("Salak")} />
 				<Videotron posisi={[-10.5, 1.45, -7.33]} lebar={4.0} tinggi={1.8} slide={slideRapat("Pangrango")} />
 				<Kolam />
 			</GrupLantai>
