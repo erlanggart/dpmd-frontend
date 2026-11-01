@@ -4,7 +4,9 @@ import {
   LuChevronUp,
 } from "react-icons/lu";
 
-const StatistikLKD = ({ summaryData, loading = false }) => {
+// scope: "desa" | "kelurahan" | "semua" dari tab halaman. Tanpa scope (dashboard inti)
+// tampil angka gabungan dengan breakdown desa & kelurahan seperti biasa.
+const StatistikLKD = ({ summaryData, loading = false, scope }) => {
   const [showBreakdown, setShowBreakdown] = useState(false);
   const [mode, setMode] = useState("verified");
   const isVerified = mode === "verified";
@@ -38,14 +40,18 @@ const StatistikLKD = ({ summaryData, loading = false }) => {
   const pick = (total, verified) =>
     isVerified ? verified : Math.max((total || 0) - (verified || 0), 0);
 
+  const countByStatus = (status, key) =>
+    pick(summaryData.by_status?.[status]?.[key], summaryData.verified_by_status?.[status]?.[key]);
+
   const count = (key) =>
-    pick(summaryData.total_kelembagaan?.[key], summaryData.verified_kelembagaan?.[key]);
+    scope === "desa" || scope === "kelurahan"
+      ? countByStatus(scope, key)
+      : pick(summaryData.total_kelembagaan?.[key], summaryData.verified_kelembagaan?.[key]);
 
-  const countByStatus = (scope, key) =>
-    pick(summaryData.by_status?.[scope]?.[key], summaryData.verified_by_status?.[scope]?.[key]);
+  const sumByStatus = (status) =>
+    KEYS.reduce((acc, key) => acc + countByStatus(status, key), 0);
 
-  const sumByStatus = (scope) =>
-    KEYS.reduce((acc, key) => acc + countByStatus(scope, key), 0);
+  const wilayah = { kelurahan: "Kelurahan", semua: "Desa & Kelurahan" }[scope] || "Desa";
 
   const totalCount = KEYS.reduce((acc, key) => acc + count(key), 0);
 
@@ -68,8 +74,8 @@ const StatistikLKD = ({ summaryData, loading = false }) => {
           <h2 className="text-2xl font-bold text-slate-900">Statistik LKD</h2>
           <p className="text-sm text-slate-500 mt-1">
             {isVerified
-              ? "Lembaga Kemasyarakatan Desa yang telah terverifikasi dan aktif"
-              : "Lembaga Kemasyarakatan Desa aktif yang belum terverifikasi"}
+              ? `Lembaga Kemasyarakatan ${wilayah} yang telah terverifikasi dan aktif`
+              : `Lembaga Kemasyarakatan ${wilayah} aktif yang belum terverifikasi`}
           </p>
         </div>
         <div className="flex items-center gap-4">
@@ -130,6 +136,7 @@ const StatistikLKD = ({ summaryData, loading = false }) => {
       </div>
 
       {/* Toggle Breakdown Button */}
+      {!scope && (
       <button
         onClick={() => setShowBreakdown(!showBreakdown)}
         className="flex items-center gap-2 text-sm font-medium text-slate-600 hover:text-slate-900 transition-colors mx-auto"
@@ -146,9 +153,10 @@ const StatistikLKD = ({ summaryData, loading = false }) => {
           </>
         )}
       </button>
+      )}
 
       {/* Breakdown Section */}
-      {showBreakdown && (
+      {!scope && showBreakdown && (
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {/* Desa */}
         <div className="bg-white rounded-xl border border-slate-200 p-5">

@@ -1,26 +1,31 @@
 import { useState, useEffect } from "react";
 import kelembagaanApi from "../api/kelembagaan";
 
-const useStatistikTahunan = () => {
+// statusPemerintahan: "desa" | "kelurahan"; kosong = gabungan keduanya.
+const useStatistikTahunan = (statusPemerintahan) => {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
   useEffect(() => {
+    // Respons tab lama yang datang belakangan tidak boleh menimpa tab yang sedang dibuka.
+    let batal = false;
     const fetchData = async () => {
       try {
         setLoading(true);
-        const res = await kelembagaanApi.getStatistikTahunan();
-        if (res.success) setData(res.data);
+        setError(null);
+        const res = await kelembagaanApi.getStatistikTahunan(statusPemerintahan);
+        if (!batal && res.success) setData(res.data);
       } catch (err) {
         console.error("Error fetching statistik tahunan:", err);
-        setError("Gagal memuat statistik tahunan");
+        if (!batal) setError("Gagal memuat statistik tahunan");
       } finally {
-        setLoading(false);
+        if (!batal) setLoading(false);
       }
     };
     fetchData();
-  }, []);
+    return () => { batal = true; };
+  }, [statusPemerintahan]);
 
   return { data, loading, error };
 };

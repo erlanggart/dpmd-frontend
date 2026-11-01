@@ -63,9 +63,11 @@ export const kelembagaanApi = {
 	},
 
 	// Mendapatkan statistik tahunan kelembagaan
-	getStatistikTahunan: async () => {
+	getStatistikTahunan: async (statusPemerintahan) => {
 		try {
-			const response = await api.get("/kelembagaan/statistik-tahunan");
+			const response = await api.get("/kelembagaan/statistik-tahunan", {
+				params: statusPemerintahan ? { status_pemerintahan: statusPemerintahan } : undefined,
+			});
 			return response.data;
 		} catch (error) {
 			console.error("Error fetching statistik tahunan:", error);

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import Swal from "sweetalert2";
 import {
@@ -13,6 +13,7 @@ import { useAuth } from "../../../context/AuthContext";
 import { useEditMode } from "../../../context/EditModeContext";
 import kelembagaanApi from "../../../api/kelembagaan";
 import StatistikLKD from "../../../components/kelembagaan/StatistikLKD";
+import TabDesaKelurahan from "../../../components/kelembagaan/TabDesaKelurahan";
 import ChartVerifikasiTahunan from "../../../components/kelembagaan/ChartVerifikasiTahunan";
 import TabelVerifikasiTahunan from "../../../components/kelembagaan/TabelVerifikasiTahunan";
 import CapaianVerifikasiLembaga from "../../../components/kelembagaan/CapaianVerifikasiLembaga";
@@ -21,6 +22,35 @@ import useStatistikTahunan from "../../../hooks/useStatistikTahunan";
 import VerifikasiNotifikasi from "../../../components/kelembagaan/VerifikasiNotifikasi";
 import KecamatanAccordion from "../../../components/kelembagaan/KecamatanAccordion";
 import KelembagaanActivityList from "../../../components/kelembagaan/KelembagaanActivityList";
+
+const JENIS_LEMBAGA = ["rw", "rt", "posyandu", "karangTaruna", "lpm", "satlinmas", "pkk"];
+
+// Jumlah per kecamatan dihitung ulang dari desa yang tersisa, dengan aturan yang sama
+// seperti backend: RW/RT/Posyandu berupa angka, lembaga tunggal berupa status "Terbentuk".
+const hitungTotal = (desas, field) =>
+  Object.fromEntries(JENIS_LEMBAGA.map((jenis) => [
+    jenis,
+    desas.reduce((jumlah, desa) => {
+      const nilai = desa[field]?.[jenis];
+      return jumlah + (typeof nilai === "number" ? nilai : nilai === "Terbentuk" ? 1 : 0);
+    }, 0),
+  ]));
+
+const saringKecamatan = (kecamatanData, status) => {
+  if (!status) return kecamatanData;
+  return kecamatanData
+    .map((kecamatan) => {
+      const desas = kecamatan.desas.filter((desa) => desa.status === status);
+      return {
+        ...kecamatan,
+        desas,
+        totalKelembagaan: hitungTotal(desas, "kelembagaan"),
+        verifiedKelembagaan: hitungTotal(desas, "verifiedKelembagaan"),
+        ditolakKelembagaan: hitungTotal(desas, "ditolakKelembagaan"),
+      };
+    })
+    .filter((kecamatan) => kecamatan.desas.length > 0);
+};
 
 const Kelembagaan = () => {
   const { user } = useAuth();
@@ -31,8 +61,14 @@ const Kelembagaan = () => {
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState(null);
   const [viewMode, setViewMode] = useState("verified");
+  const [tabWilayah, setTabWilayah] = useState("desa");
+  const statusWilayah = tabWilayah === "semua" ? undefined : tabWilayah;
   const navigate = useNavigate();
-  const { data: statistikData, loading: statistikLoading, error: statistikError } = useStatistikTahunan();
+  const { data: statistikData, loading: statistikLoading, error: statistikError } = useStatistikTahunan(statusWilayah);
+  const kecamatanTampil = useMemo(
+    () => saringKecamatan(kecamatanData, statusWilayah),
+    [kecamatanData, statusWilayah]
+  );
 
   // Check if user can toggle edit mode
   const canToggleEdit =
@@ -209,7 +245,7 @@ const Kelembagaan = () => {
             <div className="flex items-center gap-2 sm:gap-3">
               {/* Notifikasi Verifikasi */}
               <VerifikasiNotifikasi
-                kecamatanData={kecamatanData}
+                kecamatanData={kecamatanTampil}
                 onDesaClick={handleDesaClick}
               />
 
@@ -292,7 +328,9 @@ const Kelembagaan = () => {
       </div>
 
       
-          <StatistikLKD summaryData={summaryData} loading={loading} />
+      <TabDesaKelurahan value={tabWilayah} onChange={setTabWilayah} />
+
+      <StatistikLKD summaryData={summaryData} loading={loading} scope={tabWilayah} />
       
 
       {/* Statistik Tahunan - komponen individual */}
@@ -315,7 +353,7 @@ const Kelembagaan = () => {
 
       {/* Kecamatan Accordion */}
       <KecamatanAccordion
-        kecamatanData={kecamatanData}
+        kecamatanData={kecamatanTampil}
         onDesaClick={handleDesaClick}
         mode={viewMode}
         onModeChange={setViewMode}

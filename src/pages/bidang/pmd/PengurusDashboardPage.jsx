@@ -38,6 +38,7 @@ import {
 import { Doughnut, Bar } from "react-chartjs-2";
 import api from "../../../api";
 import toast from "react-hot-toast";
+import TabDesaKelurahan from "../../../components/kelembagaan/TabDesaKelurahan";
 
 ChartJS.register(ArcElement, CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend);
 
@@ -223,8 +224,14 @@ export default function PengurusDashboardPage() {
   // diabaikan supaya tidak menimpa data permintaan terbaru.
   const summaryReq = useRef(0);
   const dataReq = useRef(0);
+  const yearlyReq = useRef(0);
   const [filters, setFilters] = useState({ kecamatans: [], desas: [] });
   const [exporting, setExporting] = useState(false);
+
+  // Tab wilayah: membatasi seluruh isi halaman, termasuk tren tahunan dan export.
+  const [tabWilayah, setTabWilayah] = useState("desa");
+  const statusWilayah = tabWilayah === "semua" ? undefined : tabWilayah;
+  const labelWilayah = { desa: "Desa", kelurahan: "Kelurahan" }[tabWilayah] || "Desa/Kelurahan";
 
   // Filter state
   const [searchInput, setSearchInput] = useState("");
@@ -260,13 +267,14 @@ export default function PengurusDashboardPage() {
     if (searchQuery.trim()) params.append("search", searchQuery.trim());
     if (selectedJabatan) params.append("jabatan", selectedJabatan);
     if (selectedTahun) params.append("tahun", selectedTahun);
+    if (statusWilayah) params.append("status_pemerintahan", statusWilayah);
     params.append("verification_scope", verificationScope);
     params.append("status_jabatan", jabatanScope);
     params.append("page", String(overrides.page || currentPage));
     params.append("per_page", "25");
     Object.entries(overrides).forEach(([k, v]) => { if (k !== 'page') params.set(k, String(v)); });
     return params;
-  }, [selectedKecamatan, selectedDesa, selectedType, selectedJabatan, searchQuery, verificationScope, jabatanScope, selectedTahun, currentPage]);
+  }, [selectedKecamatan, selectedDesa, selectedType, selectedJabatan, searchQuery, verificationScope, jabatanScope, selectedTahun, statusWilayah, currentPage]);
 
   const fetchSummary = useCallback(async () => {
     const reqId = ++summaryReq.current;
@@ -282,6 +290,7 @@ export default function PengurusDashboardPage() {
       if (selectedType) params.append("pengurusable_type", TYPE_QUERY_MAP[selectedType] || selectedType);
       if (selectedKecamatan) params.append("kecamatan_id", selectedKecamatan);
       if (selectedDesa) params.append("desa_id", selectedDesa);
+      if (statusWilayah) params.append("status_pemerintahan", statusWilayah);
       params.append("summary_only", "1");
       params.append("page", "1");
       params.append("per_page", "1");
@@ -296,20 +305,23 @@ export default function PengurusDashboardPage() {
     } finally {
       if (reqId === summaryReq.current) setSummaryLoading(false);
     }
-  }, [verificationScope, jabatanScope, selectedTahun, selectedType, selectedKecamatan, selectedDesa]);
+  }, [verificationScope, jabatanScope, selectedTahun, selectedType, selectedKecamatan, selectedDesa, statusWilayah]);
 
-  // Tren per tahun sengaja tanpa filter apa pun: pengurus aktif terverifikasi.
+  // Tren per tahun hanya mengikuti tab wilayah, tanpa filter lain: pengurus aktif terverifikasi.
   const fetchYearly = useCallback(async () => {
+    const reqId = ++yearlyReq.current;
     setYearlyLoading(true);
     try {
-      const res = await api.get("/kelembagaan/pengurus-dashboard?verification_scope=verified&status_jabatan=aktif&summary_only=1&page=1&per_page=1");
+      const wilayah = statusWilayah ? `&status_pemerintahan=${statusWilayah}` : "";
+      const res = await api.get(`/kelembagaan/pengurus-dashboard?verification_scope=verified&status_jabatan=aktif&summary_only=1&page=1&per_page=1${wilayah}`);
+      if (reqId !== yearlyReq.current) return;
       if (res.data.success) setYearlyStats(res.data.summary?.yearlyStats || {});
     } catch (error) {
       console.error("Error fetching yearly stats:", error);
     } finally {
-      setYearlyLoading(false);
+      if (reqId === yearlyReq.current) setYearlyLoading(false);
     }
-  }, []);
+  }, [statusWilayah]);
 
   useEffect(() => {
     fetchYearly();
@@ -392,7 +404,7 @@ export default function PengurusDashboardPage() {
           Jabatan: p.jabatan || '-',
           'Status Jabatan': getJabatanStatus(p.status_jabatan).label,
           Lembaga: lembaga,
-          Desa: p.desa_nama || '-',
+          [labelWilayah]: p.desa_nama || '-',
           Kecamatan: p.kecamatan_nama || '-',
           'Tanggal Mulai Jabatan': fmtDate(p.tanggal_mulai_jabatan),
           'Tanggal Akhir Jabatan': fmtDate(p.tanggal_akhir_jabatan),
@@ -405,7 +417,7 @@ export default function PengurusDashboardPage() {
       const ws = XLSX.utils.json_to_sheet(rows);
       const wb = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(wb, ws, "Pengurus");
-      const filterLabel = [selectedKecamatan && filters.kecamatans.find(k => String(k.id) === String(selectedKecamatan))?.nama, selectedDesa && filters.desas.find(d => String(d.id) === String(selectedDesa))?.nama].filter(Boolean).join('_') || 'Semua';
+      const filterLabel = [selectedKecamatan && filters.kecamatans.find(k => String(k.id) === String(selectedKecamatan))?.nama, selectedDesa && filters.desas.find(d => String(d.id) === String(selectedDesa))?.nama].filter(Boolean).join('_') || (statusWilayah ? labelWilayah : 'Semua');
       XLSX.writeFile(wb, `Pengurus_${filterLabel}_${new Date().toISOString().slice(0,10)}.xlsx`);
       toast.success(`Berhasil export ${rows.length} data`);
     } catch (error) {
@@ -447,6 +459,13 @@ export default function PengurusDashboardPage() {
 
   const selectTab = (tabId) => { setActiveTab(tabId); setCurrentPage(1); };
   const selectType = (type) => { setSelectedType(type); setCurrentPage(1); };
+  // Wilayah terpilih bisa jadi tidak ada di tab baru, jadi filter wilayah ikut dikosongkan.
+  const selectWilayah = (tab) => {
+    setTabWilayah(tab);
+    setSelectedKecamatan("");
+    setSelectedDesa("");
+    setCurrentPage(1);
+  };
 
   // Compute max value for bar charts
   const maxAgeCount = summary ? Math.max(...Object.values(summary.ageRanges), 1) : 1;
@@ -504,6 +523,8 @@ export default function PengurusDashboardPage() {
                 
               
             </header>
+
+      <TabDesaKelurahan value={tabWilayah} onChange={selectWilayah} />
 
       {/* Tren per tahun: tidak ikut filter di bawahnya */}
       {yearlyLoading ? (
@@ -755,7 +776,7 @@ export default function PengurusDashboardPage() {
               onChange={(e) => { setSelectedDesa(e.target.value); setCurrentPage(1); }}
               className="px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
-              <option value="">Semua Desa</option>
+              <option value="">Semua {labelWilayah}</option>
               {filteredDesas.map((d) => (
                 <option key={d.id} value={d.id}>
                   {d.nama}
@@ -809,7 +830,7 @@ export default function PengurusDashboardPage() {
                   <th className="text-left px-4 py-3 font-medium">Nama</th>
                   <th className="text-left px-4 py-3 font-medium">Jabatan</th>
                   <th className="text-left px-4 py-3 font-medium">Kelembagaan</th>
-                  <th className="text-left px-4 py-3 font-medium">Desa</th>
+                  <th className="text-left px-4 py-3 font-medium">{labelWilayah}</th>
                   <th className="text-left px-4 py-3 font-medium">Kecamatan</th>
                   <th className="text-left px-4 py-3 font-medium">Verifikasi</th>
                   <th className="text-left px-4 py-3 font-medium">Status Jabatan</th>
