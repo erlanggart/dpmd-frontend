@@ -1,4 +1,4 @@
-import { useSyncExternalStore } from "react";
+import { useEffect, useState, useSyncExternalStore } from "react";
 import { GEDUNG, TITIK_MULAI } from "./kantorConfig";
 
 // Jembatan antara loop 3D (useFrame, ±60 kali per detik) dan UI React.
@@ -46,6 +46,31 @@ export const ambilKeadaan = () => keadaan;
 
 export function useKeadaan() {
 	return useSyncExternalStore(langganan, () => keadaan);
+}
+
+// Kotak yang digambar denah mini (gedung + halaman depan).
+export const KOTAK_DENAH = { x0: -16, z0: -14, lebar: 32, tinggi: 46 };
+
+// Pemain di luar kotak denah (jalan depan, samping, Situ, kompleks Pemda): minimap
+// berganti ke peta kawasan dan bilah atas menyebut kawasan. Selisih 1,5 m mencegah
+// kedip saat berdiri tepat di tepinya.
+export function useDiKawasan(lantai) {
+	const [kawasan, setKawasan] = useState(false);
+	useEffect(() => {
+		let id;
+		let kini = false;
+		const cek = () => {
+			const m = kini ? -1.5 : 0;
+			const luar =
+				lantai === 0 &&
+				(posisi.x < KOTAK_DENAH.x0 - m || posisi.x > KOTAK_DENAH.x0 + KOTAK_DENAH.lebar + m || posisi.z < KOTAK_DENAH.z0 - m || posisi.z > KOTAK_DENAH.z0 + KOTAK_DENAH.tinggi + m);
+			if (luar !== kini) setKawasan((kini = luar));
+			id = requestAnimationFrame(cek);
+		};
+		id = requestAnimationFrame(cek);
+		return () => cancelAnimationFrame(id);
+	}, [lantai]);
+	return kawasan;
 }
 
 export function resetJelajah() {

@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef } from "react";
 import { useFrame } from "@react-three/fiber";
 import { KENDARAAN } from "./kendaraan";
-import { MOBIL, PAGAR_BATA, PARKIRAN, RUMAH_TETANGGA } from "./layout";
+import { MOBIL, PAGAR_BATA, PARKIRAN } from "./layout";
 import { BoxGeometry, CylinderGeometry, MeshStandardMaterial } from "three";
 import Gabung from "./Gabung";
 import { BAHAN_WARNA, gabung, kotak, warnai } from "./geometri";
@@ -151,31 +151,6 @@ function PagarBata() {
 	);
 }
 
-function RumahTetangga() {
-	const { x, z, lx, lz, tinggi } = RUMAH_TETANGGA;
-	return (
-		<group position={[x, 0, z]}>
-			<mesh position-y={tinggi / 2}>
-				<boxGeometry args={[lx, tinggi, lz]} />
-				<meshStandardMaterial color="#efe6d2" />
-			</mesh>
-			{/* atap limas: kerucut 4 sisi diputar 45° lalu di-scale oleh induknya, jadi alasnya persegi panjang */}
-			<group position-y={tinggi + 1.4} scale={[(lx / 2 + 0.5) / Math.SQRT1_2, 1, (lz / 2 + 0.5) / Math.SQRT1_2]}>
-				<mesh rotation-y={Math.PI / 4}>
-					<coneGeometry args={[1, 2.8, 4]} />
-					<meshStandardMaterial color="#c9673f" flatShading />
-				</mesh>
-			</group>
-			{[-2, 2].map((wz) => (
-				<mesh key={wz} position={[-lx / 2 - 0.01, 2.6, wz]} rotation-y={-Math.PI / 2}>
-					<planeGeometry args={[1.1, 1.4]} />
-					<meshStandardMaterial color="#2a2f33" />
-				</mesh>
-			))}
-		</group>
-	);
-}
-
 export default function Parkiran() {
 	// Garis putih pembatas petak parkir, di antara mobil-mobil.
 	const garis = useMemo(() => {
@@ -200,7 +175,6 @@ export default function Parkiran() {
 			{KENDARAAN.map((k) => (k.jenis === "mobil" ? <Mobil key={k.id} k={k} /> : <Motor key={k.id} k={k} />))}
 			<Gabung>
 				<PagarBata />
-				<RumahTetangga />
 			</Gabung>
 		</group>
 	);

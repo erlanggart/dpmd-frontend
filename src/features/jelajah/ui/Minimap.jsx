@@ -1,10 +1,10 @@
 import { useEffect, useRef } from "react";
 import { AREA_LAIN, LOBI, RUANGAN } from "../kantorConfig";
-import { posisi } from "../jelajahStore";
+import { KOTAK_DENAH as BATAS, posisi, useDiKawasan } from "../jelajahStore";
+import MinimapKawasan from "./MinimapKawasan";
 
 // Denah mini dari atas untuk lantai tempat pemain berada. Posisi pemain diperbarui
 // langsung ke atribut SVG lewat requestAnimationFrame, tanpa render ulang React.
-const BATAS = { x0: -16, z0: -14, lebar: 32, tinggi: 46 };
 
 const persegi = (r) => ({ x: r.x0, y: r.z0, width: r.x1 - r.x0, height: r.z1 - r.z0 });
 
@@ -26,6 +26,7 @@ const LABEL_PENDUKUNG = {
 
 export default function Minimap({ area, lantai, dikunjungi, onPilih, className = "" }) {
 	const penanda = useRef(null);
+	const kawasan = useDiKawasan(lantai);
 
 	useEffect(() => {
 		let id;
@@ -40,6 +41,7 @@ export default function Minimap({ area, lantai, dikunjungi, onPilih, className =
 	}, []);
 
 	const ruang = [LOBI, ...RUANGAN].filter((r) => r.lantai === lantai);
+	if (kawasan) return <MinimapKawasan className={className} />;
 
 	return (
 		<div className={`rounded-2xl bg-white/90 p-2 shadow-lg ring-1 ring-black/5 backdrop-blur ${className}`}>

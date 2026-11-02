@@ -6,6 +6,7 @@ import { teksturPaving } from "./tekstur";
 import Papan from "./Papan";
 import Gabung from "./Gabung";
 import JalanHidup from "./JalanHidup";
+import Kawasan from "./Kawasan.jsx";
 import PagarDepan from "./PagarDepan";
 import Parkiran from "./Parkiran";
 
@@ -197,18 +198,24 @@ function PondasiTeras() {
 	);
 }
 
+// Halaman kantor berpaving blok, dari belakang gedung sampai trotoar depan; di luar
+// itu tanah kawasan (Kawasan.jsx).
+const HALAMAN = { x0: -34, x1: 34, z0: -22, z1: 31.3 };
+
 export default function Lingkungan({ daftarDinding }) {
-	// Seluruh halaman berpaving blok; satu ubin tekstur = 1,6 m.
-	const paving = useMemo(() => teksturPaving([180 / 1.6, 180 / 1.6]), []);
+	const h = HALAMAN;
+	// satu ubin tekstur = 1,6 m
+	const paving = useMemo(() => teksturPaving([(h.x1 - h.x0) / 1.6, (h.z1 - h.z0) / 1.6]), [h]);
 
 	return (
 		<group>
 			{/* seluruh halaman satu pondasi lebih rendah dari lantai gedung */}
 			<group position-y={TANAH}>
-				<mesh rotation-x={-Math.PI / 2} position-y={-0.01}>
-					<planeGeometry args={[180, 180]} />
+				<mesh rotation-x={-Math.PI / 2} position={[(h.x0 + h.x1) / 2, -0.01, (h.z0 + h.z1) / 2]}>
+					<planeGeometry args={[h.x1 - h.x0, h.z1 - h.z0]} />
 					<meshStandardMaterial map={paving} />
 				</mesh>
+				<Kawasan />
 				<Parkiran />
 				{/* benda statis dipanggang jadi beberapa draw call saja */}
 				<Gabung>

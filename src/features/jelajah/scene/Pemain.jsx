@@ -5,6 +5,7 @@ import { BENDA, LOBI, RUANGAN, TINGGI_LANTAI, TITIK_MULAI, cariArea } from "../k
 import { kendali, posisi, setKeadaan } from "../jelajahStore";
 import { KENDARAAN, kendaraanDariId, keDunia, lingkaran, resetKendaraan, tabrakKendaraan, titikNaik } from "./kendaraan";
 import { PERABOT, TANAH, cariJalur, langkah, tabrakKendaraanStatis, tanggaDi, tinggiTanah } from "./layout";
+import { tinggiGedungDi } from "./kawasanBantu";
 import { diriSendiri, kendaraanDipakaiLain, pemainLain } from "../multipemain";
 import Tokoh from "./Tokoh";
 
@@ -467,8 +468,8 @@ export default function Pemain({ daftarDinding, penghuni, penampilan = PENAMPILA
 		const modeUi = mk.jenis === "kemudi" ? mk.k.jenis : mk.jenis === "duduk" ? "duduk" : "jalan";
 		setKeadaan({ area, lantai, dekat, mode: modeUi });
 
-		// Bidang klik mengikuti lantai tempat pemain berada.
-		bidangKlik.current.position.y = (lantai ? lantai * H : tinggiTanah(p.x, p.z)) + 0.02;
+		// Bidang klik mengikuti lantai & posisi pemain (kawasan jauh lebih luas dari bidangnya).
+		bidangKlik.current.position.set(p.x, (lantai ? lantai * H : tinggiTanah(p.x, p.z)) + 0.02, p.z);
 
 		// --- kamera orang ketiga ---
 		// Di halaman kamera lebih landai dan memandang lebih tinggi supaya tampak depan
@@ -488,7 +489,8 @@ export default function Pemain({ daftarDinding, penghuni, penampilan = PENAMPILA
 				const kx = p.x + sy * d * Math.cos(pitch);
 				const kz = p.z + cy * d * Math.cos(pitch);
 				const ky = p.y + 1.2 + d * Math.sin(pitch);
-				if (!(kx > -15.8 && kx < 15.8 && kz > -13.8 && kz < 12.9 && ky < 11)) break;
+				const dalamKantor = kx > -15.8 && kx < 15.8 && kz > -13.8 && kz < 12.9 && ky < 11;
+				if (!dalamKantor && ky - TANAH > tinggiGedungDi(kx, kz)) break;
 			}
 		}
 		k.jarakAman = k.jarakAman == null ? jarakAman : k.jarakAman + (jarakAman - k.jarakAman) * (1 - Math.exp(-8 * dt));
@@ -564,7 +566,7 @@ export default function Pemain({ daftarDinding, penghuni, penampilan = PENAMPILA
 				<meshBasicMaterial color="#ffffff" transparent opacity={0.85} depthWrite={false} />
 			</mesh>
 			<mesh ref={bidangKlik} rotation-x={-Math.PI / 2} position-y={0.02} onClick={ketukLantai}>
-				<planeGeometry args={[120, 120]} />
+				<planeGeometry args={[160, 160]} />
 				<meshBasicMaterial colorWrite={false} depthWrite={false} />
 			</mesh>
 		</>

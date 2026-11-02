@@ -1,4 +1,5 @@
 import { LOBI, RUANGAN, TINGGI_LANTAI } from "../kantorConfig";
+import { BATAS_KAWASAN, tabrakKawasan } from "./kawasanBantu";
 
 // Geometri turunan dari kantorConfig: dinding per lantai, pintu, tangga, perabot,
 // penghuni kantor, penghalang tabrakan, dan pencarian jalur. Semua dalam meter.
@@ -573,7 +574,8 @@ export const MOBIL = [
 ].map((m) => ({ ...m, z: 18 }));
 export const MOTOR = [10.9, 11.7, 12.5, 13.3, 14.1].map((x, i) => ({ x, z: 18, warna: i % 2 ? "#2b2b2e" : "#c4532d" }));
 export const PAGAR_BATA = { x: -15.4, z0: 12.4, z1: 28, tinggi: 1.4 };
-export const RUMAH_TETANGGA = { x: 27, z: 2, lx: 8, lz: 9, tinggi: 5 };
+// Tetangga kanan (Badan Kesbangpol) dan seluruh kawasan Pemda di sekitarnya digambar
+// dari data OpenStreetMap — lihat Kawasan.jsx.
 
 // Pagar depan seperti kantor aslinya: dinding abu-abu berlis hijau dengan lubang
 // tegak, tiang batu tiap ±3 m, gerbang geser di kanan (terbuka, daunnya tergeser
@@ -637,13 +639,12 @@ export const PENGHALANG = [0, 1].map((l) => [
 				dariKotak(POS_SATPAM),
 				titik(PAPAN_NAMA.x - 1.3, PAPAN_NAMA.z, 0.12),
 				titik(PAPAN_NAMA.x + 1.3, PAPAN_NAMA.z, 0.12),
-				dariKotak(RUMAH_TETANGGA),
 				...POHON.map(([x, z]) => titik(x, z, 0.5)),
 			]
 		: []),
 ]);
 
-export const BATAS_DUNIA = { x0: -34, x1: 34, z0: -22, z1: 48 };
+export const BATAS_DUNIA = BATAS_KAWASAN;
 
 // Penghalang khusus kendaraan: mobil/motor tidak boleh masuk lewat pintu lobi.
 // (Mobil & motor sendiri dinamis — tabrakannya ada di kendaraan.js.)
@@ -662,7 +663,7 @@ export function tabrak(x, z, lantai = 0, r = 0.38) {
 	for (const k of PENGHALANG[lantai]) {
 		if (x > k.x0 - r && x < k.x1 + r && z > k.z0 - r && z < k.z1 + r) return true;
 	}
-	return false;
+	return lantai === 0 && tabrakKawasan(x, z, r);
 }
 
 // Satu langkah dari ketinggian yLama ke (x, z). Ketinggian di tujuan ditentukan
@@ -831,6 +832,11 @@ const panjangJalur = (awal, daftar) =>
 // Rute dari {x, z, lantai} ke {x, z, lantai}. Beda lantai → lewat tangga yang
 // total jaraknya paling pendek. Mengembalikan daftar titik, atau null bila buntu.
 export function cariJalur(dari, ke) {
+	// Grid A* hanya menutupi kantor & halamannya. Di kawasan luas sekitarnya pengunjung
+	// berjalan lurus ke titik yang diketuk (berhenti bila terhalang).
+	const g = GRID[0];
+	const diGrid = (p) => p.x > g.x0 && p.x < g.x0 + g.nx * SEL && p.z > g.z0 && p.z < g.z0 + g.nz * SEL;
+	if (dari.lantai === 0 && ke.lantai === 0 && !(diGrid(dari) && diGrid(ke))) return tabrak(ke.x, ke.z, 0) ? null : [{ x: ke.x, z: ke.z }];
 	if (dari.lantai === ke.lantai) return astar(dari.lantai, dari, ke);
 	let terbaik = null;
 	for (const t of TANGGA) {

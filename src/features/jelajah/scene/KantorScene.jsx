@@ -54,7 +54,7 @@ export default function KantorScene({ statistik, dikunjungi, jeda, penghuni, pen
 		<Canvas
 			dpr={DPR_MAKS}
 			frameloop={jeda ? "never" : "always"}
-			camera={{ fov: 50, near: 0.1, far: 170, position: [0, 8, 40] }}
+			camera={{ fov: 50, near: 0.1, far: 400, position: [0, 8, 40] }}
 			gl={{ antialias: true, powerPreference: "high-performance" }}
 			style={{ touchAction: "none" }}
 			onCreated={({ gl, scene }) => {
@@ -63,7 +63,8 @@ export default function KantorScene({ statistik, dikunjungi, jeda, penghuni, pen
 			}}
 		>
 			<color attach="background" args={["#cfe6f1"]} />
-			<fog attach="fog" args={["#cfe6f1", 50, 120]} />
+			{/* kabut cukup jauh supaya Situ Pemda & gedung kawasan terlihat dari halaman */}
+			<fog attach="fog" args={["#cfe6f1", 80, 330]} />
 			<SiangMalam />
 
 			<KualitasOtomatis />

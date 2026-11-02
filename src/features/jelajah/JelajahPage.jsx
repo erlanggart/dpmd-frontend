@@ -25,7 +25,7 @@ import { penampilanAvatar } from "./avatar";
 import { kendaraanDariId } from "./scene/kendaraan";
 import { kirimEmote, kirimUcap, putusJelajah, sambungJelajah, sapaPemain, tutupSapaan, useMultipemain } from "./multipemain";
 import { AREA_PER_ID, BENDA, HALAMAN, LOBI, RUANGAN, TITIK_MULAI, titikDepanPetugas } from "./kantorConfig";
-import { kendali, posisi as posisiPemain, resetJelajah, useKeadaan } from "./jelajahStore";
+import { kendali, posisi as posisiPemain, resetJelajah, useDiKawasan, useKeadaan } from "./jelajahStore";
 import { suasana } from "./scene/suasana";
 import { susunPenghuni } from "./penghuni";
 import InfoPanel from "./ui/InfoPanel";
@@ -168,6 +168,7 @@ export default function JelajahPage() {
 	const penghuni = useMemo(() => susunPenghuni(dataPegawai), [dataPegawai]);
 	const baruLengkap = useRef(false);
 	const { area, lantai, dekat, minta, mode: modeMain } = useKeadaan();
+	const diKawasan = useDiKawasan(lantai);
 	// Jelajah bersama tamu lain
 	const [profil, setProfil] = useState(null);
 	const penampilan = useMemo(() => (profil ? penampilanAvatar(profil) : undefined), [profil]);
@@ -430,7 +431,7 @@ export default function JelajahPage() {
 							</Link>
 							<div className="flex h-10 min-w-0 items-center rounded-xl bg-white/90 px-2.5 text-xs font-semibold text-slate-800 shadow-md ring-1 ring-black/5 backdrop-blur sm:px-3 sm:text-sm">
 								<span className="mr-2 shrink-0 rounded-md bg-slate-900 px-1.5 py-0.5 text-[10px] text-white sm:text-[11px]">{NAMA_LANTAI[lantai]}</span>
-								<span className="truncate">{AREA_PER_ID[area]?.nama}</span>
+								<span className="truncate">{area === "luar" && diKawasan ? "Kawasan Pemda Cibinong" : AREA_PER_ID[area]?.nama}</span>
 							</div>
 						</div>
 						<div className="pointer-events-auto flex shrink-0 items-center gap-2">
