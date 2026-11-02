@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
+import toast from "react-hot-toast";
 import AparaturDesaForm from "../../../components/aparatur-desa/AparaturDesaForm";
 import {
 	getAparaturDesaById,
@@ -14,6 +15,7 @@ const AparaturDesaEditPage = () => {
 	const [produkHukum, setProdukHukum] = useState([]);
 	const [loading, setLoading] = useState(true);
 	const [error, setError] = useState(null);
+	const [gagalSimpan, setGagalSimpan] = useState(null);
 
 	useEffect(() => {
 		const load = async () => {
@@ -81,11 +83,22 @@ const AparaturDesaEditPage = () => {
 				});
 				dataToSend = fd;
 			}
+			setGagalSimpan(null);
 			await updateAparaturDesa(id, dataToSend);
 			nav(`/desa/aparatur-desa/${id}`);
 		} catch (e) {
 			console.error("Error updating aparatur:", e);
-			setError("Gagal menyimpan perubahan.");
+			// Formulir tetap ditampilkan (isian tidak hilang) dan alasan dari
+			// server ikut disebut — dulu seluruh halaman diganti pesan umum
+			// "Gagal menyimpan perubahan" tanpa penyebab.
+			const status = e.response?.status;
+			const pesan =
+				status === 413
+					? "Ukuran berkas terlalu besar (maks. 2 MB per berkas). Kompres atau foto ulang dengan resolusi lebih kecil, lalu simpan lagi."
+					: e.response?.data?.message || (e.response ? "Gagal menyimpan perubahan." : "Koneksi terputus saat mengunggah. Periksa internet lalu coba lagi.");
+			setGagalSimpan(pesan);
+			toast.error(pesan, { duration: 7000 });
+			window.scrollTo({ top: 0, behavior: "smooth" });
 		}
 	};
 
@@ -129,6 +142,11 @@ const AparaturDesaEditPage = () => {
 					Kembali
 				</button>
 			</div>
+			{gagalSimpan && (
+				<div role="alert" className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-medium text-rose-700">
+					Gagal menyimpan: {gagalSimpan}
+				</div>
+			)}
 			<AparaturDesaForm
 				onSubmit={handleSubmit}
 				initialData={initialData}

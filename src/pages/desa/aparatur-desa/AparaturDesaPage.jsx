@@ -69,7 +69,13 @@ const AparaturDesaPage = () => {
 			setEditingData(null);
 		} catch (error) {
 			console.error("Form submission error:", error);
-			Swal.fire("Error", "Terjadi kesalahan saat menyimpan data.", "error");
+			// Sebut alasannya (berkas terlalu besar, format, isian ditolak) —
+			// pesan umum saja membuat desa tidak tahu harus membetulkan apa.
+			const pesan =
+				error.response?.status === 413
+					? "Ukuran berkas terlalu besar (maks. 2 MB per berkas)."
+					: error.response?.data?.message || "Terjadi kesalahan saat menyimpan data.";
+			Swal.fire("Gagal menyimpan", pesan, "error");
 		}
 	};
 

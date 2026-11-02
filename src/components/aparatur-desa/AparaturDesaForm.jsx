@@ -10,6 +10,7 @@ import {
 	CreditCard, Users, GraduationCap, Check, ChevronDown, ExternalLink, RefreshCw,
 	Save, X,
 } from "lucide-react";
+import toast from "react-hot-toast";
 import SearchableProdukHukumSelect from "../shared/SearchableProdukHukumSelect";
 
 // Build base host to preview existing uploaded files
@@ -20,6 +21,72 @@ const getBaseHost = () => {
 };
 const fileUrl = (filename) =>
 	filename ? `${getBaseHost()}/uploads/aparatur_desa_files/${filename}` : null;
+
+/**
+ * Server hanya menerima PDF/JPG/PNG maksimal 2 MB per berkas (middlewares/upload.js).
+ * Foto KTP/SK dari kamera HP biasanya 3–6 MB atau berformat HEIC/WebP, dan dulu
+ * baru ditolak server setelah dikirim — desa hanya melihat "Gagal menyimpan".
+ * Di sini gambar dikecilkan otomatis jadi JPEG, sedangkan yang tidak bisa
+ * diperbaiki (PDF besar, format lain) ditolak sebelum dikirim, dengan alasannya.
+ */
+const BATAS_BERKAS = 2 * 1024 * 1024;
+const TIPE_DITERIMA = ["application/pdf", "image/jpeg", "image/png"];
+
+const kompresGambar = (berkas) =>
+	new Promise((selesai, gagal) => {
+		const url = URL.createObjectURL(berkas);
+		const img = new Image();
+		img.onload = async () => {
+			URL.revokeObjectURL(url);
+			const hasilDari = (sisi, mutu) =>
+				new Promise((ok) => {
+					const skala = Math.min(1, sisi / Math.max(img.width, img.height));
+					const kanvas = document.createElement("canvas");
+					kanvas.width = Math.round(img.width * skala);
+					kanvas.height = Math.round(img.height * skala);
+					const ctx = kanvas.getContext("2d");
+					ctx.fillStyle = "#fff"; // PNG transparan jangan jadi hitam
+					ctx.fillRect(0, 0, kanvas.width, kanvas.height);
+					ctx.drawImage(img, 0, 0, kanvas.width, kanvas.height);
+					kanvas.toBlob(ok, "image/jpeg", mutu);
+				});
+			for (const [sisi, mutu] of [[2000, 0.85], [1600, 0.75], [1200, 0.7], [1000, 0.6]]) {
+				const blob = await hasilDari(sisi, mutu);
+				if (blob && blob.size <= BATAS_BERKAS) {
+					const nama = berkas.name.replace(/\.[^.]+$/, "") + ".jpg";
+					return selesai(new File([blob], nama, { type: "image/jpeg" }));
+				}
+			}
+			gagal(new Error("terlalu besar"));
+		};
+		img.onerror = () => {
+			URL.revokeObjectURL(url);
+			gagal(new Error("tidak terbaca"));
+		};
+		img.src = url;
+	});
+
+const siapkanBerkas = async (berkas, label) => {
+	if (!berkas) return null;
+	const gambar = berkas.type?.startsWith("image/");
+	if (TIPE_DITERIMA.includes(berkas.type) && berkas.size <= BATAS_BERKAS) return berkas;
+	if (gambar) {
+		try {
+			const kecil = await kompresGambar(berkas);
+			if (berkas.size > BATAS_BERKAS) toast.success(`${label}: foto dikecilkan otomatis agar di bawah 2 MB`);
+			return kecil;
+		} catch {
+			toast.error(`${label}: format gambar ini tidak bisa dibaca peramban. Simpan ulang sebagai JPG/PNG lalu unggah lagi.`, { duration: 7000 });
+			return null;
+		}
+	}
+	if (berkas.type === "application/pdf") {
+		toast.error(`${label}: PDF ${(berkas.size / 1024 / 1024).toFixed(1)} MB melebihi batas 2 MB. Kompres PDF-nya dulu atau unggah sebagai foto.`, { duration: 7000 });
+		return null;
+	}
+	toast.error(`${label}: hanya PDF, JPG, atau PNG yang diterima.`, { duration: 7000 });
+	return null;
+};
 
 // Helpers: treat empty string or null as undefined for optional fields
 const emptyToUndef = (schema) =>
@@ -376,7 +443,13 @@ const PasFoto = ({ control, existingFilename, nama }) => {
 	const [rusak, setRusak] = useState(false);
 	const src = pratinjau || (!rusak && fileUrl(existingFilename)) || null;
 
-	const onDrop = useCallback((berkas) => berkas[0] && field.onChange(berkas[0]), [field]);
+	const onDrop = useCallback(
+		async (berkas) => {
+			const siap = await siapkanBerkas(berkas[0], "Pas foto");
+			if (siap) field.onChange(siap);
+		},
+		[field]
+	);
 	const { getRootProps, getInputProps, isDragActive } = useDropzone({
 		onDrop,
 		multiple: false,
@@ -450,7 +523,13 @@ const UbinBerkas = ({ control, name, label, existingFilename, icon: Icon, wajib 
 	const { field } = useController({ control, name });
 	const baru = field.value instanceof File ? field.value : null;
 
-	const onDrop = useCallback((berkas) => berkas[0] && field.onChange(berkas[0]), [field]);
+	const onDrop = useCallback(
+		async (berkas) => {
+			const siap = await siapkanBerkas(berkas[0], label);
+			if (siap) field.onChange(siap);
+		},
+		[field, label]
+	);
 	const { getRootProps, getInputProps, isDragActive } = useDropzone({ onDrop, multiple: false });
 
 	const keadaan = baru ? "baru" : existingFilename ? "ada" : "kosong";

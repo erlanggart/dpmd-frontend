@@ -75,6 +75,43 @@ const isBpd = (jabatan = '') => {
 	return jab.includes('bpd') || jab.includes('badan permusyawaratan');
 };
 
+// Batas usia 60 tahun (UU 6/2014 Pasal 53) hanya untuk perangkat desa.
+// Kepala desa (termasuk PJ) dan BPD tidak dibatasi usia — jangan ditolak karena umur.
+const BATAS_USIA_PERANGKAT = 60;
+const isKepalaDesa = (jabatan = '') => /kepala desa|\bkades\b/i.test(String(jabatan));
+const tanpaBatasUsia = (jabatan) => isBpd(jabatan) || isKepalaDesa(jabatan);
+const usiaTahun = (tanggal) => {
+	const lahir = tanggal ? new Date(tanggal) : null;
+	if (!lahir || Number.isNaN(lahir.getTime())) return null;
+	const kini = new Date();
+	let tahun = kini.getFullYear() - lahir.getFullYear();
+	if (kini.getMonth() < lahir.getMonth() || (kini.getMonth() === lahir.getMonth() && kini.getDate() < lahir.getDate())) tahun -= 1;
+	return tahun;
+};
+
+// Keadaan daftar (tab, kecamatan/desa yang dibuka, saringan) disimpan per tab
+// peramban, supaya kembali dari halaman detail mendarat di tempat semula —
+// bukan di awal daftar lagi.
+const useIngatSesi = (kunci, awal) => {
+	const [nilai, setNilai] = useState(() => {
+		try {
+			const simpanan = sessionStorage.getItem(kunci);
+			return simpanan === null ? awal : JSON.parse(simpanan);
+		} catch {
+			return awal;
+		}
+	});
+	useEffect(() => {
+		try {
+			sessionStorage.setItem(kunci, JSON.stringify(nilai));
+		} catch {
+			/* penyimpanan sesi tidak tersedia — keadaan cukup di memori */
+		}
+	}, [kunci, nilai]);
+	return [nilai, setNilai];
+};
+const KUNCI_FOKUS = 'aparatur-fokus';
+
 const AVATAR_TONES = [
 	'bg-slate-100 text-slate-700',
 	'bg-slate-100 text-slate-700',
@@ -1646,6 +1683,11 @@ export const AparaturDesaDetailPage = ({ backPath }) => {
 	const ubahVerifikasi = async (payload, { senyap = false } = {}) => {
 		setSibuk(true);
 		const statusSebelum = a.status_verifikasi;
+		// Item yang ada isinya harus diputus semua; satu "tidak sesuai" saja sudah
+		// membuat statusnya "ditolak", padahal item lain mungkin belum diperiksa.
+		const itemAda = (a.item_verifikasi || []).filter((item) => item.ada);
+		const semuaDiputus = (keputusan) => itemAda.length > 0 && itemAda.every((item) => keputusan?.[item.key]?.status);
+		const tuntasSebelum = statusSebelum && semuaDiputus(a.verifikasi_item);
 		try {
 			const response = await api.post(`/pemdes/aparatur-desa/${a.id}/verifikasi`, payload);
 			const baru = response.data?.data || {};
@@ -1655,6 +1697,13 @@ export const AparaturDesaDetailPage = ({ backPath }) => {
 			if (!senyap || baru.status_verifikasi !== statusSebelum) toast.success(response.data?.message || 'Status verifikasi diperbarui');
 			else toast.success('Keputusan disimpan', { duration: 1500 });
 			if (response.data?.peringatan) toast(response.data.peringatan, { icon: '⚠️', duration: 6000 });
+			// Verifikasi orang ini baru saja tuntas → langsung kembali ke
+			// kecamatan/desa yang sedang diverifikasi untuk lanjut ke orang berikutnya.
+			const tuntas = ['terverifikasi', 'ditolak'].includes(baru.status_verifikasi) && semuaDiputus(baru.verifikasi_item);
+			if (tuntas && (!tuntasSebelum || baru.status_verifikasi !== statusSebelum)) {
+				kembali();
+				return true;
+			}
 			await muatRiwayat();
 			return true;
 		} catch (error) {
@@ -1886,6 +1935,26 @@ export const AparaturDesaDetailPage = ({ backPath }) => {
 								<DetailField label="Usia" value={usia} />
 								<DetailField label="Pendidikan Terakhir" value={a.pendidikan_terakhir} />
 							</div>
+							{/* Petunjuk usia untuk pemverifikasi: hanya perangkat desa yang
+							    dibatasi 60 tahun; kepala desa & BPD tidak boleh ditolak karena umur. */}
+							{usiaTahun(a.tanggal_lahir) >= BATAS_USIA_PERANGKAT &&
+								(tanpaBatasUsia(a.jabatan) ? (
+									<p className="mt-4 flex items-start gap-2 rounded-xl border border-sky-200 bg-sky-50 px-3 py-2.5 text-xs text-sky-800">
+										<Info className="mt-0.5 h-4 w-4 shrink-0 text-sky-600" />
+										<span>
+											<span className="font-semibold">{isBpd(a.jabatan) ? 'BPD' : 'Kepala desa'} tidak memiliki batas usia.</span> Usia{' '}
+											{usiaTahun(a.tanggal_lahir)} tahun bukan alasan untuk menolak verifikasi.
+										</span>
+									</p>
+								) : (
+									<p className="mt-4 flex items-start gap-2 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2.5 text-xs text-amber-800">
+										<AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber-600" />
+										<span>
+											<span className="font-semibold">Sudah berusia {usiaTahun(a.tanggal_lahir)} tahun.</span> Perangkat desa
+											diberhentikan setelah berusia {BATAS_USIA_PERANGKAT} tahun (UU 6/2014 Pasal 53).
+										</span>
+									</p>
+								))}
 							{/* Tanggal lahir taksiran impor Dapur Desa: masuk ke 8 digit
 							    pertama NIPD, jadi NIPD ditahan sampai dikoreksi / dikonfirmasi. */}
 							{a.tanggal_lahir_taksiran && (
@@ -2854,9 +2923,10 @@ const DatabaseTab = ({ refreshKey = 0, jenis, stats, statsLoading, detailBasePat
 	const bukaDetail = (idAparatur) => navigate(`${detailBasePath}/${idAparatur}`);
 	const [loading, setLoading] = useState(true);
 	const [data, setData] = useState([]);
-	const [pagination, setPagination] = useState({ page: 1, limit: 20, totalPages: 1, totalItems: 0 });
-	const [filters, setFilters] = useState(EMPTY_FILTERS);
-	const [searchInput, setSearchInput] = useState('');
+	const sesi = `aparatur-tabel:${jenis || 'semua'}`;
+	const [pagination, setPagination] = useIngatSesi(`${sesi}:halaman`, { page: 1, limit: 20, totalPages: 1, totalItems: 0 });
+	const [filters, setFilters] = useIngatSesi(`${sesi}:saring`, EMPTY_FILTERS);
+	const [searchInput, setSearchInput] = useState(() => filters.search || '');
 	const [kecamatanList, setKecamatanList] = useState([]);
 	const pilihanDesa = useDesaKecamatan(filters.kecamatan_id, kecamatanList);
 	const [showFilters, setShowFilters] = useState(false);
@@ -2888,7 +2958,7 @@ const DatabaseTab = ({ refreshKey = 0, jenis, stats, statsLoading, detailBasePat
 		} finally {
 			setLoading(false);
 		}
-	}, [filters, jenis, pagination.page, pagination.limit, onUpdated]);
+	}, [filters, jenis, pagination.page, pagination.limit, onUpdated, setPagination]);
 
 	useEffect(() => {
 		const fetchKecamatanList = async () => {
@@ -2927,7 +2997,7 @@ const DatabaseTab = ({ refreshKey = 0, jenis, stats, statsLoading, detailBasePat
 			setPagination((prev) => (prev.page === 1 ? prev : { ...prev, page: 1 }));
 		}, 400);
 		return () => clearTimeout(timer);
-	}, [searchInput]);
+	}, [searchInput, setFilters, setPagination]);
 
 	const handleFilterChange = (key, value) => {
 		setFilters((prev) => {
@@ -3481,7 +3551,7 @@ const BatangTerisi = ({ terisi, total }) => {
 };
 
 const BarisAparatur = ({ person, nomor, onBuka, onUbah }) => (
-	<div className="group flex items-center gap-1 rounded-xl transition-colors hover:bg-white">
+	<div id={`aparatur-${person.id}`} className="group flex scroll-mt-24 items-center gap-1 rounded-xl transition-colors hover:bg-white">
 		<button type="button" onClick={onBuka} className="flex min-w-0 flex-1 items-center gap-3 px-3 py-2 text-left">
 			<span className="w-5 shrink-0 text-right text-xs tabular-nums text-slate-400">{nomor}</span>
 			<Avatar person={person} className="h-9 w-9 text-xs" />
@@ -3612,13 +3682,36 @@ const KartuDesa = ({ desa, jenis, terbuka, onToggle, onBuka, onTambah, onUbah })
 
 const WilayahTab = ({ refreshKey = 0, jenis, detailBasePath, onLoadingChange, onUpdated, onTambah, onUbah }) => {
 	const navigate = useNavigate();
-	const bukaDetail = (idAparatur) => navigate(`${detailBasePath}/${idAparatur}`);
+	// Orang yang dibuka diingat, supaya saat kembali dari detail baris itu
+	// digulir ke tengah layar di dalam desanya yang masih terbuka.
+	const bukaDetail = (idAparatur) => {
+		try {
+			sessionStorage.setItem(KUNCI_FOKUS, String(idAparatur));
+		} catch {
+			/* abaikan */
+		}
+		navigate(`${detailBasePath}/${idAparatur}`);
+	};
+	const sesi = `aparatur-wilayah:${jenis || 'semua'}`;
 	const [loading, setLoading] = useState(true);
 	const [data, setData] = useState([]);
-	const [cari, setCari] = useState('');
-	const [saringan, setSaringan] = useState('semua');
-	const [kecamatanTerbuka, setKecamatanTerbuka] = useState(() => new Set());
-	const [desaTerbuka, setDesaTerbuka] = useState(() => new Set());
+	const [cari, setCari] = useIngatSesi(`${sesi}:cari`, '');
+	const [saringan, setSaringan] = useIngatSesi(`${sesi}:saringan`, 'semua');
+	const [kecamatanTerbuka, setKecamatanTerbuka] = useIngatSesi(`${sesi}:kecamatan`, []);
+	const [desaTerbuka, setDesaTerbuka] = useIngatSesi(`${sesi}:desa`, []);
+
+	useEffect(() => {
+		if (loading) return;
+		let id = null;
+		try {
+			id = sessionStorage.getItem(KUNCI_FOKUS);
+			sessionStorage.removeItem(KUNCI_FOKUS);
+		} catch {
+			/* abaikan */
+		}
+		if (!id) return;
+		requestAnimationFrame(() => document.getElementById(`aparatur-${id}`)?.scrollIntoView({ block: 'center' }));
+	}, [loading]);
 
 	useEffect(() => {
 		let batal = false;
@@ -3683,12 +3776,7 @@ const WilayahTab = ({ refreshKey = 0, jenis, detailBasePath, onLoadingChange, on
 	const sedangMencari = kata.length > 0;
 
 	const toggle = (setter) => (id) =>
-		setter((sebelumnya) => {
-			const berikutnya = new Set(sebelumnya);
-			if (berikutnya.has(id)) berikutnya.delete(id);
-			else berikutnya.add(id);
-			return berikutnya;
-		});
+		setter((sebelumnya) => (sebelumnya.includes(id) ? sebelumnya.filter((x) => x !== id) : [...sebelumnya, id]));
 	const toggleKecamatan = toggle(setKecamatanTerbuka);
 	const toggleDesa = toggle(setDesaTerbuka);
 
@@ -3757,7 +3845,7 @@ const WilayahTab = ({ refreshKey = 0, jenis, detailBasePath, onLoadingChange, on
 			) : (
 				<div className="space-y-2">
 					{hasil.map((kecamatan) => {
-						const bukaKecamatan = sedangMencari || saringan !== 'semua' || kecamatanTerbuka.has(kecamatan.id);
+						const bukaKecamatan = sedangMencari || saringan !== 'semua' || kecamatanTerbuka.includes(kecamatan.id);
 						const jumlahDesa = kecamatan.desa.length;
 						const terisi = kecamatan.desa.filter((desa) => desa.aparatur.length > 0).length;
 						const orang = kecamatan.desa.reduce((total, desa) => total + desa.aparatur.length, 0);
@@ -3809,7 +3897,7 @@ const WilayahTab = ({ refreshKey = 0, jenis, detailBasePath, onLoadingChange, on
 												key={desa.id}
 												desa={desa}
 												jenis={jenis}
-												terbuka={sedangMencari || desaTerbuka.has(desa.id)}
+												terbuka={sedangMencari || desaTerbuka.includes(desa.id)}
 												onToggle={() => toggleDesa(desa.id)}
 												onBuka={bukaDetail}
 												onTambah={
@@ -3915,7 +4003,7 @@ const PanelNotifikasi = ({ jenis, detailBasePath }) => {
 					<ButirNotifikasi
 						icon={CalendarDays}
 						nada="bg-amber-50 text-amber-600"
-						judul={`Usia di atas ${data.batas_usia} tahun`}
+						judul={`Perangkat desa usia di atas ${data.batas_usia} tahun`}
 						keterangan="Diurutkan dari yang tertua"
 						total={data.usia_lanjut.total}
 						contoh={data.usia_lanjut.contoh}
@@ -4209,7 +4297,7 @@ const AparaturDesaPage = ({
 	const tabs = filteredTabs.length > 0 ? filteredTabs : TAB_DEFINITIONS;
 	const fallbackTab = tabs[0]?.id || 'database';
 	const defaultTab = initialTab && tabs.some((tab) => tab.id === initialTab) ? initialTab : fallbackTab;
-	const [activeTab, setActiveTab] = useState(defaultTab);
+	const [activeTab, setActiveTab] = useIngatSesi(`aparatur-tab:${mode}:${jenis || 'semua'}`, defaultTab);
 	const [refreshKey, setRefreshKey] = useState(0);
 	const [busy, setBusy] = useState(false);
 	const [lastUpdated, setLastUpdated] = useState(null);
@@ -4217,7 +4305,7 @@ const AparaturDesaPage = ({
 
 	useEffect(() => {
 		if (!hasActiveTab) setActiveTab(fallbackTab);
-	}, [fallbackTab, hasActiveTab]);
+	}, [fallbackTab, hasActiveTab, setActiveTab]);
 
 	// Statistik diambil di sini, bukan di dalam tab: ringkasannya berdiri di
 	// luar tab, sementara pilihan filter pendidikan di mode tabel memakai
