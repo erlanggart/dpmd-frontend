@@ -11,6 +11,10 @@ const LANGIT = [new Color("#cfe6f1"), new Color("#0d1830")];
 const LANGIT_ATAS = [new Color("#ffffff"), new Color("#7d8fc2")];
 const TANAH_BAWAH = [new Color("#a8a49b"), new Color("#2b2a35")];
 const MATAHARI = [new Color("#fff3dc"), new Color("#9fb4ff")];
+// langit mendung saat hujan
+const MENDUNG = new Color("#7d8a96");
+const MENDUNG_MALAM = new Color("#1a2029");
+const bantuWarna = new Color();
 
 export default function SiangMalam() {
 	const scene = useThree((s) => s.scene);
@@ -28,18 +32,26 @@ export default function SiangMalam() {
 		}
 		const target = suasana.paksa === "siang" ? 0 : suasana.paksa === "malam" ? 1 : j.nilai;
 		const m0 = suasana.malam;
-		if (m0 === target && sinar.current.userData.siap) return;
+		const h = suasana.hujan;
+		if (m0 === target && h === sinar.current.userData.hujan && sinar.current.userData.siap) return;
 		const m = Math.abs(target - m0) < 0.002 ? target : m0 + (target - m0) * (1 - Math.exp(-2.5 * dt));
 		suasana.malam = m;
 		sinar.current.userData.siap = true;
+		sinar.current.userData.hujan = h;
 
-		if (scene.background?.isColor) scene.background.lerpColors(LANGIT[0], LANGIT[1], m);
-		if (scene.fog) scene.fog.color.lerpColors(LANGIT[0], LANGIT[1], m);
+		bantuWarna.lerpColors(MENDUNG, MENDUNG_MALAM, m);
+		if (scene.background?.isColor) scene.background.lerpColors(LANGIT[0], LANGIT[1], m).lerp(bantuWarna, h * 0.75);
+		if (scene.fog) {
+			scene.fog.color.lerpColors(LANGIT[0], LANGIT[1], m).lerp(bantuWarna, h * 0.75);
+			// hujan: pandangan memendek
+			scene.fog.near = 80 - 55 * h;
+			scene.fog.far = 330 - 190 * h;
+		}
 		langit.current.color.lerpColors(LANGIT_ATAS[0], LANGIT_ATAS[1], m);
 		langit.current.groundColor.lerpColors(TANAH_BAWAH[0], TANAH_BAWAH[1], m);
-		langit.current.intensity = 1.15 - 0.45 * m;
+		langit.current.intensity = (1.15 - 0.45 * m) * (1 - 0.25 * h);
 		sinar.current.color.lerpColors(MATAHARI[0], MATAHARI[1], m);
-		sinar.current.intensity = 1.5 - 1.15 * m;
+		sinar.current.intensity = (1.5 - 1.15 * m) * (1 - 0.6 * h);
 	});
 
 	return (

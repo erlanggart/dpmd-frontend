@@ -15,6 +15,8 @@ import { AIR_Y, DEK_Y, DERMAGA, PERAHU, dermagaDi, jarakKeTepi, diPanggung, pera
 import { bukaPeti, petiSiap } from "../harta";
 import { berhentiMakan, mulaiMakan, tickMakan, warung } from "../warung";
 import { lemari, selesaiCoba } from "../lemari";
+import { catat } from "../progres";
+import { balap, batalBalap, dekatStart, tickBalap } from "../balap";
 import KeranjangTangan from "./KeranjangTangan";
 import Tokoh from "./Tokoh";
 
@@ -100,6 +102,8 @@ export default function Pemain({ daftarDinding, penghuni, penampilan = PENAMPILA
 	const penandaTujuan = useRef();
 	const bidangKlik = useRef();
 	const riak = useRef();
+	// jarak tempuh untuk misi harian (renang / mendayung / naik motor)
+	const tempuh = useRef({ x: 0, z: 0, jenis: null, akum: 0 });
 	const gerak = useRef({ laju: 0, fase: 0, udara: false, isyarat: null });
 	const tombol = useRef(new Set());
 	const rute = useRef(null);
@@ -583,6 +587,8 @@ export default function Pemain({ daftarDinding, penghuni, penampilan = PENAMPILA
 			kend.laju += Math.max(-batas, Math.min(batas, beda));
 			if (Math.abs(maju) < 0.05) kend.laju *= Math.exp(-1.2 * dt);
 			if (Math.abs(kend.laju) < 0.02 && Math.abs(maju) < 0.05) kend.laju = 0;
+			// hitung mundur balapan: motor ditahan di garis start
+			if (kend.jenis === "motor" && !mode.current.no && tickBalap(kend.x, kend.z)) kend.laju = 0;
 			kend.setir += (Math.max(-1, Math.min(1, samping)) - kend.setir) * (1 - Math.exp(-c.setirCepat * dt));
 			// model sepeda: belok kanan (D) = rot berkurang
 			const putar = ((-kend.setir * c.belok * kend.laju * dt) / c.sumbu) * 2 / (1 + Math.abs(kend.laju) * c.redam) * (kend.h ? 0.15 : 1);
@@ -704,6 +710,19 @@ export default function Pemain({ daftarDinding, penghuni, penampilan = PENAMPILA
 		posisi.yTampil = p.y + loncat.current.h;
 		posisi.pose = diMobil ? "mobil" : diMotor ? "motor" : diPerahu ? "perahu" : duduk ? "duduk" : mk.jenis === "mancing" ? "mancing" : renang ? "renang" : "jalan";
 		posisi.kursi = mk.k ? mk.no || 0 : 0;
+		if (balap.fase && !(mk.jenis === "kemudi" && mk.k?.jenis === "motor" && !mk.no)) batalBalap("Balapan dibatalkan — Anda turun dari motor");
+		{
+			const tp = tempuh.current;
+			const jenis = renang ? "renang" : mk.jenis === "kemudi" && !mk.no && (diPerahu || diMotor) ? (diPerahu ? "perahu" : "motor") : null;
+			const d = Math.hypot(p.x - tp.x, p.z - tp.z);
+			if (jenis && jenis === tp.jenis && d < 5) tp.akum += d;
+			else tp.akum = 0;
+			if (tp.akum >= 10) {
+				catat(jenis, Math.floor(tp.akum));
+				tp.akum -= Math.floor(tp.akum);
+			}
+			Object.assign(tp, { x: p.x, z: p.z, jenis });
+		}
 		posisi.udara = gr.udara;
 		posisi.lari = lari && besar > 0.05;
 		posisi.kend = mk.k || null;
@@ -721,6 +740,7 @@ export default function Pemain({ daftarDinding, penghuni, penampilan = PENAMPILA
 		// keranjang dikembalikan begitu keluar toko
 		if (belanja.bawaKeranjang && !tokoDi(p.x, p.z) && (p.z < 46.4 || mk.jenis !== "jalan")) kembalikanKeranjang();
 		gr.aktivitas = warung.makan && mk.jenis === "duduk" ? "makan" : null;
+		posisi.aktivitas = gr.aktivitas;
 		// keluar bilik ruang coba = pakaian coba dilepas
 		if (lemari.coba && bilikDi(p.x, p.z) < 0) selesaiCoba();
 		gr.isyarat =
@@ -750,7 +770,7 @@ export default function Pemain({ daftarDinding, penghuni, penampilan = PENAMPILA
 			// di perahu: dekat dermaga → turun; di tengah situ & hampir diam → memancing
 			if (titikTurun(mk.k.x, mk.k.z)) dekat = "keluar";
 			else if (Math.abs(mk.k.laju) < 0.8) dekat = "mancing:perahu";
-		} else if (mk.jenis === "kemudi") dekat = "keluar";
+		} else if (mk.jenis === "kemudi") dekat = mk.k.jenis === "motor" && !mk.no && !balap.fase && dekatStart(p.x, p.z) ? "balap:mulai" : "keluar";
 		else if (mk.jenis === "jalan" && !diTangga && !renang) {
 			// yang berjangkauan pendek (kursi, kendaraan, benda) didahulukan bila dalam jangkauan
 			let terdekat = Infinity;

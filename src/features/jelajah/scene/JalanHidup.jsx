@@ -1,7 +1,7 @@
 import { useEffect, useLayoutEffect, useMemo, useRef } from "react";
 import { useFrame } from "@react-three/fiber";
 import { BoxGeometry, Color, CylinderGeometry, MeshStandardMaterial, Object3D, SphereGeometry } from "three";
-import { posisi } from "../jelajahStore";
+import { posisi, posisiNpc } from "../jelajahStore";
 import { pemainLain } from "../multipemain";
 import { BAHAN_WARNA, gabung, kotak, warnai } from "./geometri";
 import { KENDARAAN } from "./kendaraan";
@@ -81,6 +81,7 @@ function halangan() {
 	const h = [{ x: posisi.x, z: posisi.z }];
 	for (const p of pemainLain.values()) if (p.s && p.s.y < 1) h.push({ x: p.s.x, z: p.s.z });
 	for (const k of KENDARAAN) h.push({ x: k.x, z: k.z });
+	for (const q of posisiNpc.values()) if (q.lantai === 0 && q.z > 28 && q.z < 43) h.push(q);
 	return h;
 }
 

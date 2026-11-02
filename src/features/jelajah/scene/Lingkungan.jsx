@@ -10,6 +10,7 @@ import Kawasan from "./Kawasan.jsx";
 import Minimarket from "./Minimarket";
 import WarungMie from "./WarungMie";
 import Distro from "./Distro";
+import Balap from "./Balap";
 import PagarDepan from "./PagarDepan";
 import Parkiran from "./Parkiran";
 
@@ -237,6 +238,7 @@ export default function Lingkungan({ daftarDinding }) {
 				<Minimarket daftarDinding={daftarDinding} />
 				<WarungMie daftarDinding={daftarDinding} />
 				<Distro daftarDinding={daftarDinding} />
+				<Balap />
 			</group>
 			<Gabung>
 				<PondasiTeras />

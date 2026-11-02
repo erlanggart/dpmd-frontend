@@ -9,6 +9,7 @@ import PetiHadiah from "./PetiHadiah";
 import Pancingan from "./Pancingan";
 import PemainLain from "./PemainLain";
 import SiangMalam from "./SiangMalam";
+import Cuaca from "./Cuaca";
 import Petugas from "./Petugas";
 
 const DPR_MAKS = Math.min(typeof window === "undefined" ? 1 : window.devicePixelRatio || 1, 1.5);
@@ -68,6 +69,7 @@ export default function KantorScene({ statistik, dikunjungi, jeda, penghuni, pen
 			{/* kabut cukup jauh supaya Situ Pemda & gedung kawasan terlihat dari halaman */}
 			<fog attach="fog" args={["#cfe6f1", 80, 330]} />
 			<SiangMalam />
+			<Cuaca />
 
 			<KualitasOtomatis />
 			<Lingkungan daftarDinding={daftarDinding} />

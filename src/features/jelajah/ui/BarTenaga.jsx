@@ -3,12 +3,17 @@ import { AnimatePresence, motion } from "framer-motion";
 import { TENAGA_LARI, TENAGA_MAKS, useKabarTenaga, useTenaga } from "../tenaga";
 import { MAKS_KERANJANG, belanja, totalKeranjang, useBelanja } from "../belanja";
 import { IKAN, useKoleksi } from "../pancing";
+import { levelDari, misiSiapKlaim, useProgres, xpUntukLevel } from "../progres";
 
 // Bar tenaga (nyawa) di pojok kiri atas, kabar singkat (tertabrak, makan, siuman), dan
 // layar gelap saat pingsan.
 const TOMBOL = "rounded-xl bg-slate-950/60 px-2.5 py-1 text-xs font-bold text-white shadow-lg ring-1 ring-white/10 backdrop-blur hover:bg-slate-900/80";
 
-export default function BarTenaga({ onTas, onAlbum, onGaya }) {
+export default function BarTenaga({ onTas, onAlbum, onGaya, onMisi, onPeringkat }) {
+	const progres = useProgres();
+	const lv = levelDari(progres.xp);
+	const persenXp = ((progres.xp - xpUntukLevel(lv)) / (xpUntukLevel(lv + 1) - xpUntukLevel(lv))) * 100;
+	const siapKlaim = misiSiapKlaim(progres);
 	useBelanja();
 	const { koleksi, poin } = useKoleksi();
 	const isiTas = Object.values(belanja.tas).reduce((s, n) => s + n, 0);
@@ -41,6 +46,20 @@ export default function BarTenaga({ onTas, onAlbum, onGaya }) {
 			</div>
 
 			<div className="absolute left-3 top-[8rem] z-20 flex flex-wrap items-center gap-1.5 sm:left-4 sm:top-[8.25rem]">
+				{onMisi && (
+					<button onClick={onMisi} className={`relative ${TOMBOL}`} title="Level & misi harian">
+						⭐ Lv {lv}
+						<span className="absolute inset-x-2 bottom-0.5 h-0.5 overflow-hidden rounded-full bg-white/20">
+							<span className="block h-full bg-amber-300" style={{ width: `${persenXp}%` }} />
+						</span>
+						{siapKlaim > 0 && <span className="absolute -right-1.5 -top-1.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-rose-500 px-1 text-[10px] font-black">{siapKlaim}</span>}
+					</button>
+				)}
+				{onPeringkat && (
+					<button onClick={onPeringkat} className={TOMBOL} title="Papan peringkat tamu">
+						🏆
+					</button>
+				)}
 				{onTas && (
 					<button onClick={onTas} className={TOMBOL} title="Tas belanjaan">
 						🎒 Tas{isiTas ? ` · ${isiTas}` : ""}

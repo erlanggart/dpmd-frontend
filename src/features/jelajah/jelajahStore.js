@@ -22,6 +22,9 @@ export const diLuarGedung = () => posisi.y < 0.9 && (posisi.x < GEDUNG.x0 || pos
 
 // Posisi pegawai yang sedang berjalan, supaya pintu juga membuka untuk mereka.
 export const posisiPejalan = [];
+// Penghuni & warga yang sedang berjalan (kunci → {x, z, lantai}): membuka pintu otomatis dan
+// membuat lalu lintas berhenti memberi jalan.
+export const posisiNpc = new Map();
 
 // `dekat`: id petugas/benda/kursi/kendaraan yang bisa dipakai saat ini.
 // `mode`: "jalan", "duduk", "mobil", atau "motor".

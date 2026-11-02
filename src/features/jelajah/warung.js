@@ -1,6 +1,7 @@
 import { useSyncExternalStore } from "react";
 import { bayarKoin } from "./pancing";
 import { TENAGA_MAKS, tenaga, ubahTenaga } from "./tenaga";
+import { catat, tambahXp } from "./progres";
 
 // Warung tenda mie ayam di seberang kantor: pesan & bayar di gerobak, lalu duduk di bangku
 // warung — semangkuk mie ayam diantar ke meja dan dimakan pelan-pelan sampai habis.
@@ -49,6 +50,8 @@ export function tickMakan(dt) {
 	warung.pesanan = false;
 	const tambah = Math.min(TENAGA_MIE, TENAGA_MAKS - tenaga.nilai);
 	ubahTenaga(TENAGA_MIE, { teks: `Kenyang! Tenaga +${Math.max(0, Math.round(tambah))} 😋`, jenis: "baik" });
+	catat("mie");
+	tambahXp(10);
 	beritahu();
 }
 

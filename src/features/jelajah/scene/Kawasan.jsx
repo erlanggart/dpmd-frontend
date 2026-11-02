@@ -13,6 +13,7 @@ import {
 	Path,
 	Shape,
 	ShapeGeometry,
+	RepeatWrapping,
 	ShapeUtils,
 	SphereGeometry,
 	SRGBColorSpace,
@@ -401,6 +402,44 @@ function geometriAir() {
 	return g;
 }
 
+// Peta normal riak air yang bisa diulang tanpa sambungan (jumlah gelombang sinus berfrekuensi
+// bulat). Digeser pelan tiap frame sehingga pantulan matahari di situ berkilau.
+function teksturRiak() {
+	const n = 128;
+	const c = document.createElement("canvas");
+	c.width = c.height = n;
+	const g = c.getContext("2d");
+	const img = g.createImageData(n, n);
+	const gel = [
+		[1, 2, 0.6, 0.3],
+		[3, -1, 0.35, 1.7],
+		[-2, 3, 0.3, 2.9],
+		[5, 4, 0.18, 0.8],
+		[-6, 1, 0.14, 4.1],
+	];
+	for (let y = 0; y < n; y++) {
+		for (let x = 0; x < n; x++) {
+			let dx = 0;
+			let dy = 0;
+			for (const [fx, fy, a, f] of gel) {
+				const k = Math.cos(((fx * x + fy * y) / n) * Math.PI * 2 + f) * a;
+				dx += k * fx;
+				dy += k * fy;
+			}
+			const i = (y * n + x) * 4;
+			img.data[i] = 128 + Math.max(-127, Math.min(127, dx * 14));
+			img.data[i + 1] = 128 + Math.max(-127, Math.min(127, dy * 14));
+			img.data[i + 2] = 255;
+			img.data[i + 3] = 255;
+		}
+	}
+	g.putImageData(img, 0, 0);
+	const t = new CanvasTexture(c);
+	t.wrapS = t.wrapT = RepeatWrapping;
+	t.repeat.set(0.14, 0.14);
+	return t;
+}
+
 const BAHAN = {
 	area: lapis(1),
 	atas: lapis(2),
@@ -414,19 +453,25 @@ function Permukaan() {
 	const geo = useMemo(susunPermukaan, []);
 	const tanah = useMemo(geometriTanah, []);
 	const air = useMemo(geometriAir, []);
+	const riak = useMemo(teksturRiak, []);
 	const bahanAir = useRef();
 	useEffect(
 		() => () => {
 			Object.values(geo).forEach((g) => g?.dispose());
 			tanah.dispose();
 			air.dispose();
+			riak.dispose();
 		},
-		[geo, tanah, air],
+		[geo, tanah, air, riak],
 	);
 	// riak halus: warna air bergeser pelan, lebih gelap saat malam
 	useFrame(({ clock }) => {
 		const t = clock.elapsedTime;
-		bahanAir.current.color.setRGB(0.24 + Math.sin(t * 0.7) * 0.015, 0.5 + Math.sin(t * 0.5) * 0.02, 0.62).multiplyScalar(1 - suasana.malam * 0.6);
+		bahanAir.current.color.setRGB(0.24 + Math.sin(t * 0.7) * 0.015, 0.5 + Math.sin(t * 0.5) * 0.02, 0.62).multiplyScalar((1 - suasana.malam * 0.6) * (1 - suasana.hujan * 0.25));
+		// riak bergeser pelan; saat hujan permukaan lebih bergolak
+		riak.offset.set(t * 0.011, t * 0.0075);
+		const kasar = 0.45 + suasana.hujan * 0.6;
+		bahanAir.current.normalScale.set(kasar, kasar);
 	});
 
 	return (
@@ -435,7 +480,7 @@ function Permukaan() {
 				<meshStandardMaterial color="#8faa66" roughness={1} />
 			</mesh>
 			<mesh geometry={air} position-y={-0.45}>
-				<meshStandardMaterial ref={bahanAir} color="#3d7f9e" roughness={0.12} metalness={0.25} />
+				<meshStandardMaterial ref={bahanAir} color="#3d7f9e" roughness={0.1} metalness={0.35} normalMap={riak} />
 			</mesh>
 			{Object.entries(geo).map(([k, g]) => g && <mesh key={k} geometry={g} material={BAHAN[k]} />)}
 		</group>

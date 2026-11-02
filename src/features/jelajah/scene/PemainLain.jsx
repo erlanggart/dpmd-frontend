@@ -183,6 +183,7 @@ function Tamu({ id, nama, jk, avatar, kulit, gaya }) {
 	const label = useKanvas(512, 72);
 	const spLabel = useRef();
 	const gerak = useRef({ laju: 0, fase: 0, udara: false, isyarat: null });
+	const gerakDuduk = useRef({ aktivitas: null });
 	const tampil = useRef({ x: 0, y: 0, z: 0, rot: 0, ada: false, laju: 0 });
 	const tinggi = useRef(2.1);
 	const lihat = useRef(false);
@@ -225,6 +226,7 @@ function Tamu({ id, nama, jk, avatar, kulit, gaya }) {
 		gr.laju += ((bergerak ? (s.lari ? 1 : 0.7) : 0) - gr.laju) * (1 - Math.exp(-8 * dt));
 		if (bergerak) gr.fase += dt * (s.lari ? 13 : 9);
 		gr.udara = !!s.udara;
+		gerakDuduk.current.aktivitas = s.ak === "makan" ? "makan" : null;
 		const kini = performance.now();
 		// sedang memancing: tangan menggenggam joran, atau mengangkat ikan hasil tangkapan
 		gr.isyarat = s.pc && s.pose === "mancing" ? (s.pc.f === 5 ? "angkat" : "mancing") : s.pose === "renang" ? "renang" : p.emote && kini < p.emote.sampai ? p.emote.jenis : s.kr ? "keranjang" : null;
@@ -272,7 +274,7 @@ function Tamu({ id, nama, jk, avatar, kulit, gaya }) {
 					<KeranjangTamu sumber={() => pemainLain.get(id)?.s} />
 				</group>
 				<group ref={duduk} visible={false}>
-					<Tokoh penampilan={penampilan} pose="duduk" />
+					<Tokoh penampilan={penampilan} pose="duduk" gerak={gerakDuduk} />
 				</group>
 			</group>
 			<sprite ref={spLabel} scale={[1.9, 0.27, 1]} visible={false} renderOrder={11}>

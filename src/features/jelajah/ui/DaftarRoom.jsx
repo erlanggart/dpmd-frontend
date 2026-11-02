@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
 import { FiX } from "react-icons/fi";
 import { posisi } from "../jelajahStore";
-import { pemainLain, sapaPemain } from "../multipemain";
+import { beriHadiah, pemainLain, sapaPemain } from "../multipemain";
+import { ubahTenaga } from "../tenaga";
 
 // Daftar tamu yang sedang berada di room jelajah bersama: nama, sedang apa, dan jaraknya.
 // Diperbarui tiap detik selama terbuka.
@@ -68,6 +69,17 @@ export default function DaftarRoom({ namaSaya, ruang, onTutup }) {
 						</div>
 						<button onClick={() => sapaPemain(t.id)} className="shrink-0 rounded-lg bg-sky-50 px-2 py-1 text-xs font-bold text-sky-700 hover:bg-sky-100" aria-label={`Sapa ${t.nama}`}>
 							👋
+						</button>
+						<button
+							onClick={() => {
+								const gagal = beriHadiah(t.id, 20);
+								ubahTenaga(0, gagal ? { teks: gagal, jenis: "buruk" } : { teks: `🎁 20 koin terkirim ke ${t.nama}`, jenis: "baik" });
+							}}
+							className="shrink-0 rounded-lg bg-amber-50 px-2 py-1 text-xs font-bold text-amber-700 hover:bg-amber-100"
+							aria-label={`Beri 20 koin ke ${t.nama}`}
+							title="Beri 20 koin"
+						>
+							🎁20
 						</button>
 					</li>
 				))}

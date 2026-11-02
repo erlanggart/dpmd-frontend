@@ -14,7 +14,7 @@ import {
 } from "three";
 import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils.js";
 import { AREA_LAIN, LOBI, RUANGAN, TINGGI_LANTAI } from "../kantorConfig";
-import { posisi, posisiPejalan } from "../jelajahStore";
+import { posisi, posisiNpc, posisiPejalan } from "../jelajahStore";
 import { DAUN_PINTU, DINDING, KOLAM, MEJA_RAPAT, PERABOT, SAJADAH, TANGGA, TINGGI_DINDING, rectTangga } from "./layout";
 import { BAHAN_PERABOT, JENIS_PERABOT, geometriPerabot } from "./perabot";
 import { teksturBatu, teksturKayu, teksturKeramik, teksturMarmer, teksturPintuKayu } from "./tekstur";
@@ -339,6 +339,7 @@ function DaunPintu({ p }) {
 	useFrame((_, dt) => {
 		let ada = posisi.lantai === p.lantai && Math.hypot(posisi.x - p.x, posisi.z - p.z) < 2.2;
 		for (const q of posisiPejalan) if (q && q.lantai === p.lantai && Math.hypot(q.x - p.x, q.z - p.z) < 1.8) ada = true;
+		for (const q of posisiNpc.values()) if (q.lantai === p.lantai && Math.hypot(q.x - p.x, q.z - p.z) < 1.8) ada = true;
 		buka.current += ((ada ? 1 : 0) - buka.current) * (1 - Math.exp(-6 * dt));
 		if (p.jenis === "kaca") daun.current.position.x = -buka.current * p.lebar * 0.9;
 		else daun.current.rotation.y = buka.current * 1.6;

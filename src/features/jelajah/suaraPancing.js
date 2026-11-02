@@ -69,7 +69,10 @@ function derau(mulai, lama, { frek = 1200, q = 0.8, vol = 0.3, ke = null, tipe =
 	g.gain.exponentialRampToValueAtTime(vol, mulai + 0.015);
 	g.gain.exponentialRampToValueAtTime(0.0001, mulai + lama);
 	s.connect(f).connect(g).connect(ctx.destination);
-	s.start(mulai, Math.random() * 0.5, lama + 0.05);
+	// derau panjang (guntur) diulang supaya tidak terpotong di ujung penyangga 1 detik
+	s.loop = lama > 0.5;
+	s.start(mulai, Math.random() * 0.5);
+	s.stop(mulai + lama + 0.05);
 }
 
 const RESEP = {
@@ -126,6 +129,10 @@ const RESEP = {
 		[523, 659, 784, 1047].forEach((f, i) => nada(f, t + i * 0.09, 0.28, { tipe: "triangle", vol: 0.14 }));
 		derau(t, 0.5, { frek: 900, ke: 250, vol: 0.25, tipe: "lowpass" });
 	},
+	guntur: (t) => {
+		derau(t, 2.6, { frek: 160, ke: 60, vol: 0.55, tipe: "lowpass", q: 0.5 });
+		derau(t + 0.25, 1.8, { frek: 90, ke: 40, vol: 0.45, tipe: "lowpass", q: 0.5 });
+	},
 	koin: (t) => {
 		[988, 1319, 1568, 1976, 2637].forEach((f, i) => nada(f, t + i * 0.06, 0.22, { tipe: "square", vol: 0.05 }));
 		[1319, 1976].forEach((f, i) => nada(f, t + 0.32 + i * 0.08, 0.3, { tipe: "triangle", vol: 0.08 }));
@@ -136,6 +143,36 @@ const RESEP = {
 		derau(t, 0.8, { frek: 700, ke: 150, vol: 0.35, tipe: "lowpass" });
 	},
 };
+
+// Desau hujan: derau putih berulang lewat penyaring pita, volume 0..1 mengikuti lebatnya.
+let hujanSuara = null;
+let volHujan = 0;
+export function aturHujan(vol) {
+	const v = suaraMati.nilai ? 0 : Math.max(0, Math.min(1, vol));
+	if (Math.abs(v - volHujan) < 0.02 && (v > 0 || !hujanSuara)) return;
+	volHujan = v;
+	try {
+		if (!siapkan()) return;
+		if (!hujanSuara) {
+			if (v <= 0) return;
+			const src = ctx.createBufferSource();
+			src.buffer = bising;
+			src.loop = true;
+			const f = ctx.createBiquadFilter();
+			f.type = "bandpass";
+			f.frequency.value = 1500;
+			f.Q.value = 0.35;
+			const g = ctx.createGain();
+			g.gain.value = 0;
+			src.connect(f).connect(g).connect(ctx.destination);
+			src.start();
+			hujanSuara = { src, g };
+		}
+		hujanSuara.g.gain.setTargetAtTime(v * 0.13, ctx.currentTime, 0.6);
+	} catch {
+		/* audio tidak tersedia */
+	}
+}
 
 export function suara(nama) {
 	if (suaraMati.nilai || !RESEP[nama]) return;

@@ -2,6 +2,7 @@ import { useSyncExternalStore } from "react";
 import { tambahKoin } from "./pancing";
 import { suara } from "./suaraPancing";
 import { ubahTenaga } from "./tenaga";
+import { catat, tambahXp } from "./progres";
 
 // Peti hadiah yang tersebar di kantor & halaman (posisinya: scene/layout.js → PETI_HADIAH).
 // Dibuka = koin acak masuk dompet; peti terisi lagi setelah JEDA_PETI. Waktu buka tiap peti
@@ -55,6 +56,8 @@ export function bukaPeti(peti) {
 	tambahKoin(n);
 	harta.ledak = { id: peti.id, n, t0: performance.now() };
 	suara("koin");
+	catat("peti");
+	tambahXp(Math.round(n / 3) + 5);
 	ubahTenaga(0, { teks: `${peti.emas ? "👑 Peti emas" : "🎁 Peti hadiah"}: +${n} koin! Terisi lagi 15 menit`, jenis: "baik" });
 	beritahu();
 }

@@ -9,6 +9,8 @@ import {
 	FiMap,
 	FiMoon,
 	FiSun,
+	FiCloud,
+	FiCloudRain,
 	FiClock,
 	FiMenu,
 	FiMessageCircle,
@@ -24,6 +26,8 @@ import api from "../../api";
 import { penampilanAvatar } from "./avatar";
 import { gayaTampil, kenakanGaya, useLemari } from "./lemari";
 import PanelGaya from "./ui/PanelGaya";
+import PanelMisi from "./ui/PanelMisi";
+import PanelPeringkat from "./ui/PanelPeringkat";
 import { kendaraanDariId } from "./scene/kendaraan";
 import { kirimEmote, kirimGaya, kirimKlakson, kirimUcap, putusJelajah, sambungJelajah, sapaPemain, tutupSapaan, useMultipemain } from "./multipemain";
 import { AREA_PER_ID, BENDA, HALAMAN, LOBI, RUANGAN, TITIK_MULAI, titikDepanPetugas } from "./kantorConfig";
@@ -39,6 +43,9 @@ import { PanelKasir, PanelTas } from "./ui/PanelKasir";
 import { BARANG_PER_ID, ambilKeranjang, belanja, mulaiAmbil } from "./belanja";
 import { INFO_TOKO } from "./toko";
 import { HARGA_MIE, pesanMie } from "./warung";
+import { catat } from "./progres";
+import { mulaiBalap } from "./balap";
+import HudBalap from "./ui/HudBalap";
 import DaftarRoom from "./ui/DaftarRoom";
 import { aturSendu } from "./musikJelajah";
 import { klakson } from "./suaraPancing";
@@ -220,6 +227,15 @@ export default function JelajahPage() {
 		suasana.paksa = baru;
 		setModeSuasana(baru);
 	};
+	// Cuaca: otomatis (sesekali hujan), selalu cerah, atau hujan.
+	const [modeCuaca, setModeCuaca] = useState(suasana.cuaca);
+	const gantiCuaca = () => {
+		const urutan = ["otomatis", "cerah", "hujan"];
+		const baru = urutan[(urutan.indexOf(modeCuaca) + 1) % urutan.length];
+		suasana.cuaca = baru;
+		setModeCuaca(baru);
+	};
+	const labelCuaca = { otomatis: "Otomatis", cerah: "Cerah", hujan: "Hujan" }[modeCuaca];
 	const [IkonSuasana, labelSuasana] = modeSuasana === "siang" ? [FiSun, "Siang"] : modeSuasana === "malam" ? [FiMoon, "Malam"] : [FiClock, "Ikuti jam"];
 
 	// Hook untuk uji otomatis di browser — hanya ada di mode dev, tidak ikut ke build produksi.
@@ -282,10 +298,12 @@ export default function JelajahPage() {
 	const bukaPanel = useCallback((id) => {
 		if (id.startsWith("tamu:")) {
 			sapaPemain(id.slice(5));
+			catat("sapa");
 			return;
 		}
 		if (id.startsWith("keranjang:")) return ambilKeranjang(id.slice(10));
 		if (id === "mie:pesan") return pesanMie();
+		if (id === "balap:mulai") return mulaiBalap();
 		if (id === "distro:pilih" || id === "distro:coba") {
 			setMenu(id === "distro:coba" ? "gaya:coba" : "gaya:toko");
 			return;
@@ -307,9 +325,11 @@ export default function JelajahPage() {
 		}
 		setMenu(null);
 		setPanel(id);
+		catat("sapa");
 		if (id === "lobi") return;
 		setDikunjungi((lama) => {
 			if (lama.has(id)) return lama;
+			queueMicrotask(() => catat("ruang"));
 			const baru = new Set(lama).add(id);
 			simpanDikunjungi(baru);
 			if (baru.size === RUANGAN.length) baruLengkap.current = true;
@@ -427,6 +447,8 @@ export default function JelajahPage() {
 				? ["Ruang coba — coba pakaian 🪞", "Coba", "#7c3aed"]
 			: dekat === "distro:pilih"
 				? ["Belanja aksesoris & pakaian 👕", "Belanja", "#7c3aed"]
+			: dekat === "balap:mulai"
+				? ["Mulai balapan motor 🏁", "Balap", "#dc2626"]
 			: dekat === "mie:pesan"
 				? [`Pesan mie ayam 🍜 · 🪙 ${HARGA_MIE}`, "Pesan", "#ea580c"]
 			: dekat.startsWith("keranjang:")
@@ -469,7 +491,7 @@ export default function JelajahPage() {
 	const berkendara = ["mobil", "motor", "perahu", "penumpang"].includes(modeMain);
 	const petunjukKendara = {
 		mobil: "W/S gas & mundur · A/D belok · Shift turbo · H klakson · E keluar",
-		motor: "W/S gas & mundur · A/D belok · Shift turbo · Spasi lompat · H klakson · E turun",
+		motor: "W/S gas & mundur · A/D belok · Shift turbo · Spasi lompat · H klakson · E turun / balapan di gerbang 🏁",
 		perahu: "W/S dayung · A/D belok · Shift dayung cepat · E mancing / naik ke dermaga",
 		penumpang: "Anda penumpang — duduk manis · E turun",
 	}[modeMain];
@@ -566,6 +588,9 @@ export default function JelajahPage() {
 								<TombolIkon label={`Suasana: ${labelSuasana} (ketuk untuk ganti)`} aktif={modeSuasana !== null} onClick={gantiSuasana}>
 									<IkonSuasana />
 								</TombolIkon>
+								<TombolIkon label={`Cuaca: ${labelCuaca} (ketuk untuk ganti)`} aktif={modeCuaca !== "otomatis"} onClick={gantiCuaca}>
+									{modeCuaca === "hujan" ? <FiCloudRain /> : modeCuaca === "cerah" ? <FiSun /> : <FiCloud />}
+								</TombolIkon>
 								<TombolIkon label="Denah 2D" onClick={() => setMode("2d")}>
 									<FiGrid />
 								</TombolIkon>
@@ -641,7 +666,8 @@ export default function JelajahPage() {
 						</div>
 					)}
 
-					{!jeda && <BarTenaga onTas={() => setMenu("tas")} onAlbum={modeMain === "mancing" ? null : () => setMenu("album")} onGaya={() => setMenu("gaya")} />}
+					{!jeda && <HudBalap />}
+					{!jeda && <BarTenaga onTas={() => setMenu("tas")} onAlbum={modeMain === "mancing" ? null : () => setMenu("album")} onGaya={() => setMenu("gaya")} onMisi={() => setMenu("misi")} onPeringkat={() => setMenu("peringkat")} />}
 					{modeMain === "mancing" && !jeda && <GamePancing sentuh={sentuh} bersama={statusMp === "tersambung"} onSelesai={() => (kendali.aksi = "berhenti")} />}
 
 					{berkendara && !jeda && !sentuh && (
@@ -863,6 +889,7 @@ export default function JelajahPage() {
 							],
 							[FiGrid, "Denah 2D", "Versi tanpa 3D", () => setMode("2d")],
 							[IkonSuasana, `Suasana: ${labelSuasana}`, "Ketuk untuk ganti siang/malam", gantiSuasana],
+							[modeCuaca === "hujan" ? FiCloudRain : FiCloud, `Cuaca: ${labelCuaca}`, "Ketuk untuk ganti otomatis/cerah/hujan", gantiCuaca],
 							[FiHelpCircle, "Cara bermain", "Kontrol & tips", () => setMenu("bantuan")],
 						].map(([Ikon, judul, ket, aksi]) => (
 							<button
@@ -914,6 +941,18 @@ export default function JelajahPage() {
 			)}
 
 			{menu === "album" && <AlbumIkan onTutup={() => setMenu(null)} />}
+
+			{menu === "peringkat" && (
+				<Lembar judul="🏆 Papan Peringkat" onTutup={() => setMenu(null)}>
+					<PanelPeringkat namaSaya={profil?.nama} />
+				</Lembar>
+			)}
+
+			{menu === "misi" && (
+				<Lembar judul="⭐ Level & Misi Harian" onTutup={() => setMenu(null)}>
+					<PanelMisi />
+				</Lembar>
+			)}
 
 			{menu?.startsWith("gaya") && (
 				<Lembar judul={menu === "gaya:coba" ? "🪞 Ruang Coba · Distro Gaya" : menu === "gaya:toko" ? "👕 Distro Gaya" : "👕 Lemari Gaya"} onTutup={() => setMenu(null)}>

@@ -2,6 +2,7 @@ import { useSyncExternalStore } from "react";
 import { bayarKoin } from "./pancing";
 import { TENAGA_MAKS, tenaga, ubahTenaga } from "./tenaga";
 import { BARANG } from "./toko";
+import { catat, tambahXp } from "./progres";
 
 // Belanja di minimarket: ambil keranjang di dekat pintu, ambil barang dari rak satu per
 // satu ke keranjang, bayar di kasir pakai koin, lalu barangnya masuk tas dan bisa
@@ -95,6 +96,8 @@ export function bayar() {
 	belanja.keranjang = [];
 	simpanTas();
 	ubahTenaga(0, { teks: `Lunas 🪙 ${total}. Belanjaan masuk tas 🎒`, jenis: "baik" });
+	catat("belanja");
+	tambahXp(Math.round(total / 5));
 	beritahu();
 	return null;
 }

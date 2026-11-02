@@ -3,6 +3,7 @@ import { diSitu, jarakKeTepi, perahuBebas } from "./scene/situ";
 import { suasana } from "./scene/suasana";
 import { hentikanLaga, hentikanRiang, putarLaga, putarRiang } from "./musikJelajah";
 import { suara } from "./suaraPancing";
+import { catat, tambahXp } from "./progres";
 
 // Game memancing di Situ Pemda. Logika murni (tanpa React/three): Pancingan.jsx memanggil
 // `tickPancing` tiap frame, GamePancing.jsx membaca `pancing` untuk HUD.
@@ -131,6 +132,8 @@ export function tambahKoin(n) {
 	simpanan.poin += n;
 	simpan();
 }
+export const ambilKoleksi = () => simpanan;
+export const dengarKoleksi = (f) => (pendengarKoleksi.add(f), () => pendengarKoleksi.delete(f));
 export const useKoleksi = () =>
 	useSyncExternalStore(
 		(f) => (pendengarKoleksi.add(f), () => pendengarKoleksi.delete(f)),
@@ -598,6 +601,9 @@ function dapat() {
 	simpanan.poin += poin;
 	simpanan.tangkapan += 1;
 	simpan();
+	catat("ikan");
+	if (ikan.kelas >= 1) catat("ikanLangka");
+	tambahXp(Math.round(poin * 0.6));
 	p.hasil = { ikan, kg: p.kg, cm: panjangCm(ikan, p.kg), baru, rekor, poin, total: simpanan.poin };
 	percik(p.ikanPos.x, p.ikanPos.z, 1.4 + ikan.kelas * 0.3);
 	// backsound Ajojing / Mancing Mania; fanfare sintetis bila berkasnya tak bisa diputar

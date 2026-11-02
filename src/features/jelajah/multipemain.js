@@ -6,6 +6,9 @@ import { kendaraanDariId } from "./scene/kendaraan";
 import { klakson } from "./suaraPancing";
 import { bersihkanGaya, lemari } from "./lemari";
 import { belanja } from "./belanja";
+import { ambilKoleksi, bayarKoin, dengarKoleksi, tambahKoin } from "./pancing";
+import { ubahTenaga } from "./tenaga";
+import { dengarProgres, levelDari, progres } from "./progres";
 
 // Jelajah bersama: setiap tamu yang membuka /jelajah tersambung ke namespace
 // socket.io "/jelajah" (lihat dpmd-fahri-express/src/socket/jelajah.socket.js).
@@ -126,6 +129,12 @@ export async function sambungJelajah(profil) {
 			if (kend && posisi.kend !== kend) Object.assign(kend, { x: k.x, z: k.z, rot: k.rot });
 		}
 		ubah({ status: "tersambung", id: m.id, ruang: m.ruang ?? null, daftar: daftarDariMap(), galat: null });
+		kirimSkor();
+		if (!lepasSkor) {
+			const a = dengarProgres(kirimSkor);
+			const b = dengarKoleksi(kirimSkor);
+			lepasSkor = () => (a(), b());
+		}
 	});
 	s.on("masuk", (p) => {
 		pemainLain.set(p.id, { profil: { nama: p.nama, jk: p.jk, avatar: p.avatar, kulit: p.kulit, gaya: bersihkanGaya(p.gaya) }, s: p.s });
@@ -181,6 +190,12 @@ export async function sambungJelajah(profil) {
 		p.profil = { ...p.profil, gaya: bersihkanGaya(m.gaya) };
 		ubah({ daftar: daftarDariMap() });
 	});
+	s.on("hadiah", (m) => {
+		const n = [10, 20, 50].includes(m?.n) ? m.n : 0;
+		if (!n) return;
+		tambahKoin(n);
+		ubahTenaga(0, { teks: `🎁 ${m.nama || "Tamu"} memberi Anda 🪙 ${n} koin!`, jenis: "baik" });
+	});
 	s.on("disapa", (m) => ubah({ sapaan: { ...m, waktu: Date.now() } }));
 	s.on("ditolak", (m) => tambahObrolan({ sistem: true, teks: m.alasan, waktu: Date.now() }));
 
@@ -202,6 +217,7 @@ export async function sambungJelajah(profil) {
 				: undefined,
 			pc: dataPancing(),
 			kr: belanja.bawaKeranjang ? belanja.keranjang.slice(0, 12) : undefined,
+			ak: posisi.aktivitas || undefined,
 		};
 		const kunci = JSON.stringify(data);
 		if (kunci === terakhir) return;
@@ -219,8 +235,32 @@ export async function sambungJelajah(profil) {
 	document.addEventListener("visibilitychange", lepasTersembunyi);
 }
 
+// ---------- papan peringkat ----------
+// Catatan tamu dikirim saat tersambung dan tiap kali level / koleksi / rekor berubah
+// (diredam 3 detik).
+function dataSkor() {
+	const { koleksi } = ambilKoleksi();
+	let ikan = null;
+	let kg = 0;
+	for (const [id, c] of Object.entries(koleksi)) if (c.terberat > kg) [ikan, kg] = [id, c.terberat];
+	return { level: levelDari(progres.xp), xp: progres.xp, ikan, kg, jenis: Object.keys(koleksi).length, balap: progres.balap };
+}
+let tundaSkor = null;
+const kirimSkor = () => {
+	clearTimeout(tundaSkor);
+	tundaSkor = setTimeout(() => socket?.connected && socket.emit("skor", dataSkor()), 3000);
+};
+let lepasSkor = null;
+export const mintaPeringkat = () =>
+	new Promise((ok, gagal) => {
+		if (!socket?.connected) return gagal(new Error("tidak tersambung"));
+		socket.timeout(8000).emit("peringkat", null, (err, data) => (err ? gagal(err) : ok(data)));
+	});
+
 export function putusJelajah() {
 	generasi++;
+	lepasSkor?.();
+	lepasSkor = null;
 	if (!socket) {
 		if (ringkas.status !== "mati") ubah({ status: "mati", id: null, ruang: null, daftar: [], sapaan: null });
 		return;
@@ -249,4 +289,11 @@ export const kirimEmote = (jenis) => socket?.connected && socket.emit("emote", {
 export const kirimKlakson = () => socket?.connected && socket.emit("klakson");
 export const kirimGaya = (gaya) => socket?.connected && socket.emit("gaya", gaya);
 export const sapaPemain = (id) => socket?.connected && socket.emit("sapa", { ke: id });
+// Beri koin ke tamu lain: koin sendiri dipotong dulu, lalu diteruskan server.
+export function beriHadiah(id, n) {
+	if (!socket?.connected) return "Tidak tersambung";
+	if (!bayarKoin(n)) return "Koin belum cukup";
+	socket.emit("hadiah", { ke: id, n });
+	return null;
+}
 export const tutupSapaan = () => ubah({ sapaan: null });

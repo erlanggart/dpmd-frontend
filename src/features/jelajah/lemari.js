@@ -1,5 +1,6 @@
 import { useSyncExternalStore } from "react";
 import { bayarKoin } from "./pancing";
+import { catat, tambahXp } from "./progres";
 
 // Lemari gaya tamu: topi, baju, celana, dan sepatu yang dibeli dengan koin lalu dipakai
 // avatar (scene/orang.js menggambarnya). Indeks 0 tiap jenis = bawaan avatar / tanpa topi
@@ -104,6 +105,8 @@ export function pakaiGaya(k, i) {
 	if (!punya(k, i)) {
 		if (!bayarKoin(item.harga)) return `Koin belum cukup (perlu 🪙 ${item.harga})`;
 		lemari.punya = { ...lemari.punya, [k]: [...lemari.punya[k], i] };
+		catat("gaya");
+		tambahXp(Math.round(item.harga / 10));
 	}
 	lemari.pakai = { ...lemari.pakai, [k]: i };
 	if (lemari.coba) lemari.coba = { ...lemari.coba, [k]: i };

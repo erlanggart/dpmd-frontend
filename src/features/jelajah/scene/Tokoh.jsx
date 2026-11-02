@@ -31,9 +31,13 @@ export default function Tokoh({ penampilan, pose = "jalan", gerak, aktivitas, as
 	const geser = useMemo(() => Math.random() * 20, []);
 	const akar = useRef();
 
-	useFrame(({ clock }, dt) => {
+	useFrame(({ clock, camera }, dt) => {
+		// hemat: tokoh di balik kabut tidak digambar, yang jauh tidak dianimasikan
+		const e = akar.current.matrixWorld.elements;
+		const jauh2 = (e[12] - camera.position.x) ** 2 + (e[14] - camera.position.z) ** 2;
+		akar.current.visible = jauh2 < 110 * 110;
 		// tokoh yang tidak tergambar tidak perlu dianimasikan
-		if (!tampak(akar.current)) return;
+		if (!tampak(akar.current) || jauh2 > 45 * 45) return;
 		const t = clock.elapsedTime + geser;
 
 		// --- kepala: menoleh ke pengunjung, atau gerak santai sesuai aktivitas ---
