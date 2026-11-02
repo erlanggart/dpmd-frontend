@@ -11,24 +11,55 @@ const KERANJANG = [-0.36, 0.57, 0.02];
 const BAHU_KANAN = [0.245, 1.43, 0];
 const LENGAN = 0.6;
 
+// Isi keranjang (id barang dipisah koma) → satu geometri, barang disusun 3×2 per lapis.
+function geomIsi(kunci) {
+	const daftar = kunci.split(",").filter((id) => BARANG_PER_ID[id]);
+	if (!daftar.length) return null;
+	const m = new Matrix4();
+	const s = new Matrix4().makeScale(0.7, 0.7, 0.7);
+	return gabung(
+		daftar.map((id, i) => {
+			const lapis = Math.floor(i / 6);
+			const j = i % 6;
+			const c = geometriBarang(BARANG_PER_ID[id]).clone();
+			c.applyMatrix4(s);
+			c.applyMatrix4(m.makeTranslation(((j % 3) - 1) * 0.13, 0.015 + lapis * 0.08, (Math.floor(j / 3) - 0.5) * 0.13));
+			return c;
+		}),
+	);
+}
+
+// Keranjang di tangan tamu lain (dari kiriman jelajah bersama: s.kr).
+export function KeranjangTamu({ sumber }) {
+	const grup = useRef();
+	const isi = useRef();
+	const kunci = useRef(null);
+	useFrame(() => {
+		const kr = sumber()?.kr;
+		grup.current.visible = Array.isArray(kr);
+		const k = Array.isArray(kr) ? kr.join(",") : "";
+		if (k === kunci.current) return;
+		kunci.current = k;
+		isi.current.geometry?.dispose();
+		const g = geomIsi(k);
+		isi.current.geometry = g || isi.current.geometry;
+		isi.current.visible = !!g;
+	});
+	useEffect(() => () => isi.current?.geometry?.dispose(), []);
+	return (
+		<group ref={grup} visible={false}>
+			<group position={KERANJANG} rotation-y={Math.PI / 2}>
+				<mesh geometry={GEO_KERANJANG} material={BAHAN_WARNA} />
+				<mesh ref={isi} material={BAHAN_WARNA} visible={false} />
+			</group>
+		</group>
+	);
+}
+
 export default function KeranjangTangan() {
 	useBelanja();
 	const kunci = belanja.keranjang.join(",");
-	const isi = useMemo(() => {
-		if (!kunci) return null;
-		const m = new Matrix4();
-		const s = new Matrix4().makeScale(0.7, 0.7, 0.7);
-		return gabung(
-			kunci.split(",").map((id, i) => {
-				const lapis = Math.floor(i / 6);
-				const j = i % 6;
-				const c = geometriBarang(BARANG_PER_ID[id]).clone();
-				c.applyMatrix4(s);
-				c.applyMatrix4(m.makeTranslation(((j % 3) - 1) * 0.13, 0.015 + lapis * 0.08, (Math.floor(j / 3) - 0.5) * 0.13));
-				return c;
-			}),
-		);
-	}, [kunci]);
+	const isi = useMemo(() => (kunci ? geomIsi(kunci) : null), [kunci]);
 	useEffect(() => () => isi?.dispose(), [isi]);
 
 	const tangan = useRef();

@@ -5,6 +5,7 @@ import { FASE_PANCING, pancing } from "./pancing";
 import { kendaraanDariId } from "./scene/kendaraan";
 import { klakson } from "./suaraPancing";
 import { bersihkanGaya, lemari } from "./lemari";
+import { belanja } from "./belanja";
 
 // Jelajah bersama: setiap tamu yang membuka /jelajah tersambung ke namespace
 // socket.io "/jelajah" (lihat dpmd-fahri-express/src/socket/jelajah.socket.js).
@@ -200,6 +201,7 @@ export async function sambungJelajah(profil) {
 				? { id: k.id, x: +k.x.toFixed(2), z: +k.z.toFixed(2), rot: +k.rot.toFixed(2), laju: +k.laju.toFixed(2), setir: +k.setir.toFixed(2), pintu: +k.pintu.toFixed(2), miring: +k.miring.toFixed(2), h: +(k.h || 0).toFixed(2), kursi: posisi.kursi ?? 0 }
 				: undefined,
 			pc: dataPancing(),
+			kr: belanja.bawaKeranjang ? belanja.keranjang.slice(0, 12) : undefined,
 		};
 		const kunci = JSON.stringify(data);
 		if (kunci === terakhir) return;

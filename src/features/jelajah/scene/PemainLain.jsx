@@ -9,6 +9,7 @@ import { diriSendiri, pemainLain, useMultipemain } from "../multipemain";
 import { kendaraanDariId } from "./kendaraan";
 import { aturBadanRenang } from "./layout";
 import PancinganTamu from "./PancinganTamu";
+import { KeranjangTamu } from "./KeranjangTangan";
 import Tokoh from "./Tokoh";
 
 // Tamu lain yang sedang menjelajah bersama: tokoh sesuai avatar pilihannya, label
@@ -226,7 +227,7 @@ function Tamu({ id, nama, jk, avatar, kulit, gaya }) {
 		gr.udara = !!s.udara;
 		const kini = performance.now();
 		// sedang memancing: tangan menggenggam joran, atau mengangkat ikan hasil tangkapan
-		gr.isyarat = s.pc && s.pose === "mancing" ? (s.pc.f === 5 ? "angkat" : "mancing") : s.pose === "renang" ? "renang" : p.emote && kini < p.emote.sampai ? p.emote.jenis : null;
+		gr.isyarat = s.pc && s.pose === "mancing" ? (s.pc.f === 5 ? "angkat" : "mancing") : s.pose === "renang" ? "renang" : p.emote && kini < p.emote.sampai ? p.emote.jenis : s.kr ? "keranjang" : null;
 		// berenang: badan mendatar saat bergerak, tegak mengapung saat diam
 		gr.renang = s.pose === "renang" ? (gr.renang ?? 0) + ((bergerak ? 1 : 0) - (gr.renang ?? 0)) * (1 - Math.exp(-4 * dt)) : 0;
 		if (s.pose === "renang") aturBadanRenang(jalan.current, gr.renang);
@@ -268,6 +269,7 @@ function Tamu({ id, nama, jk, avatar, kulit, gaya }) {
 			<group ref={grup} visible={false}>
 				<group ref={jalan}>
 					<Tokoh penampilan={penampilan} pose="jalan" gerak={gerak} />
+					<KeranjangTamu sumber={() => pemainLain.get(id)?.s} />
 				</group>
 				<group ref={duduk} visible={false}>
 					<Tokoh penampilan={penampilan} pose="duduk" />
