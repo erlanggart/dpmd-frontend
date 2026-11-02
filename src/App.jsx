@@ -228,6 +228,8 @@ const PegawaiLayout = lazy(() =>
 const PegawaiDashboard = lazy(() => import("./pages/pegawai/PegawaiDashboard"));
 const AbsensiPage = lazy(() => import("./pages/pegawai/AbsensiPage"));
 const MessagingPage = lazy(() => import("./pages/messaging/MessagingPage"));
+const HelpdeskPanelPage = lazy(() => import("./pages/helpdesk/HelpdeskPanelPage"));
+const HelpdeskWidget = lazy(() => import("./components/helpdesk/HelpdeskWidget"));
 const AbsensiManagementPage = lazy(() => import("./pages/bidang/sekretariat/AbsensiManagementPage"));
 const AnggaranPage = lazy(() => import("./pages/bidang/sekretariat/anggaran/AnggaranPage"));
 const ProgramKegiatanPage = lazy(() => import("./pages/bidang/sekretariat/anggaran/ProgramKegiatanPage"));
@@ -1053,6 +1055,10 @@ function App() {
               {/* Popup wajib lengkapi identitas — khusus Admin Desa */}
               <CompleteDesaProfileModal />
               <ImpersonationReturnBanner />
+              {/* Helpdesk: chatbot & tiket untuk tamu, desa, dan kecamatan (pegawai DPMD tidak melihatnya) */}
+              <Suspense fallback={null}>
+                <HelpdeskWidget />
+              </Suspense>
             </ErrorBoundary>
             <ErrorBoundary>
             <Suspense
@@ -1295,6 +1301,7 @@ function App() {
                   <Route path="video-meeting" element={<VideoMeetingListPage />} />
                   <Route path="absensi" element={<AbsensiPage />} />
                   <Route path="pesan" element={<MessagingPage />} />
+                  <Route path="helpdesk" element={<HelpdeskPanelPage />} />
                   <Route path="bank-surat" element={<BankSuratPage />} />
                 </Route>
 
@@ -1710,6 +1717,7 @@ function App() {
                   <Route path="bidang/pemdes/produk-hukum" element={<ProdukHukumPemdesPage />} />
                   <Route path="bidang/pemdes/produk-hukum/:id" element={<ProdukHukumDetailPemdesPage />} />
                   <Route path="pesan" element={<MessagingPage />} />
+                  <Route path="helpdesk" element={<HelpdeskPanelPage />} />
                 </Route>
 
                 {/* Rute Kecamatan - Exclusive untuk Admin Kecamatan */}
@@ -1726,6 +1734,8 @@ function App() {
                     path="dashboard"
                     element={<KecamatanDashboardPage />}
                   />
+                  {/* Helpdesk terbuka untuk semua akun kecamatan, termasuk operator. */}
+                  <Route path="helpdesk" element={<HelpdeskPanelPage />} />
                   {/* Operator kecamatan hanya membuka fitur yang diberikan akun utamanya. */}
                   <Route element={<KecamatanPermissionRoute permission="bankeu" />}>
                     <Route path="bankeu" element={<KecamatanBankeuPage />} />

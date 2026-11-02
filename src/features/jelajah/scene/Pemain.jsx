@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef } from "react";
 import { useFrame, useThree } from "@react-three/fiber";
-import { Raycaster, Vector3 } from "three";
+import { Raycaster, Vector2, Vector3 } from "three";
 import { BENDA, LOBI, RUANGAN, TINGGI_LANTAI, TITIK_MULAI, cariArea } from "../kantorConfig";
 import { kendali, posisi, setKeadaan } from "../jelajahStore";
 import { KENDARAAN, KURSI as KURSI_KENDARAAN, tambahPerahu, kendaraanDariId, keDunia, kursiDunia, lingkaran, resetKendaraan, tabrakKendaraan, titikNaikKursi } from "./kendaraan";
@@ -39,6 +39,8 @@ const H = TINGGI_LANTAI;
 const PETUGAS = [LOBI, ...RUANGAN];
 const JARAK_SAPA = 3.8;
 const JARAK_BENDA = 1.6;
+// Titik di bagian atas layar (koordinat NDC) untuk memeriksa atap di atas pandangan.
+const ATAS_LAYAR = new Vector2(0, 0.85);
 const JARAK_KURSI = 0.95;
 const JARAK_MOBIL = 1.3;
 const JARAK_MOTOR = 1.1;
@@ -195,6 +197,14 @@ export default function Pemain({ daftarDinding, penghuni, penampilan = PENAMPILA
 		const gerakPointer = (e) => {
 			if (!aktif || e.pointerId !== aktif.id) return;
 			const k = kamera.current;
+			// Saat memancing seretan menggerakkan joran saja (bidikan sebelum melempar;
+			// saat adu tarik arahnya dibaca GamePancing dari posisi mouse) — kamera diam.
+			if (pancing.aktif) {
+				if (pancing.fase === "siap") pancing.aim -= (e.clientX - aktif.x) * 0.004;
+				aktif.x = e.clientX;
+				aktif.y = e.clientY;
+				return;
+			}
 			k.yaw -= (e.clientX - aktif.x) * 0.006;
 			k.pitch = Math.min(1.2, Math.max(0.3, k.pitch + (e.clientY - aktif.y) * 0.004));
 			aktif.x = e.clientX;
@@ -616,7 +626,7 @@ export default function Pemain({ daftarDinding, penghuni, penampilan = PENAMPILA
 				p.set(jok.x, yKursi(kend), jok.z);
 				geserAsal(jok.x, jok.z, kend.rot);
 			}
-			g.rotation.y = arahJoran();
+			g.rotation.y = arahJoran() + Math.PI * pancing.gaya.balik;
 			// kamera mengikuti arah bidikan saja (bukan ayunan joran) supaya ayunannya terlihat
 			const ke = pancing.asal.rot + pancing.aim + Math.PI;
 			k.yaw += (sudutDekat(k.yaw, ke) - k.yaw) * (1 - Math.exp(-3 * dt));
@@ -1023,8 +1033,18 @@ export default function Pemain({ daftarDinding, penghuni, penampilan = PENAMPILA
 			const dinding = daftarDinding.current[l].filter(Boolean);
 			const kena =
 				l === lantai ? new Set(bantu.ray.intersectObjects(dinding, false).flatMap((h) => h.object.userData.sekelompok || [h.object])) : null;
+			// Saat mengangkat ikan kamera turun ke bawah atap saung dermaga: atap yang
+			// menutupi bagian atas pandangan disembunyikan supaya tidak menjadi pita gelap.
+			let atas = null;
+			if (angkatIkan && l === lantai) {
+				bantu.ray.setFromCamera(ATAS_LAYAR, camera);
+				bantu.ray.far = 8;
+				atas = new Set(bantu.ray.intersectObjects(dinding, false).map((h) => h.object));
+				bantu.ray.set(camera.position, bantu.arah);
+				bantu.ray.far = jauh;
+			}
 			for (const md of dinding) {
-				const target = kena?.has(md) ? 0.15 : 1;
+				const target = atas?.has(md) ? 0 : kena?.has(md) ? 0.15 : 1;
 				for (const bahan of md.userData.bahan) {
 					if (bahan.opacity === target) continue;
 					bahan.opacity = Math.abs(target - bahan.opacity) < 0.01 ? target : bahan.opacity + (target - bahan.opacity) * f;

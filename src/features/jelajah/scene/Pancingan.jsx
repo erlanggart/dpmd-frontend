@@ -149,6 +149,7 @@ function aturGaya(p, dt) {
 	let putar = 0;
 	let lutut = 0;
 	let lompat = 0;
+	let balik = 0;
 	p.hentakT += dt;
 	if (p.fase === "siap" && p.tahan) {
 		// ancang-ancang: joran & lengan ditarik ke belakang kepala, badan condong ke belakang
@@ -178,6 +179,9 @@ function aturGaya(p, dt) {
 		condong = 0.2;
 		lengan = -0.45;
 	} else if (p.fase === "dapat") {
+		// berbalik menghadap kamera sambil mengangkat ikan, lalu melompat girang
+		const b = Math.min(1, Math.max(0, (p.t - 0.05) / 0.55));
+		balik = b * b * (3 - 2 * b);
 		const u = (p.t - 0.75) / 0.45;
 		lompat = u > 0 && u < 1 ? Math.sin(u * Math.PI) : 0;
 	}
@@ -193,6 +197,8 @@ function aturGaya(p, dt) {
 	g.putar = dekati(g.putar, putar, 8, dt);
 	g.lutut = dekati(g.lutut, lutut, 8, dt);
 	g.lompat = lompat;
+	// kembali menghadap air dengan halus setelah lanjut memancing
+	g.balik = balik >= g.balik ? balik : dekati(g.balik, balik, 6, dt);
 }
 
 export default function Pancingan() {
@@ -407,7 +413,7 @@ export default function Pancingan() {
 				// terangkat dari air ke dekapan pemancing, lalu dipegang di depan dada sambil
 				// menggelepar (joran diletakkan dulu)
 				const f = Math.min(1, p.t / 0.7);
-				const hadap = p.asal.rot + p.aim;
+				const hadap = arahJoran() + Math.PI * p.gaya.balik;
 				const tangan = {
 					x: posisi.x + Math.sin(hadap) * 0.45,
 					y: (posisi.yTampil ?? posisi.y) + (p.perahu ? 0.8 : 1.12) + Math.abs(Math.sin(t * 7)) * 0.06 + p.gaya.lompat * 0.32,

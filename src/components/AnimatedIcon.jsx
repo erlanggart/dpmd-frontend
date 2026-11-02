@@ -28,6 +28,7 @@ import {
   Menu,
   Archive,
   Camera,
+  LifeBuoy,
   MessageSquare,
   Contact,
   CalendarClock,
@@ -66,6 +67,7 @@ const ICON_MAP = {
   menu: Menu,
   archive: Archive,
   camera: Camera,
+  helpdesk: LifeBuoy,
   shopping: ShoppingBag,
   building: Building2,
 };

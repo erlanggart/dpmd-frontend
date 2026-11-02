@@ -496,6 +496,8 @@ const DPMDStaffLayout = () => {
 		{ path: "/dpmd/bank-surat", label: "Bank Surat", icon: 'archive' },
 		{ path: "/dpmd/video-meeting", label: "Video Meeting", icon: 'video' },
 		{ path: "/dpmd/pesan", label: "Pesan", icon: 'chatbot' },
+		// Tiket Helpdesk dari masyarakat, desa, dan kecamatan yang menjadi wewenang bidang/pimpinan.
+		{ path: "/dpmd/helpdesk", label: "Helpdesk", icon: 'helpdesk' },
 		// Tur 3D kantor (halaman publik /jelajah) — untuk semua pegawai.
 		{ path: "/jelajah", label: "Jelajahi Kantor", icon: 'building' },
 	];
@@ -532,6 +534,7 @@ const DPMDStaffLayout = () => {
 				items: [
 					byPath("/dpmd/video-meeting"),
 					byPath("/dpmd/pesan"),
+					byPath("/dpmd/helpdesk"),
 				],
 			},
 		];

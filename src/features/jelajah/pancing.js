@@ -224,7 +224,9 @@ export const pancing = {
 	ketukan: 0,
 	arah: 0, // A/D atau analog: −1 kiri … 1 kanan
 	arahMouse: 0, // posisi mouse relatif tengah layar (−1 kiri … 1 kanan)
-	ayun: 0, // arah joran saat adu tarik (dihaluskan); ikan ikut terseret ke arah ini
+	ayun: 0, // arah joran saat menunggu & adu tarik (dihaluskan); pelampung/ikan ikut terseret
+	mouseBasis: 0, // posisi mouse saat mulai menunggu — ayunan dihitung relatif darinya
+	riakGeser: 0,
 	gulung: 0, // laju mengetuk yang dihaluskan, 0..1+
 	// siap / lempar
 	tenaga: 0,
@@ -268,7 +270,7 @@ export const pancing = {
 	sorak: null, // { teks, warna, id }
 	hentakT: 99, // detik sejak tarikan sakti (animasi tubuh menyentak)
 	// gaya tubuh pemancing, dihaluskan tiap frame oleh Pancingan.jsx & dibaca Tokoh.jsx
-	gaya: { condong: 0, lengan: 0, engkol: 0, putar: 0, lutut: 0, lompat: 0 },
+	gaya: { condong: 0, lengan: 0, engkol: 0, putar: 0, lutut: 0, lompat: 0, balik: 0 },
 	// hasil
 	hasil: null,
 	pesan: null, // { teks, jenis: "info" | "baik" | "buruk" | "besar" }
@@ -382,6 +384,8 @@ function mulaiTunggu(teks, jenis) {
 	p.colekBunyi = -1;
 	p.colek = false;
 	p.colekan = Array.from({ length: n }, () => acak(0.8, p.tungguSampai - 0.6)).sort((a, b) => a - b);
+	// joran mulai dari posisi diam: ayunan saat menunggu relatif dari mouse sekarang
+	p.mouseBasis = p.arahMouse;
 	keFase("tunggu", { teks, jenis });
 }
 
@@ -447,7 +451,10 @@ export function tickPancing(dt) {
 	p.getar = Math.max(0, p.getar - dt * 2.5);
 	p.kilat = Math.max(0, p.kilat - dt * 3);
 	// adu tarik: joran diarahkan dengan mouse (atau A/D / analog) — lawan arah lari ikan
-	const masukan = p.fase === "tarik" ? (p.arah !== 0 ? p.arah : p.arahMouse) : 0;
+	// Menunggu: joran digerakkan relatif dari posisi mouse awal (pelampung ikut terseret).
+	const masukan = p.fase === "tarik"
+		? (p.arah !== 0 ? p.arah : p.arahMouse)
+		: p.fase === "tunggu" ? (p.arah !== 0 ? p.arah : Math.max(-1, Math.min(1, p.arahMouse - p.mouseBasis))) : 0;
 	p.ayun += (masukan - p.ayun) * (1 - Math.exp(-6 * dt));
 	p.dorong = Math.max(0, p.dorong - dt * 2.2);
 	const o = ujungJoran();
@@ -504,6 +511,30 @@ export function tickPancing(dt) {
 	}
 
 	if (p.fase === "tunggu") {
+		// Joran yang diayun menyeret pelampung menyusuri air ke arah ujung joran
+		// (senar sedikit tergulung), seperti menggoda ikan dengan umpan.
+		const a = arahLempar();
+		const jarakSenar = Math.hypot(p.pelampung.x - o.x, p.pelampung.z - o.z);
+		const tujuanX = o.x + Math.sin(a) * jarakSenar;
+		const tujuanZ = o.z + Math.cos(a) * jarakSenar;
+		const selisih = Math.hypot(tujuanX - p.pelampung.x, tujuanZ - p.pelampung.z);
+		if (selisih > 0.05) {
+			const langkah = Math.min(selisih, 1.6 * dt);
+			const tarik = jarakSenar > 4 ? 0.12 * langkah : 0;
+			let x = p.pelampung.x + ((tujuanX - p.pelampung.x) / selisih) * langkah;
+			let z = p.pelampung.z + ((tujuanZ - p.pelampung.z) / selisih) * langkah;
+			x -= ((x - o.x) / jarakSenar) * tarik;
+			z -= ((z - o.z) / jarakSenar) * tarik;
+			if (perahuBebas(x, z, 0.2)) {
+				p.pelampung.x = x;
+				p.pelampung.z = z;
+				p.riakGeser -= dt;
+				if (p.riakGeser <= 0) {
+					percik(x, z, 0.18);
+					p.riakGeser = 0.35;
+				}
+			}
+		}
 		const i = p.colekan.findIndex((c) => p.t > c && p.t < c + 0.35);
 		p.colek = i >= 0;
 		if (p.colek && p.colekBunyi !== i) {

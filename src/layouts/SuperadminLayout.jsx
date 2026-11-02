@@ -3,6 +3,7 @@ import { Outlet, Navigate, useNavigate, useLocation } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import {
 	FiActivity,
+	FiLifeBuoy,
 	FiBarChart2,
 	FiBell,
 	FiBriefcase,
@@ -75,6 +76,7 @@ const MENU_GROUPS = [
 			{ path: "/superadmin/activity-logs", label: "Activity Logs", icon: FiActivity },
 			{ path: "/superadmin/backup", label: "Backup Sistem", icon: FiDownloadCloud },
 			{ path: "/superadmin/pesan", label: "Pesan", icon: MessageLottieIcon },
+			{ path: "/superadmin/helpdesk", label: "Helpdesk", icon: FiLifeBuoy },
 			{ path: "/superadmin/settings", label: "Settings", icon: FiSettings },
 		],
 	},

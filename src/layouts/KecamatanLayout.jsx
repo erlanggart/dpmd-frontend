@@ -5,6 +5,7 @@ import { useUserProfile } from "../hooks/useUserProfile";
 import { useKecamatanPermissions } from "../hooks/useKecamatanPermissions";
 import WajibOperatorKecamatan from "../components/kecamatan/WajibOperatorKecamatan";
 import {
+  LifeBuoy,
   LayoutDashboard,
   Banknote,
   Coins,
@@ -55,6 +56,8 @@ const menuGroups = [
     label: "Komunikasi",
     items: [
       { id: "pesan", label: "Pesan", path: "/kecamatan/pesan", icon: MessageCircle, izin: "pesan" },
+      // Tiket Helpdesk dari desa & masyarakat di wilayah kecamatan ini — untuk semua akun kecamatan.
+      { id: "helpdesk", label: "Helpdesk", path: "/kecamatan/helpdesk", icon: LifeBuoy },
     ],
   },
   {

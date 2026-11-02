@@ -392,7 +392,7 @@ export default function GamePancing({ sentuh, bersama, onSelesai }) {
 				)}
 				{fase === "tunggu" && (
 					<motion.p initial={{ y: 16, opacity: 0 }} animate={{ y: 0, opacity: 1 }} className="rounded-full bg-slate-950/60 px-4 py-2 text-xs text-white/85 backdrop-blur">
-						Pelampung mengapung… ketuk saat <b>tenggelam</b> · {sentuh ? "tombol" : "SPASI"} sekarang = gulung ulang
+						Pelampung mengapung… ketuk saat <b>tenggelam</b> · {sentuh ? "analog" : "geser mouse"} = seret pelampung · {sentuh ? "tombol" : "SPASI"} sekarang = gulung ulang
 					</motion.p>
 				)}
 			</div>
