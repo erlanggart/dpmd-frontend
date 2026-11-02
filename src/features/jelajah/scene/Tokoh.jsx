@@ -29,6 +29,7 @@ export default function Tokoh({ penampilan, pose = "jalan", gerak, aktivitas, as
 	const kki = useRef();
 	const kka = useRef();
 	const geser = useMemo(() => Math.random() * 20, []);
+	const miring = useRef(false);
 	const akar = useRef();
 
 	useFrame(({ clock, camera }, dt) => {
@@ -115,21 +116,41 @@ export default function Tokoh({ penampilan, pose = "jalan", gerak, aktivitas, as
 		// --- gerak isyarat tamu: melambai (lengan kanan terangkat ke samping) & tepuk tangan ---
 		if (pose === "jalan") {
 			const isyarat = gerak?.current?.isyarat;
+			const gp = gerak?.current?.gayaPancing;
 			lkn.current.rotation.z = 0;
 			sbkn.current.rotation.z = 0;
 			lka.current.rotation.z = 0;
+			if (miring.current && !(gp && (isyarat === "mancing" || isyarat === "angkat"))) {
+				badan.current.rotation.x = 0;
+				badan.current.position.z = 0;
+				miring.current = false;
+			}
 			if (isyarat === "lambai") {
 				lkn.current.rotation.x = 0;
 				lkn.current.rotation.z = 2.55 + Math.sin(t * 11) * 0.3;
 				sbkn.current.rotation.x = 0;
 				sbkn.current.rotation.z = 0.25;
 			} else if (isyarat === "mancing") {
-				// dua tangan menggenggam joran di depan perut
-				lkn.current.rotation.x = -0.95;
-				sbkn.current.rotation.x = -0.55;
-				lka.current.rotation.x = -0.85;
-				lka.current.rotation.z = -0.3;
-				sbka.current.rotation.x = -0.75;
+				// dua tangan menggenggam joran di depan perut; pemain sendiri ikut bergaya sesuai
+				// fase: ancang-ancang, menyabet, condong menahan tarikan, mengengkol gulungan
+				const lengan = gp?.lengan ?? 0;
+				const putar = gp?.putar ?? 0;
+				const e = gp?.engkol ?? 0;
+				lkn.current.rotation.x = -0.95 - lengan;
+				sbkn.current.rotation.x = -0.55 - lengan * 0.25;
+				lka.current.rotation.x = -0.85 - lengan * 0.9 + Math.sin(e) * 0.3 * putar;
+				lka.current.rotation.z = -0.3 + Math.cos(e) * 0.14 * putar;
+				sbka.current.rotation.x = -0.75 + Math.cos(e) * 0.35 * putar;
+				if (gp) {
+					// condong dari pinggul: badan diputar, pinggul digeser kembali ke atas kaki,
+					// kaki tetap tegak (kuda-kuda sedikit terbuka)
+					const c = gp.condong;
+					badan.current.rotation.x = c;
+					badan.current.position.z = -0.9 * Math.sin(c);
+					kki.current.rotation.x = -c + gp.lutut;
+					kka.current.rotation.x = -c - gp.lutut * 0.6;
+					miring.current = true;
+				}
 			} else if (isyarat === "angkat") {
 				// gembira memegang ikan hasil tangkapan di depan dada sambil berjingkrak
 				lka.current.rotation.x = -1.05;
@@ -138,8 +159,12 @@ export default function Tokoh({ penampilan, pose = "jalan", gerak, aktivitas, as
 				lkn.current.rotation.z = -0.25;
 				sbka.current.rotation.x = -0.35;
 				sbkn.current.rotation.x = -0.35;
-				badan.current.position.y = Math.abs(Math.sin(t * 7)) * 0.06;
-				kepala.current.rotation.x = -0.18 + Math.sin(t * 7) * 0.05;
+				// lompat girang sesaat setelah ikan sampai di tangan
+				const lompat = gp?.lompat ?? 0;
+				badan.current.position.y = Math.abs(Math.sin(t * 7)) * 0.06 + lompat * 0.32;
+				kki.current.rotation.x = -0.6 * lompat;
+				kka.current.rotation.x = 0.3 * lompat;
+				kepala.current.rotation.x = -0.18 + Math.sin(t * 7) * 0.05 - lompat * 0.2;
 			} else if (isyarat === "keranjang" || isyarat === "ambil") {
 				// tangan kiri menenteng keranjang belanja; saat "ambil" tangan kanan menjangkau rak
 				lka.current.rotation.x = 0;

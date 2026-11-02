@@ -1,8 +1,8 @@
 import { PEMBUKA, durasiFilm } from "./film";
-import { derauPutih, siapkan, suaraMati } from "./suaraPancing";
+import { derauPanjang, derauPutih, siapkan, suaraMati } from "./suaraPancing";
 
 // Suara di studio bioskop CCM (Lt 4), disintesis WebAudio:
-// - dengung proyektor & riuh penonton sebelum film mulai (riuh mereda saat film berjalan);
+// - dengung proyektor;
 // - bip pita hitung mundur;
 // - musik latar film sesuai zamannya: "kuno" gamelan slendro (Tarumanagara), "kerajaan" pelog
 //   + kendang (Pajajaran), "kolonial" wals piano (Buitenzorg), "modern" pop optimis (Tegar
@@ -28,7 +28,7 @@ function bangun(ctx) {
 	dengung.connect(dg).connect(master);
 	dengung.start();
 	const kipas = ctx.createBufferSource();
-	kipas.buffer = derauPutih();
+	kipas.buffer = derauPanjang();
 	kipas.loop = true;
 	const kf = ctx.createBiquadFilter();
 	kf.type = "bandpass";
@@ -38,19 +38,7 @@ function bangun(ctx) {
 	kg.gain.value = 0;
 	kipas.connect(kf).connect(kg).connect(master);
 	kipas.start();
-	// riuh penonton
-	const riuh = ctx.createBufferSource();
-	riuh.buffer = derauPutih();
-	riuh.loop = true;
-	const rf = ctx.createBiquadFilter();
-	rf.type = "bandpass";
-	rf.frequency.value = 700;
-	rf.Q.value = 1.2;
-	const rg = ctx.createGain();
-	rg.gain.value = 0;
-	riuh.connect(rf).connect(rg).connect(master);
-	riuh.start(0, 0.3);
-	return { master, musik, dg, kg, rg, waktu: 0, langkah: 0, gaya: null, bipLalu: -1, filmLalu: null };
+	return { master, musik, dg, kg, waktu: 0, langkah: 0, gaya: null, bipLalu: -1, filmLalu: null };
 }
 
 function nada(ctx, ke, t, f, lama, vol, tipe = "sine", serang = 0.005) {
@@ -184,7 +172,6 @@ export function aturSuaraBioskop({ diStudio, film, t, jeda = false }) {
 	const bicara = typeof window !== "undefined" && window.speechSynthesis?.speaking;
 	s.dg.gain.setTargetAtTime(0.012, kini, 0.5);
 	s.kg.gain.setTargetAtTime(0.006, kini, 0.5);
-	s.rg.gain.setTargetAtTime(film ? 0.002 : 0.022, kini, 1.2);
 	// film baru tamat (bukan dijeda) saat kita di studio: tepuk tangan
 	if (s.filmLalu && !film && !jeda) tepukTangan(ctx, s.master);
 	s.filmLalu = film;

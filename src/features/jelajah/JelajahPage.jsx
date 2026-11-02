@@ -1094,7 +1094,7 @@ export default function JelajahPage() {
 									["Di mobil/motor", "W/S gas & mundur, A/D belok, Shift turbo, H klakson"],
 									["Mobil berempat", "E di dekat kendaraan yang dikemudikan tamu lain = ikut naik"],
 									["Situ Pemda", "E di dermaga: naik perahu · E di panggung / perahu: memancing"],
-									["Memancing", "tahan Spasi lalu lepas = lempar; KETUK Spasi berulang = gulung (jangan ditahan), A/D melawan arah ikan"],
+									["Memancing", "tahan Spasi lalu lepas = lempar; KETUK Spasi berulang = gulung (jangan ditahan), arahkan mouse (atau A/D) melawan arah ikan, F = Tarikan Sakti saat meteran ⚡ penuh"],
 									["Tenaga ❤", "habis = pingsan; masuk Alfamart seberang kantor: E ambil keranjang & barang di rak, bayar di kasir pakai koin, makan dari 🎒 Tas"],
 									["Enter / T", "ngobrol dengan tamu lain"],
 									["1 – 5", "emote: lambai, jempol, tepuk, tawa, hati"],

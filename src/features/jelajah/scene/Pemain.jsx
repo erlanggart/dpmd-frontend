@@ -8,7 +8,7 @@ import { KURSI_BIOSKOP, KURSI_MAKAN, TITIK_PESAN_PECEL, TOKO_PER_ID, PERMUKAAN_S
 import { diJalan, tinggiGedungDi } from "./kawasanBantu";
 import { langkahKaki } from "../suasanaSuara";
 import { diriSendiri, kursiTerpakai, pemainLain } from "../multipemain";
-import { berhentiPancing, geserAsal, mulaiPancing, pancing, percik } from "../pancing";
+import { arahJoran, berhentiPancing, geserAsal, mulaiPancing, pancing, percik } from "../pancing";
 import { laporTabrak } from "../tenaga";
 import { LAMA_AMBIL, belanja, kembalikanKeranjang, selesaiAmbil } from "../belanja";
 import { TENAGA_LARI, setTenaga, tenaga, ubahTenaga } from "../tenaga";
@@ -616,8 +616,9 @@ export default function Pemain({ daftarDinding, penghuni, penampilan = PENAMPILA
 				p.set(jok.x, yKursi(kend), jok.z);
 				geserAsal(jok.x, jok.z, kend.rot);
 			}
-			g.rotation.y = pancing.asal.rot + pancing.aim;
-			const ke = g.rotation.y + Math.PI;
+			g.rotation.y = arahJoran();
+			// kamera mengikuti arah bidikan saja (bukan ayunan joran) supaya ayunannya terlihat
+			const ke = pancing.asal.rot + pancing.aim + Math.PI;
 			k.yaw += (sudutDekat(k.yaw, ke) - k.yaw) * (1 - Math.exp(-3 * dt));
 			if (!pancing.aktif) {
 				pancing.arah = 0;
@@ -806,6 +807,8 @@ export default function Pemain({ daftarDinding, penghuni, penampilan = PENAMPILA
 		posisi.aktivitas = gr.aktivitas;
 		// keluar bilik ruang coba = pakaian coba dilepas
 		if (lemari.coba && bilikDi(p.x, p.z) < 0) selesaiCoba();
+		// gaya tubuh saat memancing (dihitung Pancingan.jsx): condong, ayunan lengan, engkol gulungan
+		gr.gayaPancing = mk.jenis === "mancing" ? pancing.gaya : null;
 		gr.isyarat =
 			mk.jenis === "mancing"
 				? pancing.fase === "dapat"
@@ -984,9 +987,12 @@ export default function Pemain({ daftarDinding, penghuni, penampilan = PENAMPILA
 		const datar = k.jarakAman * Math.cos(pitch);
 		const tinggi = k.jarakAman * Math.sin(pitch);
 		bantu.kepala.set(p.x, p.y + 1.2, p.z);
-		bantu.fokus.set(p.x, p.y + 1.2 + 1.8 * k.luar, p.z);
+		// mengangkat ikan: kamera dekat setinggi mata (tetap di bawah atap pendopo dermaga)
+		// dan menatap ikan di depan dada, bukan ke langit
+		const angkatIkan = mk.jenis === "mancing" && pancing.fase === "dapat";
+		bantu.fokus.set(p.x, p.y + (angkatIkan ? 1.35 : 1.2 + 1.8 * k.luar), p.z);
 		const tx = p.x + sy * datar;
-		const ty = p.y + 1.2 + tinggi;
+		const ty = angkatIkan ? Math.min(p.y + 1.2 + tinggi, p.y + 1.75) : p.y + 1.2 + tinggi;
 		const tz = p.z + cy * datar;
 		if (k.lompat) {
 			camera.position.set(tx, ty, tz);

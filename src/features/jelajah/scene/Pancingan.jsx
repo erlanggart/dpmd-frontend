@@ -2,7 +2,7 @@ import { useMemo, useRef } from "react";
 import { useFrame } from "@react-three/fiber";
 import { BufferGeometry, Float32BufferAttribute, Line, LineBasicMaterial, MeshBasicMaterial, Object3D, RingGeometry, SphereGeometry, Vector3 } from "three";
 import { posisi } from "../jelajahStore";
-import { IKAN, joranKini, panjangCm, pancing, senarKini, tickPancing, useKoleksi } from "../pancing";
+import { IKAN, arahJoran, joranKini, panjangCm, pancing, senarKini, tickPancing, useKoleksi } from "../pancing";
 import { TANAH } from "./layout";
 import ModelIkan from "./ModelIkan";
 import { AIR_Y, perahuBebas } from "./situ";
@@ -139,6 +139,62 @@ function Pelampung({ g }) {
 	);
 }
 
+// Gaya tubuh pemancing per fase (dibaca Tokoh.jsx lewat gerak.gayaPancing):
+// condong (+ ke depan / − ke belakang), lengan (+ terangkat), engkol (fase putaran gulungan)
+// & putar (besarnya), lutut (kuda-kuda), lompat (girang saat dapat ikan).
+function aturGaya(p, dt) {
+	const g = p.gaya;
+	let condong = 0;
+	let lengan = 0;
+	let putar = 0;
+	let lutut = 0;
+	let lompat = 0;
+	p.hentakT += dt;
+	if (p.fase === "siap" && p.tahan) {
+		// ancang-ancang: joran & lengan ditarik ke belakang kepala, badan condong ke belakang
+		condong = -0.2 * p.tenaga;
+		lengan = 0.95 * p.tenaga;
+		lutut = 0.15 * p.tenaga;
+	} else if (p.fase === "lempar") {
+		// ayunan melempar: lengan menyabet ke depan, badan ikut maju
+		const f = Math.min(1, p.t / 0.18);
+		condong = 0.24 * f;
+		lengan = 0.9 * (1 - f) - 0.35 * f;
+		lutut = 0.2;
+	} else if (p.fase === "tunggu") condong = 0.04;
+	else if (p.fase === "gigit") {
+		condong = 0.14;
+		lengan = 0.1;
+		lutut = 0.2;
+	} else if (p.fase === "tarik") {
+		const tg = Math.min(1.1, p.tegang);
+		condong = -(0.08 + tg * 0.17) + (p.sentak > 0 ? 0.13 : 0) - (p.lari > 0 ? 0.07 : 0) - (p.amuk > 0 ? 0.05 : 0);
+		lengan = 0.12 + tg * 0.25;
+		putar = Math.min(1, p.gulung) * (p.habisi ? 1.3 : 1);
+		lutut = 0.28;
+		// mengengkol gulungan: makin cepat mengetuk makin cepat berputar
+		g.engkol += dt * (6 + 14 * Math.min(1.3, p.gulung)) * (p.habisi ? 1.5 : 1);
+	} else if (p.fase === "gagal") {
+		condong = 0.2;
+		lengan = -0.45;
+	} else if (p.fase === "dapat") {
+		const u = (p.t - 0.75) / 0.45;
+		lompat = u > 0 && u < 1 ? Math.sin(u * Math.PI) : 0;
+	}
+	// TARIKAN SAKTI: sentakan besar ke belakang dengan joran terangkat tinggi
+	if (p.hentakT < 0.8) {
+		const k = p.hentakT < 0.12 ? p.hentakT / 0.12 : Math.max(0, 1 - (p.hentakT - 0.12) / 0.68);
+		condong -= 0.32 * k;
+		lengan += 1.3 * k;
+		lutut += 0.25 * k;
+	}
+	g.condong = dekati(g.condong, condong, p.fase === "lempar" || p.hentakT < 0.15 ? 30 : 10, dt);
+	g.lengan = dekati(g.lengan, lengan, p.fase === "lempar" || p.hentakT < 0.15 ? 30 : 10, dt);
+	g.putar = dekati(g.putar, putar, 8, dt);
+	g.lutut = dekati(g.lutut, lutut, 8, dt);
+	g.lompat = lompat;
+}
+
 export default function Pancingan() {
 	const akar = useRef();
 	const ruas = useRef([]);
@@ -162,7 +218,7 @@ export default function Pancingan() {
 	}, []);
 
 	useFrame(({ clock, camera }, dtMentah) => {
-		const dt = Math.min(dtMentah, 0.1);
+		let dt = Math.min(dtMentah, 0.1);
 		const p = pancing;
 		const t = clock.elapsedTime;
 		const aktif = p.aktif;
@@ -170,16 +226,27 @@ export default function Pancingan() {
 		senar.visible = false;
 		pelampung.current.visible = false;
 		bidik.current.visible = false;
+		const s0 = st.current;
 		if (!aktif) {
 			ikanG.current.visible = false;
+			if (s0.fov0 && camera.fov !== s0.fov0) {
+				camera.fov = s0.fov0;
+				camera.updateProjectionMatrix();
+			}
 			return;
+		}
+		// gerak lambat sesaat (tarikan sakti, ikan terangkat)
+		if (p.lambat > 0) {
+			p.lambat -= dt;
+			dt *= 0.3;
 		}
 		// logika permainan berjalan di sini, satu kali per frame
 		tickPancing(dt);
+		aturGaya(p, dt);
 		senar.material.color.set(senarKini().warna);
 
 		// --- joran di tangan kanan pemancing ---
-		const arah = p.asal.rot + p.aim;
+		const arah = arahJoran();
 		const tinggiTangan = p.perahu ? 0.78 : 1.12;
 		const a = akar.current;
 		a.position.set(posisi.x + Math.cos(arah) * 0.24 + Math.sin(arah) * 0.28, (posisi.yTampil ?? posisi.y) + tinggiTangan, posisi.z - Math.sin(arah) * 0.24 + Math.cos(arah) * 0.28);
@@ -194,7 +261,8 @@ export default function Pancingan() {
 			sudut = 0.8 + Math.sin(t * 30) * 0.05;
 			lentur = 0.38 + Math.sin(t * 19) * 0.04;
 		} else if (p.fase === "tarik") {
-			sudut = 0.3 + (p.sentak > 0 ? 0.3 : 0) + Math.sin(t * 17) * 0.02 * p.tegang;
+			// joran ikut terangkat tinggi saat tarikan sakti
+			sudut = 0.3 + (p.sentak > 0 ? 0.3 : 0) + Math.sin(t * 17) * 0.02 * p.tegang - Math.max(0, p.gaya.lengan - 0.4) * 0.55;
 			lentur = 0.06 + Math.min(1.1, p.tegang) * 0.32;
 		} else if (p.fase === "dapat") sudut = 0.15;
 		s.sudut = dekati(s.sudut, sudut, p.fase === "lempar" ? 22 : 9, dt);
@@ -342,7 +410,7 @@ export default function Pancingan() {
 				const hadap = p.asal.rot + p.aim;
 				const tangan = {
 					x: posisi.x + Math.sin(hadap) * 0.45,
-					y: (posisi.yTampil ?? posisi.y) + (p.perahu ? 0.8 : 1.12) + Math.abs(Math.sin(t * 7)) * 0.06,
+					y: (posisi.yTampil ?? posisi.y) + (p.perahu ? 0.8 : 1.12) + Math.abs(Math.sin(t * 7)) * 0.06 + p.gaya.lompat * 0.32,
 					z: posisi.z + Math.cos(hadap) * 0.45,
 				};
 				const ease = 1 - Math.pow(1 - f, 3);
@@ -359,6 +427,14 @@ export default function Pancingan() {
 			m.visible = setrum && Math.random() < 0.6;
 			if (m.visible) m.position.set(p.ikanPos.x + (Math.random() - 0.5) * 2, AIR + Math.random() * 0.6, p.ikanPos.z + (Math.random() - 0.5) * 2);
 		});
+
+		// --- zoom: sedikit mendekat selama adu tarik, "dorongan" melebar sesaat di momen besar ---
+		s0.fov0 ??= camera.fov;
+		const fovTuju = s0.fov0 - (p.fase === "tarik" ? 5 + Math.min(1, p.tegang) * 3 : 0) + p.dorong * 10;
+		if (Math.abs(camera.fov - fovTuju) > 0.05) {
+			camera.fov += (fovTuju - camera.fov) * (1 - Math.exp(-(p.dorong > 0.05 ? 18 : 4) * dtMentah));
+			camera.updateProjectionMatrix();
+		}
 
 		// --- guncangan kamera saat sentakan/amukan ---
 		if (p.getar > 0.01) {

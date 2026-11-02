@@ -1,7 +1,7 @@
 import { useSyncExternalStore } from "react";
 import { diSitu, jarakKeTepi, perahuBebas } from "./scene/situ";
 import { suasana } from "./scene/suasana";
-import { hentikanLaga, hentikanRiang, putarLaga, putarRiang } from "./musikJelajah";
+import { hentikanLaga, hentikanRiang, laguLaga, putarLaga, putarRiang } from "./musikJelajah";
 import { suara } from "./suaraPancing";
 import { catat, tambahXp } from "./progres";
 
@@ -222,7 +222,9 @@ export const pancing = {
 	// masukan dari UI: tahan (mengayun lemparan), ketukan (jumlah tekan-lepas), arah
 	tahan: false,
 	ketukan: 0,
-	arah: 0,
+	arah: 0, // A/D atau analog: −1 kiri … 1 kanan
+	arahMouse: 0, // posisi mouse relatif tengah layar (−1 kiri … 1 kanan)
+	ayun: 0, // arah joran saat adu tarik (dihaluskan); ikan ikut terseret ke arah ini
 	gulung: 0, // laju mengetuk yang dihaluskan, 0..1+
 	// siap / lempar
 	tenaga: 0,
@@ -254,6 +256,19 @@ export const pancing = {
 	peristiwa: null, // { jenis: "lompat" | "setrum", t, dur, lepas }
 	ikanPos: { x: 0, z: 0 },
 	getar: 0,
+	// tarikan sakti: terisi selama tegangan dijaga di zona hijau; penuh = satu hentakan besar
+	kuasa: 0,
+	habisi: false, // ikan sudah lemas (<20% tenaga): gulungan jauh lebih kuat
+	detakLagi: 0,
+	// efek layar (dibaca HUD & kamera): kilat warna, dorongan zoom, gerak lambat, teks sorakan
+	kilat: 0,
+	warnaKilat: "#ffffff",
+	dorong: 0,
+	lambat: 0,
+	sorak: null, // { teks, warna, id }
+	hentakT: 99, // detik sejak tarikan sakti (animasi tubuh menyentak)
+	// gaya tubuh pemancing, dihaluskan tiap frame oleh Pancingan.jsx & dibaca Tokoh.jsx
+	gaya: { condong: 0, lengan: 0, engkol: 0, putar: 0, lutut: 0, lompat: 0 },
 	// hasil
 	hasil: null,
 	pesan: null, // { teks, jenis: "info" | "baik" | "buruk" | "besar" }
@@ -290,12 +305,32 @@ function pesanSaja(teks, jenis = "info") {
 	pancing.pesan = { teks, jenis, id: versi + 1 };
 	beritahu();
 }
+let urutSorak = 0;
+// Teks besar di tengah layar + kilat & dorongan kamera untuk momen penting.
+function sorak(teks, warna = "#fde047", kilat = 0.5, dorong = 0.6) {
+	const p = pancing;
+	p.sorak = { teks, warna, id: ++urutSorak };
+	p.kilat = Math.max(p.kilat, kilat);
+	p.warnaKilat = warna;
+	p.dorong = Math.max(p.dorong, dorong);
+	beritahu();
+}
+function getarHp(pola) {
+	try {
+		navigator.vibrate?.(pola);
+	} catch {
+		/* tidak didukung */
+	}
+}
+
 export function percik(x, z, besar = 1) {
 	pancing.cipratan.push({ x, z, besar, t0: performance.now() / 1000 });
 	if (pancing.cipratan.length > 12) pancing.cipratan.shift();
 }
 
-const arahLempar = () => pancing.asal.rot + pancing.aim;
+// Arah joran: bidikan + ayunan ke kiri/kanan saat adu tarik (ikan ikut terseret).
+const arahLempar = () => pancing.asal.rot + pancing.aim - pancing.ayun * 0.3;
+export const arahJoran = arahLempar;
 // Ujung joran kira-kira 1,4 m di depan pemancing.
 export function ujungJoran() {
 	const a = arahLempar();
@@ -303,7 +338,7 @@ export function ujungJoran() {
 }
 
 export function mulaiPancing({ x, z, rot, perahu }) {
-	Object.assign(pancing, { aktif: true, perahu: !!perahu, asal: { x, z, rot }, aim: 0, tahan: false, arah: 0, hasil: null, ikan: null, cipratan: [] });
+	Object.assign(pancing, { aktif: true, perahu: !!perahu, asal: { x, z, rot }, aim: 0, tahan: false, arah: 0, hasil: null, ikan: null, cipratan: [], kuasa: 0, habisi: false, kilat: 0, dorong: 0, lambat: 0, sorak: null });
 	keFase("siap", { teks: "Tahan untuk mengayun joran, lepas untuk melempar", jenis: "info" });
 }
 
@@ -410,6 +445,11 @@ export function tickPancing(dt) {
 	const lepas = !p.tahan && tahanLalu;
 	tahanLalu = p.tahan;
 	p.getar = Math.max(0, p.getar - dt * 2.5);
+	p.kilat = Math.max(0, p.kilat - dt * 3);
+	// adu tarik: joran diarahkan dengan mouse (atau A/D / analog) — lawan arah lari ikan
+	const masukan = p.fase === "tarik" ? (p.arah !== 0 ? p.arah : p.arahMouse) : 0;
+	p.ayun += (masukan - p.ayun) * (1 - Math.exp(-6 * dt));
+	p.dorong = Math.max(0, p.dorong - dt * 2.2);
 	const o = ujungJoran();
 
 	if (p.fase === "siap") {
@@ -489,6 +529,7 @@ export function tickPancing(dt) {
 			}
 			// tanpa tanda seru: isyaratnya senar menegang & pelampung terseret ikan (Pancingan.jsx)
 			p.getar = Math.max(p.getar, 0.5);
+			p.dorong = Math.max(p.dorong, 0.35);
 			keFase("gigit", { teks: "Senar menegang… sentak sekarang", jenis: "besar" });
 		}
 		return;
@@ -520,7 +561,12 @@ export function tickPancing(dt) {
 			p.lari = 0;
 			p.pulih = false;
 			p.gulung = 0;
+			p.habisi = false;
+			p.detakLagi = 0;
+			p.kuasa = p.perfect ? 0.35 : 0;
 			p.ikanPos = { x: p.pelampung.x, z: p.pelampung.z };
+			percik(p.pelampung.x, p.pelampung.z, 1.1 + p.ikan.kelas * 0.3);
+			getarHp(p.perfect ? [50, 30, 90] : 50);
 			p.getar = 0.4;
 			suara("kail");
 			// strike! musik sendu berganti backsound laga
@@ -535,6 +581,8 @@ export function tickPancing(dt) {
 						? "Tarikannya kuat sekali! Ketuk berulang untuk menggulung"
 						: "Kena! Ketuk berulang untuk menggulung";
 			if (p.perfect) p.getar = Math.max(p.getar, 0.8);
+			if (p.perfect) sorak("PERFECT STRIKE!", "#38bdf8", 0.8, 1);
+			else sorak("STRIKE!", "#fde047", 0.35, 0.7);
 			return keFase("tarik", { teks, jenis: p.ikan.kelas >= 3 || p.perfect ? "besar" : "baik" });
 		}
 		if (p.t > p.jendela) return lepasTapiTunggu("Kurang cepat — ikannya lepas. Umpan masih di air, tunggu sambaran berikutnya");
@@ -589,6 +637,8 @@ function tarik(dt, o, ketukBaru) {
 		p.amuk = 3.5;
 		p.getar = 1;
 		suara("amuk");
+		getarHp([120, 60, 160]);
+		sorak("MENGAMUK!", "#ef4444", 0.45, 0.9);
 		pesanSaja(`${p.ikan.nama.toUpperCase()} MENGAMUK! Jaga tegangan!`, "besar");
 	}
 	if (p.amuk > 0) p.amuk -= dt;
@@ -600,6 +650,7 @@ function tarik(dt, o, ketukBaru) {
 		if (e.t >= e.dur) {
 			if (e.lepas / e.dur > 0.65) {
 				p.stamina -= p.staminaMaks * 0.12;
+				p.kuasa = Math.min(1, p.kuasa + 0.15);
 				pesanSaja(e.jenis === "lompat" ? "Bagus! Ikan kelelahan setelah melompat" : "Selamat dari setrum! Ikan melemah", "baik");
 			}
 			p.peristiwa = null;
@@ -616,32 +667,57 @@ function tarik(dt, o, ketukBaru) {
 	// --- gaya tarik ikan: makin lelah makin lemah; berlari jauh lebih kuat ---
 	// ikan yang lebih berat (dalam rentang jenisnya) menarik lebih kuat
 	const tarikan = k.tenaga * (0.85 + 0.3 * (p.besar || 0)) * (0.4 + 0.6 * sisa) * (p.sentak > 0 ? 1.6 : 1) * (p.lari > 0 ? 2.0 : 1) * (p.amuk > 0 ? 1.3 : 1);
-	const lawan = p.arah !== 0 && Math.sign(p.arah) === -p.arahIkan;
-	const ikut = p.arah !== 0 && Math.sign(p.arah) === p.arahIkan;
+	// makin jauh joran diarahkan, makin kuat efeknya
+	const kuatArah = Math.min(1, Math.abs(p.ayun));
+	const lawan = kuatArah > 0.2 && Math.sign(p.ayun) === -p.arahIkan;
+	const ikut = kuatArah > 0.2 && Math.sign(p.ayun) === p.arahIkan;
 
 	// --- tegangan senar (dengan getaran kepala ikan yang menggeleng) ---
 	let target = tarikan * 0.14 + gl * (0.25 + tarikan * 0.45);
-	if (lawan) target -= 0.1;
-	if (ikut) target += 0.12;
+	if (lawan) target -= 0.1 * kuatArah;
+	if (ikut) target += 0.12 * kuatArah;
 	if (p.peristiwa && menggulung) target += 0.9 * gl;
+	if (p.habisi) target *= 0.85;
 	p.tegang += (target - p.tegang) * (1 - Math.exp(-4 * dt));
 	p.geleng = Math.sin(p.t * 13.7) * Math.sin(p.t * 3.1) * k.tenaga * 0.07 * (menggulung ? 1 : 0.4);
 	const tegangan = p.tegang + p.geleng;
 
 	// --- panjang senar: menggulung melawan tarikan; dilepas = senar ditarik keluar (rem senar) ---
-	p.jarak -= gl * (1.6 + 1.6 * (1 - sisa)) * (1 - 0.6 * sisa) * (tegangan > 1 ? 0.2 : 1) * (p.lari > 0 ? 0.3 : 1) * dt;
+	p.jarak -= gl * (1.6 + 1.6 * (1 - sisa)) * (1 - 0.6 * sisa) * (tegangan > 1 ? 0.2 : 1) * (p.lari > 0 ? 0.3 : 1) * (p.habisi ? 1.8 : 1) * dt;
 	p.jarak += tarikan * (1.0 - 0.7 * gl) * 0.8 * dt;
 
 	// --- tenaga ikan: terkuras di zona pas, pulih bila senar kendor ---
 	p.pulih = false;
 	if (menggulung && tegangan >= zonaBawah) {
 		const diZona = tegangan <= zonaAtas;
-		p.stamina -= (diZona ? 1 : 1.25) * (lawan ? 1.6 : 1) * (0.4 + 0.6 * gl) * dt;
+		p.stamina -= (diZona ? 1 : 1.25) * (lawan ? 1 + 0.6 * kuatArah : 1) * (0.4 + 0.6 * gl) * dt;
+		// meteran tarikan sakti terisi selama tegangan dijaga di zona hijau (±9 detik)
+		if (diZona && p.kuasa < 1) {
+			p.kuasa = Math.min(1, p.kuasa + dt * 0.11);
+			if (p.kuasa >= 1) {
+				suara("kuasa");
+				pesanSaja("⚡ TARIKAN SAKTI siap! Pakai sekarang", "baik");
+			}
+		}
 	} else if (tegangan < zonaBawah * 0.85 && k.regen > 0 && sisa < 1) {
 		p.stamina = Math.min(p.staminaMaks, p.stamina + k.regen * dt);
 		p.pulih = true;
 	}
 	p.stamina = Math.max(0, p.stamina);
+	// ikan lemas: saatnya menghabisi
+	if (!p.habisi && p.stamina / p.staminaMaks < 0.2) {
+		p.habisi = true;
+		suara("habisi");
+		laguLaga(1.12);
+		sorak("HABISI!", "#f59e0b", 0.4, 0.8);
+		pesanSaja("Ikan lemas! Ketuk secepatnya — gulungan 2× lebih kuat", "besar");
+	}
+	// detak jantung saat senar hampir putus
+	p.detakLagi -= dt;
+	if ((tegangan >= 1 || p.bahaya > 0.2) && p.detakLagi <= 0) {
+		suara("detak");
+		p.detakLagi = Math.max(0.42, 0.75 - p.bahaya * 0.4);
+	}
 
 	// --- putus / habis senar / dapat ---
 	if (tegangan >= 1) p.bahaya += dt * (p.lari > 0 ? 1.6 : 1);
@@ -680,6 +756,33 @@ function tarik(dt, o, ketukBaru) {
 	if (p.jarak <= 2.2) dapat();
 }
 
+// TARIKAN SAKTI (F / tombol ⚡): meteran penuh = satu hentakan besar — ikan terseret mendekat,
+// tenaganya terkuras, lari/lompat/amukan terhenti, senar aman kembali.
+export function tarikanSakti() {
+	const p = pancing;
+	if (p.fase !== "tarik" || p.kuasa < 1) return false;
+	const [zb, za] = zonaKini(p.ikan.kelas);
+	p.kuasa = 0;
+	p.stamina = Math.max(0, p.stamina - p.staminaMaks * 0.3);
+	p.jarak = Math.max(2.4, p.jarak - Math.min(6, p.jarak * 0.35));
+	p.lari = 0;
+	p.peristiwa = null;
+	p.amuk = 0;
+	p.bahaya = 0;
+	p.kendor = 0;
+	p.tegang = (zb + za) / 2;
+	p.getar = 1;
+	p.lambat = 0.45;
+	p.hentakT = 0;
+	percik(p.ikanPos.x, p.ikanPos.z, 1.7 + p.ikan.kelas * 0.3);
+	suara("hentak");
+	getarHp([40, 30, 160]);
+	sorak("TARIKAN SAKTI!", "#38bdf8", 0.9, 1.3);
+	return true;
+}
+
+const SORAK_DAPAT = ["DAPAT!", "LANGKA!", "EPIK!", "MONSTER!", "LEGENDA!"];
+
 function dapat() {
 	const p = pancing;
 	const ikan = p.ikan;
@@ -707,6 +810,10 @@ function dapat() {
 	// laga selesai: musik riang "selamat" selama kartu hasil tampil
 	hentikanLaga();
 	putarRiang();
-	suara("cebur");
+	suara("tangkap");
+	p.lambat = 0.5;
+	p.getar = Math.max(p.getar, 0.6);
+	getarHp(ikan.kelas >= 3 ? [80, 40, 80, 40, 200] : [60, 40, 90]);
+	sorak(SORAK_DAPAT[ikan.kelas], KELAS[ikan.kelas].warna, 0.7, 1);
 	keFase("dapat", null);
 }

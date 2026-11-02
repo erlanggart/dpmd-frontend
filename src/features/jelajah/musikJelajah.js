@@ -26,6 +26,17 @@ export function putarLaga(kelas) {
 	}
 }
 
+// Saat menghabisi ikan, backsound laga dipercepat sedikit supaya makin menegangkan.
+export function laguLaga(laju = 1) {
+	if (!laga) return;
+	try {
+		laga.preservesPitch = false;
+		laga.playbackRate = laju;
+	} catch {
+		/* tidak didukung */
+	}
+}
+
 export function hentikanLaga() {
 	if (!laga) return;
 	const a = laga;

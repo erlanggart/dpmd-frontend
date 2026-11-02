@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { FiBookOpen, FiVolume2, FiVolumeX, FiX } from "react-icons/fi";
 import { kirimUcap } from "../multipemain";
-import { IKAN, KELAS, jamLapar, joranKini, ketuk, lanjutPancing, pancing, senarKini, useKoleksi, usePancing, zonaKini } from "../pancing";
+import { IKAN, KELAS, jamLapar, joranKini, ketuk, lanjutPancing, pancing, senarKini, tarikanSakti, useKoleksi, usePancing, zonaKini } from "../pancing";
 import PanelJoran from "./PanelJoran";
 import { aturSuara, suaraMati } from "../suaraPancing";
 import AlbumIkan from "./AlbumIkan";
@@ -138,8 +138,17 @@ export default function GamePancing({ sentuh, bersama, onSelesai }) {
 	const staminaIsi = useRef();
 	const arahKiri = useRef();
 	const arahKanan = useRef();
+	const jarumArah = useRef();
 	const vinyet = useRef();
 	const peringatan = useRef();
+	const sentuhRef = useRef(sentuh);
+	sentuhRef.current = sentuh;
+	const kilatEl = useRef();
+	const garisEl = useRef();
+	const panelTarik = useRef();
+	const kuasaIsi = useRef();
+	const kuasaTeks = useRef();
+	const tombolSakti = useRef();
 
 	// --- Spasi: ditahan = mengayun lemparan; tiap tekan-lepas = satu ketukan (sambar &
 	// menggulung — ditahan terus tidak menggulung); setelah dapat = lanjut ---
@@ -157,11 +166,22 @@ export default function GamePancing({ sentuh, bersama, onSelesai }) {
 				if (!e.repeat) ketuk();
 				pancing.tahan = true;
 			}
+			if (e.code === "KeyF" && pancing.fase === "tarik" && !e.repeat) {
+				e.preventDefault();
+				tarikanSakti();
+			}
 		};
 		const naik = (e) => {
 			if (e.code === "Space") pancing.tahan = false;
 		};
 		const lepas = () => (pancing.tahan = false);
+		// mouse kiri/kanan dari tengah layar = arah joran saat adu tarik
+		const gerakMouse = (e) => {
+			if (e.pointerType !== "mouse") return;
+			const x = (e.clientX / window.innerWidth - 0.5) / 0.3;
+			pancing.arahMouse = Math.abs(x) < 0.08 ? 0 : Math.max(-1, Math.min(1, x));
+		};
+		window.addEventListener("pointermove", gerakMouse);
 		window.addEventListener("keydown", turun);
 		window.addEventListener("keyup", naik);
 		window.addEventListener("blur", lepas);
@@ -169,6 +189,7 @@ export default function GamePancing({ sentuh, bersama, onSelesai }) {
 			window.removeEventListener("keydown", turun);
 			window.removeEventListener("keyup", naik);
 			window.removeEventListener("blur", lepas);
+			window.removeEventListener("pointermove", gerakMouse);
 			pancing.tahan = false;
 		};
 	}, []);
@@ -204,12 +225,43 @@ export default function GamePancing({ sentuh, bersama, onSelesai }) {
 				const kiri = p.arahIkan < 0;
 				arahKiri.current.style.opacity = kiri ? 1 : 0.25;
 				arahKanan.current.style.opacity = kiri ? 0.25 : 1;
+				// jarum arah joran: hijau = melawan ikan, merah = searah ikan
+				const ay = Math.max(-1, Math.min(1, p.ayun));
+				jarumArah.current.style.left = `${50 + ay * 46}%`;
+				jarumArah.current.style.background = Math.abs(ay) < 0.2 ? "#ffffff" : Math.sign(ay) === -p.arahIkan ? "#4ade80" : "#f43f5e";
+				jarumArah.current.style.boxShadow = `0 0 8px ${jarumArah.current.style.background}`;
 				const e = p.peristiwa;
 				peringatan.current.style.display = e ? "flex" : "none";
 				if (e) peringatan.current.textContent = e.jenis === "lompat" ? "🐟 MELOMPAT! BERHENTI MENGETUK!" : "⚡ SETRUM! BERHENTI MENGETUK!";
 				const merah = p.amuk > 0 || p.bahaya > 0;
-				vinyet.current.style.boxShadow = e?.jenis === "setrum" ? "inset 0 0 140px rgba(56,189,248,0.6)" : merah ? `inset 0 0 ${120 + Math.sin(performance.now() / 90) * 30}px rgba(239,68,68,0.55)` : "none";
+				const denyut = Math.sin(performance.now() / 90);
+				vinyet.current.style.boxShadow =
+					e?.jenis === "setrum" ? "inset 0 0 140px rgba(56,189,248,0.6)" : merah ? `inset 0 0 ${120 + denyut * 30}px rgba(239,68,68,0.55)` : p.habisi ? `inset 0 0 ${110 + denyut * 25}px rgba(245,158,11,0.45)` : "none";
+				// meteran tarikan sakti
+				const penuh = p.kuasa >= 1;
+				kuasaIsi.current.style.width = `${p.kuasa * 100}%`;
+				kuasaIsi.current.style.background = penuh ? "linear-gradient(90deg,#38bdf8,#e0f2fe,#38bdf8)" : "linear-gradient(90deg,#0ea5e9,#6366f1)";
+				kuasaIsi.current.style.boxShadow = penuh ? `0 0 ${10 + denyut * 6}px #38bdf8` : "none";
+				kuasaTeks.current.textContent = penuh ? (sentuhRef.current ? "SIAP! tekan ⚡" : "SIAP! tekan F") : `${Math.floor(p.kuasa * 100)}%`;
+				kuasaTeks.current.style.color = penuh ? "#7dd3fc" : "";
+				if (tombolSakti.current) {
+					tombolSakti.current.style.opacity = penuh ? 1 : 0.4;
+					tombolSakti.current.style.transform = penuh ? `scale(${1.05 + denyut * 0.05})` : "scale(0.9)";
+				}
+				// panel ikut terguncang saat ikan menyentak/mengamuk
+				const g = p.getar * 7;
+				panelTarik.current.style.transform = g > 0.3 ? `translate(${(Math.random() - 0.5) * g}px, ${(Math.random() - 0.5) * g}px)` : "";
 			} else if (vinyet.current) vinyet.current.style.boxShadow = "none";
+			// kilat layar & garis kecepatan (strike, tarikan sakti, ikan lari, dapat)
+			if (kilatEl.current) {
+				kilatEl.current.style.opacity = Math.min(0.65, p.kilat * 0.6);
+				kilatEl.current.style.background = `radial-gradient(circle at 50% 45%, #ffffff 0%, ${p.warnaKilat} 45%, transparent 80%)`;
+			}
+			if (garisEl.current) {
+				const kuat = Math.max(p.fase === "tarik" && p.lari > 0 ? 0.3 : 0, Math.min(0.8, p.dorong * 0.7));
+				garisEl.current.style.opacity = kuat;
+				if (kuat > 0) garisEl.current.style.transform = `rotate(${Math.random() * 6}deg) scale(${1 + p.dorong * 0.15})`;
+			}
 			id = requestAnimationFrame(putar);
 		};
 		id = requestAnimationFrame(putar);
@@ -238,6 +290,33 @@ export default function GamePancing({ sentuh, bersama, onSelesai }) {
 	return (
 		<>
 			<div ref={vinyet} className="pointer-events-none absolute inset-0 z-10 transition-shadow" />
+			<div ref={kilatEl} className="pointer-events-none absolute inset-0 z-10 opacity-0 mix-blend-screen" />
+			<div
+				ref={garisEl}
+				className="pointer-events-none absolute -inset-[20%] z-10 opacity-0"
+				style={{
+					background: "repeating-conic-gradient(from 0deg at 50% 50%, transparent 0deg 2.6deg, rgba(255,255,255,0.55) 2.6deg 3deg)",
+					WebkitMaskImage: "radial-gradient(circle at 50% 50%, transparent 32%, black 70%)",
+					maskImage: "radial-gradient(circle at 50% 50%, transparent 32%, black 70%)",
+				}}
+			/>
+			{/* teks besar momen penting: STRIKE!, TARIKAN SAKTI!, HABISI!, MONSTER! … */}
+			<div className="pointer-events-none absolute inset-x-0 top-[30%] z-20 flex justify-center">
+				<AnimatePresence>
+					{pancing.sorak && (
+						<motion.p
+							key={pancing.sorak.id}
+							initial={{ scale: 2.4, opacity: 0, rotate: -6 }}
+							animate={{ scale: [2.4, 0.95, 1.05, 1], opacity: [0, 1, 1, 0], rotate: [-6, -3, -3, -3], y: [0, 0, 0, -30] }}
+							transition={{ duration: 1.25, times: [0, 0.15, 0.7, 1] }}
+							className="absolute whitespace-nowrap text-4xl font-black italic tracking-tight sm:text-6xl"
+							style={{ color: pancing.sorak.warna, WebkitTextStroke: "2px #0f172a", textShadow: `0 0 24px ${pancing.sorak.warna}, 0 6px 0 #0f172a` }}
+						>
+							{pancing.sorak.teks}
+						</motion.p>
+					)}
+				</AnimatePresence>
+			</div>
 
 			{/* kartu poin, album, suara */}
 			<div className="pointer-events-auto absolute right-3 top-[4.5rem] z-20 flex items-center gap-1.5 rounded-2xl bg-slate-950/70 px-2 py-1.5 text-white shadow-lg ring-1 ring-white/10 backdrop-blur sm:top-20">
@@ -302,26 +381,27 @@ export default function GamePancing({ sentuh, bersama, onSelesai }) {
 			{/* panel bawah */}
 			<div className={`pointer-events-none absolute inset-x-0 z-20 flex justify-center px-3 ${sentuh ? "bottom-40" : "bottom-24"}`}>
 				{fase === "siap" && (
-					<div className="w-72 rounded-2xl bg-slate-950/65 p-3 text-white shadow-xl ring-1 ring-white/10 backdrop-blur">
+					<motion.div initial={{ y: 30, opacity: 0, scale: 0.92 }} animate={{ y: 0, opacity: 1, scale: 1 }} transition={{ type: "spring", stiffness: 420, damping: 22 }} className="w-72 rounded-2xl bg-slate-950/65 p-3 text-white shadow-xl ring-1 ring-white/10 backdrop-blur">
 						<Batang label="Tenaga lemparan" refIsi={tenagaIsi}>
 							<div className="absolute inset-y-0 right-0 w-[7%] bg-amber-400/30" />
 						</Batang>
 						<p className="mt-2 text-center text-[11px] text-white/75">
 							{sentuh ? "Tahan tombol 🎣 · analog ◀ ▶ membidik" : "Tahan SPASI, lepas di ujung kuning · A/D membidik"}
 						</p>
-					</div>
+					</motion.div>
 				)}
 				{fase === "tunggu" && (
-					<p className="rounded-full bg-slate-950/60 px-4 py-2 text-xs text-white/85 backdrop-blur">
+					<motion.p initial={{ y: 16, opacity: 0 }} animate={{ y: 0, opacity: 1 }} className="rounded-full bg-slate-950/60 px-4 py-2 text-xs text-white/85 backdrop-blur">
 						Pelampung mengapung… ketuk saat <b>tenggelam</b> · {sentuh ? "tombol" : "SPASI"} sekarang = gulung ulang
-					</p>
+					</motion.p>
 				)}
 			</div>
 
 			{/* panel tarik di pojok kiri bawah — tidak menutupi pemancing & ikannya di tengah layar */}
 			<div className={`pointer-events-none absolute left-3 z-20 sm:left-5 ${sentuh ? "bottom-[calc(max(1rem,env(safe-area-inset-bottom))+0.5rem)]" : "bottom-6"}`}>
 				{fase === "tarik" && ikan && (
-					<div className="w-[min(18rem,58vw)] origin-bottom-left space-y-2 rounded-2xl bg-slate-950/75 p-2.5 text-white shadow-2xl ring-1 ring-white/10 backdrop-blur sm:w-[19rem] sm:space-y-2.5 sm:p-3">
+					<motion.div initial={{ x: -120, opacity: 0, rotate: -4, scale: 0.85 }} animate={{ x: 0, opacity: 1, rotate: 0, scale: 1 }} transition={{ type: "spring", stiffness: 500, damping: 20 }}>
+					<div ref={panelTarik} className="w-[min(18rem,58vw)] origin-bottom-left space-y-2 rounded-2xl bg-slate-950/75 p-2.5 text-white shadow-2xl ring-1 ring-white/10 backdrop-blur sm:w-[19rem] sm:space-y-2.5 sm:p-3">
 						{/* ikan misterius: belum terlihat jenisnya, hanya kilau kelasnya */}
 						<div className="flex items-center gap-3">
 							<motion.span
@@ -350,16 +430,27 @@ export default function GamePancing({ sentuh, bersama, onSelesai }) {
 							</span>
 						</Batang>
 						<Batang label="Senar terulur" kanan={senarTeks} refIsi={senarIsi} />
-						<div className="flex items-center justify-between text-[11px] font-semibold">
-							<span ref={arahKiri} className="text-lg">⬅</span>
-							<span className="text-center text-white/75">Ikan lari ke panah terang — {sentuh ? "dorong analog" : "tahan A/D"} ke arah <b>sebaliknya</b></span>
-							<span ref={arahKanan} className="text-lg">➡</span>
+						<Batang label="⚡ Tarikan sakti" kanan={kuasaTeks} refIsi={kuasaIsi} />
+						<div>
+							<div className="flex items-center gap-2">
+								<span ref={arahKiri} className="text-lg leading-none">⬅</span>
+								{/* arah joran (mouse / A/D): jarum hijau = melawan ikan */}
+								<div className="relative h-2 flex-1 rounded-full bg-white/10 ring-1 ring-white/10">
+									<div className="absolute inset-y-0 left-1/2 w-px bg-white/30" />
+									<div ref={jarumArah} className="absolute -top-1 h-4 w-2 -translate-x-1/2 rounded-full bg-white" style={{ left: "50%" }} />
+								</div>
+								<span ref={arahKanan} className="text-lg leading-none">➡</span>
+							</div>
+							<p className="mt-1 text-center text-[11px] font-semibold text-white/75">
+								Ikan lari ke panah terang — {sentuh ? "dorong analog" : "arahkan mouse"} ke arah <b>sebaliknya</b>
+							</p>
 						</div>
 						<div ref={lariTanda} className="hidden animate-pulse items-center justify-center rounded-xl bg-rose-500 py-1.5 text-sm font-black text-white">
 							🏃 IKAN LARI! BERHENTI MENGETUK
 						</div>
 						<div ref={peringatan} className="hidden animate-pulse items-center justify-center rounded-xl bg-amber-400 py-1.5 text-sm font-black text-slate-950" />
 					</div>
+					</motion.div>
 				)}
 			</div>
 
@@ -375,6 +466,22 @@ export default function GamePancing({ sentuh, bersama, onSelesai }) {
 				>
 					<span className="text-3xl">🎣</span>
 					<span className="mt-0.5 px-2 text-center text-[10px] font-bold leading-tight">{labelTombol}</span>
+				</button>
+			)}
+
+			{sentuh && fase === "tarik" && (
+				<button
+					ref={tombolSakti}
+					onPointerDown={(e) => {
+						e.preventDefault();
+						tarikanSakti();
+					}}
+					className="pointer-events-auto absolute bottom-[calc(max(1rem,env(safe-area-inset-bottom))+10rem)] right-8 z-30 flex h-16 w-16 select-none flex-col items-center justify-center rounded-full bg-gradient-to-br from-sky-400 to-indigo-600 text-white shadow-2xl ring-4 ring-sky-200/70"
+					style={{ touchAction: "none", opacity: 0.4 }}
+					aria-label="Tarikan sakti"
+				>
+					<span className="text-2xl leading-none">⚡</span>
+					<span className="text-[9px] font-black">SAKTI</span>
 				</button>
 			)}
 

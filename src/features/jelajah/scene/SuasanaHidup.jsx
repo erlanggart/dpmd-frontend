@@ -12,7 +12,7 @@ import { suasana } from "./suasana";
 
 // Pengatur suasana suara di sekitar tamu, dicek beberapa kali per detik:
 // - musik latar: "berkendara" di mobil/motor, "mal" di dalam mal/McD/toko, "jalan" di luar;
-// - suara sekitar: angin, burung/jangkrik, deru lalu lintas, riuh orang, mesin kendaraan sendiri
+// - suara sekitar: angin, burung/jangkrik, deru lalu lintas, mesin kendaraan sendiri
 //   & tiga kendaraan lalu lintas terdekat;
 // - sapaan bersuara (bahasa Indonesia) dari penjual, kasir, kru, dan petugas saat tamu mendekat,
 //   dan obrolan pengunjung di tempat ramai.
@@ -91,7 +91,6 @@ export default function SuasanaHidup() {
 		aturSuasanaSuara({
 			angin: luar ? 0.55 + situ + Math.min(1, laju / 14) * (k?.jenis === "motor" ? 1 : 0.4) : 0,
 			lalin: Math.min(1, deru / 4) * (luar ? 1 : 0.25),
-			ramai: diMal ? 0.85 : diMcd ? 0.65 : diKantor && posisi.lantai === 0 ? 0.25 : diToko ? 0.3 : 0,
 			burung: luar && malam < 0.4 && suasana.hujan < 0.3 ? 0.7 : 0,
 			jangkrik: luar && malam > 0.6 ? 0.8 : 0,
 			mesin: berkendara && !posisi.kursi ? { jenis: k.jenis, laju: k.laju, gas: Math.abs(kendali.arah.y) || 0 } : berkendara ? { jenis: k.jenis, laju: k.laju, gas: 0.4 } : null,

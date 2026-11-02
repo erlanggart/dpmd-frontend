@@ -87,8 +87,9 @@ const ALAT = {
 	hat(ctx, ke, t, v, buka = false) {
 		derau(ctx, t, buka ? 0.18 : 0.045, v, "highpass", 7500, ke);
 	},
-	sikat(ctx, ke, t, v) {
-		derau(ctx, t, 0.09, v, "bandpass", 3200, ke, 0.5);
+	// ketukan kayu kecil (pengganti sikat drum berbasis derau yang terdengar kresek-kresek)
+	ketuk(ctx, ke, t, v) {
+		osc(ctx, "sine", 1250, t, 0.05, amplop(ctx, ke, t, 0.002, 0.05, v));
 	},
 	bas(ctx, ke, t, n, lama, v, tipe = "sawtooth") {
 		const g = amplop(ctx, ke, t, 0.01, lama, v);
@@ -160,7 +161,7 @@ const LAGU = {
 			if (!isi && [0, 3, 4].includes(i)) ALAT.kick(ctx, ke, t, 0.5);
 			if (i === 2 || i === 6) ALAT.snare(ctx, ke, t, 0.2);
 			if (isi && i >= 4) ALAT.snare(ctx, ke, t, 0.12 + i * 0.02);
-			ALAT.hat(ctx, ke, t, i % 2 ? 0.05 : 0.035, i === 7);
+			if (i % 2) ALAT.hat(ctx, ke, t, 0.022);
 			ALAT.bas(ctx, ke, t, akor[0] - 12 + (i === 6 ? 7 : i % 2 ? 12 : 0), d * 0.9, 0.16);
 			if (i % 2) ALAT.stab(ctx, ke, t, akor, d * 0.6, 0.035);
 			if (nadaMel) ALAT.lead(ctx, ke, t, nadaMel, lamaMel, 0.055);
@@ -181,7 +182,7 @@ const LAGU = {
 			const pola = [akor[0], akor[2], akor[0] + 12, akor[1] + 12, akor[2] + 12, akor[1] + 12, akor[0] + 12, akor[2]];
 			ALAT.petik(ctx, ke, t, pola[i], 0.06);
 			if (i === 0 || i === 4) ALAT.bas(ctx, ke, t, akor[0] - 12, d * 3.5, 0.11, "triangle");
-			if (i % 2) ALAT.sikat(ctx, ke, t, 0.018);
+			if (i === 2 || i === 6) ALAT.ketuk(ctx, ke, t, 0.012);
 			if (nadaMel) ALAT.siul(ctx, ke, t, nadaMel + 12, lamaMel, 0.03);
 		},
 	},
@@ -199,7 +200,7 @@ const LAGU = {
 			if ([0, 3, 6].includes(i)) ALAT.epiano(ctx, ke, t, akor, d * 2.2, 0.03);
 			const bas = { 0: 0, 3: 7, 4: 0, 7: 7 }[i];
 			if (bas !== undefined) ALAT.bas(ctx, ke, t, akor[0] - 12 + bas, d * 1.6, 0.13, "triangle");
-			ALAT.sikat(ctx, ke, t, i % 2 ? 0.014 : 0.008);
+			if (i === 3 || i === 7) ALAT.ketuk(ctx, ke, t, 0.01);
 			if (nadaMel) ALAT.epiano(ctx, ke, t, [nadaMel], lamaMel, 0.035);
 		},
 	},

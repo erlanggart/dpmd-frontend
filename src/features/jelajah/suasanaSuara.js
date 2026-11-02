@@ -1,9 +1,8 @@
-import { derauPutih, siapkan, suaraMati } from "./suaraPancing";
+import { derauPanjang, derauPutih, siapkan, suaraMati } from "./suaraPancing";
 
 // Suara sekitar yang membuat kawasan tidak sunyi, semuanya disintesis WebAudio (tanpa berkas):
 // - angin: derau lewat penyaring rendah, berembus naik-turun (lebih kencang saat berkendara);
 // - lalu lintas: deru rendah sesuai banyak & dekatnya kendaraan;
-// - keramaian: riuh rendah orang mengobrol (aula mal, McD, warung);
 // - mesin: suara mobil / motor yang sedang dikemudikan — putaran naik lalu turun tiap ganti
 //   gigi, deru knalpot mengikuti injakan gas;
 // - kendaraan lain: tiga mesin terdekat + desir saat melintas (makin dekat makin keras);
@@ -15,7 +14,7 @@ let s = null;
 
 function loopDerau(ctx, tipe, frek, q) {
 	const src = ctx.createBufferSource();
-	src.buffer = derauPutih();
+	src.buffer = derauPanjang();
 	src.loop = true;
 	const f = ctx.createBiquadFilter();
 	f.type = tipe;
@@ -24,24 +23,13 @@ function loopDerau(ctx, tipe, frek, q) {
 	const g = ctx.createGain();
 	g.gain.value = 0;
 	src.connect(f).connect(g).connect(ctx.destination);
-	src.start(0, Math.random());
+	src.start(0, Math.random() * 8);
 	return { src, f, g };
 }
 
 function bangun(ctx) {
-	const angin = loopDerau(ctx, "lowpass", 520, 0.7);
+	const angin = loopDerau(ctx, "lowpass", 300, 0.5);
 	const lalin = loopDerau(ctx, "lowpass", 170, 0.9);
-	// keramaian: dua pita suara manusia, diayun cepat seperti suku kata yang tumpang-tindih
-	const ramai = loopDerau(ctx, "bandpass", 620, 1.3);
-	const ramai2 = loopDerau(ctx, "bandpass", 1150, 1.8);
-	const ayun = ctx.createOscillator();
-	ayun.frequency.value = 6.5;
-	const kedalaman = ctx.createGain();
-	kedalaman.gain.value = 0;
-	ayun.connect(kedalaman);
-	kedalaman.connect(ramai.g.gain);
-	kedalaman.connect(ramai2.g.gain);
-	ayun.start();
 	// mesin: gergaji + kotak setengah frekuensi, diredam, diberi getar (motor)
 	const m1 = ctx.createOscillator();
 	m1.type = "sawtooth";
@@ -76,10 +64,10 @@ function bangun(ctx) {
 		g.gain.value = 0;
 		o.connect(f).connect(g).connect(ctx.destination);
 		o.start();
-		const desir = loopDerau(ctx, "bandpass", 900, 0.8);
+		const desir = loopDerau(ctx, "lowpass", 500, 0.6);
 		return { o, f, g, desir, jarakLalu: 99 };
 	});
-	return { angin, lalin, ramai, ramai2, kedalaman, ayun, mesin: { m1, m2, mf, mg, getar, getarG, knalpot }, lain, embus: 0.5, burungLagi: 0, jangkrikLagi: 0 };
+	return { angin, lalin, mesin: { m1, m2, mf, mg, getar, getarG, knalpot }, lain, embus: 0.5, burungLagi: 0, jangkrikLagi: 0 };
 }
 
 function kicau(ctx, t, vol) {
@@ -118,8 +106,8 @@ function krik(ctx, t, vol) {
 	o.stop(t + n * 0.055 + 0.05);
 }
 
-// angin, lalin, ramai, burung, jangkrik: 0..1; mesin: null | { jenis: "mobil"|"motor", laju }
-export function aturSuasanaSuara({ angin = 0, lalin = 0, ramai = 0, burung = 0, jangkrik = 0, mesin = null }) {
+// angin, lalin, burung, jangkrik: 0..1; mesin: null | { jenis: "mobil"|"motor", laju }
+export function aturSuasanaSuara({ angin = 0, lalin = 0, burung = 0, jangkrik = 0, mesin = null }) {
 	const ctx = siapkan();
 	if (!ctx || !derauPutih()) return;
 	if (!s) s = bangun(ctx);
@@ -127,14 +115,9 @@ export function aturSuasanaSuara({ angin = 0, lalin = 0, ramai = 0, burung = 0, 
 	const mati = suaraMati.nilai ? 0 : 1;
 	// embusan angin: bergeser acak pelan
 	s.embus = Math.max(0.2, Math.min(1, s.embus + (Math.random() - 0.5) * 0.25));
-	s.angin.g.gain.setTargetAtTime(mati * angin * (0.012 + 0.03 * s.embus), t, 0.8);
-	s.angin.f.frequency.setTargetAtTime(300 + 700 * s.embus * Math.min(1.5, angin), t, 0.8);
+	s.angin.g.gain.setTargetAtTime(mati * angin * (0.006 + 0.016 * s.embus), t, 1.2);
+	s.angin.f.frequency.setTargetAtTime(180 + 320 * s.embus * Math.min(1.5, angin), t, 1.2);
 	s.lalin.g.gain.setTargetAtTime(mati * lalin * 0.07, t, 0.5);
-	const r = mati * ramai;
-	s.ramai.g.gain.setTargetAtTime(r * 0.03, t, 0.6);
-	s.ramai2.g.gain.setTargetAtTime(r * 0.012, t, 0.6);
-	s.kedalaman.gain.setTargetAtTime(r * 0.018, t, 0.6);
-	s.ayun.frequency.setTargetAtTime(5 + Math.random() * 3, t, 0.3);
 
 	const m = s.mesin;
 	if (mesin && mati) {
@@ -195,8 +178,8 @@ export function aturMesinLain(daftar) {
 		v.o.frequency.setTargetAtTime(f, t, 0.15);
 		v.f.frequency.setTargetAtTime(f * (motor ? 6 : 4), t, 0.15);
 		v.g.gain.setTargetAtTime(dekat * (motor ? 0.03 : 0.025), t, 0.15);
-		v.desir.f.frequency.setTargetAtTime(500 + k.laju * 60, t, 0.2);
-		v.desir.g.gain.setTargetAtTime(dekat * k.laju * 0.004, t, 0.15);
+		v.desir.f.frequency.setTargetAtTime(350 + k.laju * 30, t, 0.2);
+		v.desir.g.gain.setTargetAtTime(dekat * Math.min(14, k.laju) * 0.0018, t, 0.15);
 	});
 }
 
@@ -234,17 +217,17 @@ export function langkahKaki(permukaan = "rumput", lari = false) {
 		o.start(t);
 		o.stop(t + lama + 0.02);
 	};
-	if (permukaan === "air") pukul("bandpass", 1100, 0.7, 0.28, 0.05);
+	if (permukaan === "air") pukul("lowpass", 700, 0.7, 0.22, 0.03);
 	else if (permukaan === "kayu") {
 		dentum(150, 0.09, 0.07);
-		pukul("bandpass", 2200, 1.2, 0.05, 0.03);
+		pukul("lowpass", 900, 0.7, 0.04, 0.01);
 	} else if (permukaan === "keras") {
-		dentum(95, 0.06, 0.05);
-		pukul("highpass", 3000, 0.7, lari ? 0.035 : 0.045, 0.035);
+		dentum(110, 0.06, 0.06);
+		pukul("lowpass", 1200, 0.7, 0.03, 0.008);
 	} else {
-		// rumput: gesekan lembut
-		pukul("bandpass", 1600, 0.5, lari ? 0.09 : 0.12, 0.022);
-		dentum(80, 0.05, 0.025);
+		// rumput: dentum empuk + gesekan tipis bernada rendah
+		dentum(80, 0.06, 0.035);
+		pukul("lowpass", 600, 0.5, lari ? 0.06 : 0.08, 0.008);
 	}
 }
 
@@ -253,5 +236,5 @@ export function senyapkanSuasana() {
 	const ctx = siapkan();
 	if (!ctx) return;
 	const t = ctx.currentTime;
-	for (const g of [s.angin.g, s.lalin.g, s.ramai.g, s.ramai2.g, s.kedalaman, s.mesin.mg, s.mesin.getarG, s.mesin.knalpot.g, ...s.lain.flatMap((v) => [v.g, v.desir.g])]) g.gain.setTargetAtTime(0, t, 0.3);
+	for (const g of [s.angin.g, s.lalin.g, s.mesin.mg, s.mesin.getarG, s.mesin.knalpot.g, ...s.lain.flatMap((v) => [v.g, v.desir.g])]) g.gain.setTargetAtTime(0, t, 0.3);
 }
