@@ -13,8 +13,12 @@ export const suaraMati = { nilai: (() => {
 	}
 })() };
 
+const pendengarMati = new Set();
+export const dengarMati = (fn) => (pendengarMati.add(fn), () => pendengarMati.delete(fn));
+
 export function aturSuara(mati) {
 	suaraMati.nilai = mati;
+	pendengarMati.forEach((fn) => fn(mati));
 	try {
 		localStorage.setItem(KUNCI, mati ? "1" : "0");
 	} catch {
@@ -22,7 +26,8 @@ export function aturSuara(mati) {
 	}
 }
 
-function siapkan() {
+// AudioContext bersama (efek suara & musik sendu); null bila peramban tak mendukung.
+export function siapkan() {
 	if (typeof window === "undefined") return null;
 	if (!ctx) {
 		const AC = window.AudioContext || window.webkitAudioContext;
@@ -90,6 +95,11 @@ const RESEP = {
 	klik: (t) => nada(1800 + Math.random() * 400, t, 0.015, { tipe: "square", vol: 0.025 }),
 	gulung: (t) => {
 		for (let i = 0; i < 6; i++) nada(1900, t + i * 0.04, 0.015, { tipe: "square", vol: 0.03 });
+	},
+	// gulungan berdesing saat ikan lari menarik senar keluar
+	lari: (t) => {
+		for (let i = 0; i < 16; i++) nada(2600 - i * 40, t + i * 0.035, 0.012, { tipe: "square", vol: 0.035 });
+		derau(t, 0.6, { frek: 3000, ke: 1500, vol: 0.06, tipe: "bandpass", q: 3 });
 	},
 	sentak: (t) => {
 		nada(140, t, 0.3, { tipe: "sawtooth", ke: 70, vol: 0.1 });

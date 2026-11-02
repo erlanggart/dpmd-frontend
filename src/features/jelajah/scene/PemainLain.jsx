@@ -6,6 +6,7 @@ import { posisi } from "../jelajahStore";
 import { penampilanAvatar } from "../avatar";
 import { diriSendiri, pemainLain, useMultipemain } from "../multipemain";
 import { kendaraanDariId } from "./kendaraan";
+import PancinganTamu from "./PancinganTamu";
 import Tokoh from "./Tokoh";
 
 // Tamu lain yang sedang menjelajah bersama: tokoh sesuai avatar pilihannya, label
@@ -220,7 +221,8 @@ function Tamu({ id, nama, jk, avatar, kulit }) {
 		if (bergerak) gr.fase += dt * (s.lari ? 13 : 9);
 		gr.udara = !!s.udara;
 		const kini = performance.now();
-		gr.isyarat = p.emote && kini < p.emote.sampai ? p.emote.jenis : null;
+		// sedang memancing: tangan menggenggam joran, atau mengangkat ikan hasil tangkapan
+		gr.isyarat = s.pc && s.pose === "mancing" ? (s.pc.f === 5 ? "angkat" : "mancing") : p.emote && kini < p.emote.sampai ? p.emote.jenis : null;
 
 		// Kendaraan yang ia kemudikan ikut bergerak (kecuali sedang kita kemudikan sendiri).
 		// Kendaraan digerakkan oleh pengemudinya saja; penumpang hanya ikut duduk.
@@ -263,6 +265,7 @@ function Tamu({ id, nama, jk, avatar, kulit }) {
 				<spriteMaterial map={label.t} transparent depthTest={false} />
 			</sprite>
 			<Hiasan sumber={() => pemainLain.get(id) || {}} tinggiRef={tinggi} lihat={lihat} posisiRef={tampil} />
+			<PancinganTamu sumber={() => pemainLain.get(id)?.s} tampil={tampil} />
 		</>
 	);
 }

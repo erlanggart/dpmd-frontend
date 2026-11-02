@@ -36,7 +36,7 @@ import { suasana } from "./suasana";
 const PETAK = 200;
 const JARAK_GAMBAR = 380;
 const JARAK_LABEL = [170, 300]; // gedung, area
-const LABEL = [...LABEL_DATA, ...LABEL_SITU];
+const LABEL = [...LABEL_DATA, ...LABEL_SITU, ["🛒 Alfamart · belanja pakai koin", 0, 51.5, 6.2, 1]];
 
 const IDX = Object.fromEntries(JENIS_GEDUNG.map((j, i) => [j, i]));
 const WARNA_RUMAH = ["#efe6d2", "#f2e3c6", "#e8d8c3", "#f4efe6", "#dfe7e0", "#f0dcd0", "#e6e0cf", "#f6e7b8"];

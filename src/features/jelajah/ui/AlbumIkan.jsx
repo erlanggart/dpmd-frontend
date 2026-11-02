@@ -25,7 +25,7 @@ export default function AlbumIkan({ onTutup }) {
 							{dapat}/{IKAN.length} <span className="text-base font-semibold text-slate-300">jenis ditemukan</span>
 						</p>
 						<p className="mt-0.5 text-xs text-slate-400">
-							{angka(tangkapan)} tangkapan · {angka(poin)} poin
+							{angka(tangkapan)} tangkapan · 🪙 {angka(poin)} koin
 						</p>
 					</div>
 					<button onClick={onTutup} aria-label="Tutup album" className="rounded-full bg-white/10 p-2 hover:bg-white/20">

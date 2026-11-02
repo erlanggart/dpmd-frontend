@@ -1,6 +1,7 @@
 import { useSyncExternalStore } from "react";
 import { asalSocket } from "../../utils/asalServer";
 import { posisi } from "./jelajahStore";
+import { FASE_PANCING, pancing } from "./pancing";
 import { kendaraanDariId } from "./scene/kendaraan";
 
 // Jelajah bersama: setiap tamu yang membuka /jelajah tersambung ke namespace
@@ -43,6 +44,25 @@ function tambahObrolan(m) {
 export function kendaraanDipakaiLain(id) {
 	for (const p of pemainLain.values()) if (p.s?.kend?.id === id) return true;
 	return false;
+}
+
+// Pancingan sendiri untuk tamu lain: fase, titik pelampung/ikan, arah bidik, tegangan,
+// dan jenis ikan (saat melawan & setelah tertangkap).
+function dataPancing() {
+	const p = pancing;
+	if (!p.aktif) return undefined;
+	const adaIkan = p.fase === "tarik" || p.fase === "dapat";
+	const titik = adaIkan ? p.ikanPos : p.pelampung;
+	const ikan = p.fase === "dapat" ? p.hasil?.ikan : p.ikan;
+	return {
+		f: FASE_PANCING.indexOf(p.fase),
+		x: +titik.x.toFixed(2),
+		z: +titik.z.toFixed(2),
+		y: +(p.fase === "lempar" ? p.pelampung.y : 0).toFixed(2),
+		a: +(p.asal.rot + p.aim).toFixed(2),
+		t: +Math.min(2, p.tegang).toFixed(2),
+		...(adaIkan && ikan ? { i: ikan.id, kg: p.fase === "dapat" ? p.hasil.kg : p.kg } : {}),
+	};
 }
 
 // Kursi kendaraan yang sedang diduduki tamu lain (0 = pengemudi).
@@ -164,6 +184,7 @@ export async function sambungJelajah(profil) {
 			kend: k
 				? { id: k.id, x: +k.x.toFixed(2), z: +k.z.toFixed(2), rot: +k.rot.toFixed(2), laju: +k.laju.toFixed(2), setir: +k.setir.toFixed(2), pintu: +k.pintu.toFixed(2), miring: +k.miring.toFixed(2), kursi: posisi.kursi ?? 0 }
 				: undefined,
+			pc: dataPancing(),
 		};
 		const kunci = JSON.stringify(data);
 		if (kunci === terakhir) return;

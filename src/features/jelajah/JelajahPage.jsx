@@ -31,6 +31,9 @@ import { susunPenghuni } from "./penghuni";
 import InfoPanel from "./ui/InfoPanel";
 import Minimap from "./ui/Minimap";
 import GamePancing from "./ui/GamePancing";
+import BarTenaga from "./ui/BarTenaga";
+import PanelToko from "./ui/PanelToko";
+import { aturSendu } from "./musikJelajah";
 import Joystick from "./ui/Joystick";
 import LayarAwal from "./ui/LayarAwal";
 import Denah2D from "./ui/Denah2D";
@@ -170,6 +173,11 @@ export default function JelajahPage() {
 	const baruLengkap = useRef(false);
 	const { area, lantai, dekat, minta, mode: modeMain } = useKeadaan();
 	const diKawasan = useDiKawasan(lantai);
+	// musik sendu selama naik perahu & memancing
+	useEffect(() => {
+		aturSendu(mode === "3d" && (modeMain === "perahu" || modeMain === "mancing"));
+	}, [mode, modeMain]);
+	useEffect(() => () => aturSendu(false), []);
 	// Jelajah bersama tamu lain
 	const [profil, setProfil] = useState(null);
 	const penampilan = useMemo(() => (profil ? penampilanAvatar(profil) : undefined), [profil]);
@@ -249,6 +257,10 @@ export default function JelajahPage() {
 	const bukaPanel = useCallback((id) => {
 		if (id.startsWith("tamu:")) {
 			sapaPemain(id.slice(5));
+			return;
+		}
+		if (id === "toko") {
+			setMenu("toko");
 			return;
 		}
 		if (/^(kursi|mobil|motor|perahu|mancing):|^(berdiri|keluar|berhenti)$/.test(id)) {
@@ -374,6 +386,10 @@ export default function JelajahPage() {
 				? ["Naik perahu dayung 🚣", "Naik", "#0e7490"]
 			: dekat === "mancing:perahu"
 				? ["Memancing dari perahu 🎣", "Mancing", "#0f766e"]
+			: dekat === "toko"
+				? ["Belanja di Alfamart 🛒", "Belanja", "#d61f26"]
+			: dekat === "mancing:tepi"
+				? ["Memancing di pinggir situ 🎣", "Mancing", "#0f766e"]
 			: dekat.startsWith("mancing:")
 				? ["Mulai memancing di sini 🎣", "Mancing", "#0f766e"]
 			: dekat === "berhenti"
@@ -573,6 +589,7 @@ export default function JelajahPage() {
 						</div>
 					)}
 
+					{!jeda && <BarTenaga />}
 					{modeMain === "mancing" && !jeda && <GamePancing sentuh={sentuh} bersama={statusMp === "tersambung"} onSelesai={() => (kendali.aksi = "berhenti")} />}
 
 					{berkendara && !jeda && !sentuh && (
@@ -829,6 +846,12 @@ export default function JelajahPage() {
 				</Lembar>
 			)}
 
+			{menu === "toko" && (
+				<Lembar judul="🛒 Alfamart — belanja pakai koin" onTutup={() => setMenu(null)}>
+					<PanelToko />
+				</Lembar>
+			)}
+
 			{menu === "bantuan" && (
 				<Lembar judul="Cara bermain" onTutup={() => setMenu(null)}>
 					<ul className="space-y-2 text-sm text-slate-700">
@@ -843,7 +866,8 @@ export default function JelajahPage() {
 									["Di mobil/motor", "analog = gas & setir, tombol Turbo untuk ngebut"],
 									["Mobil berempat", "dekati mobil/motor/perahu yang dikemudikan tamu lain untuk ikut naik"],
 									["Situ Pemda", "naik perahu di dermaga; di panggung dermaga atau dari perahu tekan Mancing"],
-									["Memancing", "tahan 🎣 lalu lepas untuk melempar; saat adu tarik tahan untuk menggulung, lawan arah lari ikan"],
+									["Memancing", "tahan 🎣 lalu lepas untuk melempar; saat adu tarik KETUK 🎣 berulang untuk menggulung, berhenti saat ikan lari"],
+									["Tenaga ❤", "berkurang seiring waktu, berlari, dan tertabrak; isi dengan belanja di Alfamart pakai koin hasil mancing"],
 									["Tombol 💬 / 🙂", "ngobrol & kirim emote ke tamu lain; dekati tamu untuk menyapa"],
 								]
 							: [
@@ -856,7 +880,8 @@ export default function JelajahPage() {
 									["Di mobil/motor", "W/S gas & mundur, A/D belok, Shift turbo"],
 									["Mobil berempat", "E di dekat kendaraan yang dikemudikan tamu lain = ikut naik"],
 									["Situ Pemda", "E di dermaga: naik perahu · E di panggung / perahu: memancing"],
-									["Memancing", "tahan Spasi lalu lepas = lempar; tahan Spasi = gulung, A/D melawan arah ikan"],
+									["Memancing", "tahan Spasi lalu lepas = lempar; KETUK Spasi berulang = gulung (jangan ditahan), A/D melawan arah ikan"],
+									["Tenaga ❤", "habis = pingsan; belanja makan & minum di Alfamart (seberang kantor) pakai koin hasil mancing"],
 									["Enter / T", "ngobrol dengan tamu lain"],
 									["1 – 5", "emote: lambai, jempol, tepuk, tawa, hati"],
 									["M", "tampilkan/sembunyikan peta"],

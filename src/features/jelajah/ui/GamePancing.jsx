@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { FiBookOpen, FiVolume2, FiVolumeX, FiX } from "react-icons/fi";
 import { kirimUcap } from "../multipemain";
-import { IKAN, KELAS, lanjutPancing, pancing, useKoleksi, usePancing } from "../pancing";
+import { IKAN, KELAS, ketuk, lanjutPancing, pancing, useKoleksi, usePancing } from "../pancing";
 import { aturSuara, suaraMati } from "../suaraPancing";
 import AlbumIkan from "./AlbumIkan";
 import IkonIkan from "./IkonIkan";
@@ -46,6 +46,9 @@ export default function GamePancing({ sentuh, bersama, onSelesai }) {
 
 	const tenagaIsi = useRef();
 	const tegangJarum = useRef();
+	const gulungIsi = useRef();
+	const lariTanda = useRef();
+	const pulihTanda = useRef();
 	const tegangTeks = useRef();
 	const senarIsi = useRef();
 	const senarTeks = useRef();
@@ -56,7 +59,8 @@ export default function GamePancing({ sentuh, bersama, onSelesai }) {
 	const peringatan = useRef();
 	const cincinGigit = useRef();
 
-	// --- tombol: Spasi ditahan = ayun/gulung; Spasi setelah dapat = lanjut ---
+	// --- Spasi: ditahan = mengayun lemparan; tiap tekan-lepas = satu ketukan (sambar &
+	// menggulung — ditahan terus tidak menggulung); setelah dapat = lanjut ---
 	useEffect(() => {
 		const abaikan = (e) => e.target.closest?.("input, textarea, [contenteditable]");
 		const turun = (e) => {
@@ -67,6 +71,7 @@ export default function GamePancing({ sentuh, bersama, onSelesai }) {
 					if (!e.repeat) lanjutPancing();
 					return;
 				}
+				if (!e.repeat) ketuk();
 				pancing.tahan = true;
 			}
 		};
@@ -96,10 +101,16 @@ export default function GamePancing({ sentuh, bersama, onSelesai }) {
 			}
 			if (cincinGigit.current && p.fase === "gigit") cincinGigit.current.style.transform = `scale(${Math.max(0, 1 - p.t / p.jendela)})`;
 			if (p.fase === "tarik" && tegangJarum.current) {
-				const t = Math.min(1.1, p.tegang);
+				// jarum ikut bergetar mengikuti kepala ikan yang menggeleng
+				const t = Math.max(0, Math.min(1.1, p.tegang + (p.geleng || 0)));
+				const [zb, za] = KELAS[p.ikan.kelas].zona;
 				tegangJarum.current.style.left = `calc(${(t / 1.1) * 100}% - 2px)`;
-				tegangTeks.current.textContent = p.bahaya > 0 ? "BAHAYA!" : t < 0.45 ? "Kendor" : t < 0.9 ? "Pas" : "Tegang";
-				tegangTeks.current.style.color = p.bahaya > 0 ? "#fb7185" : t < 0.45 ? "#93c5fd" : t < 0.9 ? "#86efac" : "#fcd34d";
+				tegangTeks.current.textContent = p.bahaya > 0 ? "BAHAYA!" : t < zb ? "Kendor" : t <= za ? "Pas" : t < 1 ? "Tegang" : "AKAN PUTUS";
+				tegangTeks.current.style.color = p.bahaya > 0 || t >= 1 ? "#fb7185" : t < zb ? "#93c5fd" : t <= za ? "#86efac" : "#fcd34d";
+				gulungIsi.current.style.width = `${Math.min(1, p.gulung) * 100}%`;
+				gulungIsi.current.style.background = "linear-gradient(90deg,#14b8a6,#fbbf24)";
+				lariTanda.current.style.display = p.lari > 0 ? "flex" : "none";
+				pulihTanda.current.style.opacity = p.pulih ? 1 : 0;
 				const sisa = Math.max(0, Math.min(1, (42 - p.jarak) / 42));
 				senarIsi.current.style.width = `${(1 - sisa) * 100}%`;
 				senarIsi.current.style.background = p.jarak > 34 ? "#f43f5e" : "#38bdf8";
@@ -112,7 +123,7 @@ export default function GamePancing({ sentuh, bersama, onSelesai }) {
 				arahKanan.current.style.opacity = kiri ? 0.25 : 1;
 				const e = p.peristiwa;
 				peringatan.current.style.display = e ? "flex" : "none";
-				if (e) peringatan.current.textContent = e.jenis === "lompat" ? "🐟 MELOMPAT! LEPAS!" : "⚡ SETRUM! LEPAS!";
+				if (e) peringatan.current.textContent = e.jenis === "lompat" ? "🐟 MELOMPAT! BERHENTI MENGETUK!" : "⚡ SETRUM! BERHENTI MENGETUK!";
 				const merah = p.amuk > 0 || p.bahaya > 0;
 				vinyet.current.style.boxShadow = e?.jenis === "setrum" ? "inset 0 0 140px rgba(56,189,248,0.6)" : merah ? `inset 0 0 ${120 + Math.sin(performance.now() / 90) * 30}px rgba(239,68,68,0.55)` : "none";
 			} else if (vinyet.current) vinyet.current.style.boxShadow = "none";
@@ -130,13 +141,14 @@ export default function GamePancing({ sentuh, bersama, onSelesai }) {
 	const tahan = {
 		onPointerDown: (e) => {
 			e.currentTarget.setPointerCapture?.(e.pointerId);
+			ketuk();
 			pancing.tahan = true;
 		},
 		onPointerUp: () => (pancing.tahan = false),
 		onPointerCancel: () => (pancing.tahan = false),
 		onContextMenu: (e) => e.preventDefault(),
 	};
-	const labelTombol = fase === "siap" ? "Tahan untuk melempar" : fase === "gigit" ? "TARIK!" : fase === "tarik" ? "Tahan untuk menggulung" : "Gulung";
+	const labelTombol = fase === "siap" ? "Tahan untuk melempar" : fase === "gigit" ? "TARIK!" : fase === "tarik" ? "KETUK berulang!" : "Gulung";
 	const k = ikan ? KELAS[ikan.kelas] : null;
 	const jumlahJenis = IKAN.filter((i) => koleksi[i.id]).length;
 
@@ -146,7 +158,7 @@ export default function GamePancing({ sentuh, bersama, onSelesai }) {
 
 			{/* kartu poin, album, suara */}
 			<div className="pointer-events-auto absolute right-3 top-[4.5rem] z-20 flex items-center gap-1.5 rounded-2xl bg-slate-950/70 px-2 py-1.5 text-white shadow-lg ring-1 ring-white/10 backdrop-blur sm:top-20">
-				<span className="px-1.5 text-xs font-bold tabular-nums">🎣 {angka(poin)}</span>
+				<span className="px-1.5 text-xs font-bold tabular-nums" title="Koin — belanja di Alfamart">🪙 {angka(poin)}</span>
 				<button onClick={() => setAlbum(true)} className="flex items-center gap-1 rounded-xl bg-white/10 px-2 py-1 text-xs font-bold hover:bg-white/20" aria-label="Buka album ikan">
 					<FiBookOpen /> {jumlahJenis}/{IKAN.length}
 				</button>
@@ -209,7 +221,7 @@ export default function GamePancing({ sentuh, bersama, onSelesai }) {
 				)}
 				{fase === "tunggu" && (
 					<p className="rounded-full bg-slate-950/60 px-4 py-2 text-xs text-white/85 backdrop-blur">
-						Pelampung mengapung… tekan saat <b>tenggelam</b> · {sentuh ? "tombol" : "SPASI"} sekarang = gulung ulang
+						Pelampung mengapung… ketuk saat <b>tenggelam</b> · {sentuh ? "tombol" : "SPASI"} sekarang = gulung ulang
 					</p>
 				)}
 				{fase === "tarik" && ikan && (
@@ -221,7 +233,21 @@ export default function GamePancing({ sentuh, bersama, onSelesai }) {
 							</span>
 							<span className="text-xs font-bold text-white/85">{ikan.kelas >= 3 ? "Sesuatu yang sangat besar…" : "Ikan menarik senar!"}</span>
 						</div>
-						<Batang label="Tegangan senar" kanan={tegangTeks} refJarum={tegangJarum} latar="linear-gradient(90deg,#1e3a8a 0%,#2563eb 38%,#16a34a 41%,#22c55e 80%,#f59e0b 82%,#ef4444 91%,#b91c1c 100%)" />
+						<Batang
+							label="Tegangan senar"
+							kanan={tegangTeks}
+							refJarum={tegangJarum}
+							// zona hijau mengikuti kelas ikan: makin langka makin sempit
+							latar={(() => {
+								const [zb, za] = k.zona.map((v) => (v / 1.1) * 100);
+								return `linear-gradient(90deg,#1e3a8a 0%,#2563eb ${zb - 1}%,#16a34a ${zb}%,#22c55e ${za}%,#f59e0b ${za + 1}%,#ef4444 ${(1 / 1.1) * 100}%,#7f1d1d 100%)`;
+							})()}
+						/>
+						<Batang label={sentuh ? "Laju gulung — ketuk 🎣 berulang" : "Laju gulung — ketuk SPASI berulang"} refIsi={gulungIsi}>
+							<span ref={pulihTanda} className="absolute inset-0 flex items-center justify-center text-[9px] font-black uppercase tracking-wider text-sky-200 opacity-0 transition-opacity">
+								Ikan memulihkan tenaga — beri tekanan!
+							</span>
+						</Batang>
 						<div className="grid grid-cols-2 gap-3">
 							<Batang label="Senar" kanan={senarTeks} refIsi={senarIsi} />
 							<Batang label="Tenaga ikan" refIsi={staminaIsi} />
@@ -230,6 +256,9 @@ export default function GamePancing({ sentuh, bersama, onSelesai }) {
 							<span ref={arahKiri} className="text-lg">⬅</span>
 							<span className="text-center text-white/75">Ikan lari ke panah terang — {sentuh ? "dorong analog" : "tahan A/D"} ke arah <b>sebaliknya</b></span>
 							<span ref={arahKanan} className="text-lg">➡</span>
+						</div>
+						<div ref={lariTanda} className="hidden animate-pulse items-center justify-center rounded-xl bg-rose-500 py-1.5 text-sm font-black text-white">
+							🏃 IKAN LARI! BERHENTI MENGETUK
 						</div>
 						<div ref={peringatan} className="hidden animate-pulse items-center justify-center rounded-xl bg-amber-400 py-1.5 text-sm font-black text-slate-950" />
 					</div>
@@ -292,7 +321,7 @@ export default function GamePancing({ sentuh, bersama, onSelesai }) {
 									</div>
 									<div className="rounded-xl bg-white/5 py-2">
 										<p className="text-lg font-black tabular-nums text-amber-300">+{angka(hasil.poin)}</p>
-										<p className="text-[10px] uppercase tracking-wider text-slate-400">poin</p>
+										<p className="text-[10px] uppercase tracking-wider text-slate-400">koin</p>
 									</div>
 								</div>
 								<p className="mt-3 text-xs leading-relaxed text-slate-300">{hasil.ikan.kisah}</p>

@@ -26,17 +26,32 @@ export function diSitu(x, z) {
 	return ya;
 }
 
-// Jarak titik ke garis tepi situ (dipakai sebagai "kedalaman": makin ke tengah makin dalam).
-export function jarakKeTepi(x, z) {
-	let min = Infinity;
+// Titik terdekat di garis tepi situ dari (x, z), beserta jaraknya.
+function tepiTerdekat(x, z) {
+	let best = { jarak: Infinity, x: 0, z: 0 };
 	for (let i = 0, j = SITU.length - 1; i < SITU.length; j = i++) {
 		const [ax, az] = SITU[j];
 		const dx = SITU[i][0] - ax;
 		const dz = SITU[i][1] - az;
 		const t = Math.max(0, Math.min(1, ((x - ax) * dx + (z - az) * dz) / (dx * dx + dz * dz || 1)));
-		min = Math.min(min, Math.hypot(x - ax - dx * t, z - az - dz * t));
+		const qx = ax + dx * t;
+		const qz = az + dz * t;
+		const jarak = Math.hypot(x - qx, z - qz);
+		if (jarak < best.jarak) best = { jarak, x: qx, z: qz };
 	}
-	return min;
+	return best;
+}
+
+// Jarak titik ke garis tepi situ (dipakai sebagai "kedalaman": makin ke tengah makin dalam).
+export const jarakKeTepi = (x, z) => tepiTerdekat(x, z).jarak;
+
+// Memancing dari pinggir situ: berdiri di darat ≤ 3,5 m dari tepi (bukan di dermaga),
+// menghadap ke air. Mengembalikan arah hadap, atau null bila terlalu jauh.
+export function titikTepi(x, z) {
+	if (diSitu(x, z) || dermagaDi(x, z)) return null;
+	const t = tepiTerdekat(x, z);
+	if (t.jarak > 3.5) return null;
+	return { x, z, rot: Math.atan2(t.x - x, t.z - z) };
 }
 
 // ---------- dermaga ----------

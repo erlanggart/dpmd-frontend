@@ -68,6 +68,11 @@ export default function MinimapKawasan({ className = "" }) {
 					<rect x={-34} y={-22} width={68} height={53} fill="#ddd3bf" />
 					<path d={peta.gedung} fill="#ece6d8" stroke="#a39b8c" strokeWidth={0.4} />
 					<rect x={-15} y={-13} width={30} height={25} fill="#f0a774" stroke="#c2622d" strokeWidth={0.5} />
+					{/* minimarket di seberang jalan */}
+					<rect x={-6} y={47} width={12} height={9} fill="#ef4444" stroke="#991b1b" strokeWidth={0.5} />
+					<text x={0} y={52} textAnchor="middle" dominantBaseline="middle" fontSize={3.6} fontWeight={800} fill="#ffffff">
+						Alfamart
+					</text>
 					<text x={0} y={0} textAnchor="middle" dominantBaseline="middle" fontSize={6} fontWeight={800} fill="#7c2d12">
 						DPMD
 					</text>

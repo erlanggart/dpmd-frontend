@@ -7,6 +7,7 @@ import { BAHAN_WARNA, gabung, kotak, warnai } from "./geometri";
 import { KENDARAAN } from "./kendaraan";
 import { JALAN, PAGAR_DEPAN } from "./layout";
 import { suasana } from "./suasana";
+import { laporTabrak } from "../tenaga";
 
 // Jalan raya di depan kantor yang hidup: lampu jalan (menyala saat malam) dan
 // lalu lintas dua arah. Kendaraan lalu lintas memakai InstancedMesh — belasan
@@ -105,7 +106,7 @@ function LaluLintas() {
 			// jarak bebas di depan: halangan di lajurnya & kendaraan di depan searah
 			let bebas = Infinity;
 			for (const p of h) {
-				if (Math.abs(p.z - k.z) > 1.7) continue;
+				if (Math.abs(p.z - k.z) > 1.2) continue;
 				const d = (p.x - k.x) * k.arah;
 				if (d > 0 && d < bebas) bebas = d;
 			}
@@ -115,9 +116,13 @@ function LaluLintas() {
 				if (d > 0 && d < bebas) bebas = d - (l.jenis === "mobil" ? 2.5 : 1);
 			}
 			const sasaran = bebas < 4 ? 0 : bebas < 12 ? (k.jelajah * (bebas - 4)) / 8 : k.jelajah;
-			const ubah = sasaran < k.laju ? 9 : 3; // rem lebih cepat dari gas
+			const ubah = sasaran < k.laju ? 7 : 3; // rem lebih cepat dari gas
 			k.laju += Math.max(-ubah * dt, Math.min(ubah * dt, sasaran - k.laju));
 			k.x += k.arah * k.laju * dt;
+			// menghantam pengunjung (yang berjalan kaki) bila tak sempat berhenti
+			if (k.laju > 2 && posisi.y < 0.5 && !posisi.kend && Math.abs(posisi.z - k.z) < (k.jenis === "mobil" ? 1.15 : 0.6) && Math.abs(posisi.x - k.x) < (k.jenis === "mobil" ? 2.3 : 1.0)) {
+				laporTabrak({ vx: k.arah, vz: (posisi.z - k.z) * 0.6, laju: k.laju, jenis: k.jenis });
+			}
 			if (k.x * k.arah > UJUNG) k.x = -k.arah * UJUNG;
 		}
 		const tulis = (ref, kumpulan) => {

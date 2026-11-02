@@ -590,6 +590,12 @@ export const PAPAN_NAMA = { x: -7, z: 28.75 };
 export const JALAN = { trotoar: 29.4, kanstin: 31.3, aspal0: 31.6, aspal1: 39.6 };
 const TIANG_GERBANG = 0.35; // setengah lebar tiang batu di kedua sisi gerbang
 
+// Minimarket di seberang jalan, tepat di depan kantor: muka toko menghadap jalan (−z),
+// halaman parkirnya dari trotoar seberang sampai muka toko. Belanja di depan pintunya.
+export const MINIMARKET = { x0: -6, x1: 6, z0: 47, z1: 56, tinggi: 4.4 };
+export const HALAMAN_TOKO = { x0: -9, x1: 9, z0: JALAN.aspal1 + 1.8, z1: MINIMARKET.z0 };
+export const PINTU_TOKO = { x: 0, z: MINIMARKET.z0 - 1.2 };
+
 // Ruas pagar (tanpa bukaan gerbang) sebagai [x0, x1] di sepanjang z PAGAR_DEPAN.
 export const RUAS_PAGAR_DEPAN = [
 	[PAGAR_DEPAN.x0, PAGAR_DEPAN.gerbang[0] - TIANG_GERBANG],
@@ -606,7 +612,11 @@ export const POHON = (() => {
 	const hasil = [];
 	// pohon peneduh di bak tanaman depan pagar & di seberang jalan
 	for (const x of [-13.8, -3.6, 2.6, 17.5]) hasil.push([x, 29.0, 1.1 + r() * 0.3]);
-	for (let x = -26; x <= 26; x += 7) hasil.push([x + r() * 2, 43 + r() * 2, 0.9 + r() * 0.4]);
+	for (let x = -26; x <= 26; x += 7) {
+		const pohon = [x + r() * 2, 43 + r() * 2, 0.9 + r() * 0.4];
+		// halaman minimarket dibiarkan lapang
+		if (Math.abs(pohon[0]) > 9) hasil.push(pohon);
+	}
 	for (let z = -14; z <= 8; z += 5) {
 		for (const sisi of [-1, 1]) hasil.push([sisi * (18 + r() * 4), z + r() * 2, 0.8 + r() * 0.5]);
 	}
@@ -639,6 +649,7 @@ export const PENGHALANG = [0, 1].map((l) => [
 				// daun gerbang yang terbuka, tergeser di balik pagar kiri gerbang
 				{ x0: PAGAR_DEPAN.gerbang[0] * 2 - PAGAR_DEPAN.gerbang[1] + 0.2, x1: PAGAR_DEPAN.gerbang[0] + 0.2, z0: PAGAR_DEPAN.z - 0.55, z1: PAGAR_DEPAN.z - 0.35 },
 				dariKotak(POS_SATPAM),
+				{ x0: MINIMARKET.x0, x1: MINIMARKET.x1, z0: MINIMARKET.z0, z1: MINIMARKET.z1 },
 				titik(PAPAN_NAMA.x - 1.3, PAPAN_NAMA.z, 0.12),
 				titik(PAPAN_NAMA.x + 1.3, PAPAN_NAMA.z, 0.12),
 				...POHON.map(([x, z]) => titik(x, z, 0.5)),
