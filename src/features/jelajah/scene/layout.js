@@ -1,6 +1,6 @@
 import { AREA_LAIN, LOBI, RUANGAN, TINGGI_LANTAI } from "../kantorConfig";
 import { diKawasan, tabrakKawasan } from "./kawasanBantu";
-import { KURSI_BIOSKOP_DASAR, KURSI_KOPI_DASAR, KURSI_MCD_DASAR, SUPERMARKET_CCM } from "./gedungKhusus";
+import { KURSI_BIOSKOP_DASAR, KURSI_FC_DASAR, KURSI_KOPI_DASAR, KURSI_MCD_DASAR, SUPERMARKET_CCM, dalamLahanCcm, malAktif, tinggiMal, yLantaiMal } from "./gedungKhusus";
 import { AIR_Y, DEK_Y, DERMAGA, KIOS_TOKO_PANCING, dermagaDi, diSitu, jarakKeTepi, keDuniaDermaga } from "./situ";
 
 // Geometri turunan dari kantorConfig: dinding per lantai, pintu, tangga, perabot,
@@ -634,9 +634,10 @@ export const TOKO = [
 		],
 		SUPERMARKET_CCM.z0,
 	),
-];
+].map((t) => (t.id === "ccm" ? { ...t, lantaiMal: 0 } : t));
 export const TOKO_PER_ID = Object.fromEntries(TOKO.map((t) => [t.id, t]));
-export const tokoDi = (x, z) => TOKO.find((t) => x > t.x0 && x < t.x1 && z > t.z0 && z < t.z1) || null;
+// toko bertanda lantaiMal (supermarket CCM) hanya dikenali di lantai mal itu
+export const tokoDi = (x, z) => TOKO.find((t) => x > t.x0 && x < t.x1 && z > t.z0 && z < t.z1 && (t.lantaiMal === undefined || t.lantaiMal === malAktif.lantai)) || null;
 
 // Warung tenda mie ayam di sebelah timur Alfamart: gerobak (pesan di sini), dua meja
 // panjang berbangku. Pesanan diantar ke meja begitu pembeli duduk.
@@ -665,11 +666,14 @@ export const KURSI_PECEL = MEJA_PECEL.flatMap((m) =>
 ).map((k, i) => ({ ...k, warung: "pecel", ...(i === 5 || i === 10 ? { npc: true } : {}) }));
 
 // Kursi di McD, kedai kopi CCM, dan studio bioskop CCM.
-const kursiDari = (daftar, ekstra) => daftar.map(([x, z, rot]) => ({ x, z, rot, lantai: 0, y: TANAH, ...ekstra }));
+// lantaiMal: kursi di lantai atas mal (y & tinggi meja ikut lantainya)
+const kursiDari = (daftar, ekstra, lantaiMal) =>
+	daftar.map(([x, z, rot]) => ({ x, z, rot, lantai: 0, y: TANAH + (lantaiMal ? yLantaiMal(lantaiMal) : 0), ...(lantaiMal ? { mejaY: yLantaiMal(lantaiMal) + 0.75, lantaiMal } : {}), ...ekstra }));
 export const KURSI_MCD = kursiDari(KURSI_MCD_DASAR, { warung: "mcd" }).map((k, i) => ([1, 6, 11].includes(i) ? { ...k, npc: true } : k));
 export const KURSI_KOPI = kursiDari(KURSI_KOPI_DASAR, { warung: "kopi" }).map((k, i) => ([2, 9].includes(i) ? { ...k, npc: true } : k));
-export const KURSI_BIOSKOP = kursiDari(KURSI_BIOSKOP_DASAR, { bioskop: true });
-export const KURSI_MAKAN = [...KURSI_WARUNG, ...KURSI_PECEL, ...KURSI_MCD, ...KURSI_KOPI];
+export const KURSI_FC = kursiDari(KURSI_FC_DASAR, { warung: "foodcourt" }, 2).map((k, i) => (i % 5 === 1 ? { ...k, npc: true } : k));
+export const KURSI_BIOSKOP = kursiDari(KURSI_BIOSKOP_DASAR, { bioskop: true }, 3);
+export const KURSI_MAKAN = [...KURSI_WARUNG, ...KURSI_PECEL, ...KURSI_MCD, ...KURSI_KOPI, ...KURSI_FC];
 // Toko aksesoris "Distro Gaya" di timur warung mie ayam: rak baju, manekin, kasir, dan dua
 // bilik ruang coba bertirai di sisi timur (coba gratis, beli di dalam bilik atau kasir).
 export const DISTRO = { x0: -32, x1: -21.6, z0: 47, z1: 55.5, tinggi: 3.8, pintu: { x0: -27.9, x1: -25.7, z: 47 } };
@@ -746,7 +750,8 @@ export const PENGHALANG = [0, 1].map((l) => [
 				{ x0: PAGAR_DEPAN.gerbang[0] * 2 - PAGAR_DEPAN.gerbang[1] + 0.2, x1: PAGAR_DEPAN.gerbang[0] + 0.2, z0: PAGAR_DEPAN.z - 0.55, z1: PAGAR_DEPAN.z - 0.35 },
 				dariKotak(POS_SATPAM),
 				// toko: dinding berpintu, rak, kasir, kulkas, tumpukan keranjang
-				...TOKO.flatMap((t) => [
+				...TOKO.flatMap((t) =>
+					[
 					{ x0: t.x0, x1: t.x1, z0: t.z1 - 0.2, z1: t.z1 },
 					{ x0: t.x0, x1: t.x0 + 0.2, z0: t.z0, z1: t.z1 },
 					{ x0: t.x1 - 0.2, x1: t.x1, z0: t.z0, z1: t.z1 },
@@ -756,7 +761,8 @@ export const PENGHALANG = [0, 1].map((l) => [
 					t.mejaKasir,
 					{ x0: t.x0 + 1, x1: t.x1 - 1, z0: t.z1 - 0.95, z1: t.z1 },
 					titik(t.keranjang.x, t.keranjang.z + 0.1, 0.3),
-				]),
+					].map((k) => (t.lantaiMal === undefined ? k : { ...k, lantaiMal: t.lantaiMal })),
+				),
 				// distro: dinding berpintu, sekat bilik coba, rak baju, kasir, manekin
 				{ x0: DISTRO.x0, x1: DISTRO.x1, z0: DISTRO.z1 - 0.2, z1: DISTRO.z1 },
 				{ x0: DISTRO.x0, x1: DISTRO.x0 + 0.2, z0: DISTRO.z0, z1: DISTRO.z1 },
@@ -799,6 +805,7 @@ export function tabrakKendaraanStatis(x, z, r) {
 export function tabrak(x, z, lantai = 0, r = 0.38, bolehAir = false) {
 	if (lantai === 0 && !diKawasan(x, z)) return true;
 	for (const k of PENGHALANG[lantai]) {
+		if (k.lantaiMal !== undefined && k.lantaiMal !== malAktif.lantai) continue;
 		if (x > k.x0 - r && x < k.x1 + r && z > k.z0 - r && z < k.z1 + r) return true;
 	}
 	return lantai === 0 && tabrakKawasan(x, z, r, bolehAir);
@@ -824,6 +831,11 @@ export function langkahRenang(x, z) {
 // tangga (bila ada) atau lantai saat ini. Langkah yang membuat tinggi melompat
 // (jatuh dari sisi tangga, menaiki tangga dari samping) ditolak → null.
 export function langkah(yLama, x, z) {
+	// di dalam lahan Cibinong City Mall: lantai mal & eskalator menentukan tingginya
+	if (dalamLahanCcm(x, z)) {
+		const y = tinggiMal(yLama, x, z);
+		return y === null || tabrak(x, z, 0) ? null : y;
+	}
 	const t = tanggaDi(x, z);
 	if (t) {
 		const y = tinggiTangga(t, x, z);

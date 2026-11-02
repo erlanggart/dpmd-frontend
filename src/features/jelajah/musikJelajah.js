@@ -44,6 +44,8 @@ export function hentikanLaga() {
 
 const sedangRiang = () => riang.aktif;
 const sedangLaga = () => !!laga;
+// Musik memancing (sendu / laga / riang) sedang berbunyi — musik latar mengalah.
+export const musikPancingAktif = () => !!laga || riang.aktif || !!sendu.aktif;
 
 // ---------- musik sendu generatif ----------
 

@@ -26,6 +26,9 @@ export function aturSuara(mati) {
 	}
 }
 
+// Satu detik derau putih bersama (dipakai suara sekitar: angin, lalu lintas, keramaian).
+export const derauPutih = () => bising;
+
 // AudioContext bersama (efek suara & musik sendu); null bila peramban tak mendukung.
 export function siapkan() {
 	if (typeof window === "undefined") return null;

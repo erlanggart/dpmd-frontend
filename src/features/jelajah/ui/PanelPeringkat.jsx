@@ -6,8 +6,6 @@ const TAB = [
 	{ id: "level", judul: "⭐ Level", nilai: (c) => `Lv ${c.level}` },
 	{ id: "ikan", judul: "🐟 Terberat", nilai: (c) => `${c.kg.toLocaleString("id-ID")} kg${c.ikan ? ` · ${IKAN_PER_ID[c.ikan]?.nama ?? ""}` : ""}` },
 	{ id: "jenis", judul: "📖 Koleksi", nilai: (c) => `${c.jenis} jenis` },
-	{ id: "balap", judul: "🏍️ Sprint", nilai: (c) => `${c.balap.toFixed(2)} dtk` },
-	{ id: "sirkuit", judul: "🏁 Sirkuit", nilai: (c) => `${Math.floor(c.sirkuit / 60)}:${(c.sirkuit % 60).toFixed(2).padStart(5, "0")}` },
 ];
 const MEDALI = ["🥇", "🥈", "🥉"];
 

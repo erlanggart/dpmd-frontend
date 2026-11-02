@@ -165,7 +165,7 @@ function Nampan({ isi, item }) {
 	);
 }
 
-const WARNA_GELAS = { "es-jeruk": "#fb923c", "kopi-susu": "#a16a3c", "teh-tarik": "#c79b6b", "mcd-eskrim": "#fef3c7", "mcd-soda": "#3f1d0b" };
+const WARNA_GELAS = { "fc-esteh": "#b45309", "fc-jus": "#84cc16", "es-jeruk": "#fb923c", "kopi-susu": "#a16a3c", "teh-tarik": "#c79b6b", "mcd-eskrim": "#fef3c7", "mcd-soda": "#3f1d0b" };
 function Gelas({ isi, item }) {
 	return (
 		<>

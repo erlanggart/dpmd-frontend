@@ -3,7 +3,7 @@ import { tambahKoin } from "./pancing";
 import { suara } from "./suaraPancing";
 import { ubahTenaga } from "./tenaga";
 
-// Kemajuan tamu: XP & level (dari memancing, peti, belanja, misi, balapan) dan tiga misi
+// Kemajuan tamu: XP & level (dari memancing, peti, belanja, makan, misi, bioskop) dan tiga misi
 // harian yang berganti tiap hari (sama untuk semua tamu pada hari yang sama). Tersimpan di
 // perangkat.
 
@@ -25,7 +25,6 @@ export const POOL_MISI = [
 	{ id: "renang", teks: "Berenang 60 meter di Situ Pemda", jenis: "renang", target: 60, koin: 40, xp: 45 },
 	{ id: "perahu", teks: "Mendayung perahu sejauh 150 meter", jenis: "perahu", target: 150, koin: 40, xp: 40 },
 	{ id: "ruang", teks: "Kunjungi 3 ruang bidang", jenis: "ruang", target: 3, koin: 40, xp: 40 },
-	{ id: "balap", teks: "Selesaikan 1 balapan motor", jenis: "balap", target: 1, koin: 70, xp: 70 },
 	{ id: "sapa", teks: "Sapa petugas atau tamu lain", jenis: "sapa", target: 1, koin: 20, xp: 20 },
 	{ id: "gaya", teks: "Pakai gaya baru dari Distro Gaya", jenis: "gaya", target: 1, koin: 30, xp: 30 },
 	{ id: "motor", teks: "Kendarai motor sejauh 500 meter", jenis: "motor", target: 500, koin: 35, xp: 35 },
@@ -54,14 +53,12 @@ function baca() {
 	try {
 		const d = JSON.parse(localStorage.getItem(KUNCI));
 		if (d && typeof d === "object") {
-			// rekor lama (satu angka) = rekor trek sprint
-			const rekor = d.rekor && typeof d.rekor === "object" ? d.rekor : typeof d.balap === "number" ? { sprint: d.balap } : {};
-			return { xp: d.xp || 0, tanggal: d.tanggal || "", misi: Array.isArray(d.misi) ? d.misi : [], rekor };
+			return { xp: d.xp || 0, tanggal: d.tanggal || "", misi: Array.isArray(d.misi) ? d.misi : [] };
 		}
 	} catch {
 		/* penyimpanan tidak tersedia */
 	}
-	return { xp: 0, tanggal: "", misi: [], rekor: {} };
+	return { xp: 0, tanggal: "", misi: [] };
 }
 
 export let progres = baca();
@@ -133,11 +130,3 @@ export function klaimMisi(id) {
 
 export const misiSiapKlaim = (p = progres) => p.misi.filter((m) => !m.diklaim && m.n >= (MISI_PER_ID[m.id]?.target ?? Infinity)).length;
 
-// Rekor balapan motor per trek (detik, makin kecil makin baik).
-export function catatBalap(trek, detik) {
-	const lama = progres.rekor?.[trek];
-	const rekor = lama == null || detik < lama;
-	if (rekor) progres.rekor = { ...progres.rekor, [trek]: Math.round(detik * 100) / 100 };
-	simpan();
-	return rekor;
-}

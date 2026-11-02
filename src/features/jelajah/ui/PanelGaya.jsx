@@ -84,7 +84,7 @@ export default function PanelGaya({ mode = "lemari", dasar }) {
 					>
 						{tombol.teks}
 					</button>
-					{kurang > 0 && !milik && mode !== "lemari" && <p className="mt-2 text-center text-[11px] text-slate-500">Cari koin dari memancing, peti hadiah, misi harian, dan balapan motor.</p>}
+					{kurang > 0 && !milik && mode !== "lemari" && <p className="mt-2 text-center text-[11px] text-slate-500">Cari koin dari memancing, peti hadiah, dan misi harian.</p>}
 					{kabar && <p className={`mt-2 rounded-lg px-3 py-1.5 text-center text-xs font-semibold ${kabar.ok ? "bg-emerald-50 text-emerald-800" : "bg-rose-50 text-rose-700"}`}>{kabar.teks}</p>}
 				</div>
 				{mode === "coba" && <p className="mt-2 text-center text-[11px] text-violet-700">🪞 Barang yang dipilih langsung dicoba di badan Anda. Keluar bilik = pakaian coba dilepas.</p>}

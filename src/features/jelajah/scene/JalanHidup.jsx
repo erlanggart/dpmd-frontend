@@ -4,6 +4,8 @@ import { BoxGeometry, Color, CylinderGeometry, MeshStandardMaterial, Object3D, S
 import { posisi, posisiNpc } from "../jelajahStore";
 import { pemainLain } from "../multipemain";
 import { BAHAN_WARNA, gabung, kotak, warnai } from "./geometri";
+import { BAHAN_LALIN, GEOM_MOBIL, GEOM_MOTOR, GEOM_PENGENDARA, WARNA_MOBIL, WARNA_MOTOR } from "./geomLalin";
+import { KENDARAAN_LALIN } from "./lalinKawasan";
 import { KENDARAAN } from "./kendaraan";
 import { JALAN, PAGAR_DEPAN } from "./layout";
 import { suasana } from "./suasana";
@@ -24,9 +26,6 @@ const LAJUR = {
 	mobil: { 1: TENGAH - 2.0, [-1]: TENGAH + 2.0 },
 	motor: { 1: TENGAH - 3.1, [-1]: TENGAH + 3.1 },
 };
-const WARNA_MOBIL = ["#e5e7eb", "#1f2937", "#9ca3af", "#b91c1c", "#1e3a8a", "#f5f5f4", "#334155"];
-const WARNA_MOTOR = ["#111827", "#b91c1c", "#1d4ed8", "#f5f5f4", "#047857", "#6b7280"];
-
 function acakBiji(seed) {
 	let s = seed;
 	return () => ((s = (s * 16807) % 2147483647) - 1) / 2147483646;
@@ -47,35 +46,6 @@ function susunLaluLintas() {
 	return daftar;
 }
 
-// Geometri: badan diberi warna putih supaya warna per-instance yang menentukan catnya.
-const GEOM_MOBIL = gabung([
-	kotak([1.8, 0.62, 4], "#ffffff", [0, 0.62, 0]),
-	kotak([1.6, 0.55, 2.2], "#2a3138", [0, 1.2, -0.25]),
-	kotak([1.62, 0.08, 1.9], "#ffffff", [0, 1.5, -0.3]),
-	...[-0.6, 0.6].map((x) => kotak([0.38, 0.14, 0.03], "#fff8e0", [x, 0.72, 2.01])),
-	...[-0.65, 0.65].map((x) => kotak([0.32, 0.12, 0.03], "#7f1d1d", [x, 0.75, -2.01])),
-	...[
-		[-0.86, 1.3],
-		[0.86, 1.3],
-		[-0.86, -1.3],
-		[0.86, -1.3],
-	].map(([x, z]) => warnai(new CylinderGeometry(0.33, 0.33, 0.24, 12), "#141414", { p: [x, 0.33, z], r: [0, 0, Math.PI / 2] })),
-]);
-const GEOM_MOTOR = gabung([
-	kotak([0.3, 0.42, 1.3], "#ffffff", [0, 0.62, 0]),
-	kotak([0.28, 0.1, 0.65], "#1b1b1b", [0, 0.88, -0.15]),
-	...[0.62, -0.62].map((z) => warnai(new CylinderGeometry(0.3, 0.3, 0.12, 12), "#141414", { p: [0, 0.3, z], r: [0, 0, Math.PI / 2] })),
-]);
-// Pengendara motor (tidak ikut diwarnai cat motor): badan, lengan ke setang, helm.
-const GEOM_PENGENDARA = gabung([
-	kotak([0.42, 0.55, 0.28], "#374151", [0, 1.25, -0.12]),
-	kotak([0.36, 0.14, 0.6], "#1f2937", [0, 0.98, 0.05]),
-	warnai(new BoxGeometry(0.1, 0.1, 0.5), "#374151", { p: [-0.2, 1.3, 0.2], r: [0.5, 0, 0] }),
-	warnai(new BoxGeometry(0.1, 0.1, 0.5), "#374151", { p: [0.2, 1.3, 0.2], r: [0.5, 0, 0] }),
-	warnai(new SphereGeometry(0.17, 10, 8), "#e5e7eb", { p: [0, 1.68, -0.08] }),
-]);
-const BAHAN_LALIN = new MeshStandardMaterial({ vertexColors: true, metalness: 0.3, roughness: 0.45 });
-
 // Titik-titik yang harus dihindari kendaraan: pengunjung, tamu lain, mobil/motor kantor.
 function halangan() {
 	const h = [{ x: posisi.x, z: posisi.z }];
@@ -92,6 +62,11 @@ function LaluLintas() {
 	const refMobil = useRef();
 	const refMotor = useRef();
 	const refPengendara = useRef();
+	// ikut terdengar oleh suara mesin lalu lintas terdekat (suasanaSuara.js)
+	useEffect(() => {
+		daftar.forEach((k) => KENDARAAN_LALIN.add(k));
+		return () => daftar.forEach((k) => KENDARAAN_LALIN.delete(k));
+	}, [daftar]);
 
 	useLayoutEffect(() => {
 		const w = new Color();

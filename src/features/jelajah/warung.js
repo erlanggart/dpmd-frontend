@@ -38,6 +38,18 @@ export const WARUNG = {
 			{ id: "mcd-soda", nama: "Minuman Soda", ikon: "🥤", harga: 15, tenaga: 10, bentuk: "gelas", ket: "Dingin bergelembung" },
 		],
 	},
+	foodcourt: {
+		nama: "Food Court CCM Lt 3",
+		ikon: "🍛",
+		warna: "#c2410c",
+		menu: [
+			{ id: "fc-nasgor", nama: "Nasi Goreng Spesial", ikon: "🍛", harga: 42, tenaga: 50, bentuk: "piring", ket: "Telur mata sapi, kerupuk, acar" },
+			{ id: "fc-geprek", nama: "Ayam Geprek Sambal Bawang", ikon: "🍗", harga: 38, tenaga: 46, bentuk: "piring", ket: "Level pedas bisa diatur" },
+			{ id: "fc-bakso", nama: "Bakso Urat Jumbo", ikon: "🍲", harga: 35, tenaga: 42, bentuk: "mangkuk", ket: "Kuah kaldu sapi, bihun" },
+			{ id: "fc-esteh", nama: "Es Teh Manis Jumbo", ikon: "🧋", harga: 10, tenaga: 9, bentuk: "gelas", ket: "Segar dingin" },
+			{ id: "fc-jus", nama: "Jus Alpukat", ikon: "🥑", harga: 20, tenaga: 15, bentuk: "gelas", ket: "Kental bersusu cokelat" },
+		],
+	},
 	kopi: {
 		nama: "Kedai Kopi CCM",
 		ikon: "☕",

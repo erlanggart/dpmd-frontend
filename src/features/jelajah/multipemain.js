@@ -243,7 +243,7 @@ function dataSkor() {
 	let ikan = null;
 	let kg = 0;
 	for (const [id, c] of Object.entries(koleksi)) if (c.terberat > kg) [ikan, kg] = [id, c.terberat];
-	return { level: levelDari(progres.xp), xp: progres.xp, ikan, kg, jenis: Object.keys(koleksi).length, balap: progres.rekor?.sprint ?? null, sirkuit: progres.rekor?.sirkuit ?? null };
+	return { level: levelDari(progres.xp), xp: progres.xp, ikan, kg, jenis: Object.keys(koleksi).length };
 }
 let tundaSkor = null;
 const kirimSkor = () => {

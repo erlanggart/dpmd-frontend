@@ -4,6 +4,7 @@ import { BufferGeometry, Float32BufferAttribute, LineBasicMaterial, LineSegments
 import { diLuarGedung, posisi } from "../jelajahStore";
 import { aturHujan, suara } from "../suaraPancing";
 import { dalamDistro, tokoDi } from "./layout";
+import { dalamGedungKhusus } from "./gedungKhusus";
 import { suasana } from "./suasana";
 
 // Cuaca: hujan turun di sekitar kamera (garis-garis air), langit & kabut meredup (lihat
@@ -71,8 +72,8 @@ export default function Cuaca() {
 		if (Math.abs(target - suasana.hujan) < 0.003) suasana.hujan = target;
 		const h = suasana.hujan;
 
-		// tetes hujan: kotak partikel mengikuti kamera, tidak tampak di dalam gedung/toko
-		const diDalam = !diLuarGedung() || tokoDi(posisi.x, posisi.z) || dalamDistro(posisi.x, posisi.z);
+		// tetes hujan: kotak partikel mengikuti kamera, tidak tampak di dalam gedung/toko/McD/mal
+		const diDalam = !diLuarGedung() || tokoDi(posisi.x, posisi.z) || dalamDistro(posisi.x, posisi.z) || dalamGedungKhusus(posisi.x, posisi.z);
 		garis.visible = h > 0.02 && !diDalam;
 		garis.material.opacity = 0.55 * h;
 		aturHujan(h * (diDalam ? 0.35 : 1));

@@ -37,7 +37,7 @@ const busur = (v0, v1) => {
 function Pengukur({ zona, refJarum, refTeks }) {
 	const [zb, za] = zona;
 	return (
-		<div className="relative mx-auto w-52">
+		<div className="relative mx-auto w-40 sm:w-48">
 			<svg viewBox="0 0 200 108" className="w-full">
 				<path d={busur(0, 1.1)} stroke="rgba(0,0,0,.45)" strokeWidth="20" fill="none" strokeLinecap="round" />
 				<path d={busur(0, zb)} stroke="#3b82f6" strokeWidth="14" fill="none" strokeLinecap="round" />
@@ -49,8 +49,8 @@ function Pengukur({ zona, refJarum, refTeks }) {
 				</g>
 				<circle cx="100" cy="96" r="8" fill="#0f172a" stroke="#fff" strokeWidth="3" />
 			</svg>
-			<p className="absolute inset-x-0 bottom-0 text-center text-[10px] font-bold uppercase tracking-widest text-white/60">Tegangan senar</p>
-			<p ref={refTeks} className="absolute inset-x-0 top-[42%] text-center text-base font-black" />
+			<p ref={refTeks} className="absolute inset-x-0 top-[36%] text-center text-sm font-black sm:text-base" />
+			<p className="mt-0.5 text-center text-[9px] font-bold uppercase tracking-widest text-white/55">Tegangan senar</p>
 		</div>
 	);
 }
@@ -316,8 +316,12 @@ export default function GamePancing({ sentuh, bersama, onSelesai }) {
 						Pelampung mengapung… ketuk saat <b>tenggelam</b> · {sentuh ? "tombol" : "SPASI"} sekarang = gulung ulang
 					</p>
 				)}
+			</div>
+
+			{/* panel tarik di pojok kiri bawah — tidak menutupi pemancing & ikannya di tengah layar */}
+			<div className={`pointer-events-none absolute left-3 z-20 sm:left-5 ${sentuh ? "bottom-[calc(max(1rem,env(safe-area-inset-bottom))+0.5rem)]" : "bottom-6"}`}>
 				{fase === "tarik" && ikan && (
-					<div className="w-[min(22rem,92vw)] space-y-2.5 rounded-2xl bg-slate-950/70 p-3 text-white shadow-2xl ring-1 ring-white/10 backdrop-blur">
+					<div className="w-[min(18rem,58vw)] origin-bottom-left space-y-2 rounded-2xl bg-slate-950/75 p-2.5 text-white shadow-2xl ring-1 ring-white/10 backdrop-blur sm:w-[19rem] sm:space-y-2.5 sm:p-3">
 						{/* ikan misterius: belum terlihat jenisnya, hanya kilau kelasnya */}
 						<div className="flex items-center gap-3">
 							<motion.span
@@ -341,8 +345,8 @@ export default function GamePancing({ sentuh, bersama, onSelesai }) {
 						</div>
 						<Pengukur zona={zonaKini(ikan.kelas)} refJarum={tegangJarum} refTeks={tegangTeks} />
 						<Batang label={sentuh ? "Laju gulung — ketuk 🎣 berulang" : "Laju gulung — ketuk SPASI berulang"} refIsi={gulungIsi}>
-							<span ref={pulihTanda} className="absolute inset-0 flex items-center justify-center text-[9px] font-black uppercase tracking-wider text-sky-200 opacity-0 transition-opacity">
-								Ikan memulihkan tenaga — beri tekanan!
+							<span ref={pulihTanda} className="absolute inset-0 flex items-center justify-center whitespace-nowrap text-[8px] font-black uppercase leading-none tracking-wide text-sky-200 opacity-0 transition-opacity">
+								Ikan pulih — beri tekanan!
 							</span>
 						</Batang>
 						<Batang label="Senar terulur" kanan={senarTeks} refIsi={senarIsi} />

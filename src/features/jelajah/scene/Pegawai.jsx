@@ -11,6 +11,7 @@ import {
 import { diLuarGedung, posisi, posisiNpc, posisiPejalan } from "../jelajahStore";
 import { cariJalur, penampilanWarga, tabrak, tinggiTanah } from "./layout";
 import Tokoh from "./Tokoh";
+import { ucapkan } from "../suaraOrang";
 
 // Penghuni kantor (hasil susunPenghuni): pegawai yang bekerja di mejanya, rapat,
 // berdiskusi, satpam, petugas kebersihan, pengunjung yang menunggu, dan yang
@@ -516,7 +517,10 @@ export default function Pegawai({ lantai, penghuni }) {
 						: kalimatUntuk(o);
 			const n = a.putaran.get(terbaik.kunci) ?? Math.floor(Math.random() * daftarKalimat.length);
 			a.putaran.set(terbaik.kunci, n + 1);
-			balon.tulis({ nama: o.nama, jabatan: o.jabatan, ucapan: daftarKalimat[n % daftarKalimat.length] });
+			const ucapan = daftarKalimat[n % daftarKalimat.length];
+			balon.tulis({ nama: o.nama, jabatan: o.jabatan, ucapan });
+			// ucapannya juga terdengar (suara Bahasa Indonesia), tidak hanya balon kata
+			ucapkan(ucapan, { x: terbaik.x, z: terbaik.z, perempuan: o.penampilan?.perempuan ?? (jenisKunci === "w" ? Math.random() < 0.5 : false), penting: true, jangkau: 6 });
 		}
 		sp.visible = true;
 		sp.position.set(terbaik.x, yDi(lantai, terbaik.x, terbaik.z) + terbaik.tinggi + 0.75, terbaik.z);

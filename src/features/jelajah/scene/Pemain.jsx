@@ -5,7 +5,8 @@ import { BENDA, LOBI, RUANGAN, TINGGI_LANTAI, TITIK_MULAI, cariArea } from "../k
 import { kendali, posisi, setKeadaan } from "../jelajahStore";
 import { KENDARAAN, KURSI as KURSI_KENDARAAN, tambahPerahu, kendaraanDariId, keDunia, kursiDunia, lingkaran, resetKendaraan, tabrakKendaraan, titikNaikKursi } from "./kendaraan";
 import { KURSI_BIOSKOP, KURSI_MAKAN, TITIK_PESAN_PECEL, TOKO_PER_ID, PERMUKAAN_SITU, aturBadanRenang, diAirSitu, langkahRenang, PERABOT, PETI_HADIAH, TITIK_DISTRO, bilikDi, dalamDistro, TITIK_PESAN_MIE, tokoDi, TANAH, cariJalur, langkah, tabrakKendaraanStatis, tanggaDi, tinggiTanah } from "./layout";
-import { tinggiGedungDi } from "./kawasanBantu";
+import { diJalan, tinggiGedungDi } from "./kawasanBantu";
+import { langkahKaki } from "../suasanaSuara";
 import { diriSendiri, kursiTerpakai, pemainLain } from "../multipemain";
 import { berhentiPancing, geserAsal, mulaiPancing, pancing, percik } from "../pancing";
 import { laporTabrak } from "../tenaga";
@@ -15,10 +16,22 @@ import { AIR_Y, DEK_Y, DERMAGA, KIOS_TOKO_PANCING, PERAHU, dermagaDi, jarakKeTep
 import { bukaPeti, petiSiap } from "../harta";
 import { berhentiMakan, mulaiMakan, tickMakan, warung } from "../warung";
 import { berhentiNonton, tickNonton } from "../bioskop";
-import { TITIK_BUTIK, TITIK_LOKET, TITIK_PESAN_KOPI, TITIK_PESAN_MCD, dalamAulaCcm, dalamMcd } from "./gedungKhusus";
+import { AULA_CCM, dalamStudio, TITIK_BUTIK, TITIK_LIFT, TITIK_LOKET, TITIK_PESAN_FC, TITIK_PESAN_KOPI, TITIK_PESAN_MCD, dalamAulaCcm, dalamGedungKhusus, dalamLahanCcm, dalamMcd, lantaiMalDariY, malAktif } from "./gedungKhusus";
+
+// Lantai kantor dari ketinggian; di dalam lahan mal semua lantai mal dihitung "lantai 0" kawasan
+// (lantai mal sendiri di malAktif).
+const lantaiDari = (y, x, z) => (y > H / 2 && !dalamLahanCcm(x, z) ? 1 : 0);
+// Permukaan pijakan untuk suara langkah kaki.
+function permukaanDi(x, z, y, renang) {
+	if (renang) return "air";
+	if (dermagaDi(x, z)) return "kayu";
+	if (y > 0.5 || dalamGedungKhusus(x, z) || tokoDi(x, z) || dalamDistro(x, z) || diJalan(x, z)) return "keras";
+	// halaman kantor berpaving, teras, jalan depan & halaman toko
+	if (Math.abs(x) < 34 && z > -14 && z < 47) return "keras";
+	return "rumput";
+}
 import { lemari, selesaiCoba } from "../lemari";
 import { catat } from "../progres";
-import { balap, batalBalap, dekatStart, tickBalap } from "../balap";
 import KeranjangTangan from "./KeranjangTangan";
 import Tokoh from "./Tokoh";
 
@@ -217,6 +230,8 @@ export default function Pemain({ daftarDinding, penghuni, penampilan = PENAMPILA
 		const p = g.position;
 		const k = kamera.current;
 		const m = mode.current;
+		// lantai mal tempat pemain berada (penghalang & titik interaksi per lantai mal)
+		malAktif.lantai = dalamLahanCcm(p.x, p.z) ? lantaiMalDariY(p.y) : 0;
 
 		if (kendali.teleport) {
 			const t = kendali.teleport;
@@ -229,7 +244,7 @@ export default function Pemain({ daftarDinding, penghuni, penampilan = PENAMPILA
 				}
 				mode.current = { jenis: "jalan", t: 0, k: null, kursi: null, dari: null };
 			}
-			p.set(t.x, t.lantai ? t.lantai * H : tinggiTanah(t.x, t.z), t.z);
+			p.set(t.x, t.y ?? (t.lantai ? t.lantai * H : tinggiTanah(t.x, t.z)), t.z);
 			g.rotation.y = t.rot;
 			k.yaw = t.yaw;
 			k.lompat = true;
@@ -400,7 +415,7 @@ export default function Pemain({ daftarDinding, penghuni, penampilan = PENAMPILA
 		if (jenisMode === "jalan") {
 			if (kendali.target) {
 				const t = kendali.target;
-				const lantaiKini = p.y > H / 2 ? 1 : 0;
+				const lantaiKini = lantaiDari(p.y, p.x, p.z);
 				const titik = cariJalur({ x: p.x, z: p.z, lantai: lantaiKini }, { x: t.x, z: t.z, lantai: t.lantai ?? lantaiKini });
 				rute.current = titik?.length ? { titik, buka: t.buka } : null;
 				if (!titik?.length && t.buka) setKeadaan({ minta: `${t.buka}:${performance.now()}` });
@@ -502,7 +517,7 @@ export default function Pemain({ daftarDinding, penghuni, penampilan = PENAMPILA
 				tickMakan(dt);
 			}
 			// kursi bioskop: film diputar selama duduk (bila punya tiket)
-			if (c.bioskop) tickNonton(dt);
+			if (c.bioskop) tickNonton(dt, c);
 			// bergerak = berdiri
 			if (Math.hypot(maju, samping) > 0.3) berdiri();
 		} else if (jenisMode === "masuk") {
@@ -633,8 +648,6 @@ export default function Pemain({ daftarDinding, penghuni, penampilan = PENAMPILA
 			kend.laju += Math.max(-batas, Math.min(batas, beda));
 			if (Math.abs(maju) < 0.05) kend.laju *= Math.exp(-1.2 * dt);
 			if (Math.abs(kend.laju) < 0.02 && Math.abs(maju) < 0.05) kend.laju = 0;
-			// hitung mundur balapan: motor ditahan di garis start
-			if (kend.jenis === "motor" && !mode.current.no && tickBalap(kend.x, kend.z)) kend.laju = 0;
 			kend.setir += (Math.max(-1, Math.min(1, samping)) - kend.setir) * (1 - Math.exp(-c.setirCepat * dt));
 			// model sepeda: belok kanan (D) = rot berkurang
 			const putar = ((-kend.setir * c.belok * kend.laju * dt) / c.sumbu) * 2 / (1 + Math.abs(kend.laju) * c.redam) * (kend.h ? 0.15 : 1);
@@ -742,11 +755,16 @@ export default function Pemain({ daftarDinding, penghuni, penampilan = PENAMPILA
 		}
 		const targetLaju = besar > 0.05 ? (lari ? 1 : 0.7) : 0;
 		gr.laju += (targetLaju - gr.laju) * (1 - Math.exp(-10 * dt));
-		if (besar > 0.05) gr.fase += dt * (lari ? 13 : 9);
+		if (besar > 0.05) {
+			// suara langkah tiap kali kaki menapak (dua kali per ayunan)
+			const tapak = Math.floor(gr.fase / Math.PI);
+			gr.fase += dt * (lari ? 13 : 9);
+			if (jenisMode === "jalan" && Math.floor(gr.fase / Math.PI) !== tapak && !loncat.current.h) langkahKaki(permukaanDi(p.x, p.z, p.y, renang), lari);
+		}
 
 		// --- kabar untuk UI ---
 		const diTangga = !!tanggaDi(p.x, p.z);
-		const lantai = p.y > H / 2 ? 1 : 0;
+		const lantai = lantaiDari(p.y, p.x, p.z);
 		posisi.x = p.x;
 		posisi.y = p.y;
 		posisi.z = p.z;
@@ -756,7 +774,6 @@ export default function Pemain({ daftarDinding, penghuni, penampilan = PENAMPILA
 		posisi.yTampil = p.y + loncat.current.h;
 		posisi.pose = diMobil ? "mobil" : diMotor ? "motor" : diPerahu ? "perahu" : duduk ? "duduk" : mk.jenis === "mancing" ? "mancing" : renang ? "renang" : "jalan";
 		posisi.kursi = mk.k ? mk.no || 0 : 0;
-		if (balap.fase && !(mk.jenis === "kemudi" && mk.k?.jenis === "motor" && !mk.no)) batalBalap("Balapan dibatalkan — Anda turun dari motor");
 		{
 			const tp = tempuh.current;
 			const jenis = renang ? "renang" : mk.jenis === "kemudi" && !mk.no && (diPerahu || diMotor) ? (diPerahu ? "perahu" : "motor") : null;
@@ -806,7 +823,7 @@ export default function Pemain({ daftarDinding, penghuni, penampilan = PENAMPILA
 
 		const tujuanAkhir = rute.current?.titik[rute.current.titik.length - 1];
 		penandaTujuan.current.visible = !!tujuanAkhir;
-		if (tujuanAkhir) penandaTujuan.current.position.set(tujuanAkhir.x, (lantai ? lantai * H : tinggiTanah(tujuanAkhir.x, tujuanAkhir.z)) + 0.03, tujuanAkhir.z);
+		if (tujuanAkhir) penandaTujuan.current.position.set(tujuanAkhir.x, (lantai ? lantai * H : dalamLahanCcm(tujuanAkhir.x, tujuanAkhir.z) ? p.y : tinggiTanah(tujuanAkhir.x, tujuanAkhir.z)) + 0.03, tujuanAkhir.z);
 
 		const area = diTangga ? "tangga" : cariArea(p.x, p.z, lantai)?.id ?? (lantai ? "aula2" : "belakang1");
 		let dekat = null;
@@ -816,7 +833,7 @@ export default function Pemain({ daftarDinding, penghuni, penampilan = PENAMPILA
 			// di perahu: dekat dermaga → turun; di tengah situ & hampir diam → memancing
 			if (titikTurun(mk.k.x, mk.k.z)) dekat = "keluar";
 			else if (Math.abs(mk.k.laju) < 0.8) dekat = "mancing:perahu";
-		} else if (mk.jenis === "kemudi") dekat = mk.k.jenis === "motor" && !mk.no && !balap.fase && dekatStart(p.x, p.z) ? "balap:mulai" : "keluar";
+		} else if (mk.jenis === "kemudi") dekat = "keluar";
 		else if (mk.jenis === "jalan" && renang) {
 			// berenang di dekat perahu yang masih ada kursi kosong: naik dari air
 			let terdekat = 1.6;
@@ -841,7 +858,8 @@ export default function Pemain({ daftarDinding, penghuni, penampilan = PENAMPILA
 				}
 			};
 			for (const b of BENDA) if (b.lantai === lantai) coba(b.id, Math.hypot(b.x - p.x, b.z - p.z), JARAK_BENDA);
-			for (const c of kursiBebas) if (c.lantai === lantai) coba(c.id, Math.hypot(c.x - p.x, c.z - p.z), JARAK_KURSI);
+			// kursi di lantai & ketinggian yang sama (kursi lantai atas mal punya y sendiri)
+			for (const c of kursiBebas) if (c.lantai === lantai && Math.abs((c.y ?? c.lantai * H) - p.y) < 1.2) coba(c.id, Math.hypot(c.x - p.x, c.z - p.z), JARAK_KURSI);
 			if (lantai === 0) {
 				for (const kend of KENDARAAN) {
 					// pengemudi dulu; bila sudah ada pengemudi (tamu lain), kursi penumpang yang kosong
@@ -868,7 +886,7 @@ export default function Pemain({ daftarDinding, penghuni, penampilan = PENAMPILA
 			}
 			for (const [id, tamu] of pemainLain) {
 				const st = tamu.s;
-				if (!st || st.pose === "mobil" || (st.y > H / 2 ? 1 : 0) !== lantai) continue;
+				if (!st || st.pose === "mobil" || lantaiDari(st.y, st.x, st.z) !== lantai || Math.abs(st.y - p.y) > 2) continue;
 				coba("tamu:" + id, Math.hypot(st.x - p.x, st.z - p.z), JARAK_TAMU);
 			}
 			// di dalam toko: ambil keranjang, ambil barang dari rak, bayar di kasir
@@ -894,10 +912,13 @@ export default function Pemain({ daftarDinding, penghuni, penampilan = PENAMPILA
 				coba("pesan:mie", Math.hypot(TITIK_PESAN_MIE.x - p.x, TITIK_PESAN_MIE.z - p.z), JARAK_GEROBAK);
 				coba("pesan:pecel", Math.hypot(TITIK_PESAN_PECEL.x - p.x, TITIK_PESAN_PECEL.z - p.z), JARAK_GEROBAK);
 				coba("pesan:mcd", Math.hypot(TITIK_PESAN_MCD.x - p.x, TITIK_PESAN_MCD.z - p.z), 1.8);
-				coba("pesan:kopi", Math.hypot(TITIK_PESAN_KOPI.x - p.x, TITIK_PESAN_KOPI.z - p.z), 1.8);
-				// loket bioskop & butik di Cibinong City Mall
-				coba("bioskop:tiket", Math.hypot(TITIK_LOKET.x - p.x, TITIK_LOKET.z - p.z), 1.8);
-				for (const t of TITIK_BUTIK) coba("distro:butik", Math.hypot(t.x - p.x, t.z - p.z), 1.6);
+				// Cibinong City Mall: kedai kopi (Lt 1), butik (Lt 2), food court (Lt 3), loket bioskop (Lt 4), lift
+				const diLt = (t) => t.lantaiMal === undefined || (dalamLahanCcm(p.x, p.z) && t.lantaiMal === malAktif.lantai);
+				if (diLt(TITIK_PESAN_KOPI)) coba("pesan:kopi", Math.hypot(TITIK_PESAN_KOPI.x - p.x, TITIK_PESAN_KOPI.z - p.z), 1.8);
+				if (diLt(TITIK_PESAN_FC)) coba("pesan:foodcourt", Math.hypot(TITIK_PESAN_FC.x - p.x, TITIK_PESAN_FC.z - p.z), 2);
+				if (diLt(TITIK_LOKET)) coba("bioskop:tiket", Math.hypot(TITIK_LOKET.x - p.x, TITIK_LOKET.z - p.z), 1.8);
+				for (const t of TITIK_BUTIK) if (diLt(t)) coba("distro:butik", Math.hypot(t.x - p.x, t.z - p.z), 1.6);
+				if (dalamLahanCcm(p.x, p.z)) coba("lift", Math.hypot(TITIK_LIFT.x - p.x, TITIK_LIFT.z - p.z), 1.8);
 			}
 			// di panggung dermaga: mulai memancing; di papan dermaga tanpa perahu: panggil perahu
 			if (!dekat && lantai === 0) {
@@ -914,16 +935,16 @@ export default function Pemain({ daftarDinding, penghuni, penampilan = PENAMPILA
 			}
 		}
 		const modeUi = mk.jenis === "mancing" ? "mancing" : mk.jenis === "kemudi" ? (mk.no ? "penumpang" : mk.k.jenis) : mk.jenis === "duduk" ? "duduk" : "jalan";
-		setKeadaan({ area, lantai, dekat, mode: modeUi });
+		setKeadaan({ area, lantai, dekat, mode: modeUi, lantaiMal: dalamLahanCcm(p.x, p.z) ? malAktif.lantai : null });
 
 		// Bidang klik mengikuti lantai & posisi pemain (kawasan jauh lebih luas dari bidangnya).
-		bidangKlik.current.position.set(p.x, (lantai ? lantai * H : tinggiTanah(p.x, p.z)) + 0.02, p.z);
+		bidangKlik.current.position.set(p.x, (lantai ? lantai * H : dalamLahanCcm(p.x, p.z) ? p.y : tinggiTanah(p.x, p.z)) + 0.02, p.z);
 
 		// --- kamera orang ketiga ---
 		// Di halaman kamera lebih landai dan memandang lebih tinggi supaya tampak depan
 		// gedung (atap, menara) terlihat utuh; di dalam gedung kamera kembali menunduk.
 		// di dalam minimarket kamera mendekat & menunduk seperti di dalam gedung kantor
-		const diToko = lantai === 0 && (!!tokoDi(p.x, p.z) || dalamDistro(p.x, p.z) || dalamMcd(p.x, p.z));
+		const diToko = lantai === 0 && (!!tokoDi(p.x, p.z) || dalamDistro(p.x, p.z) || dalamMcd(p.x, p.z) || dalamStudio(p.x, p.z));
 		// aula mal berplafon 7 m: kamera tetap lapang seperti di luar, tetapi tidak didorong
 		// keluar oleh massa gedung (dindingnya dipudarkan bila menghalangi)
 		const diAula = lantai === 0 && dalamAulaCcm(p.x, p.z);
@@ -946,6 +967,17 @@ export default function Pemain({ daftarDinding, penghuni, penampilan = PENAMPILA
 				const ky = p.y + 1.2 + d * Math.sin(pitch);
 				const dalamKantor = kx > -15.8 && kx < 15.8 && kz > -13.8 && kz < 12.9 && ky < 11;
 				if (!dalamKantor && ky - TANAH > tinggiGedungDi(kx, kz)) break;
+			}
+		} else if (diAula && !diToko) {
+			// di aula mal: kamera tetap di dalam aula (tidak menembus muka kaca / dinding massa)
+			// dan di bawah plafon lantainya
+			const A = AULA_CCM;
+			for (let d = jarakKamera; d >= 2.5; d -= 0.5) {
+				jarakAman = d;
+				const kx = p.x + sy * d * Math.cos(pitch);
+				const kz = p.z + cy * d * Math.cos(pitch);
+				const ky = 1.2 + d * Math.sin(pitch);
+				if (kx > A.x0 + 0.6 && kx < A.x1 - 0.6 && kz > A.z0 + 0.6 && kz < A.z1 - 0.6 && ky < 5.2) break;
 			}
 		}
 		k.jarakAman = k.jarakAman == null ? jarakAman : k.jarakAman + (jarakAman - k.jarakAman) * (1 - Math.exp(-8 * dt));

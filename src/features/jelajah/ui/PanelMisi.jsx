@@ -10,7 +10,7 @@ function sisaHari() {
 	return `${Math.floor(m / 60)} j ${m % 60} m`;
 }
 
-// Level & XP tamu, tiga misi harian (berganti tengah malam), dan rekor balapan motor.
+// Level & XP tamu dan tiga misi harian (berganti tengah malam).
 export default function PanelMisi() {
 	const p = useProgres();
 	const [, setDetak] = useState(0);
@@ -41,13 +41,6 @@ export default function PanelMisi() {
 				<div className="mt-3 h-2.5 overflow-hidden rounded-full bg-white/20">
 					<div className="h-full rounded-full bg-amber-300 transition-all" style={{ width: `${persen}%` }} />
 				</div>
-				{(p.rekor?.sprint != null || p.rekor?.sirkuit != null) && (
-					<p className="mt-3 text-xs text-indigo-100">
-						🏍️ Rekor balap:
-						{p.rekor.sprint != null && <> Sprint <b className="text-white">{p.rekor.sprint.toFixed(2)} dtk</b></>}
-						{p.rekor.sirkuit != null && <> · Sirkuit <b className="text-white">{p.rekor.sirkuit.toFixed(2)} dtk</b></>}
-					</p>
-				)}
 			</div>
 			<div className="mb-2 flex items-center justify-between">
 				<p className="text-sm font-black text-slate-800">📋 Misi hari ini</p>
@@ -89,7 +82,7 @@ export default function PanelMisi() {
 					);
 				})}
 			</ul>
-			<p className="mt-3 text-center text-xs text-slate-500">XP juga didapat dari memancing, membuka peti, belanja, dan balapan motor.</p>
+			<p className="mt-3 text-center text-xs text-slate-500">XP juga didapat dari memancing, membuka peti, belanja, makan, dan menonton film di bioskop.</p>
 		</div>
 	);
 }

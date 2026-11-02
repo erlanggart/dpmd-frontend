@@ -4,7 +4,6 @@ import { AIR, AREA, GEDUNG, JENIS_AREA, JENIS_JALAN, LABEL, SUDUT_UTARA } from "
 import { JALAN_TAMPIL } from "../scene/kawasanBantu";
 import { LAHAN_CCM, MCD } from "../scene/gedungKhusus";
 import { WARUNG_PECEL } from "../scene/layout";
-import { balap, trekKini, useBalap } from "../balap";
 
 // Peta mini kawasan Pemda saat pengunjung berada di luar halaman kantor. Sumbunya sama
 // dengan denah mini kantor (x ke kanan, z ke bawah: jalan depan kantor di bawah),
@@ -25,9 +24,6 @@ const WARNA_JALAN = { utama: "#ffffff", sedang: "#ffffff", kecil: "#f4f1ea", gan
 const UTARA = (Math.atan2(-Math.sin(SUDUT_UTARA), -Math.cos(SUDUT_UTARA)) * 180) / Math.PI;
 
 export default function MinimapKawasan({ className = "" }) {
-	useBalap();
-	const trek = balap.fase ? trekKini() : null;
-	const cpBerikut = trek?.gerbang[balap.cp];
 	const svg = useRef(null);
 	const penanda = useRef(null);
 
@@ -75,9 +71,6 @@ export default function MinimapKawasan({ className = "" }) {
 					<rect x={-34} y={-22} width={68} height={53} fill="#ddd3bf" />
 					<path d={peta.gedung} fill="#ece6d8" stroke="#a39b8c" strokeWidth={0.4} />
 					<rect x={-15} y={-13} width={30} height={25} fill="#f0a774" stroke="#c2622d" strokeWidth={0.5} />
-					{/* rute balapan motor yang sedang ditempuh & gerbang berikutnya */}
-					{trek && <polyline points={trek.jalur.map(([x, z]) => `${x},${z}`).join(" ")} fill="none" stroke="#f59e0b" strokeWidth={4} strokeLinejoin="round" strokeLinecap="round" opacity={0.85} />}
-					{cpBerikut && <circle cx={cpBerikut.x} cy={cpBerikut.z} r={7} fill="#facc15" stroke="#78350f" strokeWidth={1.5} />}
 					{/* toko & warung di seberang jalan */}
 					<rect x={10} y={47} width={12} height={9} fill="#dc2626" stroke="#7f1d1d" strokeWidth={0.5} />
 					<text x={16} y={52} textAnchor="middle" dominantBaseline="middle" fontSize={3} fontWeight={800} fill="#ffffff">

@@ -1,5 +1,5 @@
 import { AIR, BATAS_KAWASAN, GEDUNG, JALAN, JENIS_GEDUNG, KORIDOR, LEBAR_KORIDOR, POHON_KAWASAN, WILAYAH_INTI } from "./kawasanData";
-import { PADAT_KHUSUS } from "./gedungKhusus";
+import { PADAT_KHUSUS, malAktif } from "./gedungKhusus";
 import { DERMAGA, dermagaDi } from "./situ";
 
 // Bantuan kawasan Pemda di sekitar kantor (lihat kawasanData.js): tinggi gedung dan
@@ -59,7 +59,7 @@ function jarakKeRuas(px, pz, ax, az, bx, bz) {
 	const t = Math.max(0, Math.min(1, ((px - ax) * dx + (pz - az) * dz) / (dx * dx + dz * dz || 1)));
 	return Math.hypot(px - ax - t * dx, pz - az - t * dz);
 }
-const diJalan = (x, z) => {
+export const diJalan = (x, z) => {
 	// jalan + trotoar depan kantor
 	if (x > -62 && x < 62 && z > 29 && z < 42) return true;
 	for (const [, lebar, f] of JALAN_TAMPIL) {
@@ -161,6 +161,7 @@ for (const k of PADAT_KHUSUS) {
 		kotak: [k.x0, k.x1, k.z0, k.z1],
 		tinggi: k.tinggi || 0,
 		tembus: !!k.tembus,
+		lantaiMal: k.lantaiMal,
 	});
 }
 
@@ -172,7 +173,7 @@ export function tabrakKawasan(x, z, r, bolehAir = false) {
 	const daftar = diSel(x, z);
 	if (!daftar) return false;
 	for (const b of daftar) {
-		if (b.tembus) continue;
+		if (b.tembus || (b.lantaiMal !== undefined && b.lantaiMal !== malAktif.lantai)) continue;
 		if (b.p) {
 			// di atas papan dermaga air tidak menghalangi (tepi dermaga tetap)
 			if (b.air && (bolehAir || dermagaDi(x, z, r))) continue;

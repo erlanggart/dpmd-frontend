@@ -7,6 +7,7 @@ import { penampilanAvatar } from "../avatar";
 import { kenakanGaya } from "../lemari";
 import { diriSendiri, pemainLain, useMultipemain } from "../multipemain";
 import { kendaraanDariId } from "./kendaraan";
+import { dalamLahanCcm } from "./gedungKhusus";
 import { aturBadanRenang } from "./layout";
 import PancinganTamu from "./PancinganTamu";
 import { KeranjangTamu } from "./KeranjangTangan";
@@ -48,7 +49,9 @@ function sasaranJejak(j, s, kini) {
 	return { x: b.x + (b.x - a.x) * f, y: b.y, z: b.z + (b.z - a.z) * f, rot: b.rot };
 }
 // Lantai pemain lain tampak bila lantai itu juga sedang ditampilkan (sama dengan GrupLantai).
-const lantaiTampak = (y) => (y > H / 2 ? posisi.y > 0.9 : posisi.y < 2.6);
+// Tamu di lantai atas kantor hanya tampak dari lantai atas & sebaliknya; di dalam mal (atrium
+// terbuka) tamu di lantai mana pun tetap tampak.
+const lantaiTampak = (y, x, z) => (dalamLahanCcm(x, z) ? true : y > H / 2 ? posisi.y > 0.9 : posisi.y < 2.6);
 
 function useKanvas(lebar, tinggi) {
 	const k = useMemo(() => {
@@ -257,7 +260,7 @@ function Tamu({ id, nama, jk, avatar, kulit, gaya }) {
 			k.roda += (k.laju * dt) / 0.32;
 		}
 
-		const tampak = lantaiTampak(t.y);
+		const tampak = lantaiTampak(t.y, t.x, t.z);
 		lihat.current = tampak;
 		g.visible = tampak && s.pose !== "mobil";
 		jalan.current.visible = s.pose === "jalan" || s.pose === "mancing" || s.pose === "renang";

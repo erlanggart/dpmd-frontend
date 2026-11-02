@@ -11,9 +11,10 @@ import Minimarket from "./Minimarket";
 import WarungTenda from "./WarungTenda";
 import MakananMeja from "./MakananMeja";
 import McD from "./McD";
+import LaluLintasKawasan from "./LaluLintasKawasan";
+import SuasanaHidup from "./SuasanaHidup";
 import MalCcm from "./MalCcm";
 import Distro from "./Distro";
-import Balap from "./Balap";
 import PagarDepan from "./PagarDepan";
 import Parkiran from "./Parkiran";
 
@@ -273,6 +274,8 @@ export default function Lingkungan({ daftarDinding }) {
 				<Pepohonan />
 				<Bendera />
 				<JalanHidup />
+				<LaluLintasKawasan />
+				<SuasanaHidup />
 				<Minimarket daftarDinding={daftarDinding} />
 				<WarungTenda w={WARUNG_MIE} g={GEROBAK_MIE} meja={MEJA_MIE} kursi={KURSI_WARUNG} tema={TEMA_MIE} daftarDinding={daftarDinding} />
 				<WarungTenda w={WARUNG_PECEL} g={GEROBAK_PECEL} meja={MEJA_PECEL} kursi={KURSI_PECEL} tema={TEMA_PECEL} daftarDinding={daftarDinding} />
@@ -280,7 +283,6 @@ export default function Lingkungan({ daftarDinding }) {
 				<McD daftarDinding={daftarDinding} />
 				<MalCcm daftarDinding={daftarDinding} />
 				<Distro daftarDinding={daftarDinding} />
-				<Balap />
 			</group>
 			<Gabung>
 				<PondasiTeras />
