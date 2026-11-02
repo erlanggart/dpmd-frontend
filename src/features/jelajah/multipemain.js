@@ -3,6 +3,8 @@ import { asalSocket } from "../../utils/asalServer";
 import { posisi } from "./jelajahStore";
 import { FASE_PANCING, pancing } from "./pancing";
 import { kendaraanDariId } from "./scene/kendaraan";
+import { klakson } from "./suaraPancing";
+import { bersihkanGaya, lemari } from "./lemari";
 
 // Jelajah bersama: setiap tamu yang membuka /jelajah tersambung ke namespace
 // socket.io "/jelajah" (lihat dpmd-fahri-express/src/socket/jelajah.socket.js).
@@ -94,7 +96,7 @@ export async function sambungJelajah(profil) {
 	if (saya !== generasi) return;
 	const asal = asalSocket();
 	socket = io(`${asal ?? ""}/jelajah`, {
-		auth: { nama: profil.nama, jk: profil.jk, avatar: profil.avatar, kulit: profil.kulit },
+		auth: { nama: profil.nama, jk: profil.jk, avatar: profil.avatar, kulit: profil.kulit, gaya: lemari.pakai },
 		transports: ["polling", "websocket"],
 		reconnectionDelayMax: 8000,
 	});
@@ -116,7 +118,7 @@ export async function sambungJelajah(profil) {
 	});
 	s.on("selamat", (m) => {
 		pemainLain.clear();
-		for (const p of m.pemain || []) pemainLain.set(p.id, { profil: { nama: p.nama, jk: p.jk, avatar: p.avatar, kulit: p.kulit }, s: p.s });
+		for (const p of m.pemain || []) pemainLain.set(p.id, { profil: { nama: p.nama, jk: p.jk, avatar: p.avatar, kulit: p.kulit, gaya: bersihkanGaya(p.gaya) }, s: p.s });
 		// Mobil & motor yang sudah dipindahkan tamu lain sebelum kita masuk.
 		for (const [id, k] of Object.entries(m.kendaraan || {})) {
 			const kend = kendaraanDariId(id);
@@ -125,7 +127,7 @@ export async function sambungJelajah(profil) {
 		ubah({ status: "tersambung", id: m.id, ruang: m.ruang ?? null, daftar: daftarDariMap(), galat: null });
 	});
 	s.on("masuk", (p) => {
-		pemainLain.set(p.id, { profil: { nama: p.nama, jk: p.jk, avatar: p.avatar, kulit: p.kulit }, s: p.s });
+		pemainLain.set(p.id, { profil: { nama: p.nama, jk: p.jk, avatar: p.avatar, kulit: p.kulit, gaya: bersihkanGaya(p.gaya) }, s: p.s });
 		ubah({ daftar: daftarDariMap() });
 		tambahObrolan({ sistem: true, teks: `${p.nama} masuk ke kantor`, waktu: Date.now() });
 	});
@@ -165,6 +167,19 @@ export async function sambungJelajah(profil) {
 			if (p) p.emote = e;
 		}
 	});
+	// klakson tamu lain: makin jauh makin pelan, tak terdengar lewat 70 m
+	s.on("klakson", (m) => {
+		const st = pemainLain.get(m.id)?.s;
+		if (!st || (st.pose !== "mobil" && st.pose !== "motor")) return;
+		klakson(st.pose, 1 - Math.hypot(st.x - posisi.x, st.z - posisi.z) / 70);
+	});
+	// tamu lain berganti topi/baju/celana/sepatu
+	s.on("gaya", (m) => {
+		const p = pemainLain.get(m.id);
+		if (!p) return;
+		p.profil = { ...p.profil, gaya: bersihkanGaya(m.gaya) };
+		ubah({ daftar: daftarDariMap() });
+	});
 	s.on("disapa", (m) => ubah({ sapaan: { ...m, waktu: Date.now() } }));
 	s.on("ditolak", (m) => tambahObrolan({ sistem: true, teks: m.alasan, waktu: Date.now() }));
 
@@ -182,7 +197,7 @@ export async function sambungJelajah(profil) {
 			udara: !!posisi.udara,
 			lari: !!posisi.lari,
 			kend: k
-				? { id: k.id, x: +k.x.toFixed(2), z: +k.z.toFixed(2), rot: +k.rot.toFixed(2), laju: +k.laju.toFixed(2), setir: +k.setir.toFixed(2), pintu: +k.pintu.toFixed(2), miring: +k.miring.toFixed(2), kursi: posisi.kursi ?? 0 }
+				? { id: k.id, x: +k.x.toFixed(2), z: +k.z.toFixed(2), rot: +k.rot.toFixed(2), laju: +k.laju.toFixed(2), setir: +k.setir.toFixed(2), pintu: +k.pintu.toFixed(2), miring: +k.miring.toFixed(2), h: +(k.h || 0).toFixed(2), kursi: posisi.kursi ?? 0 }
 				: undefined,
 			pc: dataPancing(),
 		};
@@ -229,5 +244,7 @@ export function kirimUcap(teks) {
 	if (t && socket?.connected) socket.emit("ucap", { teks: t });
 }
 export const kirimEmote = (jenis) => socket?.connected && socket.emit("emote", { jenis });
+export const kirimKlakson = () => socket?.connected && socket.emit("klakson");
+export const kirimGaya = (gaya) => socket?.connected && socket.emit("gaya", gaya);
 export const sapaPemain = (id) => socket?.connected && socket.emit("sapa", { ke: id });
 export const tutupSapaan = () => ubah({ sapaan: null });

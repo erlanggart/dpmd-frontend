@@ -1,6 +1,6 @@
-import { LOBI, RUANGAN, TINGGI_LANTAI } from "../kantorConfig";
+import { AREA_LAIN, LOBI, RUANGAN, TINGGI_LANTAI } from "../kantorConfig";
 import { BATAS_KAWASAN, tabrakKawasan } from "./kawasanBantu";
-import { DEK_Y, dermagaDi } from "./situ";
+import { AIR_Y, DEK_Y, DERMAGA, dermagaDi, diSitu, jarakKeTepi, keDuniaDermaga } from "./situ";
 
 // Geometri turunan dari kantorConfig: dinding per lantai, pintu, tangga, perabot,
 // penghuni kantor, penghalang tabrakan, dan pencarian jalur. Semua dalam meter.
@@ -590,11 +590,74 @@ export const PAPAN_NAMA = { x: -7, z: 28.75 };
 export const JALAN = { trotoar: 29.4, kanstin: 31.3, aspal0: 31.6, aspal1: 39.6 };
 const TIANG_GERBANG = 0.35; // setengah lebar tiang batu di kedua sisi gerbang
 
-// Minimarket di seberang jalan, tepat di depan kantor: muka toko menghadap jalan (−z),
-// halaman parkirnya dari trotoar seberang sampai muka toko. Belanja di depan pintunya.
-export const MINIMARKET = { x0: -6, x1: 6, z0: 47, z1: 56, tinggi: 4.4 };
-export const HALAMAN_TOKO = { x0: -9, x1: 9, z0: JALAN.aspal1 + 1.8, z1: MINIMARKET.z0 };
-export const PINTU_TOKO = { x: 0, z: MINIMARKET.z0 - 1.2 };
+// Deretan toko di seberang jalan depan kantor, muka menghadap jalan (−z), halaman parkir
+// dari trotoar seberang sampai muka toko. Alfamart tepat di depan kantor, Koperasi Desa
+// Merah Putih (sembako) di sebelah baratnya. Keduanya bisa dimasuki dengan denah yang sama:
+// pintu kaca geser di tengah, tiga rak (tiap sisi satu jenis barang), kasir di kiri,
+// kulkas / karung di dinding belakang, tumpukan keranjang di kanan pintu.
+function susunToko(id, cx, rak) {
+	return {
+		id,
+		x0: cx - 6,
+		x1: cx + 6,
+		z0: 47,
+		z1: 56,
+		tinggi: 4.4,
+		pintu: { x0: cx - 1.1, x1: cx + 1.1, z: 47 },
+		// rak: kiri = sisi −x, kanan = sisi +x (id barang di toko.js)
+		rak: [-2.0, 1.0, 3.8].map((dx, i) => ({ x: cx + dx, z0: 49.6, z1: 54.0, kiri: rak[i][0], kanan: rak[i][1] })),
+		mejaKasir: { x0: cx - 5.3, x1: cx - 4.4, z0: 48.0, z1: 50.6 },
+		titikKasir: { x: cx - 3.75, z: 49.3 },
+		keranjang: { x: cx + 2.6, z: 47.85 },
+	};
+}
+export const TOKO = [
+	susunToko("alfamart", 0, [
+		["air", "esteh"],
+		["roti", "mie"],
+		["nasi", "energi"],
+	]),
+	susunToko("koperasi", 16, [
+		["beras", "minyak"],
+		["telur", "gula"],
+		["tempe", "kopi"],
+	]),
+];
+export const tokoDi = (x, z) => TOKO.find((t) => x > t.x0 && x < t.x1 && z > t.z0 && z < t.z1) || null;
+
+// Warung tenda mie ayam di sebelah timur Alfamart: gerobak (pesan di sini), dua meja
+// panjang berbangku. Pesanan diantar ke meja begitu pembeli duduk.
+export const WARUNG_MIE = { x0: -19.2, x1: -9.4, z0: 44.8, z1: 52.8, tinggi: 2.7 };
+export const GEROBAK_MIE = { x: -11.2, z: 46.4, lx: 1.9, lz: 0.8 };
+export const TITIK_PESAN_MIE = { x: -11.2, z: 45.35 };
+export const MEJA_MIE = [48.6, 51.3].map((z) => ({ x0: -17.6, x1: -13.4, z0: z - 0.36, z1: z + 0.36, z }));
+export const KURSI_WARUNG = MEJA_MIE.flatMap((m) =>
+	[-16.9, -15.5, -14.1].flatMap((x) => [
+		{ x, z: m.z - 0.62, rot: 0, lantai: 0, y: TANAH, meja: m.z },
+		{ x, z: m.z + 0.62, rot: Math.PI, lantai: 0, y: TANAH, meja: m.z },
+	]),
+).map((k, i) => (i === 3 || i === 8 ? { ...k, npc: true } : k)); // dua bangku diisi pelanggan
+// Toko aksesoris "Distro Gaya" di timur warung mie ayam: rak baju, manekin, kasir, dan dua
+// bilik ruang coba bertirai di sisi timur (coba gratis, beli di dalam bilik atau kasir).
+export const DISTRO = { x0: -32, x1: -21.6, z0: 47, z1: 55.5, tinggi: 3.8, pintu: { x0: -27.9, x1: -25.7, z: 47 } };
+export const BILIK_COBA = [
+	{ x0: -31.8, x1: -30.2, z0: 52.4, z1: 53.85 },
+	{ x0: -31.8, x1: -30.2, z0: 54.0, z1: 55.3 },
+];
+export const MEJA_DISTRO = { x0: -23.6, x1: -22.7, z0: 50.4, z1: 53 };
+export const TITIK_DISTRO = [
+	{ x: -24.3, z: 51.7 }, // kasir
+	{ x: -26.2, z: 54.0 }, // rak baju belakang
+];
+export const MANEKIN = [
+	{ x: -30.1, z: 48.5, rot: Math.PI, gaya: { t: 6, b: 5, c: 1, s: 3 } },
+	{ x: -23.3, z: 48.5, rot: Math.PI, gaya: { t: 1, b: 2, c: 3, s: 1 } },
+	{ x: -26.8, z: 52.6, rot: Math.PI, gaya: { t: 7, b: 6, c: 5, s: 5 } },
+];
+export const dalamDistro = (x, z) => x > DISTRO.x0 && x < DISTRO.x1 && z > DISTRO.z0 && z < DISTRO.z1;
+export const bilikDi = (x, z) => BILIK_COBA.findIndex((b) => x > b.x0 && x < b.x1 && z > b.z0 && z < b.z1);
+
+export const HALAMAN_TOKO = { x0: DISTRO.x0 - 1, x1: TOKO[TOKO.length - 1].x1 + 2, z0: JALAN.aspal1 + 1.8, z1: 47 };
 
 // Ruas pagar (tanpa bukaan gerbang) sebagai [x0, x1] di sepanjang z PAGAR_DEPAN.
 export const RUAS_PAGAR_DEPAN = [
@@ -614,8 +677,8 @@ export const POHON = (() => {
 	for (const x of [-13.8, -3.6, 2.6, 17.5]) hasil.push([x, 29.0, 1.1 + r() * 0.3]);
 	for (let x = -26; x <= 26; x += 7) {
 		const pohon = [x + r() * 2, 43 + r() * 2, 0.9 + r() * 0.4];
-		// halaman minimarket dibiarkan lapang
-		if (Math.abs(pohon[0]) > 9) hasil.push(pohon);
+		// halaman toko & warung dibiarkan lapang
+		if (pohon[0] < -34 || pohon[0] > 25) hasil.push(pohon);
 	}
 	for (let z = -14; z <= 8; z += 5) {
 		for (const sisi of [-1, 1]) hasil.push([sisi * (18 + r() * 4), z + r() * 2, 0.8 + r() * 0.5]);
@@ -649,7 +712,33 @@ export const PENGHALANG = [0, 1].map((l) => [
 				// daun gerbang yang terbuka, tergeser di balik pagar kiri gerbang
 				{ x0: PAGAR_DEPAN.gerbang[0] * 2 - PAGAR_DEPAN.gerbang[1] + 0.2, x1: PAGAR_DEPAN.gerbang[0] + 0.2, z0: PAGAR_DEPAN.z - 0.55, z1: PAGAR_DEPAN.z - 0.35 },
 				dariKotak(POS_SATPAM),
-				{ x0: MINIMARKET.x0, x1: MINIMARKET.x1, z0: MINIMARKET.z0, z1: MINIMARKET.z1 },
+				// toko: dinding berpintu, rak, kasir, kulkas, tumpukan keranjang
+				...TOKO.flatMap((t) => [
+					{ x0: t.x0, x1: t.x1, z0: t.z1 - 0.2, z1: t.z1 },
+					{ x0: t.x0, x1: t.x0 + 0.2, z0: t.z0, z1: t.z1 },
+					{ x0: t.x1 - 0.2, x1: t.x1, z0: t.z0, z1: t.z1 },
+					{ x0: t.x0, x1: t.pintu.x0, z0: t.z0 - 0.05, z1: t.z0 + 0.15 },
+					{ x0: t.pintu.x1, x1: t.x1, z0: t.z0 - 0.05, z1: t.z0 + 0.15 },
+					...t.rak.map((r) => ({ x0: r.x - 0.28, x1: r.x + 0.28, z0: r.z0, z1: r.z1 })),
+					t.mejaKasir,
+					{ x0: t.x0 + 1, x1: t.x1 - 1, z0: t.z1 - 0.95, z1: t.z1 },
+					titik(t.keranjang.x, t.keranjang.z + 0.1, 0.3),
+				]),
+				// distro: dinding berpintu, sekat bilik coba, rak baju, kasir, manekin
+				{ x0: DISTRO.x0, x1: DISTRO.x1, z0: DISTRO.z1 - 0.2, z1: DISTRO.z1 },
+				{ x0: DISTRO.x0, x1: DISTRO.x0 + 0.2, z0: DISTRO.z0, z1: DISTRO.z1 },
+				{ x0: DISTRO.x1 - 0.2, x1: DISTRO.x1, z0: DISTRO.z0, z1: DISTRO.z1 },
+				{ x0: DISTRO.x0, x1: DISTRO.pintu.x0, z0: DISTRO.z0 - 0.05, z1: DISTRO.z0 + 0.15 },
+				{ x0: DISTRO.pintu.x1, x1: DISTRO.x1, z0: DISTRO.z0 - 0.05, z1: DISTRO.z0 + 0.15 },
+				...[52.3, 53.92].map((z) => ({ x0: DISTRO.x0, x1: -30.1, z0: z - 0.04, z1: z + 0.04 })),
+				{ x0: -29.6, x1: -22.9, z0: 54.7, z1: DISTRO.z1 },
+				MEJA_DISTRO,
+				...MANEKIN.map((m) => titik(m.x, m.z, 0.3)),
+				// warung mie ayam: gerobak, meja, bangku, tiang tenda
+				dariKotak(GEROBAK_MIE),
+				...MEJA_MIE,
+				...MEJA_MIE.flatMap((m) => [-1, 1].map((s) => ({ x0: m.x0, x1: m.x1, z0: m.z + s * 0.62 - 0.14, z1: m.z + s * 0.62 + 0.14 }))),
+				...[WARUNG_MIE.x0, WARUNG_MIE.x1].flatMap((x) => [WARUNG_MIE.z0, WARUNG_MIE.z1].map((z) => titik(x, z, 0.08))),
 				titik(PAPAN_NAMA.x - 1.3, PAPAN_NAMA.z, 0.12),
 				titik(PAPAN_NAMA.x + 1.3, PAPAN_NAMA.z, 0.12),
 				...POHON.map(([x, z]) => titik(x, z, 0.5)),
@@ -668,7 +757,7 @@ export function tabrakKendaraanStatis(x, z, r) {
 	return PENGHALANG_KENDARAAN.some((k) => x > k.x0 - r && x < k.x1 + r && z > k.z0 - r && z < k.z1 + r);
 }
 
-export function tabrak(x, z, lantai = 0, r = 0.38) {
+export function tabrak(x, z, lantai = 0, r = 0.38, bolehAir = false) {
 	if (lantai === 0) {
 		const b = BATAS_DUNIA;
 		if (x < b.x0 || x > b.x1 || z < b.z0 || z > b.z1) return true;
@@ -676,7 +765,23 @@ export function tabrak(x, z, lantai = 0, r = 0.38) {
 	for (const k of PENGHALANG[lantai]) {
 		if (x > k.x0 - r && x < k.x1 + r && z > k.z0 - r && z < k.z1 + r) return true;
 	}
-	return lantai === 0 && tabrakKawasan(x, z, r);
+	return lantai === 0 && tabrakKawasan(x, z, r, bolehAir);
+}
+
+// ---------- berenang di Situ Pemda ----------
+// Air situ boleh dimasuki dari tepi; badan tamu yang berenang mengapung di permukaan.
+export const PERMUKAAN_SITU = TANAH + AIR_Y;
+export const diAirSitu = (x, z) => diSitu(x, z) && !dermagaDi(x, z);
+// Badan saat berenang: f 0 = mengapung tegak (kepala di atas air), 1 = gaya bebas mendatar.
+export function aturBadanRenang(g, f) {
+	g.rotation.x = 0.15 + 1.2 * f;
+	g.position.y = -1.32 * (1 - f) - 0.15 * f;
+}
+// Langkah di halaman yang boleh keluar-masuk air situ (tanpa batas beda tinggi tepi/talud).
+export function langkahRenang(x, z) {
+	const air = diAirSitu(x, z);
+	if (tabrak(x, z, 0, 0.38, air || jarakKeTepi(x, z) < 1.2)) return null;
+	return air ? PERMUKAAN_SITU : tinggiTanah(x, z);
 }
 
 // Satu langkah dari ketinggian yLama ke (x, z). Ketinggian di tujuan ditentukan
@@ -865,3 +970,64 @@ export function cariJalur(dari, ke) {
 	}
 	return terbaik?.titik ?? null;
 }
+
+// ---------- peti hadiah ----------
+// Peti berisi koin di sudut ruang-ruang kantor dan beberapa titik di luar. Posisinya dicari
+// otomatis: sudut ruang pertama yang tidak menabrak perabot/dinding, menghadap ke tengah ruang.
+// emas = isi lebih banyak.
+const RUANG_PETI = ["kkd", "spked", "pangrango", "salak", "arsip", "kolam", "prolap", "keuangan", "pmd", "sekretariat", "pemdes", "kadis", "halimun", "dapur"];
+const PETI_EMAS = new Set(["kadis", "salak", "luar-dermaga"]);
+const PETI_LUAR = [
+	{ id: "luar-depan", x: -12.8, z: 21.6 },
+	{ id: "luar-samping", x: 18, z: 14.5 },
+	{ id: "luar-belakang", x: 1.5, z: -19 },
+	{ id: "luar-toko", x: 24.5, z: 44.5 },
+	{ id: "luar-dermaga", x: 0, z: 0, dermaga: true },
+];
+
+function sudutBebas(rect, lantai) {
+	const m = 0.85;
+	const cx = (rect.x0 + rect.x1) / 2;
+	const cz = (rect.z0 + rect.z1) / 2;
+	const calon = [
+		[rect.x0 + m, rect.z0 + m],
+		[rect.x1 - m, rect.z0 + m],
+		[rect.x0 + m, rect.z1 - m],
+		[rect.x1 - m, rect.z1 - m],
+		[cx, rect.z0 + m],
+		[cx, rect.z1 - m],
+		[rect.x0 + m, cz],
+		[rect.x1 - m, cz],
+	];
+	const ok = calon.find(([x, z]) => !tabrak(x, z, lantai, 0.5));
+	return ok && { x: ok[0], z: ok[1], rot: Math.atan2(cx - ok[0], cz - ok[1]) };
+}
+
+function titikBebasDekat(x, z) {
+	for (let r = 0; r < 4; r += 0.5) {
+		for (let a = 0; a < Math.PI * 2; a += Math.PI / 4) {
+			const px = x + Math.cos(a) * r;
+			const pz = z + Math.sin(a) * r;
+			if (!tabrak(px, pz, 0, 0.5)) return { x: px, z: pz };
+			if (r === 0) break;
+		}
+	}
+	return null;
+}
+
+export const PETI_HADIAH = (() => {
+	const hasil = [];
+	const area = [...RUANGAN, ...AREA_LAIN];
+	for (const id of RUANG_PETI) {
+		const a = area.find((r) => r.id === id);
+		const t = a && sudutBebas(a.rect, a.lantai);
+		if (t) hasil.push({ id, nama: a.nama, lantai: a.lantai, ...t, y: a.lantai * H, emas: PETI_EMAS.has(id) });
+	}
+	for (const l of PETI_LUAR) {
+		let { x, z } = l;
+		if (l.dermaga) ({ x, z } = keDuniaDermaga(DERMAGA[0], 2.2, 1.1));
+		const t = l.dermaga ? { x, z } : titikBebasDekat(x, z);
+		if (t) hasil.push({ id: l.id, nama: "Halaman", lantai: 0, x: t.x, z: t.z, rot: Math.atan2(-t.x, -t.z), y: tinggiTanah(t.x, t.z), emas: PETI_EMAS.has(l.id) });
+	}
+	return hasil;
+})();

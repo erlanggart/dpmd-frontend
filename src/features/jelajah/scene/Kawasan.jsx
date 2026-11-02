@@ -20,8 +20,8 @@ import {
 } from "three";
 import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils.js";
 import { warnai } from "./geometri";
-import { POHON_TAMPIL as POHON_KAWASAN, pasangan, tinggiGedung } from "./kawasanBantu";
-import { AIR, AREA, GEDUNG, JALAN, JENIS_AREA, JENIS_GEDUNG, JENIS_JALAN, LABEL as LABEL_DATA, SUNGAI } from "./kawasanData";
+import { JALAN_TAMPIL, POHON_TAMPIL as POHON_KAWASAN, pasangan, tinggiGedung } from "./kawasanBantu";
+import { AIR, AREA, GEDUNG, JENIS_AREA, JENIS_GEDUNG, JENIS_JALAN, LABEL as LABEL_DATA, SUNGAI } from "./kawasanData";
 import { LABEL_SITU } from "./situ";
 import SituPemda from "./SituPemda.jsx";
 import { suasana } from "./suasana";
@@ -36,7 +36,7 @@ import { suasana } from "./suasana";
 const PETAK = 200;
 const JARAK_GAMBAR = 380;
 const JARAK_LABEL = [170, 300]; // gedung, area
-const LABEL = [...LABEL_DATA, ...LABEL_SITU, ["🛒 Alfamart · belanja pakai koin", 0, 51.5, 6.2, 1]];
+const LABEL = [...LABEL_DATA, ...LABEL_SITU];
 
 const IDX = Object.fromEntries(JENIS_GEDUNG.map((j, i) => [j, i]));
 const WARNA_RUMAH = ["#efe6d2", "#f2e3c6", "#e8d8c3", "#f4efe6", "#dfe7e0", "#f0dcd0", "#e6e0cf", "#f6e7b8"];
@@ -328,7 +328,7 @@ function susunPermukaan() {
 	}
 	for (const [lebar, f] of SUNGAI) area.pita(pasangan(f), lebar, 0.006, "#3f7fa6");
 
-	for (const [j, lebar, f] of JALAN) {
+	for (const [j, lebar, f] of JALAN_TAMPIL) {
 		const jenis = JENIS_JALAN[j];
 		const p = pasangan(f);
 		(jenis === "setapak" ? setapak : jalan).pita(p, lebar, Y_JALAN[jenis], WARNA_JALAN[jenis]);
@@ -365,9 +365,9 @@ function susunPermukaan() {
 		for (let k = 0; k < p.length; k++) {
 			const [ax, az] = p[k];
 			const [bx, bz] = p[(k + 1) % p.length];
-			talud.segiempat([ax, -0.9, az], [bx, -0.9, bz], [bx, 0.12, bz], [ax, 0.12, az], "#8c877c");
+			talud.segiempat([ax, -0.9, az], [bx, -0.9, bz], [bx, 0.1, bz], [ax, 0.1, az], "#8c877c");
 		}
-		talud.pita([...p, p[0]], 0.45, 0.12, "#a7a196", false);
+		talud.pita([...p, p[0]], 0.45, 0.1, "#a7a196", false);
 	}
 
 	return {

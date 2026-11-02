@@ -4,6 +4,7 @@ import { KENDARAAN } from "./kendaraan";
 import { MOBIL, PAGAR_BATA, PARKIRAN } from "./layout";
 import { BoxGeometry, CylinderGeometry, MeshStandardMaterial } from "three";
 import Gabung from "./Gabung";
+import Plat from "./Plat";
 import { BAHAN_WARNA, gabung, kotak, warnai } from "./geometri";
 import { teksturPavingParkir } from "./tekstur";
 
@@ -68,6 +69,8 @@ function Mobil({ k }) {
 	return (
 		<group ref={grup}>
 			<mesh geometry={geom.badan} material={BAHAN_KENDARAAN} />
+			<Plat id={k.id} posisi={[0, 0.46, 2.012]} />
+			<Plat id={k.id} posisi={[0, 0.5, -2.012]} rotasi={Math.PI} />
 			<group ref={pintu} position={[-0.92, 0, 0.95]}>
 				<mesh geometry={geom.pintu} material={BAHAN_KENDARAAN} />
 			</group>
@@ -104,9 +107,11 @@ function Motor({ k }) {
 	);
 	useEffect(() => () => Object.values(geom).forEach((g) => g.dispose()), [geom]);
 	useFrame(() => {
-		grup.current.position.set(k.x, 0, k.z);
+		grup.current.position.set(k.x, k.h || 0, k.z);
 		grup.current.rotation.y = k.rot;
 		badan.current.rotation.z = k.miring;
+		// saat meloncat moncong terangkat, lalu menukik saat mendarat
+		badan.current.rotation.x = k.h ? -Math.max(-0.25, Math.min(0.35, (k.vy || 0) * 0.07)) : 0;
 		stang.current.rotation.y = -k.setir * 0.5;
 		roda.current.forEach((w) => w && (w.rotation.x = k.roda));
 	});
@@ -114,8 +119,10 @@ function Motor({ k }) {
 		<group ref={grup}>
 			<group ref={badan}>
 				<mesh geometry={geom.badan} material={BAHAN_KENDARAAN} />
+				<Plat id={k.id} posisi={[0, 0.66, -0.656]} rotasi={Math.PI} lebar={0.27} tinggi={0.085} />
 				<group ref={stang} position={[0, 0, 0.6]}>
 					<mesh geometry={geom.stang} material={BAHAN_KENDARAAN} />
+					<Plat id={k.id} posisi={[0, 0.72, 0.2]} lebar={0.24} tinggi={0.075} />
 				</group>
 				{[0.62, -0.62].map((rz, i) => (
 					<group key={rz} position={[0, 0.3, rz]}>

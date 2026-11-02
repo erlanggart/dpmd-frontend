@@ -16,7 +16,9 @@ import { laporTabrak } from "../tenaga";
 // jalan bagi pengunjung (atau tamu lain, atau mobil kantor) yang ada di lajurnya,
 // dan menjaga jarak dengan kendaraan di depannya.
 
-const UJUNG = 88; // kendaraan muncul lagi dari ujung lain setelah lewat batas ini
+// kendaraan muncul lagi dari ujung lain setelah lewat batas ini (masih di ruas jalan
+// yang lurus; lewat dari sini jalan OSM berbelok)
+const UJUNG = 66;
 const TENGAH = (JALAN.aspal0 + JALAN.aspal1) / 2;
 const LAJUR = {
 	mobil: { 1: TENGAH - 2.0, [-1]: TENGAH + 2.0 },

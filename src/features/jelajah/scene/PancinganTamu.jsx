@@ -92,8 +92,10 @@ export default function PancinganTamu({ sumber, tampil }) {
 				ig.position.set(pc.x, AIR - 0.06 * L - 0.03, pc.z);
 				ig.rotation.set(0, Math.atan2(pc.x - p.x, pc.z - p.z) + Math.sin(t * 7) * 0.3, Math.sin(t * 9) * 0.15);
 			} else {
-				ig.position.set(p.x, p.y + 2.25 + L * 0.15, p.z);
-				ig.rotation.set(0, pc.a + Math.PI / 2 + Math.sin(t * 1.5) * 0.4, Math.sin(t * 7) * 0.12);
+				// dipegang di depan dada (joran diletakkan)
+				ig.position.set(p.x + Math.sin(pc.a) * 0.45, p.y + (duduk ? 0.8 : 1.12) + Math.abs(Math.sin(t * 7)) * 0.06, p.z + Math.cos(pc.a) * 0.45);
+				ig.rotation.set(0, pc.a + Math.PI / 2, Math.sin(t * 11) * 0.12);
+				akar.current.visible = false;
 			}
 		}
 	});

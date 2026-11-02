@@ -4,8 +4,10 @@ import { CanvasTexture, SRGBColorSpace } from "three";
 import { TINGGI_LANTAI } from "../kantorConfig";
 import { posisi } from "../jelajahStore";
 import { penampilanAvatar } from "../avatar";
+import { kenakanGaya } from "../lemari";
 import { diriSendiri, pemainLain, useMultipemain } from "../multipemain";
 import { kendaraanDariId } from "./kendaraan";
+import { aturBadanRenang } from "./layout";
 import PancinganTamu from "./PancinganTamu";
 import Tokoh from "./Tokoh";
 
@@ -170,8 +172,10 @@ function Hiasan({ sumber, tinggiRef, lihat, posisiRef }) {
 	);
 }
 
-function Tamu({ id, nama, jk, avatar, kulit }) {
-	const penampilan = useMemo(() => penampilanAvatar({ jk, avatar, kulit }), [jk, avatar, kulit]);
+function Tamu({ id, nama, jk, avatar, kulit, gaya }) {
+	const kunciGaya = JSON.stringify(gaya || null);
+	// eslint-disable-next-line react-hooks/exhaustive-deps
+	const penampilan = useMemo(() => kenakanGaya(penampilanAvatar({ jk, avatar, kulit }), gaya), [jk, avatar, kulit, kunciGaya]);
 	const grup = useRef();
 	const jalan = useRef();
 	const duduk = useRef();
@@ -222,7 +226,14 @@ function Tamu({ id, nama, jk, avatar, kulit }) {
 		gr.udara = !!s.udara;
 		const kini = performance.now();
 		// sedang memancing: tangan menggenggam joran, atau mengangkat ikan hasil tangkapan
-		gr.isyarat = s.pc && s.pose === "mancing" ? (s.pc.f === 5 ? "angkat" : "mancing") : p.emote && kini < p.emote.sampai ? p.emote.jenis : null;
+		gr.isyarat = s.pc && s.pose === "mancing" ? (s.pc.f === 5 ? "angkat" : "mancing") : s.pose === "renang" ? "renang" : p.emote && kini < p.emote.sampai ? p.emote.jenis : null;
+		// berenang: badan mendatar saat bergerak, tegak mengapung saat diam
+		gr.renang = s.pose === "renang" ? (gr.renang ?? 0) + ((bergerak ? 1 : 0) - (gr.renang ?? 0)) * (1 - Math.exp(-4 * dt)) : 0;
+		if (s.pose === "renang") aturBadanRenang(jalan.current, gr.renang);
+		else if (jalan.current.rotation.x) {
+			jalan.current.rotation.x = 0;
+			jalan.current.position.y = 0;
+		}
 
 		// Kendaraan yang ia kemudikan ikut bergerak (kecuali sedang kita kemudikan sendiri).
 		// Kendaraan digerakkan oleh pengemudinya saja; penumpang hanya ikut duduk.
@@ -237,13 +248,14 @@ function Tamu({ id, nama, jk, avatar, kulit }) {
 			k.setir = s.kend.setir;
 			k.pintu = s.kend.pintu;
 			k.miring = s.kend.miring;
+			k.h = s.kend.h || 0;
 			k.roda += (k.laju * dt) / 0.32;
 		}
 
 		const tampak = lantaiTampak(t.y);
 		lihat.current = tampak;
 		g.visible = tampak && s.pose !== "mobil";
-		jalan.current.visible = s.pose === "jalan" || s.pose === "mancing";
+		jalan.current.visible = s.pose === "jalan" || s.pose === "mancing" || s.pose === "renang";
 		duduk.current.visible = s.pose === "duduk" || s.pose === "motor" || s.pose === "perahu";
 		duduk.current.position.y = s.pose === "motor" ? 0.38 : 0;
 		tinggi.current = TINGGI_LABEL[s.pose] ?? 2.05;
@@ -289,7 +301,7 @@ export default function PemainLain() {
 	return (
 		<>
 			{daftar.map((p) => (
-				<Tamu key={p.id} id={p.id} nama={p.nama} jk={p.jk} avatar={p.avatar} kulit={p.kulit} />
+				<Tamu key={p.id} id={p.id} nama={p.nama} jk={p.jk} avatar={p.avatar} kulit={p.kulit} gaya={p.gaya} />
 			))}
 			{status === "tersambung" && <HiasanSendiri />}
 		</>

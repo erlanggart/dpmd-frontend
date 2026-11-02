@@ -62,13 +62,19 @@ export default function Tokoh({ penampilan, pose = "jalan", gerak, aktivitas, as
 		// --- tangan pegawai yang duduk ---
 		if (tangan.current) {
 			const tg = tangan.current;
-			if (aktivitas === "mengetik") {
+			const akt = gerak?.current?.aktivitas ?? aktivitas;
+			if (akt === "makan") {
+				// menyuap: tangan naik ke mulut lalu turun lagi ke mangkuk
+				const suap = Math.max(0, Math.sin(t * 2.4));
+				tg.position.y = suap * 0.16;
+				tg.position.z = -suap * 0.12;
+			} else if (aktivitas === "mengetik") {
 				tg.position.y = Math.abs(Math.sin(t * 13)) * 0.012;
 				tg.position.x = Math.sin(t * 0.9) * 0.015;
 			} else if (aktivitas === "rapat") {
 				tg.position.y = Math.max(0, Math.sin(t * 0.7)) * 0.05;
 				tg.position.z = Math.sin(t * 0.7) * 0.02;
-			}
+			} else if (gerak) tg.position.set(0, 0, 0);
 		}
 
 		// --- ayunan jalan ---
@@ -121,11 +127,38 @@ export default function Tokoh({ penampilan, pose = "jalan", gerak, aktivitas, as
 				lka.current.rotation.z = -0.3;
 				sbka.current.rotation.x = -0.75;
 			} else if (isyarat === "angkat") {
-				// mengangkat ikan hasil tangkapan tinggi-tinggi
-				lka.current.rotation.x = -2.9;
-				lkn.current.rotation.x = -2.9;
+				// gembira memegang ikan hasil tangkapan di depan dada sambil berjingkrak
+				lka.current.rotation.x = -1.05;
+				lkn.current.rotation.x = -1.05;
+				lka.current.rotation.z = 0.25;
+				lkn.current.rotation.z = -0.25;
+				sbka.current.rotation.x = -0.35;
+				sbkn.current.rotation.x = -0.35;
+				badan.current.position.y = Math.abs(Math.sin(t * 7)) * 0.06;
+				kepala.current.rotation.x = -0.18 + Math.sin(t * 7) * 0.05;
+			} else if (isyarat === "keranjang" || isyarat === "ambil") {
+				// tangan kiri menenteng keranjang belanja; saat "ambil" tangan kanan menjangkau rak
+				lka.current.rotation.x = 0;
+				lka.current.rotation.z = -0.2;
+				sbka.current.rotation.x = -0.05;
+				if (isyarat === "ambil") {
+					const r = gerak.current.ambil || 0;
+					lkn.current.rotation.x = -1.4 * r;
+					sbkn.current.rotation.x = -0.15 - 0.2 * r;
+				}
+			} else if (isyarat === "renang") {
+				// gaya bebas: lengan berputar bergantian; mengapung: lengan mengayuh ke samping
+				const f = gerak.current.renang ?? 1;
+				const fs = gerak.current.fase || 0;
+				lka.current.rotation.x = -f * ((fs * 0.5) % (Math.PI * 2));
+				lkn.current.rotation.x = -f * ((fs * 0.5 + Math.PI) % (Math.PI * 2));
+				lka.current.rotation.z = -(1 - f) * (0.9 + Math.sin(t * 3) * 0.35);
+				lkn.current.rotation.z = (1 - f) * (0.9 + Math.sin(t * 3) * 0.35);
 				sbka.current.rotation.x = -0.1;
 				sbkn.current.rotation.x = -0.1;
+				kki.current.rotation.x = Math.sin(t * 9) * 0.35;
+				kka.current.rotation.x = -Math.sin(t * 9) * 0.35;
+				kepala.current.rotation.x = -0.95 * f;
 			} else if (isyarat === "tepuk") {
 				const buka = Math.abs(Math.sin(t * 9)) * 0.25;
 				lka.current.rotation.x = -1.25;

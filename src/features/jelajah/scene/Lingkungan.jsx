@@ -8,6 +8,8 @@ import Gabung from "./Gabung";
 import JalanHidup from "./JalanHidup";
 import Kawasan from "./Kawasan.jsx";
 import Minimarket from "./Minimarket";
+import WarungMie from "./WarungMie";
+import Distro from "./Distro";
 import PagarDepan from "./PagarDepan";
 import Parkiran from "./Parkiran";
 
@@ -232,7 +234,9 @@ export default function Lingkungan({ daftarDinding }) {
 				<Pepohonan />
 				<Bendera />
 				<JalanHidup />
-				<Minimarket />
+				<Minimarket daftarDinding={daftarDinding} />
+				<WarungMie daftarDinding={daftarDinding} />
+				<Distro daftarDinding={daftarDinding} />
 			</group>
 			<Gabung>
 				<PondasiTeras />

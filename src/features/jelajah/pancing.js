@@ -1,7 +1,7 @@
 import { useSyncExternalStore } from "react";
 import { diSitu, jarakKeTepi, perahuBebas } from "./scene/situ";
 import { suasana } from "./scene/suasana";
-import { hentikanJingle, putarJingle } from "./musikJelajah";
+import { hentikanLaga, hentikanRiang, putarLaga, putarRiang } from "./musikJelajah";
 import { suara } from "./suaraPancing";
 
 // Game memancing di Situ Pemda. Logika murni (tanpa React/three): Pancingan.jsx memanggil
@@ -17,11 +17,11 @@ import { suara } from "./suaraPancing";
 // zona = rentang tegangan "pas" (makin sempit makin sulit); regen = tenaga ikan pulih per
 // detik saat senar kendor; lari = peluang per detik ikan kabur menarik senar.
 export const KELAS = [
-	{ nama: "Biasa", warna: "#94a3b8", bobot: 60, tenaga: 0.5, stamina: 5, sentak: 0.14, reaksi: 1.0, poin: 10, zona: [0.32, 0.92], regen: 0, lari: 0.04, colek: 2 },
-	{ nama: "Langka", warna: "#3b82f6", bobot: 26, tenaga: 0.75, stamina: 9, sentak: 0.24, reaksi: 0.85, poin: 25, zona: [0.38, 0.9], regen: 0.25, lari: 0.1, colek: 3 },
-	{ nama: "Epik", warna: "#a855f7", bobot: 10, tenaga: 0.98, stamina: 15, sentak: 0.32, reaksi: 0.68, poin: 60, zona: [0.44, 0.87], regen: 0.5, lari: 0.16, colek: 4 },
-	{ nama: "Monster", warna: "#ef4444", bobot: 2.6, tenaga: 1.2, stamina: 23, sentak: 0.42, reaksi: 0.55, poin: 120, zona: [0.5, 0.84], regen: 0.8, lari: 0.22, colek: 5 },
-	{ nama: "Legenda", warna: "#f59e0b", bobot: 0.4, tenaga: 1.42, stamina: 26, sentak: 0.48, reaksi: 0.45, poin: 300, zona: [0.54, 0.82], regen: 0.8, lari: 0.24, colek: 6 },
+	{ nama: "Biasa", warna: "#94a3b8", bobot: 60, tenaga: 0.55, stamina: 6.5, sentak: 0.18, reaksi: 0.85, poin: 10, zona: [0.34, 0.9], regen: 0.1, lari: 0.06, colek: 3 },
+	{ nama: "Langka", warna: "#3b82f6", bobot: 26, tenaga: 0.8, stamina: 12, sentak: 0.28, reaksi: 0.72, poin: 25, zona: [0.4, 0.88], regen: 0.35, lari: 0.13, colek: 4 },
+	{ nama: "Epik", warna: "#a855f7", bobot: 10, tenaga: 1.02, stamina: 19, sentak: 0.36, reaksi: 0.58, poin: 60, zona: [0.46, 0.85], regen: 0.6, lari: 0.19, colek: 5 },
+	{ nama: "Monster", warna: "#ef4444", bobot: 2.6, tenaga: 1.22, stamina: 27, sentak: 0.45, reaksi: 0.48, poin: 120, zona: [0.52, 0.82], regen: 0.9, lari: 0.25, colek: 6 },
+	{ nama: "Legenda", warna: "#f59e0b", bobot: 0.4, tenaga: 1.42, stamina: 31, sentak: 0.5, reaksi: 0.4, poin: 300, zona: [0.56, 0.8], regen: 0.9, lari: 0.27, colek: 7 },
 ];
 
 // bentuk: tinggi/lebar badan relatif panjang; ekor "garpu" | "bulat" | "pisau" | "belut".
@@ -30,15 +30,29 @@ export const IKAN = [
 	{ id: "nila", nama: "Nila", latin: "Oreochromis niloticus", kelas: 0, kg: [0.2, 1.3], k: 1.6, warna: { punggung: "#5b6b62", perut: "#c9cfc4", sirip: "#7c5a5a" }, bentuk: { tinggi: 0.42, lebar: 0.16, ekor: "bulat", belang: true }, kisah: "Penghuni paling ramah Situ Pemda. Hampir semua pemancing di sini memulai dari nila." },
 	{ id: "mujair", nama: "Mujair", latin: "Oreochromis mossambicus", kelas: 0, kg: [0.15, 0.8], k: 1.7, warna: { punggung: "#3f4a45", perut: "#a9b3a5", sirip: "#4b3b3b" }, bentuk: { tinggi: 0.44, lebar: 0.17, ekor: "bulat" }, kisah: "Sepupu nila yang lebih gelap dan lebih rakus. Sering menyambar umpan duluan." },
 	{ id: "tawes", nama: "Tawes", latin: "Barbonymus gonionotus", kelas: 0, kg: [0.2, 1.1], k: 1.4, warna: { punggung: "#8a8f7a", perut: "#e8e4d0", sirip: "#d6b25a" }, bentuk: { tinggi: 0.36, lebar: 0.13, ekor: "garpu" }, kisah: "Sisiknya berkilau keperakan saat diangkat dari air." },
+	{ id: "sepat", nama: "Sepat Rawa", latin: "Trichogaster trichopterus", kelas: 0, kg: [0.05, 0.3], k: 2.0, warna: { punggung: "#6b7c5c", perut: "#d8dcc4", sirip: "#8a7a4a" }, bentuk: { tinggi: 0.45, lebar: 0.12, ekor: "bulat", tutul: true }, kisah: "Ikan kecil penghuni rawa dan pinggiran situ. Umpan apa saja disambarnya." },
+	{ id: "betok", nama: "Betok", latin: "Anabas testudineus", kelas: 0, kg: [0.05, 0.35], k: 1.8, warna: { punggung: "#4d5a3a", perut: "#c9c49a", sirip: "#6b5a3a" }, bentuk: { tinggi: 0.36, lebar: 0.16, ekor: "bulat" }, kisah: "Si pemanjat yang bisa bertahan lama di darat. Duri siripnya tajam, hati-hati memegangnya." },
+	{ id: "wader", nama: "Wader Pari", latin: "Rasbora argyrotaenia", kelas: 0, kg: [0.02, 0.12], k: 1.0, warna: { punggung: "#8a9a8a", perut: "#f1f5f9", sirip: "#c2b28a" }, bentuk: { tinggi: 0.26, lebar: 0.1, ekor: "garpu", kilau: true }, kisah: "Gerombolan wader berkilau perak berenang dekat permukaan. Gurih digoreng kering." },
 	{ id: "lele", nama: "Lele", latin: "Clarias batrachus", kelas: 0, kg: [0.3, 2.6], k: 0.75, warna: { punggung: "#3a3328", perut: "#8f8572", sirip: "#2e2820" }, bentuk: { tinggi: 0.2, lebar: 0.18, ekor: "bulat", kumis: true }, kisah: "Licin dan berkumis. Bersembunyi di lumpur dasar situ." },
 	{ id: "mas", nama: "Ikan Mas", latin: "Cyprinus carpio", kelas: 1, kg: [1, 7], k: 1.7, warna: { punggung: "#d97706", perut: "#fbbf24", sirip: "#ea580c" }, bentuk: { tinggi: 0.4, lebar: 0.17, ekor: "garpu", kumis: true }, kisah: "Ikan mas keemasan, lambang rezeki. Tarikannya panjang dan kuat." },
 	{ id: "gurame", nama: "Gurame", latin: "Osphronemus goramy", kelas: 1, kg: [1, 5.5], k: 2.0, warna: { punggung: "#7b6d6d", perut: "#e3c9c9", sirip: "#9b7b6b" }, bentuk: { tinggi: 0.55, lebar: 0.15, ekor: "bulat" }, kisah: "Bertubuh lebar dan tenang, tapi pantang menyerah begitu kail tertancap." },
+	{ id: "gabus", nama: "Ikan Gabus", latin: "Channa striata", kelas: 1, kg: [0.5, 3.5], k: 0.9, warna: { punggung: "#3a3a2c", perut: "#bfb7a0", sirip: "#4a3f30" }, bentuk: { tinggi: 0.2, lebar: 0.16, ekor: "bulat", belang: true }, sifat: { lompat: true }, kisah: "Predator lumpur yang rakus. Sering menyambar umpan lalu melompat keluar air." },
+	{ id: "bawal", nama: "Bawal Air Tawar", latin: "Colossoma macropomum", kelas: 1, kg: [1, 6], k: 2.4, warna: { punggung: "#4b5563", perut: "#f1a7a7", sirip: "#3f3f46" }, bentuk: { tinggi: 0.58, lebar: 0.14, ekor: "garpu" }, kisah: "Berbadan bundar pipih dengan perut kemerahan. Giginya mirip gigi manusia!" },
+	{ id: "baung", nama: "Baung", latin: "Hemibagrus nemurus", kelas: 1, kg: [0.5, 4], k: 0.85, warna: { punggung: "#6b5b45", perut: "#e6dcc8", sirip: "#8a7255" }, bentuk: { tinggi: 0.22, lebar: 0.15, ekor: "garpu", kumis: true }, kisah: "Lele sungai berkumis panjang. Paling aktif menjelang magrib." },
+	{ id: "jelawat", nama: "Jelawat", latin: "Leptobarbus hoevenii", kelas: 1, kg: [1, 8], k: 1.1, warna: { punggung: "#7c8a6a", perut: "#f5f0dc", sirip: "#d97757" }, bentuk: { tinggi: 0.3, lebar: 0.14, ekor: "garpu" }, kisah: "Sirip merahnya menyala. Larinya kencang begitu merasakan kail." },
 	{ id: "patin", nama: "Patin", latin: "Pangasius hypophthalmus", kelas: 1, kg: [2, 12], k: 1.0, warna: { punggung: "#5d6b78", perut: "#dfe5ea", sirip: "#6b7785" }, bentuk: { tinggi: 0.27, lebar: 0.15, ekor: "garpu", kumis: true }, kisah: "Perenang cepat dari perairan dalam. Larinya bisa menghabiskan senar." },
 	{ id: "toman", nama: "Toman Raksasa", latin: "Channa micropeltes", kelas: 2, kg: [4, 19], k: 0.9, warna: { punggung: "#2f3b2a", perut: "#c7a46a", sirip: "#b4532a" }, bentuk: { tinggi: 0.24, lebar: 0.16, ekor: "bulat", belang: true }, sifat: { lompat: true }, kisah: "Predator ganas bergigi tajam. Suka melompat menyentak kail." },
 	{ id: "belida", nama: "Belida", latin: "Chitala lopis", kelas: 2, kg: [3, 13], k: 0.7, warna: { punggung: "#8b8f98", perut: "#e7e9ee", sirip: "#9aa0aa" }, bentuk: { tinggi: 0.32, lebar: 0.1, ekor: "pisau", tutul: true }, kisah: "Ikan pisau bertutul yang langka. Gerakannya meliuk seperti pita." },
+	{ id: "hampala", nama: "Hampala Belang", latin: "Hampala macrolepidota", kelas: 2, kg: [2, 8], k: 1.2, warna: { punggung: "#5b6b4a", perut: "#e9e4cf", sirip: "#e05a2a" }, bentuk: { tinggi: 0.32, lebar: 0.14, ekor: "garpu", belang: true }, sifat: { lompat: true }, kisah: "Sebarau buas bersirip jingga dengan belang hitam di badan. Sambarannya keras." },
+	{ id: "koi", nama: "Koi Kohaku", latin: "Cyprinus rubrofuscus", kelas: 2, kg: [3, 15], k: 1.8, warna: { punggung: "#f8fafc", perut: "#fef2f2", sirip: "#ef4444" }, bentuk: { tinggi: 0.36, lebar: 0.18, ekor: "garpu", kumis: true, tutul: true, kilau: true }, kisah: "Koi merah-putih yang lepas dari kolam rumah dinas dan tumbuh besar di situ." },
+	{ id: "redtail", nama: "Redtail Catfish", latin: "Phractocephalus hemioliopterus", kelas: 2, kg: [10, 40], k: 1.0, warna: { punggung: "#27272a", perut: "#fef3c7", sirip: "#dc2626" }, bentuk: { tinggi: 0.24, lebar: 0.22, ekor: "garpu", kumis: true }, syarat: { jauh: 8 }, kisah: "Lele Amazon berekor merah. Menunggu di perairan dalam, lalu menarik seperti truk." },
+	{ id: "tapah", nama: "Tapah", latin: "Wallago leeri", kelas: 2, kg: [8, 35], k: 0.55, warna: { punggung: "#6b7280", perut: "#e5e7eb", sirip: "#9ca3af" }, bentuk: { tinggi: 0.2, lebar: 0.12, ekor: "pisau", kumis: true }, syarat: { malam: true }, kisah: "Lele raksasa bermulut lebar. Berburu dalam gelap di dasar situ." },
 	{ id: "arapaima", nama: "Arapaima Purba", latin: "Arapaima gigas", kelas: 3, kg: [40, 165], k: 0.95, warna: { punggung: "#3e4a3a", perut: "#9aa38c", sirip: "#b91c1c" }, bentuk: { tinggi: 0.22, lebar: 0.17, ekor: "bulat", sisikMerah: true }, sifat: { lompat: true }, syarat: { jauh: 10 }, kisah: "Raksasa bersisik merah dari zaman purba. Konon lepas dari kolam kolektor dan tumbuh liar di situ." },
 	{ id: "siluman", nama: "Lele Siluman", latin: "Clarias phantasma", kelas: 3, kg: [30, 95], k: 0.8, warna: { punggung: "#111317", perut: "#3a3f47", sirip: "#0b0c0f" }, bentuk: { tinggi: 0.2, lebar: 0.2, ekor: "bulat", kumis: true, mataNyala: "#39ff88" }, syarat: { malam: true, jauh: 8 }, kisah: "Hanya muncul saat malam. Matanya menyala hijau di bawah permukaan air." },
 	{ id: "belut", nama: "Belut Listrik Raksasa", latin: "Electrophorus voltai", kelas: 3, kg: [15, 45], k: 0.22, warna: { punggung: "#2c3530", perut: "#e0a53a", sirip: "#1e2622" }, bentuk: { tinggi: 0.09, lebar: 0.09, ekor: "belut" }, sifat: { setrum: true }, syarat: { jauh: 14 }, kisah: "Menyimpan listrik ratusan volt. Lepaskan gulungan saat ia menyetrum!" },
+	{ id: "gar", nama: "Alligator Gar", latin: "Atractosteus spatula", kelas: 3, kg: [40, 130], k: 0.45, warna: { punggung: "#4b5a3c", perut: "#c9c2a0", sirip: "#5a4a2e" }, bentuk: { tinggi: 0.14, lebar: 0.13, ekor: "bulat", tutul: true, duri: true }, sifat: { lompat: true }, syarat: { jauh: 12 }, kisah: "Ikan bermoncong buaya dengan sisik sekeras zirah. Diduga dibuang pemelihara ke situ bertahun-tahun lalu." },
+	{ id: "sidat", nama: "Sidat Marmer Raksasa", latin: "Anguilla marmorata", kelas: 3, kg: [10, 25], k: 0.25, warna: { punggung: "#4a4a2a", perut: "#d6c78a", sirip: "#3a3a20" }, bentuk: { tinggi: 0.09, lebar: 0.1, ekor: "belut", tutul: true }, syarat: { malam: true, jauh: 6 }, kisah: "Belut laut yang mudik ke air tawar. Licin, kuat, dan hanya keluar malam hari." },
+	{ id: "dewa", nama: "Ikan Dewa Kancra", latin: "Tor soro", kelas: 4, kg: [10, 40], k: 1.4, warna: { punggung: "#3f5a52", perut: "#d9e4dc", sirip: "#7a8a6a" }, bentuk: { tinggi: 0.3, lebar: 0.15, ekor: "garpu", kumis: true, kilau: true }, syarat: { jauh: 14 }, kisah: "Ikan keramat dari mata air Kuningan. Konon siapa yang menangkapnya akan selalu beruntung." },
 	{ id: "arwana", nama: "Arwana Naga Emas", latin: "Scleropages aureus", kelas: 4, kg: [8, 28], k: 1.05, warna: { punggung: "#b8860b", perut: "#ffe08a", sirip: "#d4380d" }, bentuk: { tinggi: 0.26, lebar: 0.12, ekor: "bulat", kumis: true, kilau: true }, sifat: { lompat: true }, syarat: { jauh: 12, sempurna: true }, kisah: "Ikan naga pembawa keberuntungan. Sisik emasnya memantulkan cahaya seperti api." },
 	{ id: "raja", nama: "Raja Situ", latin: "Rex situensis", kelas: 4, kg: [220, 480], k: 1.5, warna: { punggung: "#1f3d2b", perut: "#6f8a5b", sirip: "#7f1d1d" }, bentuk: { tinggi: 0.38, lebar: 0.22, ekor: "garpu", duri: true, kumis: true, mataNyala: "#ff3b3b" }, sifat: { lompat: true, setrum: false }, syarat: { perahu: true, jauh: 20 }, kisah: "Penguasa Situ Pemda yang hanya jadi cerita pemancing tua. Hanya mau melawan dari perahu, jauh di tengah situ." },
 ];
@@ -62,11 +76,11 @@ const KUNCI = "jelajah-pancing-v1";
 function bacaSimpanan() {
 	try {
 		const d = JSON.parse(localStorage.getItem(KUNCI));
-		if (d && typeof d === "object") return { koleksi: d.koleksi || {}, poin: d.poin || 0, tangkapan: d.tangkapan || 0 };
+		if (d && typeof d === "object") return { koleksi: d.koleksi || {}, poin: d.poin || 0, tangkapan: d.tangkapan || 0, joran: d.joran || 0 };
 	} catch {
 		/* penyimpanan tidak tersedia */
 	}
-	return { koleksi: {}, poin: 0, tangkapan: 0 };
+	return { koleksi: {}, poin: 0, tangkapan: 0, joran: 0 };
 }
 let simpanan = bacaSimpanan();
 const pendengarKoleksi = new Set();
@@ -85,6 +99,37 @@ export function bayarKoin(n) {
 	simpanan.poin -= n;
 	simpan();
 	return true;
+}
+// ---------- joran (di-upgrade berurutan pakai koin) ----------
+// lebar = pelebaran zona tegangan "pas" di kedua sisi; gulung = pengali tenaga ketukan;
+// senar = kekuatan senar (batas bahaya putus); panjang = panjang senar (m); hoki = pengali
+// peluang ikan Epik ke atas.
+export const JORAN = [
+	{ nama: "Joran Bambu", harga: 0, warna: "#a16207", ujung: "#dc2626", lebar: 0, gulung: 1, senar: 1, panjang: 45, hoki: 1, ket: "Joran warisan kakek. Cukup untuk ikan biasa." },
+	{ nama: "Joran Fiber", harga: 300, warna: "#1f2937", ujung: "#dc2626", lebar: 0.02, gulung: 1.07, senar: 1.15, panjang: 48, hoki: 1.1, ket: "Lebih lentur: zona aman sedikit lebih lebar, senar lebih awet." },
+	{ nama: "Joran Karbon", harga: 900, warna: "#0f172a", ujung: "#22d3ee", lebar: 0.035, gulung: 1.14, senar: 1.3, panjang: 52, hoki: 1.25, ket: "Ringan & kaku: gulungan lebih cepat, ikan besar lebih sering datang." },
+	{ nama: "Joran Titanium Pro", harga: 2200, warna: "#94a3b8", ujung: "#f97316", lebar: 0.05, gulung: 1.22, senar: 1.5, panjang: 56, hoki: 1.45, ket: "Senar baja tipis yang tahan tarikan monster." },
+	{ nama: "Joran Naga Emas", harga: 5000, warna: "#ca8a04", ujung: "#facc15", lebar: 0.07, gulung: 1.32, senar: 1.75, panjang: 60, hoki: 1.8, ket: "Legenda para pemancing. Ikan langka seolah datang sendiri." },
+];
+export const tingkatJoran = () => Math.min(JORAN.length - 1, simpanan.joran || 0);
+export const joranKini = () => JORAN[tingkatJoran()];
+export const zonaKini = (kelas) => {
+	const [b, a] = KELAS[kelas].zona;
+	const l = joranKini().lebar;
+	return [b - l, Math.min(0.97, a + l)];
+};
+export function beliJoran(i) {
+	if (i !== tingkatJoran() + 1 || !JORAN[i]) return "Upgrade harus berurutan";
+	if (!bayarKoin(JORAN[i].harga)) return "Koin belum cukup (perlu 🪙 " + JORAN[i].harga + ")";
+	simpanan.joran = i;
+	simpan();
+	return null;
+}
+
+// Koin dari sumber lain (peti hadiah).
+export function tambahKoin(n) {
+	simpanan.poin += n;
+	simpan();
 }
 export const useKoleksi = () =>
 	useSyncExternalStore(
@@ -192,7 +237,8 @@ export function mulaiPancing({ x, z, rot, perahu }) {
 }
 
 export function berhentiPancing() {
-	hentikanJingle();
+	hentikanLaga();
+	hentikanRiang();
 	pancing.aktif = false;
 	pancing.ikan = null;
 	pancing.hasil = null;
@@ -203,12 +249,14 @@ export function berhentiPancing() {
 export const geserAsal = (x, z, rot) => Object.assign(pancing.asal, { x, z, rot });
 
 export function lanjutPancing() {
+	hentikanRiang();
 	pancing.hasil = null;
 	pancing.ikan = null;
 	keFase("siap", { teks: "Lempar lagi! Makin jauh ke tengah, makin besar ikannya", jenis: "info" });
 }
 
 function gagal(teks) {
+	hentikanLaga();
 	suara("lepas");
 	pancing.ikan = null;
 	keFase("gagal", { teks, jenis: "buruk" });
@@ -226,6 +274,8 @@ function pilihIkan(jauh) {
 	if (m) kalikan([1, 1, 1.2, 1.8, 1.6]);
 	if (pancing.perahu) kalikan([1, 1, 1.1, 1.3, 1.5]);
 	if (pancing.sempurna) kalikan([1, 1, 1.25, 1.5, 1.6]);
+	const hoki = joranKini().hoki;
+	kalikan([1, 1, Math.sqrt(hoki), hoki, hoki * 1.1]);
 	const layak = (ikan) => {
 		const s = ikan.syarat || {};
 		return (!s.malam || m) && (!s.perahu || pancing.perahu) && (!s.jauh || jauh >= s.jauh) && (!s.sempurna || pancing.sempurna);
@@ -313,7 +363,8 @@ export function tickPancing(dt) {
 			p.ikanTunggu = calon;
 			const kls = KELAS[calon.ikan.kelas];
 			const cepat = (malam() ? 0.85 : 1) * (p.sempurna ? 0.8 : 1) * (1 + calon.ikan.kelas * 0.3);
-			p.tungguSampai = acak(2.5, 7.5) * cepat;
+			// ikan butuh waktu menemukan umpan; makin dalam & makin besar makin lama
+			p.tungguSampai = acak(4.5, 11) * cepat;
 			const n = Math.floor(Math.random() * (kls.colek + 1));
 			p.colekBunyi = -1;
 			p.colekan = Array.from({ length: n }, () => acak(0.8, p.tungguSampai - 0.6)).sort((a, b) => a - b);
@@ -346,7 +397,8 @@ export function tickPancing(dt) {
 			} catch {
 				/* tidak didukung */
 			}
-			keFase("gigit", { teks: "SAMBAR! Tekan sekarang!", jenis: "besar" });
+			// tanpa tanda seru: isyaratnya senar menegang & pelampung terseret ikan (Pancingan.jsx)
+			keFase("gigit", { teks: "Senar menegang… sentak sekarang", jenis: "besar" });
 		}
 		return;
 	}
@@ -355,6 +407,11 @@ export function tickPancing(dt) {
 		if (tekan) {
 			const k = KELAS[p.ikan.kelas];
 			const besar = (p.kg - p.ikan.kg[0]) / (p.ikan.kg[1] - p.ikan.kg[0] || 1);
+			p.besar = besar;
+			// sentakan cepat = kail menancap kuat; terlambat = kail hanya tersangkut di bibir
+			p.kailKuat = p.t < p.jendela * 0.45;
+			p.kendor = 0;
+			p.tegurKendor = false;
 			p.staminaMaks = k.stamina * (0.75 + 0.5 * besar);
 			p.stamina = p.staminaMaks;
 			p.jarak = Math.hypot(p.pelampung.x - o.x, p.pelampung.z - o.z) + 2;
@@ -373,7 +430,15 @@ export function tickPancing(dt) {
 			p.ikanPos = { x: p.pelampung.x, z: p.pelampung.z };
 			p.getar = 0.4;
 			suara("kail");
-			const teks = p.ikan.kelas >= 3 ? "Sesuatu yang SANGAT BESAR menarik senar!" : p.ikan.kelas === 2 ? "Tarikannya kuat sekali! Ketuk berulang untuk menggulung" : "Kena! Ketuk berulang untuk menggulung";
+			// strike! musik sendu berganti backsound laga
+			putarLaga(p.ikan.kelas);
+			const teks = !p.kailKuat
+				? "Kail cuma tersangkut di bibir — jaga senar tetap tegang!"
+				: p.ikan.kelas >= 3
+					? "Sesuatu yang SANGAT BESAR menarik senar!"
+					: p.ikan.kelas === 2
+						? "Tarikannya kuat sekali! Ketuk berulang untuk menggulung"
+						: "Kena! Ketuk berulang untuk menggulung";
 			return keFase("tarik", { teks, jenis: p.ikan.kelas >= 3 ? "besar" : "baik" });
 		}
 		if (p.t > p.jendela) return gagal("Kurang cepat — ikannya melepas umpan");
@@ -390,9 +455,10 @@ function tarik(dt, o, ketukBaru) {
 	const k = KELAS[p.ikan.kelas];
 	const sisa = p.stamina / p.staminaMaks;
 	const sifat = p.ikan.sifat || {};
-	const [zonaBawah, zonaAtas] = k.zona;
+	const jr = joranKini();
+	const [zonaBawah, zonaAtas] = zonaKini(p.ikan.kelas);
 	// laju mengetuk: tiap ketukan menambah, meluruh ±1 detik bila berhenti (±7 ketukan/dtk ≈ 1)
-	p.gulung = Math.min(1.3, p.gulung * Math.exp(-2.4 * dt) + ketukBaru * 0.3);
+	p.gulung = Math.min(1.3, p.gulung * Math.exp(-2.4 * dt) + ketukBaru * 0.28 * jr.gulung);
 	const gl = Math.min(1, p.gulung);
 	const menggulung = gl > 0.25;
 	for (let i = 0; i < Math.min(ketukBaru, 2); i++) suara("klik");
@@ -451,7 +517,8 @@ function tarik(dt, o, ketukBaru) {
 	}
 
 	// --- gaya tarik ikan: makin lelah makin lemah; berlari jauh lebih kuat ---
-	const tarikan = k.tenaga * (0.4 + 0.6 * sisa) * (p.sentak > 0 ? 1.6 : 1) * (p.lari > 0 ? 2.0 : 1) * (p.amuk > 0 ? 1.3 : 1);
+	// ikan yang lebih berat (dalam rentang jenisnya) menarik lebih kuat
+	const tarikan = k.tenaga * (0.85 + 0.3 * (p.besar || 0)) * (0.4 + 0.6 * sisa) * (p.sentak > 0 ? 1.6 : 1) * (p.lari > 0 ? 2.0 : 1) * (p.amuk > 0 ? 1.3 : 1);
 	const lawan = p.arah !== 0 && Math.sign(p.arah) === -p.arahIkan;
 	const ikut = p.arah !== 0 && Math.sign(p.arah) === p.arahIkan;
 
@@ -482,11 +549,23 @@ function tarik(dt, o, ketukBaru) {
 	// --- putus / habis senar / dapat ---
 	if (tegangan >= 1) p.bahaya += dt * (p.lari > 0 ? 1.6 : 1);
 	else p.bahaya = Math.max(0, p.bahaya - dt * 0.8);
-	if (p.bahaya > 0.75) {
+	if (p.bahaya > 0.75 * jr.senar) {
 		suara("putus");
 		return gagal(p.ikan.kelas >= 3 ? `Senar putus! ${p.ikan.nama} kembali ke kedalaman…` : "Senar putus! Tegangan terlalu tinggi");
 	}
-	if (p.jarak > 45) return gagal("Senar habis tertarik — ikannya kabur");
+	if (p.jarak > jr.panjang) return gagal("Senar habis tertarik — ikannya kabur");
+	// senar kendor terlalu lama (di luar saat ikan lari/melompat) = ikan menggeleng lepas dari kail
+	if (tegangan < zonaBawah * 0.7 && !(p.lari > 0) && !p.peristiwa) {
+		p.kendor += dt;
+		if (p.kendor > 0.8 && !p.tegurKendor) {
+			p.tegurKendor = true;
+			pesanSaja("Senar kendor! Gulung lagi sebelum kail lepas", "buruk");
+		}
+		if (p.kendor > (p.kailKuat ? 3.2 : 1.8)) return gagal("Senar kendor terlalu lama — kail terlepas dari mulut ikan");
+	} else {
+		p.kendor = Math.max(0, p.kendor - dt * 1.5);
+		if (p.kendor === 0) p.tegurKendor = false;
+	}
 
 	// --- posisi ikan di air (untuk percikan & pelampung) ---
 	const a = arahLempar();
@@ -522,7 +601,9 @@ function dapat() {
 	p.hasil = { ikan, kg: p.kg, cm: panjangCm(ikan, p.kg), baru, rekor, poin, total: simpanan.poin };
 	percik(p.ikanPos.x, p.ikanPos.z, 1.4 + ikan.kelas * 0.3);
 	// backsound Ajojing / Mancing Mania; fanfare sintetis bila berkasnya tak bisa diputar
-	if (!putarJingle(ikan.kelas)) suara(ikan.kelas >= 3 ? "jaya" : "dapat");
-	else suara("cebur");
+	// laga selesai: musik riang "selamat" selama kartu hasil tampil
+	hentikanLaga();
+	putarRiang();
+	suara("cebur");
 	keFase("dapat", null);
 }

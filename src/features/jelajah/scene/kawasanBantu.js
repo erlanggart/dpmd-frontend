@@ -1,4 +1,4 @@
-import { AIR, BATAS_KAWASAN, GEDUNG, JENIS_GEDUNG, POHON_KAWASAN } from "./kawasanData";
+import { AIR, BATAS_KAWASAN, GEDUNG, JALAN, JENIS_GEDUNG, POHON_KAWASAN } from "./kawasanData";
 import { DERMAGA, dermagaDi } from "./situ";
 
 // Bantuan kawasan Pemda di sekitar kantor (lihat kawasanData.js): tinggi gedung dan
@@ -7,8 +7,32 @@ import { DERMAGA, dermagaDi } from "./situ";
 
 export { BATAS_KAWASAN };
 
-// Pohon bantaran yang menghalangi jalan masuk dermaga tidak ditanam.
-export const POHON_TAMPIL = POHON_KAWASAN.filter(([x, z]) => DERMAGA.every((d) => Math.hypot(x - d.x, z - d.z) > 6.5));
+// Jalan depan kantor digambar tangan (PagarDepan.jsx, x −60…60); ruas OSM Jl. KSR Dadi
+// Kusmayadi baru mulai di x ≈ −110 (timur) dan x ≈ 68 (barat). Sambungan ini menutup celahnya.
+const SAMBUNGAN_JALAN = [
+	[0, 5.9, [-57, 35.6, -78, 36.4, -96, 38.8, -110.6, 43.1]],
+	[0, 5.9, [57, 35.6, 67.9, 34.6]],
+];
+export const JALAN_TAMPIL = [...JALAN, ...SAMBUNGAN_JALAN];
+
+function jarakKeRuas(px, pz, ax, az, bx, bz) {
+	const dx = bx - ax;
+	const dz = bz - az;
+	const t = Math.max(0, Math.min(1, ((px - ax) * dx + (pz - az) * dz) / (dx * dx + dz * dz || 1)));
+	return Math.hypot(px - ax - t * dx, pz - az - t * dz);
+}
+const diJalan = (x, z) => {
+	// jalan + trotoar depan kantor
+	if (x > -62 && x < 62 && z > 29 && z < 42) return true;
+	for (const [, lebar, f] of JALAN_TAMPIL) {
+		for (let i = 0; i + 3 < f.length; i += 2) if (jarakKeRuas(x, z, f[i], f[i + 1], f[i + 2], f[i + 3]) < lebar / 2 + 1.2) return true;
+	}
+	return false;
+};
+
+// Pohon tidak ditanam di badan jalan, di jalan masuk & papan dermaga, maupun di deretan
+// toko & warung seberang kantor.
+export const POHON_TAMPIL = POHON_KAWASAN.filter(([x, z]) => DERMAGA.every((d) => Math.hypot(x - d.x, z - d.z) > 6.5) && !(x > -36 && x < 25 && z > 40 && z < 60) && !diJalan(x, z));
 
 export const TINGGI_PER_LANTAI = { rumah: 3.2, kantor: 3.6 };
 const ATAP = JENIS_GEDUNG.indexOf("atap");
@@ -91,13 +115,14 @@ for (const [x, z] of POHON_TAMPIL) daftarkan({ x, z, r: 0.4, kotak: [x, x, z, z]
 const diSel = (x, z) => sel.get(kunci(Math.floor(x / SEL), Math.floor(z / SEL)));
 
 // Lingkaran (x, z, r) menabrak gedung, situ, atau batang pohon kawasan?
-export function tabrakKawasan(x, z, r) {
+// bolehAir: air (situ) tidak menghalangi — untuk tamu yang berenang.
+export function tabrakKawasan(x, z, r, bolehAir = false) {
 	const daftar = diSel(x, z);
 	if (!daftar) return false;
 	for (const b of daftar) {
 		if (b.p) {
 			// di atas papan dermaga air tidak menghalangi (tepi dermaga tetap)
-			if (b.air && dermagaDi(x, z, r)) continue;
+			if (b.air && (bolehAir || dermagaDi(x, z, r))) continue;
 			const [x0, x1, z0, z1] = b.kotak;
 			if (x < x0 - r || x > x1 + r || z < z0 - r || z > z1 + r) continue;
 			if (dalamPoligon(x, z, b.p) || dekatTepi(x, z, b.p, r)) return true;

@@ -2,6 +2,7 @@ import {
 	BoxGeometry,
 	CapsuleGeometry,
 	Color,
+	ConeGeometry,
 	CylinderGeometry,
 	Float32BufferAttribute,
 	MeshStandardMaterial,
@@ -78,7 +79,123 @@ function badanAtas(p, u) {
 		// selendang kerudung menutup bahu
 		daftar.push(bentuk(new CylinderGeometry(0.11, 0.27, 0.3, 14, 1, true), p.jilbab, [0, 1.48 + u, 0], [0, 0, 0], [1, 1, 0.85]));
 	}
+	daftar.push(...motifBaju(p, u));
 	return daftar;
+}
+
+// Detail baju dari lemari gaya (lemari.js): motif di atas badan berwarna p.baju.
+function motifBaju(p, u) {
+	const d = [];
+	const depan = 0.124;
+	switch (p.motif) {
+		case "merahputih":
+			// separuh bawah putih
+			d.push(bentuk(new CylinderGeometry(0.208, 0.181, 0.28, 12), "#f8fafc", [0, 1.05 + u, 0], [0, 0, 0], [1, 1, 0.64]));
+			break;
+		case "jersey":
+			d.push(
+				bentuk(new BoxGeometry(0.02, 0.5, 0.2), "#f8fafc", [0.2, 1.2 + u, 0]),
+				bentuk(new BoxGeometry(0.02, 0.5, 0.2), "#f8fafc", [-0.2, 1.2 + u, 0]),
+				bentuk(new BoxGeometry(0.05, 0.06, 0.012), "#facc15", [-0.085, 1.34 + u, depan]),
+				bentuk(new BoxGeometry(0.09, 0.03, 0.012), "#f8fafc", [0, 1.46 + u, depan - 0.01]),
+				// nomor punggung "10"
+				bentuk(new BoxGeometry(0.025, 0.14, 0.012), "#f8fafc", [0.05, 1.27 + u, -depan]),
+				bentuk(new TorusGeometry(0.04, 0.012, 4, 10), "#f8fafc", [-0.04, 1.27 + u, -depan], [0, 0, 0], [0.8, 1.6, 1]),
+			);
+			break;
+		case "hoodie":
+			d.push(
+				bentuk(new SphereGeometry(0.15, 12, 8, 0, Math.PI * 2, 0, Math.PI / 2), p.baju, [0, 1.47 + u, -0.1], [-1.2, 0, 0], [1, 1, 0.8]),
+				bentuk(new BoxGeometry(0.24, 0.1, 0.012), gelapkan(p.baju, 0.75), [0, 1.03 + u, depan - 0.005]),
+				bentuk(new BoxGeometry(0.008, 0.12, 0.008), "#e5e7eb", [0.035, 1.39 + u, depan]),
+				bentuk(new BoxGeometry(0.008, 0.12, 0.008), "#e5e7eb", [-0.035, 1.39 + u, depan]),
+			);
+			break;
+		case "batik":
+			// belah ketupat parang berselang-seling per baris
+			for (let r = 0; r < 6; r++) {
+				for (let c = 0; c < 4; c++) {
+					const x = -0.12 + c * 0.08 + (r % 2 ? 0.04 : 0);
+					if (x > 0.15) continue;
+					for (const z of [depan, -depan]) d.push(bentuk(new BoxGeometry(0.035, 0.035, 0.008), "#f2c46d", [x, 0.99 + r * 0.09 + u, z], [0, 0, Math.PI / 4]));
+				}
+			}
+			break;
+		case "jaket":
+			d.push(
+				bentuk(new BoxGeometry(0.08, 0.46, 0.012), "#e5e7eb", [0, 1.2 + u, depan]),
+				bentuk(new BoxGeometry(0.006, 0.46, 0.014), "#a3a3a3", [0.045, 1.2 + u, depan + 0.002]),
+				bentuk(new BoxGeometry(0.1, 0.06, 0.03), gelapkan(p.baju, 0.7), [0.07, 1.47 + u, 0.1], [0, 0, 0.5]),
+				bentuk(new BoxGeometry(0.1, 0.06, 0.03), gelapkan(p.baju, 0.7), [-0.07, 1.47 + u, 0.1], [0, 0, -0.5]),
+			);
+			break;
+		case "jas":
+			d.push(
+				bentuk(new BoxGeometry(0.08, 0.28, 0.012), "#f8fafc", [0, 1.33 + u, depan]),
+				bentuk(new BoxGeometry(0.035, 0.025, 0.02), "#111827", [0.022, 1.45 + u, depan + 0.005], [0, 0, 0.4]),
+				bentuk(new BoxGeometry(0.035, 0.025, 0.02), "#111827", [-0.022, 1.45 + u, depan + 0.005], [0, 0, -0.4]),
+				bentuk(new SphereGeometry(0.012, 6, 4), "#7c2d12", [0, 1.15 + u, depan + 0.004]),
+				bentuk(new SphereGeometry(0.012, 6, 4), "#7c2d12", [0, 1.05 + u, depan + 0.004]),
+			);
+			break;
+		default:
+	}
+	return d;
+}
+
+// Topi dari lemari gaya, di koordinat kepala (pusat tengkorak ±0.135).
+function topiGaya(t) {
+	const w = t.warna;
+	switch (t.id) {
+		case "cap":
+			return [
+				bentuk(new SphereGeometry(0.123, 14, 8, 0, Math.PI * 2, 0, Math.PI * 0.5), w, [0, 0.165, -0.005]),
+				bentuk(new BoxGeometry(0.17, 0.012, 0.13), gelapkan(w, 0.8), [0, 0.172, 0.13]),
+				bentuk(new SphereGeometry(0.014, 6, 4), gelapkan(w, 0.8), [0, 0.29, -0.005]),
+			];
+		case "peci":
+			return [bentuk(new CylinderGeometry(0.117, 0.12, 0.09, 16), w, [0, 0.235, -0.005], [0, 0, 0], [1, 1, 0.85])];
+		case "kupluk":
+			return [
+				bentuk(new SphereGeometry(0.126, 14, 8, 0, Math.PI * 2, 0, Math.PI * 0.55), w, [0, 0.15, -0.005]),
+				bentuk(new CylinderGeometry(0.128, 0.128, 0.05, 14), gelapkan(w, 0.8), [0, 0.165, -0.005]),
+				bentuk(new SphereGeometry(0.036, 8, 6), "#f8fafc", [0, 0.29, -0.005]),
+			];
+		case "bucket":
+			return [bentuk(new CylinderGeometry(0.11, 0.122, 0.1, 14), w, [0, 0.24, -0.005]), bentuk(new CylinderGeometry(0.19, 0.19, 0.012, 16), w, [0, 0.19, -0.005])];
+		case "koboi":
+			return [
+				bentuk(new CylinderGeometry(0.09, 0.115, 0.13, 14), w, [0, 0.27, -0.005], [0, 0, 0], [1, 1, 0.85]),
+				bentuk(new CylinderGeometry(0.116, 0.116, 0.025, 14), "#1c1917", [0, 0.22, -0.005], [0, 0, 0], [1, 1, 0.85]),
+				bentuk(new CylinderGeometry(0.26, 0.26, 0.015, 18), w, [0, 0.205, -0.005]),
+			];
+		case "mahkota":
+			return [
+				bentuk(new CylinderGeometry(0.118, 0.12, 0.07, 14, 1, true), w, [0, 0.245, -0.005]),
+				...[0, 1, 2, 3, 4, 5].map((i) => bentuk(new ConeGeometry(0.025, 0.08, 6), w, [Math.sin((i * Math.PI) / 3) * 0.115, 0.315, Math.cos((i * Math.PI) / 3) * 0.115 - 0.005])),
+				bentuk(new SphereGeometry(0.018, 6, 4), "#dc2626", [0, 0.245, 0.118]),
+			];
+		default:
+			return [];
+	}
+}
+
+// Sepatu satu kaki, pangkal di telapak (y = dasar sepatu + 0.04).
+function geometriSepatu(p, [x, y, z]) {
+	const s = p.sepatu;
+	if (!s) return [bentuk(new BoxGeometry(0.12, 0.08, 0.25), "#141414", [x, y, z])];
+	if (s.id === "boots") return [bentuk(new BoxGeometry(0.13, 0.2, 0.25), s.warna, [x, y + 0.06, z]), bentuk(new BoxGeometry(0.135, 0.03, 0.26), s.sol, [x, y - 0.03, z])];
+	if (s.id === "sandal")
+		return [
+			bentuk(new BoxGeometry(0.1, 0.05, 0.22), p.kulit, [x, y + 0.005, z]),
+			bentuk(new BoxGeometry(0.115, 0.018, 0.25), s.sol, [x, y - 0.03, z]),
+			bentuk(new BoxGeometry(0.105, 0.012, 0.02), s.warna, [x, y + 0.03, z + 0.05]),
+		];
+	return [
+		bentuk(new BoxGeometry(0.12, 0.07, 0.25), s.warna, [x, y + 0.005, z]),
+		bentuk(new BoxGeometry(0.126, 0.03, 0.26), s.sol, [x, y - 0.028, z]),
+		bentuk(new BoxGeometry(0.05, 0.008, 0.08), "#f8fafc", [x, y + 0.042, z + 0.05]),
+	];
 }
 
 function geometriKepala(p) {
@@ -101,7 +218,8 @@ function geometriKepala(p) {
 		);
 		if (p.perempuan) daftar.push(bentuk(new BoxGeometry(0.21, 0.26, 0.06), p.rambut, [0, 0.05, -0.08]));
 	}
-	const topi = seragam(p).topi;
+	if (p.topiGaya) daftar.push(...topiGaya(p.topiGaya));
+	const topi = !p.topiGaya && seragam(p).topi;
 	if (topi && !p.jilbab) {
 		daftar.push(
 			bentuk(new CylinderGeometry(0.118, 0.124, 0.075, 14), topi, [0, 0.235, -0.005]),
@@ -145,12 +263,15 @@ function lenganBawah(p, map, alat) {
 // yang terlihat hanya betis bawah dan sepatu.
 function geometriKaki(p) {
 	const celana = celanaDari(p);
-	return gabung([
-		p.rok
-			? bentuk(new BoxGeometry(0.11, 0.3, 0.12), gelapkan(p.kulit, 0.85), [0, -0.66, 0])
-			: bentuk(new BoxGeometry(0.135, 0.8, 0.15), celana, [0, -0.4, 0]),
-		bentuk(new BoxGeometry(0.12, 0.08, 0.25), "#141414", [0, -0.84, 0.04]),
-	]);
+	const m = p.modelCelana;
+	const kaki = p.rok
+		? [bentuk(new BoxGeometry(0.11, 0.3, 0.12), gelapkan(p.kulit, 0.85), [0, -0.66, 0])]
+		: m === "pendek"
+			? [bentuk(new BoxGeometry(0.14, 0.38, 0.155), celana, [0, -0.19, 0]), bentuk(new BoxGeometry(0.1, 0.44, 0.11), p.kulit, [0, -0.6, 0])]
+			: [bentuk(new BoxGeometry(0.135, 0.8, 0.15), celana, [0, -0.4, 0])];
+	if (m === "training") kaki.push(bentuk(new BoxGeometry(0.14, 0.78, 0.02), "#f8fafc", [0, -0.4, 0]));
+	if (m === "cargo") for (const s of [-1, 1]) kaki.push(bentuk(new BoxGeometry(0.012, 0.12, 0.09), gelapkan(celana, 0.8), [s * 0.072, -0.36, 0]));
+	return gabung([...kaki, ...geometriSepatu(p, [0, -0.84, 0.04])]);
 }
 
 // Lengan diputar di sekitar pangkalnya lalu dipindah ke posisi bahu/siku,
@@ -173,8 +294,8 @@ export function rakitOrang(p, pose) {
 		for (const s of [-1, 1]) {
 			kaki.push(
 				bentuk(new BoxGeometry(0.14, 0.15, 0.44), celana, [s * 0.095, 0.5, 0.2]),
-				bentuk(new BoxGeometry(0.13, 0.44, 0.14), p.rok ? gelapkan(p.kulit, 0.85) : celana, [s * 0.095, 0.26, 0.42]),
-				bentuk(new BoxGeometry(0.12, 0.08, 0.25), "#141414", [s * 0.095, 0.04, 0.48]),
+				bentuk(new BoxGeometry(0.13, 0.44, 0.14), p.rok ? gelapkan(p.kulit, 0.85) : p.modelCelana === "pendek" ? p.kulit : celana, [s * 0.095, 0.26, 0.42]),
+				...geometriSepatu(p, [s * 0.095, 0.04, 0.48]),
 			);
 		}
 		if (p.rok) kaki.push(bentuk(new BoxGeometry(0.42, 0.12, 0.5), celana, [0, 0.53, 0.18]));

@@ -8,7 +8,7 @@ import { PERAHU } from "./situ";
 
 const awal = () => [
 	...MOBIL.map((m, i) => ({ id: `mobil:${i}`, jenis: "mobil", warna: m.warna, x: m.x, z: m.z, rot: 0, laju: 0, setir: 0, pintu: 0, roda: 0, miring: 0 })),
-	...MOTOR.map((m, i) => ({ id: `motor:${i}`, jenis: "motor", warna: m.warna, x: m.x, z: m.z, rot: 0, laju: 0, setir: 0, pintu: 0, roda: 0, miring: 0.12 })),
+	...MOTOR.map((m, i) => ({ id: `motor:${i}`, jenis: "motor", warna: m.warna, x: m.x, z: m.z, rot: 0, laju: 0, setir: 0, pintu: 0, roda: 0, miring: 0.12, h: 0, vy: 0 })),
 	...PERAHU.map((p, i) => ({ id: `perahu:${i}`, jenis: "perahu", warna: WARNA_PERAHU[i % WARNA_PERAHU.length], x: p.x, z: p.z, rot: p.rot, laju: 0, setir: 0, pintu: 0, roda: 0, miring: 0 })),
 ];
 const WARNA_PERAHU = ["#2f6f9f", "#c0392b", "#2e8b57", "#d4a017"];

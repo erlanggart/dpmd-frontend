@@ -126,6 +126,10 @@ const RESEP = {
 		[523, 659, 784, 1047].forEach((f, i) => nada(f, t + i * 0.09, 0.28, { tipe: "triangle", vol: 0.14 }));
 		derau(t, 0.5, { frek: 900, ke: 250, vol: 0.25, tipe: "lowpass" });
 	},
+	koin: (t) => {
+		[988, 1319, 1568, 1976, 2637].forEach((f, i) => nada(f, t + i * 0.06, 0.22, { tipe: "square", vol: 0.05 }));
+		[1319, 1976].forEach((f, i) => nada(f, t + 0.32 + i * 0.08, 0.3, { tipe: "triangle", vol: 0.08 }));
+	},
 	jaya: (t) => {
 		[392, 523, 659, 784, 1047, 1319].forEach((f, i) => nada(f, t + i * 0.1, 0.5, { tipe: "triangle", vol: 0.15 }));
 		[523, 659, 784].forEach((f) => nada(f, t + 0.7, 1.1, { tipe: "sine", vol: 0.1 }));
@@ -138,6 +142,37 @@ export function suara(nama) {
 	try {
 		if (!siapkan()) return;
 		RESEP[nama](ctx.currentTime + 0.01);
+	} catch {
+		/* audio tidak tersedia */
+	}
+}
+
+// Klakson kendaraan: mobil = dua nada "tiiin" yang tebal, motor = "tin" tipis & pendek.
+// `vol` 0..1 untuk klakson tamu lain yang makin pelan bila makin jauh.
+export function klakson(jenis = "mobil", vol = 1) {
+	if (suaraMati.nilai || vol <= 0.02) return;
+	try {
+		if (!siapkan()) return;
+		const t = ctx.currentTime + 0.01;
+		const motor = jenis === "motor";
+		const lama = motor ? 0.22 : 0.42;
+		const f = ctx.createBiquadFilter();
+		f.type = "lowpass";
+		f.frequency.value = motor ? 3200 : 1800;
+		const g = ctx.createGain();
+		g.gain.setValueAtTime(0.0001, t);
+		g.gain.exponentialRampToValueAtTime(0.16 * vol, t + 0.015);
+		g.gain.setValueAtTime(0.16 * vol, t + lama - 0.05);
+		g.gain.exponentialRampToValueAtTime(0.0001, t + lama);
+		f.connect(g).connect(ctx.destination);
+		for (const frek of motor ? [640, 805] : [415, 523]) {
+			const o = ctx.createOscillator();
+			o.type = motor ? "square" : "sawtooth";
+			o.frequency.setValueAtTime(frek, t);
+			o.connect(f);
+			o.start(t);
+			o.stop(t + lama + 0.05);
+		}
 	} catch {
 		/* audio tidak tersedia */
 	}

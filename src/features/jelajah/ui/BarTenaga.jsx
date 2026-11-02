@@ -1,10 +1,17 @@
 import { useEffect, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { TENAGA_LARI, TENAGA_MAKS, useKabarTenaga, useTenaga } from "../tenaga";
+import { MAKS_KERANJANG, belanja, totalKeranjang, useBelanja } from "../belanja";
+import { IKAN, useKoleksi } from "../pancing";
 
 // Bar tenaga (nyawa) di pojok kiri atas, kabar singkat (tertabrak, makan, siuman), dan
 // layar gelap saat pingsan.
-export default function BarTenaga() {
+const TOMBOL = "rounded-xl bg-slate-950/60 px-2.5 py-1 text-xs font-bold text-white shadow-lg ring-1 ring-white/10 backdrop-blur hover:bg-slate-900/80";
+
+export default function BarTenaga({ onTas, onAlbum, onGaya }) {
+	useBelanja();
+	const { koleksi, poin } = useKoleksi();
+	const isiTas = Object.values(belanja.tas).reduce((s, n) => s + n, 0);
 	const nilai = useTenaga();
 	const kabar = useKabarTenaga();
 	const [tampilKabar, setTampilKabar] = useState(null);
@@ -31,6 +38,30 @@ export default function BarTenaga() {
 					<div className={`h-full rounded-full transition-all duration-300 ${nilai < TENAGA_LARI ? "animate-pulse" : ""}`} style={{ width: `${persen}%`, background: warna }} />
 				</div>
 				{nilai < TENAGA_LARI && !pingsan && <p className="mt-1 text-[10px] font-semibold text-rose-200">Lemas — tak bisa berlari. Makan di Alfamart!</p>}
+			</div>
+
+			<div className="absolute left-3 top-[8rem] z-20 flex flex-wrap items-center gap-1.5 sm:left-4 sm:top-[8.25rem]">
+				{onTas && (
+					<button onClick={onTas} className={TOMBOL} title="Tas belanjaan">
+						🎒 Tas{isiTas ? ` · ${isiTas}` : ""}
+					</button>
+				)}
+				{onAlbum && (
+					<button onClick={onAlbum} className={TOMBOL} title="Album ikan hasil tangkapan">
+						📖 {Object.keys(koleksi).length}/{IKAN.length}
+					</button>
+				)}
+				{onGaya && (
+					<button onClick={onGaya} className={TOMBOL} title="Lemari gaya: topi, baju, celana, sepatu">
+						👕 Gaya
+					</button>
+				)}
+				<span className="pointer-events-none rounded-xl bg-amber-500/90 px-2.5 py-1 text-xs font-black text-white shadow-lg">🪙 {poin.toLocaleString("id-ID")}</span>
+				{belanja.bawaKeranjang && (
+					<span className="pointer-events-none rounded-xl bg-red-600/90 px-2.5 py-1 text-xs font-bold text-white shadow-lg">
+						🧺 {belanja.keranjang.length}/{MAKS_KERANJANG} · 🪙 {totalKeranjang()}
+					</span>
+				)}
 			</div>
 
 			<AnimatePresence>

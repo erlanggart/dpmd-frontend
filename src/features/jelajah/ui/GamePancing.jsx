@@ -2,7 +2,8 @@ import { useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { FiBookOpen, FiVolume2, FiVolumeX, FiX } from "react-icons/fi";
 import { kirimUcap } from "../multipemain";
-import { IKAN, KELAS, ketuk, lanjutPancing, pancing, useKoleksi, usePancing } from "../pancing";
+import { IKAN, KELAS, joranKini, ketuk, lanjutPancing, pancing, tingkatJoran, useKoleksi, usePancing, zonaKini } from "../pancing";
+import PanelJoran from "./PanelJoran";
 import { aturSuara, suaraMati } from "../suaraPancing";
 import AlbumIkan from "./AlbumIkan";
 import IkonIkan from "./IkonIkan";
@@ -11,6 +12,10 @@ import IkonIkan from "./IkonIkan";
 // batang tenaga/tegangan/stamina diperbarui langsung ke DOM tiap frame.
 
 const angka = (n) => n.toLocaleString("id-ID", { maximumFractionDigits: 2 });
+// kartu hasil tangkapan baru bisa ditutup setelah sekian detik (ketukan gulung sering terlanjur)
+// (kartu muncul setelah ikan sampai di tangan pemancing)
+const MUNCUL_KARTU = 1.1;
+const JEDA_LANJUT = MUNCUL_KARTU + 0.8;
 const WARNA_PESAN = {
 	info: "bg-slate-900/70 text-white",
 	baik: "bg-emerald-500/90 text-white",
@@ -38,6 +43,7 @@ export default function GamePancing({ sentuh, bersama, onSelesai }) {
 	usePancing();
 	const { poin, koleksi } = useKoleksi();
 	const [album, setAlbum] = useState(false);
+	const [joran, setJoran] = useState(false);
 	const [mati, setMati] = useState(suaraMati.nilai);
 	const fase = pancing.fase;
 	const pesan = pancing.pesan;
@@ -57,7 +63,6 @@ export default function GamePancing({ sentuh, bersama, onSelesai }) {
 	const arahKanan = useRef();
 	const vinyet = useRef();
 	const peringatan = useRef();
-	const cincinGigit = useRef();
 
 	// --- Spasi: ditahan = mengayun lemparan; tiap tekan-lepas = satu ketukan (sambar &
 	// menggulung — ditahan terus tidak menggulung); setelah dapat = lanjut ---
@@ -68,7 +73,8 @@ export default function GamePancing({ sentuh, bersama, onSelesai }) {
 			if (e.code === "Space") {
 				e.preventDefault();
 				if (pancing.fase === "dapat") {
-					if (!e.repeat) lanjutPancing();
+					// ketukan menggulung yang terlanjur tidak boleh langsung menutup kartu hasil
+					if (!e.repeat && pancing.t > JEDA_LANJUT) lanjutPancing();
 					return;
 				}
 				if (!e.repeat) ketuk();
@@ -99,11 +105,10 @@ export default function GamePancing({ sentuh, bersama, onSelesai }) {
 				tenagaIsi.current.style.width = `${p.tenaga * 100}%`;
 				tenagaIsi.current.style.background = p.tenaga > 0.93 ? "linear-gradient(90deg,#f59e0b,#fde047)" : "linear-gradient(90deg,#22c55e,#a3e635)";
 			}
-			if (cincinGigit.current && p.fase === "gigit") cincinGigit.current.style.transform = `scale(${Math.max(0, 1 - p.t / p.jendela)})`;
 			if (p.fase === "tarik" && tegangJarum.current) {
 				// jarum ikut bergetar mengikuti kepala ikan yang menggeleng
 				const t = Math.max(0, Math.min(1.1, p.tegang + (p.geleng || 0)));
-				const [zb, za] = KELAS[p.ikan.kelas].zona;
+				const [zb, za] = zonaKini(p.ikan.kelas);
 				tegangJarum.current.style.left = `calc(${(t / 1.1) * 100}% - 2px)`;
 				tegangTeks.current.textContent = p.bahaya > 0 ? "BAHAYA!" : t < zb ? "Kendor" : t <= za ? "Pas" : t < 1 ? "Tegang" : "AKAN PUTUS";
 				tegangTeks.current.style.color = p.bahaya > 0 || t >= 1 ? "#fb7185" : t < zb ? "#93c5fd" : t <= za ? "#86efac" : "#fcd34d";
@@ -111,9 +116,10 @@ export default function GamePancing({ sentuh, bersama, onSelesai }) {
 				gulungIsi.current.style.background = "linear-gradient(90deg,#14b8a6,#fbbf24)";
 				lariTanda.current.style.display = p.lari > 0 ? "flex" : "none";
 				pulihTanda.current.style.opacity = p.pulih ? 1 : 0;
-				const sisa = Math.max(0, Math.min(1, (42 - p.jarak) / 42));
+				const panjang = joranKini().panjang - 3;
+				const sisa = Math.max(0, Math.min(1, (panjang - p.jarak) / panjang));
 				senarIsi.current.style.width = `${(1 - sisa) * 100}%`;
-				senarIsi.current.style.background = p.jarak > 34 ? "#f43f5e" : "#38bdf8";
+				senarIsi.current.style.background = p.jarak > panjang * 0.8 ? "#f43f5e" : "#38bdf8";
 				senarTeks.current.textContent = `${p.jarak.toFixed(1)} m`;
 				staminaIsi.current.style.width = `${(p.stamina / p.staminaMaks) * 100}%`;
 				staminaIsi.current.style.background = KELAS[p.ikan.kelas].warna;
@@ -159,6 +165,9 @@ export default function GamePancing({ sentuh, bersama, onSelesai }) {
 			{/* kartu poin, album, suara */}
 			<div className="pointer-events-auto absolute right-3 top-[4.5rem] z-20 flex items-center gap-1.5 rounded-2xl bg-slate-950/70 px-2 py-1.5 text-white shadow-lg ring-1 ring-white/10 backdrop-blur sm:top-20">
 				<span className="px-1.5 text-xs font-bold tabular-nums" title="Koin — belanja di Alfamart">🪙 {angka(poin)}</span>
+				<button onClick={() => setJoran(true)} className="rounded-xl bg-amber-400/90 px-2 py-1 text-xs font-black text-slate-950 hover:bg-amber-300" aria-label="Upgrade joran" title={joranKini().nama}>
+					🎣 Lv {tingkatJoran() + 1}
+				</button>
 				<button onClick={() => setAlbum(true)} className="flex items-center gap-1 rounded-xl bg-white/10 px-2 py-1 text-xs font-bold hover:bg-white/20" aria-label="Buka album ikan">
 					<FiBookOpen /> {jumlahJenis}/{IKAN.length}
 				</button>
@@ -195,18 +204,6 @@ export default function GamePancing({ sentuh, bersama, onSelesai }) {
 				</AnimatePresence>
 			</div>
 
-			{/* SAMBAR! */}
-			{fase === "gigit" && (
-				<div className="pointer-events-none absolute inset-0 z-20 flex items-center justify-center">
-					<div className="relative flex h-40 w-40 items-center justify-center">
-						<div ref={cincinGigit} className="absolute inset-0 rounded-full border-[6px] border-amber-300" />
-						<motion.span initial={{ scale: 0.4 }} animate={{ scale: [1.2, 1] }} className="text-8xl font-black text-amber-300 drop-shadow-[0_4px_12px_rgba(0,0,0,0.6)]">
-							!
-						</motion.span>
-					</div>
-				</div>
-			)}
-
 			{/* panel bawah */}
 			<div className={`pointer-events-none absolute inset-x-0 z-20 flex justify-center px-3 ${sentuh ? "bottom-40" : "bottom-24"}`}>
 				{fase === "siap" && (
@@ -239,7 +236,7 @@ export default function GamePancing({ sentuh, bersama, onSelesai }) {
 							refJarum={tegangJarum}
 							// zona hijau mengikuti kelas ikan: makin langka makin sempit
 							latar={(() => {
-								const [zb, za] = k.zona.map((v) => (v / 1.1) * 100);
+								const [zb, za] = zonaKini(ikan.kelas).map((v) => (v / 1.1) * 100);
 								return `linear-gradient(90deg,#1e3a8a 0%,#2563eb ${zb - 1}%,#16a34a ${zb}%,#22c55e ${za}%,#f59e0b ${za + 1}%,#ef4444 ${(1 / 1.1) * 100}%,#7f1d1d 100%)`;
 							})()}
 						/>
@@ -287,13 +284,13 @@ export default function GamePancing({ sentuh, bersama, onSelesai }) {
 						initial={{ opacity: 0 }}
 						animate={{ opacity: 1 }}
 						exit={{ opacity: 0 }}
-						transition={{ delay: 0.6 }}
-						className="pointer-events-auto absolute inset-0 z-30 flex items-end justify-center bg-gradient-to-t from-slate-950/80 via-slate-950/30 to-transparent p-4 pb-[max(1.5rem,env(safe-area-inset-bottom))] sm:items-center"
+						transition={{ delay: MUNCUL_KARTU, duration: 0.25 }}
+						className="pointer-events-auto absolute inset-0 z-30 flex items-end justify-center bg-gradient-to-t from-slate-950/60 via-transparent to-transparent p-4 pb-[max(1.5rem,env(safe-area-inset-bottom))] sm:items-center sm:justify-end sm:bg-gradient-to-l sm:pr-12"
 					>
 						<motion.div
 							initial={{ y: 60, scale: 0.9 }}
 							animate={{ y: 0, scale: 1 }}
-							transition={{ delay: 0.6, type: "spring", damping: 16 }}
+							transition={{ delay: MUNCUL_KARTU, type: "spring", damping: 16 }}
 							className="w-full max-w-sm overflow-hidden rounded-3xl bg-gradient-to-b from-slate-900 to-slate-950 text-white shadow-2xl"
 							style={{ boxShadow: `0 0 0 2px ${KELAS[hasil.ikan.kelas].warna}, 0 0 60px ${KELAS[hasil.ikan.kelas].warna}66` }}
 						>
@@ -305,7 +302,7 @@ export default function GamePancing({ sentuh, bersama, onSelesai }) {
 									{hasil.baru && <span className="rounded-full bg-emerald-400 px-2 py-0.5 text-[10px] font-black text-slate-950">JENIS BARU!</span>}
 									{hasil.rekor && <span className="rounded-full bg-amber-400 px-2 py-0.5 text-[10px] font-black text-slate-950">REKOR!</span>}
 								</div>
-								<motion.div initial={{ rotate: -8, scale: 0.6 }} animate={{ rotate: [0, -4, 4, 0], scale: 1 }} transition={{ delay: 0.8, duration: 0.8 }}>
+								<motion.div initial={{ rotate: -8, scale: 0.6 }} animate={{ rotate: [0, -4, 4, 0], scale: 1 }} transition={{ delay: MUNCUL_KARTU + 0.2, duration: 0.8 }}>
 									<IkonIkan ikan={hasil.ikan} className="mx-auto mt-3 h-24 w-full drop-shadow-[0_8px_16px_rgba(0,0,0,0.5)]" />
 								</motion.div>
 								<p className="mt-2 text-2xl font-black">{hasil.ikan.nama}</p>
@@ -330,7 +327,7 @@ export default function GamePancing({ sentuh, bersama, onSelesai }) {
 								<button onClick={() => setAlbum(true)} className="flex items-center justify-center gap-1.5 rounded-2xl bg-white/10 px-4 py-3 text-sm font-bold hover:bg-white/20">
 									<FiBookOpen /> Album
 								</button>
-								<button onClick={lanjutPancing} className="flex-1 rounded-2xl bg-teal-500 py-3 text-sm font-black text-slate-950 hover:bg-teal-400">
+								<button onClick={() => pancing.t > JEDA_LANJUT && lanjutPancing()} className="flex-1 rounded-2xl bg-teal-500 py-3 text-sm font-black text-slate-950 hover:bg-teal-400">
 									Lanjut memancing {sentuh ? "" : "(Spasi)"}
 								</button>
 							</div>
@@ -340,6 +337,7 @@ export default function GamePancing({ sentuh, bersama, onSelesai }) {
 			</AnimatePresence>
 
 			{album && <AlbumIkan onTutup={() => setAlbum(false)} />}
+			{joran && <PanelJoran onTutup={() => setJoran(false)} />}
 		</>
 	);
 }

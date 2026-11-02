@@ -22,8 +22,10 @@ import {
 } from "react-icons/fi";
 import api from "../../api";
 import { penampilanAvatar } from "./avatar";
+import { gayaTampil, kenakanGaya, useLemari } from "./lemari";
+import PanelGaya from "./ui/PanelGaya";
 import { kendaraanDariId } from "./scene/kendaraan";
-import { kirimEmote, kirimUcap, putusJelajah, sambungJelajah, sapaPemain, tutupSapaan, useMultipemain } from "./multipemain";
+import { kirimEmote, kirimGaya, kirimKlakson, kirimUcap, putusJelajah, sambungJelajah, sapaPemain, tutupSapaan, useMultipemain } from "./multipemain";
 import { AREA_PER_ID, BENDA, HALAMAN, LOBI, RUANGAN, TITIK_MULAI, titikDepanPetugas } from "./kantorConfig";
 import { kendali, posisi as posisiPemain, resetJelajah, useDiKawasan, useKeadaan } from "./jelajahStore";
 import { suasana } from "./scene/suasana";
@@ -32,8 +34,14 @@ import InfoPanel from "./ui/InfoPanel";
 import Minimap from "./ui/Minimap";
 import GamePancing from "./ui/GamePancing";
 import BarTenaga from "./ui/BarTenaga";
-import PanelToko from "./ui/PanelToko";
+import AlbumIkan from "./ui/AlbumIkan";
+import { PanelKasir, PanelTas } from "./ui/PanelKasir";
+import { BARANG_PER_ID, ambilKeranjang, belanja, mulaiAmbil } from "./belanja";
+import { INFO_TOKO } from "./toko";
+import { HARGA_MIE, pesanMie } from "./warung";
+import DaftarRoom from "./ui/DaftarRoom";
 import { aturSendu } from "./musikJelajah";
+import { klakson } from "./suaraPancing";
 import Joystick from "./ui/Joystick";
 import LayarAwal from "./ui/LayarAwal";
 import Denah2D from "./ui/Denah2D";
@@ -173,15 +181,32 @@ export default function JelajahPage() {
 	const baruLengkap = useRef(false);
 	const { area, lantai, dekat, minta, mode: modeMain } = useKeadaan();
 	const diKawasan = useDiKawasan(lantai);
+	const [lihatRoom, setLihatRoom] = useState(false);
 	// musik sendu selama naik perahu & memancing
 	useEffect(() => {
 		aturSendu(mode === "3d" && (modeMain === "perahu" || modeMain === "mancing"));
 	}, [mode, modeMain]);
+
+	// Klakson hanya untuk pengemudi mobil/motor; ikut terdengar oleh tamu lain di dekatnya.
+	const klaksonTerakhir = useRef(0);
+	const bunyikanKlakson = useCallback(() => {
+		if (modeMain !== "mobil" && modeMain !== "motor") return;
+		if (performance.now() - klaksonTerakhir.current < 250) return;
+		klaksonTerakhir.current = performance.now();
+		klakson(modeMain);
+		kirimKlakson();
+	}, [modeMain]);
 	useEffect(() => () => aturSendu(false), []);
 	// Jelajah bersama tamu lain
 	const [profil, setProfil] = useState(null);
-	const penampilan = useMemo(() => (profil ? penampilanAvatar(profil) : undefined), [profil]);
+	const gayaDipakai = gayaTampil(useLemari());
+	const penampilanDasar = useMemo(() => (profil ? penampilanAvatar(profil) : undefined), [profil]);
+	const penampilan = useMemo(() => (profil ? kenakanGaya(penampilanAvatar(profil), gayaDipakai) : undefined), [profil, gayaDipakai]);
 	const { daftar: tamuLain, obrolan, sapaan, status: statusMp, galat: galatMp, ruang: ruangMp } = useMultipemain();
+	// gaya baru langsung dikabarkan ke tamu lain
+	useEffect(() => {
+		if (statusMp === "tersambung") kirimGaya(gayaDipakai);
+	}, [gayaDipakai, statusMp]);
 	const [ketik, setKetik] = useState(null);
 	const [pilihEmote, setPilihEmote] = useState(false);
 	const [kini, setKini] = useState(() => Date.now());
@@ -259,11 +284,18 @@ export default function JelajahPage() {
 			sapaPemain(id.slice(5));
 			return;
 		}
-		if (id === "toko") {
-			setMenu("toko");
+		if (id.startsWith("keranjang:")) return ambilKeranjang(id.slice(10));
+		if (id === "mie:pesan") return pesanMie();
+		if (id === "distro:pilih" || id === "distro:coba") {
+			setMenu(id === "distro:coba" ? "gaya:coba" : "gaya:toko");
 			return;
 		}
-		if (/^(kursi|mobil|motor|perahu|mancing):|^(berdiri|keluar|berhenti)$/.test(id)) {
+		if (id.startsWith("ambil:")) return mulaiAmbil(id.slice(6));
+		if (id.startsWith("kasir:")) {
+			setMenu("kasir");
+			return;
+		}
+		if (/^(kursi|mobil|motor|perahu|mancing|peti):|^(berdiri|keluar|berhenti)$/.test(id)) {
 			kendali.aksi = id;
 			return;
 		}
@@ -343,6 +375,7 @@ export default function JelajahPage() {
 			if (mode !== "3d" || panel || menu || selesai || pesan) return;
 			if (e.code === "KeyE" && dekat) bukaPanel(dekat);
 			if (e.code === "KeyM") setPeta((v) => !v);
+			if (e.code === "KeyH") bunyikanKlakson();
 			if (statusMp === "tersambung") {
 				if (e.key === "Enter" || e.code === "KeyT") {
 					e.preventDefault();
@@ -354,7 +387,7 @@ export default function JelajahPage() {
 		};
 		window.addEventListener("keydown", tekan);
 		return () => window.removeEventListener("keydown", tekan);
-	}, [mode, panel, menu, selesai, pesan, dekat, bukaPanel, tutupPanel, statusMp, pilihEmote]);
+	}, [mode, panel, menu, selesai, pesan, dekat, bukaPanel, tutupPanel, statusMp, pilihEmote, bunyikanKlakson]);
 
 	const mulai3D = (profilBaru) => {
 		if (profilBaru?.nama) setProfil(profilBaru);
@@ -382,12 +415,26 @@ export default function JelajahPage() {
 					: dekat.startsWith("perahu:")
 						? ["Ikut naik perahu", "Ikut", "#0e7490"]
 						: ["Ikut naik sebagai penumpang", "Ikut", "#0369a1"]
+			: dekat === "perahu:panggil"
+				? ["Panggil perahu ke dermaga 🚣", "Panggil", "#0e7490"]
 			: dekat.startsWith("perahu:")
 				? ["Naik perahu dayung 🚣", "Naik", "#0e7490"]
 			: dekat === "mancing:perahu"
 				? ["Memancing dari perahu 🎣", "Mancing", "#0f766e"]
-			: dekat === "toko"
-				? ["Belanja di Alfamart 🛒", "Belanja", "#d61f26"]
+			: dekat.startsWith("peti:")
+				? ["Buka peti hadiah 🎁", "Buka", "#b45309"]
+			: dekat === "distro:coba"
+				? ["Ruang coba — coba pakaian 🪞", "Coba", "#7c3aed"]
+			: dekat === "distro:pilih"
+				? ["Belanja aksesoris & pakaian 👕", "Belanja", "#7c3aed"]
+			: dekat === "mie:pesan"
+				? [`Pesan mie ayam 🍜 · 🪙 ${HARGA_MIE}`, "Pesan", "#ea580c"]
+			: dekat.startsWith("keranjang:")
+				? ["Ambil keranjang belanja 🧺", "Ambil", "#d61f26"]
+			: dekat.startsWith("ambil:")
+				? [`Ambil ${BARANG_PER_ID[dekat.slice(6)]?.nama} · 🪙 ${BARANG_PER_ID[dekat.slice(6)]?.harga}`, "Ambil", "#d61f26"]
+			: dekat.startsWith("kasir:")
+				? ["Bayar di kasir 🧾", "Bayar", "#1d4ed8"]
 			: dekat === "mancing:tepi"
 				? ["Memancing di pinggir situ 🎣", "Mancing", "#0f766e"]
 			: dekat.startsWith("mancing:")
@@ -421,8 +468,8 @@ export default function JelajahPage() {
 				: null;
 	const berkendara = ["mobil", "motor", "perahu", "penumpang"].includes(modeMain);
 	const petunjukKendara = {
-		mobil: "W/S gas & mundur · A/D belok · Shift turbo · E keluar",
-		motor: "W/S gas & mundur · A/D belok · Shift turbo · E turun",
+		mobil: "W/S gas & mundur · A/D belok · Shift turbo · H klakson · E keluar",
+		motor: "W/S gas & mundur · A/D belok · Shift turbo · Spasi lompat · H klakson · E turun",
 		perahu: "W/S dayung · A/D belok · Shift dayung cepat · E mancing / naik ke dermaga",
 		penumpang: "Anda penumpang — duduk manis · E turun",
 	}[modeMain];
@@ -480,8 +527,11 @@ export default function JelajahPage() {
 						</div>
 						<div className="pointer-events-auto flex shrink-0 items-center gap-2">
 							{profil?.mode === "bersama" && (
-								<div
-									className="flex h-10 items-center gap-1.5 rounded-xl bg-white/90 px-2.5 text-sm font-semibold text-slate-800 shadow-md ring-1 ring-black/5 backdrop-blur sm:px-3"
+								<div className="relative">
+								<button
+									onClick={() => setLihatRoom((v) => !v)}
+									aria-expanded={lihatRoom}
+									className="flex h-10 items-center gap-1.5 rounded-xl bg-white/90 px-2.5 text-sm font-semibold text-slate-800 shadow-md ring-1 ring-black/5 backdrop-blur hover:bg-white sm:px-3"
 									title={
 										statusMp === "tersambung"
 											? `${ruangMp ? `Kantor #${ruangMp} · ` : ""}${tamuLain.length + 1} tamu sedang menjelajah: ${[profil.nama, ...tamuLain.map((t) => t.nama)].join(", ")}`
@@ -491,7 +541,9 @@ export default function JelajahPage() {
 									<span className={`h-2 w-2 rounded-full ${statusMp === "tersambung" ? "bg-emerald-500" : "bg-slate-400"}`} />
 									<FiUsers className="text-slate-600" />
 									<span className="tabular-nums">{statusMp === "tersambung" ? tamuLain.length + 1 : "–"}</span>
-									<span className="sr-only">tamu online</span>
+									<span className="sr-only">tamu online — ketuk untuk melihat siapa saja</span>
+								</button>
+								{lihatRoom && statusMp === "tersambung" && <DaftarRoom namaSaya={profil.nama} ruang={ruangMp} onTutup={() => setLihatRoom(false)} />}
 								</div>
 							)}
 							<div
@@ -589,7 +641,7 @@ export default function JelajahPage() {
 						</div>
 					)}
 
-					{!jeda && <BarTenaga />}
+					{!jeda && <BarTenaga onTas={() => setMenu("tas")} onAlbum={modeMain === "mancing" ? null : () => setMenu("album")} onGaya={() => setMenu("gaya")} />}
 					{modeMain === "mancing" && !jeda && <GamePancing sentuh={sentuh} bersama={statusMp === "tersambung"} onSelesai={() => (kendali.aksi = "berhenti")} />}
 
 					{berkendara && !jeda && !sentuh && (
@@ -723,7 +775,16 @@ export default function JelajahPage() {
 										<span className="mt-0.5 text-[11px] font-bold leading-none">{sasaran.tombol}</span>
 									</button>
 								)}
-								{modeMain === "jalan" && (
+								{(modeMain === "mobil" || modeMain === "motor") && (
+									<button
+										onClick={bunyikanKlakson}
+										aria-label="Klakson"
+										className="flex h-12 w-12 items-center justify-center rounded-full bg-amber-500/80 text-xl text-white shadow-lg ring-1 ring-white/40 backdrop-blur active:bg-amber-600"
+									>
+										📯
+									</button>
+								)}
+								{(modeMain === "jalan" || modeMain === "motor") && (
 									<button
 										onClick={() => (kendali.loncat = true)}
 										aria-label="Loncat"
@@ -846,9 +907,23 @@ export default function JelajahPage() {
 				</Lembar>
 			)}
 
-			{menu === "toko" && (
-				<Lembar judul="🛒 Alfamart — belanja pakai koin" onTutup={() => setMenu(null)}>
-					<PanelToko />
+			{menu === "kasir" && (
+				<Lembar judul={`🧾 Kasir ${INFO_TOKO[belanja.toko]?.nama ?? "toko"}`} onTutup={() => setMenu(null)}>
+					<PanelKasir onSelesai={() => setMenu(null)} />
+				</Lembar>
+			)}
+
+			{menu === "album" && <AlbumIkan onTutup={() => setMenu(null)} />}
+
+			{menu?.startsWith("gaya") && (
+				<Lembar judul={menu === "gaya:coba" ? "🪞 Ruang Coba · Distro Gaya" : menu === "gaya:toko" ? "👕 Distro Gaya" : "👕 Lemari Gaya"} onTutup={() => setMenu(null)}>
+					<PanelGaya mode={menu === "gaya:coba" ? "coba" : menu === "gaya:toko" ? "toko" : "lemari"} dasar={penampilanDasar} />
+				</Lembar>
+			)}
+
+			{menu === "tas" && (
+				<Lembar judul="🎒 Tas belanjaan" onTutup={() => setMenu(null)}>
+					<PanelTas />
 				</Lembar>
 			)}
 
@@ -863,11 +938,11 @@ export default function JelajahPage() {
 									["Ketuk lantai / petugas", "berjalan otomatis ke sana"],
 									["Tombol aksi (kanan)", "bicara, pakai benda, duduk, masuk mobil, naik motor"],
 									["Tombol Loncat", "meloncat"],
-									["Di mobil/motor", "analog = gas & setir, tombol Turbo untuk ngebut"],
+									["Di mobil/motor", "analog = gas & setir, tombol Turbo untuk ngebut, 📯 klakson"],
 									["Mobil berempat", "dekati mobil/motor/perahu yang dikemudikan tamu lain untuk ikut naik"],
 									["Situ Pemda", "naik perahu di dermaga; di panggung dermaga atau dari perahu tekan Mancing"],
 									["Memancing", "tahan 🎣 lalu lepas untuk melempar; saat adu tarik KETUK 🎣 berulang untuk menggulung, berhenti saat ikan lari"],
-									["Tenaga ❤", "berkurang seiring waktu, berlari, dan tertabrak; isi dengan belanja di Alfamart pakai koin hasil mancing"],
+									["Tenaga ❤", "berkurang seiring waktu, berlari, dan tertabrak; belanja di Alfamart: ambil keranjang, pilih barang di rak, bayar di kasir, lalu makan dari 🎒 Tas"],
 									["Tombol 💬 / 🙂", "ngobrol & kirim emote ke tamu lain; dekati tamu untuk menyapa"],
 								]
 							: [
@@ -877,11 +952,11 @@ export default function JelajahPage() {
 									["Klik lantai / petugas", "berjalan otomatis ke sana"],
 									["E", "bicara · pakai benda · duduk · naik/turun kendaraan"],
 									["Spasi", "loncat"],
-									["Di mobil/motor", "W/S gas & mundur, A/D belok, Shift turbo"],
+									["Di mobil/motor", "W/S gas & mundur, A/D belok, Shift turbo, H klakson"],
 									["Mobil berempat", "E di dekat kendaraan yang dikemudikan tamu lain = ikut naik"],
 									["Situ Pemda", "E di dermaga: naik perahu · E di panggung / perahu: memancing"],
 									["Memancing", "tahan Spasi lalu lepas = lempar; KETUK Spasi berulang = gulung (jangan ditahan), A/D melawan arah ikan"],
-									["Tenaga ❤", "habis = pingsan; belanja makan & minum di Alfamart (seberang kantor) pakai koin hasil mancing"],
+									["Tenaga ❤", "habis = pingsan; masuk Alfamart seberang kantor: E ambil keranjang & barang di rak, bayar di kasir pakai koin, makan dari 🎒 Tas"],
 									["Enter / T", "ngobrol dengan tamu lain"],
 									["1 – 5", "emote: lambai, jempol, tepuk, tawa, hati"],
 									["M", "tampilkan/sembunyikan peta"],

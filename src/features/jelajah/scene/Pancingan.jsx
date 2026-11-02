@@ -2,7 +2,7 @@ import { useMemo, useRef } from "react";
 import { useFrame } from "@react-three/fiber";
 import { BufferGeometry, Float32BufferAttribute, Line, LineBasicMaterial, MeshBasicMaterial, Object3D, RingGeometry, SphereGeometry, Vector3 } from "three";
 import { posisi } from "../jelajahStore";
-import { IKAN, panjangCm, pancing, tickPancing } from "../pancing";
+import { IKAN, joranKini, panjangCm, pancing, tickPancing, useKoleksi } from "../pancing";
 import { TANAH } from "./layout";
 import ModelIkan from "./ModelIkan";
 import { AIR_Y, perahuBebas } from "./situ";
@@ -85,6 +85,8 @@ function Cipratan() {
 
 // Joran 3 ruas: pangkal (gagang gabus + gulungan), tengah, dan ujung yang paling lentur.
 function Joran({ akar, ruas, ujung }) {
+	useKoleksi(); // warna ikut berganti saat joran di-upgrade
+	const { warna, ujung: warnaUjung } = joranKini();
 	return (
 		<group ref={akar}>
 			<mesh position={[0, -0.1, 0]}>
@@ -98,17 +100,17 @@ function Joran({ akar, ruas, ujung }) {
 			<group ref={(el) => (ruas.current[0] = el)}>
 				<mesh position-y={0.55}>
 					<cylinderGeometry args={[0.014, 0.02, 1.1, 5]} />
-					<meshStandardMaterial color="#1f2937" />
+					<meshStandardMaterial color={warna} metalness={0.3} roughness={0.4} />
 				</mesh>
 				<group ref={(el) => (ruas.current[1] = el)} position-y={1.1}>
 					<mesh position-y={0.5}>
 						<cylinderGeometry args={[0.009, 0.014, 1.0, 5]} />
-						<meshStandardMaterial color="#1f2937" />
+						<meshStandardMaterial color={warna} metalness={0.3} roughness={0.4} />
 					</mesh>
 					<group ref={(el) => (ruas.current[2] = el)} position-y={1.0}>
 						<mesh position-y={0.4}>
 							<cylinderGeometry args={[0.005, 0.009, 0.8, 4]} />
-							<meshStandardMaterial color="#dc2626" />
+							<meshStandardMaterial color={warnaUjung} />
 						</mesh>
 						<object3D ref={ujung} position-y={0.8} />
 					</group>
@@ -183,8 +185,9 @@ export default function Pancingan() {
 		else if (p.fase === "lempar") sudut = 1.2;
 		else if (p.fase === "tunggu") sudut = 0.95 + (p.colek ? Math.sin(t * 40) * 0.05 : 0);
 		else if (p.fase === "gigit") {
-			sudut = 1.05 + Math.sin(t * 30) * 0.04;
-			lentur = 0.25;
+			// joran tertarik ke depan & melengkung berat
+			sudut = 0.8 + Math.sin(t * 30) * 0.05;
+			lentur = 0.38 + Math.sin(t * 19) * 0.04;
 		} else if (p.fase === "tarik") {
 			sudut = 0.3 + (p.sentak > 0 ? 0.3 : 0) + Math.sin(t * 17) * 0.02 * p.tegang;
 			lentur = 0.06 + Math.min(1.1, p.tegang) * 0.32;
@@ -213,12 +216,16 @@ export default function Pancingan() {
 			ujungSenar = pl.position;
 		} else if (p.fase === "tunggu" || p.fase === "gigit") {
 			const gigit = p.fase === "gigit";
-			const dip = gigit ? -0.12 - Math.min(0.15, p.t * 0.4) : p.colek ? -0.05 : 0;
-			pl.position.set(p.pelampung.x + (gigit ? Math.sin(t * 37) * 0.03 : 0), AIR + Math.sin(t * 2.2) * 0.012 + dip, p.pelampung.z + (gigit ? Math.cos(t * 31) * 0.03 : 0));
+			// ikan menyambar: pelampung ditarik tenggelam & terseret menjauh, senar lurus menegang
+			const seret = gigit ? Math.min(1.4, p.t * 1.8) : 0;
+			const menjauh = Math.atan2(p.pelampung.x - v.ujung.x, p.pelampung.z - v.ujung.z);
+			s.menjauh = menjauh;
+			const dip = gigit ? -0.12 - Math.min(0.3, p.t * 0.6) : p.colek ? -0.05 : 0;
+			pl.position.set(p.pelampung.x + Math.sin(menjauh) * seret + (gigit ? Math.sin(t * 37) * 0.03 : 0), AIR + Math.sin(t * 2.2) * 0.012 + dip, p.pelampung.z + Math.cos(menjauh) * seret + (gigit ? Math.cos(t * 31) * 0.03 : 0));
 			pl.rotation.z = gigit ? Math.sin(t * 25) * 0.4 : Math.sin(t * 1.7) * 0.08;
 			pl.visible = true;
 			ujungSenar = pl.position;
-			lendut = 0.1;
+			lendut = gigit ? 0 : 0.1;
 		} else if (p.fase === "tarik") {
 			v.akhir.set(p.ikanPos.x, AIR - 0.05, p.ikanPos.z);
 			ujungSenar = v.akhir;
@@ -257,7 +264,7 @@ export default function Pancingan() {
 
 		// --- ikan: melawan di permukaan, melompat, lalu diangkat tinggi ---
 		const ig = ikanG.current;
-		const ikan = p.fase === "dapat" ? p.hasil?.ikan : p.fase === "tarik" ? p.ikan : null;
+		const ikan = p.fase === "dapat" ? p.hasil?.ikan : p.fase === "tarik" || p.fase === "gigit" ? p.ikan : null;
 		ig.visible = !!ikan;
 		if (ikan) {
 			if (s.ikanId !== ikan.id) s.ikanId = ikan.id;
@@ -265,7 +272,12 @@ export default function Pancingan() {
 			const kg = p.fase === "dapat" ? p.hasil.kg : p.kg;
 			const L = panjangCm(ikan, kg) / 100;
 			ig.scale.setScalar(L);
-			if (p.fase === "tarik") {
+			if (p.fase === "gigit") {
+				// ikan tersangkut kail di bawah pelampung, berenang menjauh menyeret senar
+				const a = s.menjauh ?? 0;
+				ig.position.set(pelampung.current.position.x + Math.sin(a) * L * 0.45, AIR - 0.2 - L * 0.08, pelampung.current.position.z + Math.cos(a) * L * 0.45);
+				ig.rotation.set(0.15, a + Math.sin(t * 15) * 0.3, Math.sin(t * 11) * 0.15);
+			} else if (p.fase === "tarik") {
 				const hadap = Math.atan2(p.ikanPos.x - v.ujung.x, p.ikanPos.z - v.ujung.z) + p.arahIkan * 0.7;
 				let y = AIR - 0.06 * L - 0.03;
 				let condong = 0;
@@ -282,12 +294,19 @@ export default function Pancingan() {
 				ig.position.set(p.ikanPos.x, y, p.ikanPos.z);
 				ig.rotation.set(condong, hadap + Math.sin(t * (6 + p.tegang * 6)) * 0.22, Math.sin(t * 9) * 0.15);
 			} else {
-				// melayang dari air ke atas kepala, lalu dipamerkan
-				const f = Math.min(1, p.t / 0.8);
-				const atas = { x: posisi.x, y: (posisi.yTampil ?? posisi.y) + 2.25 + L * 0.15, z: posisi.z };
+				// terangkat dari air ke dekapan pemancing, lalu dipegang di depan dada sambil
+				// menggelepar (joran diletakkan dulu)
+				const f = Math.min(1, p.t / 0.7);
+				const hadap = p.asal.rot + p.aim;
+				const tangan = {
+					x: posisi.x + Math.sin(hadap) * 0.45,
+					y: (posisi.yTampil ?? posisi.y) + (p.perahu ? 0.8 : 1.12) + Math.abs(Math.sin(t * 7)) * 0.06,
+					z: posisi.z + Math.cos(hadap) * 0.45,
+				};
 				const ease = 1 - Math.pow(1 - f, 3);
-				ig.position.set(p.ikanPos.x + (atas.x - p.ikanPos.x) * ease, AIR + (atas.y - AIR) * ease + Math.sin(f * Math.PI) * 2, p.ikanPos.z + (atas.z - p.ikanPos.z) * ease);
-				ig.rotation.set(0, p.asal.rot + Math.PI / 2 + Math.sin(t * 1.5) * 0.4, Math.sin(t * 7) * 0.12);
+				ig.position.set(p.ikanPos.x + (tangan.x - p.ikanPos.x) * ease, AIR + (tangan.y - AIR) * ease + Math.sin(f * Math.PI) * 1.6, p.ikanPos.z + (tangan.z - p.ikanPos.z) * ease);
+				ig.rotation.set(0, hadap + Math.PI / 2, Math.sin(t * 11) * 0.18 * (1 - f * 0.5));
+				akar.current.visible = p.t < 0.3;
 			}
 		}
 

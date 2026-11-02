@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef } from "react";
 import { posisi } from "../jelajahStore";
-import { AIR, AREA, GEDUNG, JALAN, JENIS_AREA, JENIS_JALAN, LABEL, SUDUT_UTARA } from "../scene/kawasanData";
+import { AIR, AREA, GEDUNG, JENIS_AREA, JENIS_JALAN, LABEL, SUDUT_UTARA } from "../scene/kawasanData";
+import { JALAN_TAMPIL } from "../scene/kawasanBantu";
 
 // Peta mini kawasan Pemda saat pengunjung berada di luar halaman kantor. Sumbunya sama
 // dengan denah mini kantor (x ke kanan, z ke bawah: jalan depan kantor di bawah),
@@ -29,7 +30,7 @@ export default function MinimapKawasan({ className = "" }) {
 			gedung: GEDUNG.map(([, , f]) => garis(f, true)).join(""),
 			air: AIR.map((f) => garis(f, true)).join(""),
 			area: AREA.map(([j, f]) => ({ d: garis(f, true), w: WARNA_AREA[JENIS_AREA[j]] })),
-			jalan: JALAN.map(([j, lebar, f]) => ({ d: garis(f, false), w: WARNA_JALAN[JENIS_JALAN[j]], lebar })),
+			jalan: JALAN_TAMPIL.map(([j, lebar, f]) => ({ d: garis(f, false), w: WARNA_JALAN[JENIS_JALAN[j]], lebar })),
 			label: LABEL.map(([teks, x, z]) => ({ teks, x, z })),
 		}),
 		[],
@@ -68,7 +69,19 @@ export default function MinimapKawasan({ className = "" }) {
 					<rect x={-34} y={-22} width={68} height={53} fill="#ddd3bf" />
 					<path d={peta.gedung} fill="#ece6d8" stroke="#a39b8c" strokeWidth={0.4} />
 					<rect x={-15} y={-13} width={30} height={25} fill="#f0a774" stroke="#c2622d" strokeWidth={0.5} />
-					{/* minimarket di seberang jalan */}
+					{/* toko & warung di seberang jalan */}
+					<rect x={10} y={47} width={12} height={9} fill="#dc2626" stroke="#7f1d1d" strokeWidth={0.5} />
+					<text x={16} y={52} textAnchor="middle" dominantBaseline="middle" fontSize={3} fontWeight={800} fill="#ffffff">
+						Koperasi
+					</text>
+					<rect x={-32} y={47} width={10.4} height={8.5} fill="#7c3aed" stroke="#4c1d95" strokeWidth={0.5} />
+					<text x={-26.8} y={51.2} textAnchor="middle" dominantBaseline="middle" fontSize={3} fontWeight={800} fill="#ffffff">
+						Distro
+					</text>
+					<rect x={-19.2} y={44.8} width={9.8} height={8} fill="#f97316" stroke="#9a3412" strokeWidth={0.5} />
+					<text x={-14.3} y={49} textAnchor="middle" dominantBaseline="middle" fontSize={3} fontWeight={800} fill="#ffffff">
+						Mie Ayam
+					</text>
 					<rect x={-6} y={47} width={12} height={9} fill="#ef4444" stroke="#991b1b" strokeWidth={0.5} />
 					<text x={0} y={52} textAnchor="middle" dominantBaseline="middle" fontSize={3.6} fontWeight={800} fill="#ffffff">
 						Alfamart
