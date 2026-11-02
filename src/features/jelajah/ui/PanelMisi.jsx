@@ -41,7 +41,13 @@ export default function PanelMisi() {
 				<div className="mt-3 h-2.5 overflow-hidden rounded-full bg-white/20">
 					<div className="h-full rounded-full bg-amber-300 transition-all" style={{ width: `${persen}%` }} />
 				</div>
-				{p.balap != null && <p className="mt-3 text-xs text-indigo-100">🏍️ Rekor balapan motor: <b className="text-white">{p.balap.toFixed(2)} dtk</b></p>}
+				{(p.rekor?.sprint != null || p.rekor?.sirkuit != null) && (
+					<p className="mt-3 text-xs text-indigo-100">
+						🏍️ Rekor balap:
+						{p.rekor.sprint != null && <> Sprint <b className="text-white">{p.rekor.sprint.toFixed(2)} dtk</b></>}
+						{p.rekor.sirkuit != null && <> · Sirkuit <b className="text-white">{p.rekor.sirkuit.toFixed(2)} dtk</b></>}
+					</p>
+				)}
 			</div>
 			<div className="mb-2 flex items-center justify-between">
 				<p className="text-sm font-black text-slate-800">📋 Misi hari ini</p>

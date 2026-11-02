@@ -27,6 +27,7 @@ import { penampilanAvatar } from "./avatar";
 import { gayaTampil, kenakanGaya, useLemari } from "./lemari";
 import PanelGaya from "./ui/PanelGaya";
 import PanelMisi from "./ui/PanelMisi";
+import PanelJoran from "./ui/PanelJoran";
 import PanelPeringkat from "./ui/PanelPeringkat";
 import { kendaraanDariId } from "./scene/kendaraan";
 import { kirimEmote, kirimGaya, kirimKlakson, kirimUcap, putusJelajah, sambungJelajah, sapaPemain, tutupSapaan, useMultipemain } from "./multipemain";
@@ -42,9 +43,12 @@ import AlbumIkan from "./ui/AlbumIkan";
 import { PanelKasir, PanelTas } from "./ui/PanelKasir";
 import { BARANG_PER_ID, ambilKeranjang, belanja, mulaiAmbil } from "./belanja";
 import { INFO_TOKO } from "./toko";
-import { HARGA_MIE, pesanMie } from "./warung";
+import { WARUNG, pesan as pesanMakan } from "./warung";
+import { HARGA_TIKET, beliTiket } from "./bioskop";
+import { TIBA_KHUSUS } from "./scene/gedungKhusus";
+import PanelWarung from "./ui/PanelWarung";
 import { catat } from "./progres";
-import { mulaiBalap } from "./balap";
+import PanelBalap from "./ui/PanelBalap";
 import HudBalap from "./ui/HudBalap";
 import DaftarRoom from "./ui/DaftarRoom";
 import { aturSendu } from "./musikJelajah";
@@ -135,7 +139,7 @@ function TombolIkon({ label, aktif, onClick, children }) {
 	);
 }
 
-function Lembar({ judul, onTutup, children }) {
+function Lembar({ judul, onTutup, lebar = "sm:max-w-md", children }) {
 	return (
 		<div className="fixed inset-0 z-40 flex items-end justify-center bg-slate-900/40 p-0 sm:items-center sm:p-4" onClick={onTutup}>
 			<section
@@ -143,7 +147,7 @@ function Lembar({ judul, onTutup, children }) {
 				aria-modal="true"
 				aria-label={judul}
 				onClick={(e) => e.stopPropagation()}
-				className="max-h-[85vh] w-full overflow-y-auto rounded-t-3xl bg-white p-5 shadow-2xl sm:max-w-md sm:rounded-3xl"
+				className={`max-h-[88vh] w-full overflow-y-auto rounded-t-3xl bg-white p-5 shadow-2xl sm:rounded-3xl ${lebar}`}
 			>
 				<div className="mb-4 flex items-center justify-between">
 					<h2 className="text-lg font-bold text-slate-900">{judul}</h2>
@@ -302,8 +306,26 @@ export default function JelajahPage() {
 			return;
 		}
 		if (id.startsWith("keranjang:")) return ambilKeranjang(id.slice(10));
-		if (id === "mie:pesan") return pesanMie();
-		if (id === "balap:mulai") return mulaiBalap();
+		if (id.startsWith("pesan:")) {
+			// mie ayam cuma satu menu: langsung dipesan; tempat lain buka daftar menunya
+			const w = WARUNG[id.slice(6)];
+			if (w?.menu.length === 1) return pesanMakan(id.slice(6), w.menu[0].id);
+			setMenu("warung:" + id.slice(6));
+			return;
+		}
+		if (id === "bioskop:tiket") return beliTiket();
+		if (id === "distro:butik") {
+			setMenu("gaya:butik");
+			return;
+		}
+		if (id === "pancing:toko") {
+			setMenu("pancing");
+			return;
+		}
+		if (id === "balap:mulai") {
+			setMenu("balap");
+			return;
+		}
 		if (id === "distro:pilih" || id === "distro:coba") {
 			setMenu(id === "distro:coba" ? "gaya:coba" : "gaya:toko");
 			return;
@@ -353,7 +375,7 @@ export default function JelajahPage() {
 			}
 			setPanel(null);
 			setMenu(null);
-			kendali.teleport = id === "luar" ? { ...TITIK_MULAI } : titikDepanPetugas(AREA_PER_ID[id]);
+			kendali.teleport = id === "luar" ? { ...TITIK_MULAI } : TIBA_KHUSUS[id] ? { ...TIBA_KHUSUS[id] } : titikDepanPetugas(AREA_PER_ID[id]);
 			setKilat((k) => k + 1);
 		},
 		[mode, bukaPanel],
@@ -396,6 +418,8 @@ export default function JelajahPage() {
 			if (e.code === "KeyE" && dekat) bukaPanel(dekat);
 			if (e.code === "KeyM") setPeta((v) => !v);
 			if (e.code === "KeyH") bunyikanKlakson();
+			// terjun dari perahu (pendayung atau penumpang) ke air
+			if (e.code === "KeyR" && (modeMain === "perahu" || modeMain === "penumpang")) kendali.aksi = "renang:terjun";
 			if (statusMp === "tersambung") {
 				if (e.key === "Enter" || e.code === "KeyT") {
 					e.preventDefault();
@@ -407,7 +431,7 @@ export default function JelajahPage() {
 		};
 		window.addEventListener("keydown", tekan);
 		return () => window.removeEventListener("keydown", tekan);
-	}, [mode, panel, menu, selesai, pesan, dekat, bukaPanel, tutupPanel, statusMp, pilihEmote, bunyikanKlakson]);
+	}, [mode, panel, menu, selesai, pesan, dekat, bukaPanel, tutupPanel, statusMp, pilihEmote, bunyikanKlakson, modeMain]);
 
 	const mulai3D = (profilBaru) => {
 		if (profilBaru?.nama) setProfil(profilBaru);
@@ -449,8 +473,16 @@ export default function JelajahPage() {
 				? ["Belanja aksesoris & pakaian 👕", "Belanja", "#7c3aed"]
 			: dekat === "balap:mulai"
 				? ["Mulai balapan motor 🏁", "Balap", "#dc2626"]
-			: dekat === "mie:pesan"
-				? [`Pesan mie ayam 🍜 · 🪙 ${HARGA_MIE}`, "Pesan", "#ea580c"]
+			: dekat === "pancing:toko"
+				? ["Toko Pancing — joran & senar 🎣", "Buka", "#0f766e"]
+			: dekat === "pesan:mie"
+				? [`Pesan mie ayam 🍜 · 🪙 ${WARUNG.mie.menu[0].harga}`, "Pesan", WARUNG.mie.warna]
+			: dekat.startsWith("pesan:")
+				? [`Lihat menu ${WARUNG[dekat.slice(6)].nama} ${WARUNG[dekat.slice(6)].ikon}`, "Menu", WARUNG[dekat.slice(6)].warna]
+			: dekat === "bioskop:tiket"
+				? [`Beli tiket bioskop 🎟️ · 🪙 ${HARGA_TIKET}`, "Beli", "#7c3aed"]
+			: dekat === "distro:butik"
+				? ["Belanja di Butik Mode 👗", "Belanja", "#db2777"]
 			: dekat.startsWith("keranjang:")
 				? ["Ambil keranjang belanja 🧺", "Ambil", "#d61f26"]
 			: dekat.startsWith("ambil:")
@@ -492,7 +524,7 @@ export default function JelajahPage() {
 	const petunjukKendara = {
 		mobil: "W/S gas & mundur · A/D belok · Shift turbo · H klakson · E keluar",
 		motor: "W/S gas & mundur · A/D belok · Shift turbo · Spasi lompat · H klakson · E turun / balapan di gerbang 🏁",
-		perahu: "W/S dayung · A/D belok · Shift dayung cepat · E mancing / naik ke dermaga",
+		perahu: "W/S dayung · A/D belok · Shift dayung cepat · E mancing / naik ke dermaga · R terjun berenang",
 		penumpang: "Anda penumpang — duduk manis · E turun",
 	}[modeMain];
 	const ambilAntrean = () => setAntrean((n) => (n ?? 23) + 1);
@@ -667,7 +699,7 @@ export default function JelajahPage() {
 					)}
 
 					{!jeda && <HudBalap />}
-					{!jeda && <BarTenaga onTas={() => setMenu("tas")} onAlbum={modeMain === "mancing" ? null : () => setMenu("album")} onGaya={() => setMenu("gaya")} onMisi={() => setMenu("misi")} onPeringkat={() => setMenu("peringkat")} />}
+					{!jeda && <BarTenaga onTas={() => setMenu("tas")} onAlbum={modeMain === "mancing" ? null : () => setMenu("album")} onGaya={() => setMenu("gaya")} onMisi={() => setMenu("misi")} onPeringkat={() => setMenu("peringkat")} onPancing={modeMain === "mancing" ? null : () => setMenu("pancing")} />}
 					{modeMain === "mancing" && !jeda && <GamePancing sentuh={sentuh} bersama={statusMp === "tersambung"} onSelesai={() => (kendali.aksi = "berhenti")} />}
 
 					{berkendara && !jeda && !sentuh && (
@@ -801,6 +833,15 @@ export default function JelajahPage() {
 										<span className="mt-0.5 text-[11px] font-bold leading-none">{sasaran.tombol}</span>
 									</button>
 								)}
+								{(modeMain === "perahu" || modeMain === "penumpang") && (
+									<button
+										onClick={() => (kendali.aksi = "renang:terjun")}
+										aria-label="Terjun berenang"
+										className="flex h-12 w-12 items-center justify-center rounded-full bg-sky-500/80 text-xl text-white shadow-lg ring-1 ring-white/40 backdrop-blur active:bg-sky-600"
+									>
+										🏊
+									</button>
+								)}
 								{(modeMain === "mobil" || modeMain === "motor") && (
 									<button
 										onClick={bunyikanKlakson}
@@ -930,6 +971,21 @@ export default function JelajahPage() {
 								</button>
 							</li>
 						))}
+						{/* tempat di koridor Jl. Tegar Beriman (±1–1,8 km dari kantor) */}
+						{[
+							["mcd", "McD Tegar Beriman", "Makan burger & paket nasi ayam", "#dc2626"],
+							["ccm", "Cibinong City Mall", "Supermarket, butik, kedai kopi & bioskop", "#0e7490"],
+						].map(([id, nama, ket, warna]) => (
+							<li key={id}>
+								<button onClick={() => pindahCepat(id)} className="flex w-full items-center gap-3 rounded-2xl border border-slate-200 px-4 py-3 text-left hover:bg-slate-50">
+									<span className="h-3 w-3 shrink-0 rounded-full" style={{ background: warna }} />
+									<span className="min-w-0 flex-1">
+										<span className="block text-sm font-semibold text-slate-900">{nama}</span>
+										<span className="block truncate text-xs text-slate-500">Jl. Tegar Beriman · {ket}</span>
+									</span>
+								</button>
+							</li>
+						))}
 					</ul>
 				</Lembar>
 			)}
@@ -941,6 +997,13 @@ export default function JelajahPage() {
 			)}
 
 			{menu === "album" && <AlbumIkan onTutup={() => setMenu(null)} />}
+			{menu === "pancing" && <PanelJoran onTutup={() => setMenu(null)} />}
+
+			{menu === "balap" && (
+				<Lembar judul="🏁 Balapan Motor — pilih trek" onTutup={() => setMenu(null)}>
+					<PanelBalap onMulai={() => setMenu(null)} />
+				</Lembar>
+			)}
 
 			{menu === "peringkat" && (
 				<Lembar judul="🏆 Papan Peringkat" onTutup={() => setMenu(null)}>
@@ -955,8 +1018,18 @@ export default function JelajahPage() {
 			)}
 
 			{menu?.startsWith("gaya") && (
-				<Lembar judul={menu === "gaya:coba" ? "🪞 Ruang Coba · Distro Gaya" : menu === "gaya:toko" ? "👕 Distro Gaya" : "👕 Lemari Gaya"} onTutup={() => setMenu(null)}>
-					<PanelGaya mode={menu === "gaya:coba" ? "coba" : menu === "gaya:toko" ? "toko" : "lemari"} dasar={penampilanDasar} />
+				<Lembar
+					lebar="sm:max-w-3xl"
+					judul={menu === "gaya:coba" ? "🪞 Ruang Coba · Distro Gaya" : menu === "gaya:toko" ? "👕 Distro Gaya" : menu === "gaya:butik" ? "👗 Butik Mode · Cibinong City Mall" : "👕 Lemari Gaya"}
+					onTutup={() => setMenu(null)}
+				>
+					<PanelGaya mode={menu === "gaya:coba" ? "coba" : menu === "gaya:toko" || menu === "gaya:butik" ? "toko" : "lemari"} dasar={penampilanDasar} />
+				</Lembar>
+			)}
+
+			{menu?.startsWith("warung:") && WARUNG[menu.slice(7)] && (
+				<Lembar judul={`${WARUNG[menu.slice(7)].ikon} ${WARUNG[menu.slice(7)].nama}`} onTutup={() => setMenu(null)}>
+					<PanelWarung id={menu.slice(7)} onSelesai={() => setMenu(null)} />
 				</Lembar>
 			)}
 

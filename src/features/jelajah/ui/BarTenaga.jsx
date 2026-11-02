@@ -9,7 +9,7 @@ import { levelDari, misiSiapKlaim, useProgres, xpUntukLevel } from "../progres";
 // layar gelap saat pingsan.
 const TOMBOL = "rounded-xl bg-slate-950/60 px-2.5 py-1 text-xs font-bold text-white shadow-lg ring-1 ring-white/10 backdrop-blur hover:bg-slate-900/80";
 
-export default function BarTenaga({ onTas, onAlbum, onGaya, onMisi, onPeringkat }) {
+export default function BarTenaga({ onTas, onAlbum, onGaya, onMisi, onPeringkat, onPancing }) {
 	const progres = useProgres();
 	const lv = levelDari(progres.xp);
 	const persenXp = ((progres.xp - xpUntukLevel(lv)) / (xpUntukLevel(lv + 1) - xpUntukLevel(lv))) * 100;
@@ -68,6 +68,11 @@ export default function BarTenaga({ onTas, onAlbum, onGaya, onMisi, onPeringkat 
 				{onAlbum && (
 					<button onClick={onAlbum} className={TOMBOL} title="Album ikan hasil tangkapan">
 						📖 {Object.keys(koleksi).length}/{IKAN.length}
+					</button>
+				)}
+				{onPancing && (
+					<button onClick={onPancing} className={TOMBOL} title="Toko pancing: jenis joran & upgrade senar">
+						🎣
 					</button>
 				)}
 				{onGaya && (

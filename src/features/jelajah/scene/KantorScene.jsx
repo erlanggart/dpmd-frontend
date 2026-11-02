@@ -57,7 +57,7 @@ export default function KantorScene({ statistik, dikunjungi, jeda, penghuni, pen
 		<Canvas
 			dpr={DPR_MAKS}
 			frameloop={jeda ? "never" : "always"}
-			camera={{ fov: 50, near: 0.1, far: 400, position: [0, 8, 40] }}
+			camera={{ fov: 50, near: 0.3, far: 400, position: [0, 8, 40] }}
 			gl={{ antialias: true, powerPreference: "high-performance" }}
 			style={{ touchAction: "none" }}
 			onCreated={({ gl, scene }) => {

@@ -94,6 +94,10 @@ export const DERMAGA = [
 
 // lokal (s, w) dermaga d → dunia
 export const keDuniaDermaga = (d, s, w) => ({ x: d.x + d.nx * s + d.nz * w, z: d.z + d.nz * s - d.nx * w });
+
+// Kios Toko Pancing di darat dekat pangkal tiap dermaga (lokal dermaga) & posisinya di dunia.
+export const KIOS_DERMAGA = { s: -3.6, w: 3.4 };
+export const KIOS_TOKO_PANCING = DERMAGA.map((d) => keDuniaDermaga(d, KIOS_DERMAGA.s, KIOS_DERMAGA.w));
 const keLokal = (d, x, z) => {
 	const dx = x - d.x;
 	const dz = z - d.z;

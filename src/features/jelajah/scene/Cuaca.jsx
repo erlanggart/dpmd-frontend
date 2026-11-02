@@ -8,14 +8,32 @@ import { suasana } from "./suasana";
 
 // Cuaca: hujan turun di sekitar kamera (garis-garis air), langit & kabut meredup (lihat
 // SiangMalam.jsx), sesekali petir menyambar disusul guntur, dan desau hujan. Mode
-// "otomatis" sesekali menurunkan hujan selama 2–4 menit; bisa juga dipaksa cerah / hujan.
+// "otomatis" sesekali menurunkan hujan 2–4 menit; bisa juga dipaksa cerah / hujan.
+// Jadwal hujan otomatis dihitung dari jam (slot 10 menit), bukan diundi per perangkat,
+// sehingga semua tamu jelajah bersama mengalami hujan yang sama pada saat yang sama.
 
 const N = 1600;
+const SLOT = 10 * 60 * 1000;
+// angka semu 0..1 yang sama di semua perangkat untuk slot & urutan tertentu
+function acakSlot(slot, k) {
+	let h = Math.imul(slot ^ 0x9e3779b9, 2654435761) ^ Math.imul(k + 1, 40503);
+	h = Math.imul(h ^ (h >>> 15), 2246822507);
+	h = Math.imul(h ^ (h >>> 13), 3266489909);
+	return ((h ^ (h >>> 16)) >>> 0) / 4294967296;
+}
+// Hujan otomatis: ±1 dari 4 slot turun hujan, mulai 0–5 menit, lamanya 2–4 menit.
+function hujanTerjadwal(waktu = Date.now()) {
+	const slot = Math.floor(waktu / SLOT);
+	if (acakSlot(slot, 0) > 0.27) return false;
+	const mulai = slot * SLOT + acakSlot(slot, 1) * 5 * 60000;
+	const lama = (2 + acakSlot(slot, 2) * 2) * 60000;
+	return waktu >= mulai && waktu < mulai + lama;
+}
 const KOTAK = { lebar: 46, tinggi: 26 };
 
 export default function Cuaca() {
 	const kilat = useRef();
-	const jadwal = useRef({ cek: 20, sampai: 0 });
+	const jadwal = useRef({ cek: 0, hujan: false });
 	const garis = useMemo(() => {
 		const pos = new Float32Array(N * 6);
 		for (let i = 0; i < N; i++) {
@@ -41,17 +59,14 @@ export default function Cuaca() {
 
 	useFrame(({ camera }, dtMentah) => {
 		const dt = Math.min(dtMentah, 0.1);
-		// hujan otomatis: tiap ±1 menit ada peluang hujan turun 2–4 menit
+		// hujan otomatis menurut jadwal bersama (dicek tiap 2 detik)
 		const j = jadwal.current;
-		const kini = performance.now();
-		if (suasana.cuaca === "otomatis") {
-			j.cek -= dt;
-			if (j.cek <= 0) {
-				j.cek = 60;
-				if (kini > j.sampai && Math.random() < 0.15) j.sampai = kini + (120 + Math.random() * 120) * 1000;
-			}
+		j.cek -= dt;
+		if (j.cek <= 0) {
+			j.cek = 2;
+			j.hujan = hujanTerjadwal();
 		}
-		const target = suasana.cuaca === "hujan" || (suasana.cuaca === "otomatis" && kini < j.sampai) ? 1 : 0;
+		const target = suasana.cuaca === "hujan" || (suasana.cuaca === "otomatis" && j.hujan) ? 1 : 0;
 		suasana.hujan += (target - suasana.hujan) * (1 - Math.exp(-0.5 * dt));
 		if (Math.abs(target - suasana.hujan) < 0.003) suasana.hujan = target;
 		const h = suasana.hujan;

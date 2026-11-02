@@ -1,4 +1,5 @@
-import { AIR, BATAS_KAWASAN, GEDUNG, JALAN, JENIS_GEDUNG, POHON_KAWASAN } from "./kawasanData";
+import { AIR, BATAS_KAWASAN, GEDUNG, JALAN, JENIS_GEDUNG, KORIDOR, LEBAR_KORIDOR, POHON_KAWASAN, WILAYAH_INTI } from "./kawasanData";
+import { PADAT_KHUSUS } from "./gedungKhusus";
 import { DERMAGA, dermagaDi } from "./situ";
 
 // Bantuan kawasan Pemda di sekitar kantor (lihat kawasanData.js): tinggi gedung dan
@@ -6,6 +7,43 @@ import { DERMAGA, dermagaDi } from "./situ";
 // langkah cukup memeriksa beberapa benda di sel tempat pemain berada.
 
 export { BATAS_KAWASAN };
+
+// Kawasan yang boleh dijelajahi = kompleks Pemda (WILAYAH_INTI) ∪ koridor ±LEBAR_KORIDOR m
+// di kiri-kanan Jl. Tegar Beriman sampai McD & Cibinong City Mall. Dipetakan sekali ke sel
+// 10 m supaya uji tiap langkah cukup satu baca larik.
+const SEL_DUNIA = 10;
+const PETA_DUNIA = (() => {
+	const b = BATAS_KAWASAN;
+	const nx = Math.ceil((b.x1 - b.x0) / SEL_DUNIA);
+	const nz = Math.ceil((b.z1 - b.z0) / SEL_DUNIA);
+	const peta = new Uint8Array(nx * nz);
+	const w = WILAYAH_INTI;
+	for (let i = 0; i < nx; i++) {
+		for (let j = 0; j < nz; j++) {
+			const x = b.x0 + (i + 0.5) * SEL_DUNIA;
+			const z = b.z0 + (j + 0.5) * SEL_DUNIA;
+			let ya = x >= w.x0 && x <= w.x1 && z >= w.z0 && z <= w.z1;
+			for (let r = 0; !ya && r < KORIDOR.length; r++) {
+				const f = KORIDOR[r];
+				for (let k = 0; k + 3 < f.length; k += 2) {
+					if (jarakKeRuas(x, z, f[k], f[k + 1], f[k + 2], f[k + 3]) < LEBAR_KORIDOR) {
+						ya = true;
+						break;
+					}
+				}
+			}
+			peta[i * nz + j] = ya ? 1 : 0;
+		}
+	}
+	return { peta, nx, nz };
+})();
+export function diKawasan(x, z) {
+	const b = BATAS_KAWASAN;
+	const i = Math.floor((x - b.x0) / SEL_DUNIA);
+	const j = Math.floor((z - b.z0) / SEL_DUNIA);
+	if (i < 0 || j < 0 || i >= PETA_DUNIA.nx || j >= PETA_DUNIA.nz) return false;
+	return PETA_DUNIA.peta[i * PETA_DUNIA.nz + j] === 1;
+}
 
 // Jalan depan kantor digambar tangan (PagarDepan.jsx, x −60…60); ruas OSM Jl. KSR Dadi
 // Kusmayadi baru mulai di x ≈ −110 (timur) dan x ≈ 68 (barat). Sambungan ini menutup celahnya.
@@ -32,7 +70,7 @@ const diJalan = (x, z) => {
 
 // Pohon tidak ditanam di badan jalan, di jalan masuk & papan dermaga, maupun di deretan
 // toko & warung seberang kantor.
-export const POHON_TAMPIL = POHON_KAWASAN.filter(([x, z]) => DERMAGA.every((d) => Math.hypot(x - d.x, z - d.z) > 6.5) && !(x > -36 && x < 25 && z > 40 && z < 60) && !diJalan(x, z));
+export const POHON_TAMPIL = POHON_KAWASAN.filter(([x, z]) => DERMAGA.every((d) => Math.hypot(x - d.x, z - d.z) > 6.5) && !(x > -36 && x < 35 && z > 40 && z < 60) && !diJalan(x, z));
 
 export const TINGGI_PER_LANTAI = { rumah: 3.2, kantor: 3.6 };
 const ATAP = JENIS_GEDUNG.indexOf("atap");
@@ -111,6 +149,20 @@ for (const f of AIR) {
 	daftarkan({ p, kotak: kotakDari(p), tinggi: 0, air: true });
 }
 for (const [x, z] of POHON_TAMPIL) daftarkan({ x, z, r: 0.4, kotak: [x, x, z, z] });
+// gedung buatan tangan (McD, Cibinong City Mall) & perabot di dalamnya
+for (const k of PADAT_KHUSUS) {
+	daftarkan({
+		p: [
+			[k.x0, k.z0],
+			[k.x1, k.z0],
+			[k.x1, k.z1],
+			[k.x0, k.z1],
+		],
+		kotak: [k.x0, k.x1, k.z0, k.z1],
+		tinggi: k.tinggi || 0,
+		tembus: !!k.tembus,
+	});
+}
 
 const diSel = (x, z) => sel.get(kunci(Math.floor(x / SEL), Math.floor(z / SEL)));
 
@@ -120,6 +172,7 @@ export function tabrakKawasan(x, z, r, bolehAir = false) {
 	const daftar = diSel(x, z);
 	if (!daftar) return false;
 	for (const b of daftar) {
+		if (b.tembus) continue;
 		if (b.p) {
 			// di atas papan dermaga air tidak menghalangi (tepi dermaga tetap)
 			if (b.air && (bolehAir || dermagaDi(x, z, r))) continue;

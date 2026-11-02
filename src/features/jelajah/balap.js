@@ -1,16 +1,18 @@
 import { useSyncExternalStore } from "react";
 import { tambahKoin } from "./pancing";
 import { catat, catatBalap, progres, tambahXp } from "./progres";
+import { GERBANG_SIRKUIT, JALUR_SIRKUIT, PANJANG_SIRKUIT } from "./ruteBalap";
 import { suara } from "./suaraPancing";
 import { ubahTenaga } from "./tenaga";
 
-// Balapan motor melawan waktu di Jl. KSR Dadi Kusmayadi depan kantor: dari garis start ke
-// timur sampai belokan, putar balik ke barat sampai ujung, lalu kembali ke garis finis.
-// Lewati gerbang cek (cincin) berurutan. Rekor tersimpan di progres & papan peringkat.
+// Balapan motor melawan waktu, berangkat & finis di gerbang 🏁 depan kantor. Dua trek:
+// - sprint : Jl. KSR Dadi Kusmayadi — ke timur sampai belokan, putar balik ke barat, kembali;
+// - sirkuit: putaran ±2,4 km menyusuri jalan-jalan kawasan Pemda (ruteBalap.js).
+// Lewati gerbang cek (cincin) berurutan. Rekor per trek tersimpan di progres & papan peringkat.
 
-export const START = { x: -18, z: 35.6, rot: -Math.PI / 2 };
+export const START = { x: -18, z: 35.6 };
 export const JARAK_START = 6;
-export const CHECKPOINT = [
+const SPRINT = [
 	{ x: -45, z: 35.6 },
 	{ x: -78, z: 36.4 },
 	{ x: -104, z: 41.5 },
@@ -22,11 +24,27 @@ export const CHECKPOINT = [
 	{ x: 30, z: 35.6 },
 	{ x: START.x, z: START.z },
 ];
-const RADIUS_CP = 5.5;
+const jalurDari = (cp) => [[START.x, START.z], ...cp.map((c) => [c.x, c.z])];
+
+export const TREK = {
+	sprint: { id: "sprint", nama: "Sprint Depan Kantor", ket: "Jalan depan kantor bolak-balik — cepat & lurus", panjang: 380, gerbang: SPRINT, jalur: jalurDari(SPRINT), hadiah: [60, 120], xp: 60 },
+	sirkuit: {
+		id: "sirkuit",
+		nama: "Sirkuit Kawasan Pemda",
+		ket: "Menyusuri jalan-jalan kawasan Pemda, belok-belok & panjang",
+		panjang: PANJANG_SIRKUIT,
+		gerbang: GERBANG_SIRKUIT.map(([x, z]) => ({ x, z })),
+		jalur: JALUR_SIRKUIT,
+		hadiah: [180, 350],
+		xp: 160,
+	},
+};
+const RADIUS_CP = 6.5;
 const HITUNG_MUNDUR = 3000;
 
-// fase: null | "hitung" | "jalan"; mulai = waktu GO (ms); cp = indeks gerbang berikutnya
-export const balap = { fase: null, hitungSampai: 0, mulai: 0, cp: 0, hasil: null };
+// fase: null | "hitung" | "jalan"; trek: id trek; cp = indeks gerbang berikutnya
+export const balap = { fase: null, trek: null, hitungSampai: 0, mulai: 0, cp: 0, hasil: null };
+export const trekKini = () => TREK[balap.trek] || TREK.sprint;
 
 let versi = 0;
 const pendengar = new Set();
@@ -42,8 +60,9 @@ export const useBalap = () =>
 
 export const dekatStart = (x, z) => Math.hypot(x - START.x, z - START.z) < JARAK_START;
 
-export function mulaiBalap() {
-	if (balap.fase) return;
+export function mulaiBalap(trek = "sprint") {
+	if (balap.fase || !TREK[trek]) return;
+	balap.trek = trek;
 	balap.fase = "hitung";
 	balap.hitungSampai = performance.now() + HITUNG_MUNDUR;
 	balap.cp = 0;
@@ -72,10 +91,11 @@ export function tickBalap(x, z) {
 		beritahu();
 		return false;
 	}
-	const cp = CHECKPOINT[balap.cp];
+	const gerbang = trekKini().gerbang;
+	const cp = gerbang[balap.cp];
 	if (Math.hypot(x - cp.x, z - cp.z) < RADIUS_CP) {
 		balap.cp++;
-		if (balap.cp >= CHECKPOINT.length) selesai((kini - balap.mulai) / 1000);
+		if (balap.cp >= gerbang.length) selesai((kini - balap.mulai) / 1000);
 		else suara("koin");
 		beritahu();
 	}
@@ -83,18 +103,19 @@ export function tickBalap(x, z) {
 }
 
 function selesai(detik) {
-	const lama = progres.balap;
-	const rekor = catatBalap(detik);
-	const koin = rekor && lama != null ? 120 : 60;
+	const t = trekKini();
+	const lama = progres.rekor?.[t.id];
+	const rekor = catatBalap(t.id, detik);
+	const koin = rekor && lama != null ? t.hadiah[1] : t.hadiah[0];
 	tambahKoin(koin);
-	tambahXp(60);
+	tambahXp(t.xp);
 	catat("balap");
 	balap.fase = null;
-	balap.hasil = { detik, rekor, koin };
+	balap.hasil = { detik, rekor, koin, xp: t.xp, trek: t.nama };
 	suara("jaya");
-	ubahTenaga(0, { teks: `🏁 Finis ${detik.toFixed(2)} dtk${rekor ? " — REKOR BARU!" : ""} · +🪙${koin}`, jenis: "baik" });
+	ubahTenaga(0, { teks: `🏁 ${t.nama}: ${detik.toFixed(2)} dtk${rekor ? " — REKOR BARU!" : ""} · +🪙${koin}`, jenis: "baik" });
 	setTimeout(() => {
 		balap.hasil = null;
 		beritahu();
-	}, 6000);
+	}, 7000);
 }

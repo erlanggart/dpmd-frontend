@@ -1,31 +1,71 @@
 import { useRef } from "react";
 import { useFrame } from "@react-three/fiber";
 import { MeshStandardMaterial } from "three";
-import { CHECKPOINT, START, balap } from "../balap";
+import { START, balap, trekKini, useBalap } from "../balap";
+import { posisi } from "../jelajahStore";
+import { TANAH } from "./layout";
 import Papan from "./Papan";
 
-// Gerbang start/finis balapan motor di tepi jalan depan kantor, dan cincin gerbang cek yang
-// muncul selama balapan: gerbang berikutnya menyala kuning, sesudahnya samar. Dipasang di
-// grup halaman (y = TANAH).
+// Gerbang start/finis balapan motor di tepi jalan depan kantor; selama balapan: cincin gerbang
+// cek trek yang dipilih (berikutnya menyala kuning, dua sesudahnya samar) dan panah 3D di atas
+// kepala pemain yang menunjuk gerbang berikutnya. Dipasang di grup halaman (y = TANAH),
+// kecuali panah (koordinat dunia, mengikuti pemain).
 
 const BAHAN_AKTIF = new MeshStandardMaterial({ color: "#facc15", emissive: "#f59e0b", emissiveIntensity: 1.2, transparent: true, opacity: 0.85 });
 const BAHAN_BERIKUT = new MeshStandardMaterial({ color: "#a5f3fc", emissive: "#22d3ee", emissiveIntensity: 0.6, transparent: true, opacity: 0.35 });
+const BAHAN_PANAH = new MeshStandardMaterial({ color: "#facc15", emissive: "#f59e0b", emissiveIntensity: 0.9 });
 
-export default function Balap() {
+function Cincin() {
+	useBalap();
+	const t = trekKini();
 	const cincin = useRef([]);
 	useFrame(({ clock }) => {
 		const aktif = balap.fase === "jalan" || balap.fase === "hitung";
 		cincin.current.forEach((m, i) => {
 			if (!m) return;
 			const k = i - balap.cp;
-			m.visible = aktif && (k === 0 || k === 1);
+			m.visible = aktif && k >= 0 && k <= 2;
 			if (!m.visible) return;
 			m.material = k === 0 ? BAHAN_AKTIF : BAHAN_BERIKUT;
-			const s = k === 0 ? 1 + Math.sin(clock.elapsedTime * 6) * 0.05 : 0.9;
-			m.scale.setScalar(s);
+			m.scale.setScalar(k === 0 ? 1 + Math.sin(clock.elapsedTime * 6) * 0.05 : 0.9);
 		});
 	});
+	return t.gerbang.map((c, i) => {
+		const sebelum = i ? t.gerbang[i - 1] : START;
+		const rot = Math.atan2(c.x - sebelum.x, c.z - sebelum.z);
+		return (
+			<mesh key={`${t.id}:${i}`} ref={(m) => (cincin.current[i] = m)} position={[c.x, 2.6, c.z]} rotation-y={rot} visible={false} material={BAHAN_BERIKUT}>
+				<torusGeometry args={[3.4, 0.2, 8, 32]} />
+			</mesh>
+		);
+	});
+}
 
+function Panah() {
+	const g = useRef();
+	useFrame(({ clock }) => {
+		const cp = balap.fase === "jalan" && trekKini().gerbang[balap.cp];
+		g.current.visible = !!cp;
+		if (!cp) return;
+		g.current.position.set(posisi.x, (posisi.yTampil ?? posisi.y) + 2.9 + Math.sin(clock.elapsedTime * 4) * 0.08 - TANAH, posisi.z);
+		g.current.rotation.y = Math.atan2(cp.x - posisi.x, cp.z - posisi.z);
+	});
+	return (
+		<group ref={g} visible={false}>
+			{/* ujung panah sedikit menukik supaya bentuknya terbaca dari kamera di belakang */}
+			<group rotation-x={0.45}>
+				<mesh rotation-x={Math.PI / 2} position-z={0.15} material={BAHAN_PANAH}>
+					<coneGeometry args={[0.32, 0.7, 12]} />
+				</mesh>
+				<mesh rotation-x={Math.PI / 2} position-z={-0.35} material={BAHAN_PANAH}>
+					<cylinderGeometry args={[0.1, 0.1, 0.5, 8]} />
+				</mesh>
+			</group>
+		</group>
+	);
+}
+
+export default function Balap() {
 	return (
 		<group>
 			{/* gerbang start/finis: dua tiang & spanduk kotak-kotak di sisi utara jalan */}
@@ -43,7 +83,7 @@ export default function Balap() {
 				latar="#111827"
 				baris={[
 					{ teks: "🏁 START · FINIS 🏁", ukuran: 0.34, tebal: true, warna: "#facc15", y: 0.38 },
-					{ teks: "Balap motor — naik motor ke sini", ukuran: 0.16, warna: "#f8fafc", y: 0.78 },
+					{ teks: "Balap motor — Sprint & Sirkuit Kawasan", ukuran: 0.15, warna: "#f8fafc", y: 0.78 },
 				]}
 			/>
 			{/* garis start di aspal */}
@@ -51,15 +91,8 @@ export default function Balap() {
 				<planeGeometry args={[0.6, 8]} />
 				<meshBasicMaterial color="#f8fafc" />
 			</mesh>
-			{CHECKPOINT.map((c, i) => {
-				const lanjut = CHECKPOINT[i + 1] || CHECKPOINT[0];
-				const rot = Math.atan2(lanjut.x - c.x, lanjut.z - c.z);
-				return (
-					<mesh key={i} ref={(m) => (cincin.current[i] = m)} position={[c.x, 2.4, c.z]} rotation-y={rot} visible={false} material={BAHAN_BERIKUT}>
-						<torusGeometry args={[3.2, 0.18, 8, 32]} />
-					</mesh>
-				);
-			})}
+			<Cincin />
+			<Panah />
 		</group>
 	);
 }

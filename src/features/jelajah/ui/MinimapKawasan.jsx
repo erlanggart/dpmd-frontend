@@ -2,6 +2,9 @@ import { useEffect, useMemo, useRef } from "react";
 import { posisi } from "../jelajahStore";
 import { AIR, AREA, GEDUNG, JENIS_AREA, JENIS_JALAN, LABEL, SUDUT_UTARA } from "../scene/kawasanData";
 import { JALAN_TAMPIL } from "../scene/kawasanBantu";
+import { LAHAN_CCM, MCD } from "../scene/gedungKhusus";
+import { WARUNG_PECEL } from "../scene/layout";
+import { balap, trekKini, useBalap } from "../balap";
 
 // Peta mini kawasan Pemda saat pengunjung berada di luar halaman kantor. Sumbunya sama
 // dengan denah mini kantor (x ke kanan, z ke bawah: jalan depan kantor di bawah),
@@ -22,6 +25,9 @@ const WARNA_JALAN = { utama: "#ffffff", sedang: "#ffffff", kecil: "#f4f1ea", gan
 const UTARA = (Math.atan2(-Math.sin(SUDUT_UTARA), -Math.cos(SUDUT_UTARA)) * 180) / Math.PI;
 
 export default function MinimapKawasan({ className = "" }) {
+	useBalap();
+	const trek = balap.fase ? trekKini() : null;
+	const cpBerikut = trek?.gerbang[balap.cp];
 	const svg = useRef(null);
 	const penanda = useRef(null);
 
@@ -69,6 +75,9 @@ export default function MinimapKawasan({ className = "" }) {
 					<rect x={-34} y={-22} width={68} height={53} fill="#ddd3bf" />
 					<path d={peta.gedung} fill="#ece6d8" stroke="#a39b8c" strokeWidth={0.4} />
 					<rect x={-15} y={-13} width={30} height={25} fill="#f0a774" stroke="#c2622d" strokeWidth={0.5} />
+					{/* rute balapan motor yang sedang ditempuh & gerbang berikutnya */}
+					{trek && <polyline points={trek.jalur.map(([x, z]) => `${x},${z}`).join(" ")} fill="none" stroke="#f59e0b" strokeWidth={4} strokeLinejoin="round" strokeLinecap="round" opacity={0.85} />}
+					{cpBerikut && <circle cx={cpBerikut.x} cy={cpBerikut.z} r={7} fill="#facc15" stroke="#78350f" strokeWidth={1.5} />}
 					{/* toko & warung di seberang jalan */}
 					<rect x={10} y={47} width={12} height={9} fill="#dc2626" stroke="#7f1d1d" strokeWidth={0.5} />
 					<text x={16} y={52} textAnchor="middle" dominantBaseline="middle" fontSize={3} fontWeight={800} fill="#ffffff">
@@ -81,6 +90,19 @@ export default function MinimapKawasan({ className = "" }) {
 					<rect x={-19.2} y={44.8} width={9.8} height={8} fill="#f97316" stroke="#9a3412" strokeWidth={0.5} />
 					<text x={-14.3} y={49} textAnchor="middle" dominantBaseline="middle" fontSize={3} fontWeight={800} fill="#ffffff">
 						Mie Ayam
+					</text>
+					<rect x={WARUNG_PECEL.x0} y={WARUNG_PECEL.z0} width={WARUNG_PECEL.x1 - WARUNG_PECEL.x0} height={WARUNG_PECEL.z1 - WARUNG_PECEL.z0} fill="#16a34a" stroke="#14532d" strokeWidth={0.5} />
+					<text x={(WARUNG_PECEL.x0 + WARUNG_PECEL.x1) / 2} y={49} textAnchor="middle" dominantBaseline="middle" fontSize={3} fontWeight={800} fill="#ffffff">
+						Pecel
+					</text>
+					{/* gedung di koridor Jl. Tegar Beriman */}
+					<rect x={MCD.x0} y={MCD.z0} width={MCD.x1 - MCD.x0} height={MCD.z1 - MCD.z0} fill="#dc2626" stroke="#7f1d1d" strokeWidth={0.6} />
+					<text x={(MCD.x0 + MCD.x1) / 2} y={(MCD.z0 + MCD.z1) / 2} textAnchor="middle" dominantBaseline="middle" fontSize={7} fontWeight={900} fill="#ffbc0d">
+						McD
+					</text>
+					<rect x={LAHAN_CCM.x0} y={LAHAN_CCM.z0} width={LAHAN_CCM.x1 - LAHAN_CCM.x0} height={LAHAN_CCM.z1 - LAHAN_CCM.z0} fill="#0e7490" stroke="#164e63" strokeWidth={0.8} />
+					<text x={(LAHAN_CCM.x0 + LAHAN_CCM.x1) / 2} y={(LAHAN_CCM.z0 + LAHAN_CCM.z1) / 2} textAnchor="middle" dominantBaseline="middle" fontSize={9} fontWeight={900} fill="#ffffff">
+						Cibinong City Mall
 					</text>
 					<rect x={-6} y={47} width={12} height={9} fill="#ef4444" stroke="#991b1b" strokeWidth={0.5} />
 					<text x={0} y={52} textAnchor="middle" dominantBaseline="middle" fontSize={3.6} fontWeight={800} fill="#ffffff">

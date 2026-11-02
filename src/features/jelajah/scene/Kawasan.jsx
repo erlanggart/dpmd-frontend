@@ -24,6 +24,7 @@ import { warnai } from "./geometri";
 import { JALAN_TAMPIL, POHON_TAMPIL as POHON_KAWASAN, pasangan, tinggiGedung } from "./kawasanBantu";
 import { AIR, AREA, GEDUNG, JENIS_AREA, JENIS_GEDUNG, JENIS_JALAN, LABEL as LABEL_DATA, SUNGAI } from "./kawasanData";
 import { LABEL_SITU } from "./situ";
+import { LABEL_KHUSUS } from "./gedungKhusus";
 import SituPemda from "./SituPemda.jsx";
 import { suasana } from "./suasana";
 
@@ -37,7 +38,7 @@ import { suasana } from "./suasana";
 const PETAK = 200;
 const JARAK_GAMBAR = 380;
 const JARAK_LABEL = [170, 300]; // gedung, area
-const LABEL = [...LABEL_DATA, ...LABEL_SITU];
+const LABEL = [...LABEL_DATA, ...LABEL_SITU, ...LABEL_KHUSUS];
 
 const IDX = Object.fromEntries(JENIS_GEDUNG.map((j, i) => [j, i]));
 const WARNA_RUMAH = ["#efe6d2", "#f2e3c6", "#e8d8c3", "#f4efe6", "#dfe7e0", "#f0dcd0", "#e6e0cf", "#f6e7b8"];
@@ -312,27 +313,30 @@ const lapis = (urutan, ekstra = {}) =>
 
 const WARNA_AREA = { taman: "#7fae5c", lapangan: "#5f9e45", stadion: "#b8573f", plaza: "#d6cfc1", parkir: "#a9a7a1", lapanganKeras: "#4f8f8b" };
 const WARNA_JALAN = { utama: "#4a4d52", sedang: "#4f5257", kecil: "#5c5f63", gang: "#8a8780", setapak: "#cdc5b5" };
-const Y_JALAN = { utama: 0.016, sedang: 0.014, kecil: 0.012, gang: 0.01, setapak: 0.008 };
+// Tiap jenis jalan berlapis sendiri (bahan berpolygonOffset bertingkat) dan berselisih tinggi
+// ±6 mm: dulu semuanya satu bahan berselisih 2 mm, sehingga di persimpangan antarjenis
+// warnanya berebut kedalaman (berkedip) begitu dilihat dari agak jauh.
+const Y_JALAN = { utama: 0.05, sedang: 0.044, kecil: 0.038, gang: 0.032, setapak: 0.026 };
+const URUT_JALAN = ["setapak", "gang", "kecil", "sedang", "utama"];
 
 function susunPermukaan() {
 	const area = new Wadah();
 	const atas = new Wadah(); // lapangan di dalam stadion/taman
-	const jalan = new Wadah();
-	const setapak = new Wadah();
+	const jalan = Object.fromEntries(URUT_JALAN.map((j) => [j, new Wadah()]));
 	const marka = new Wadah();
 	const talud = new Wadah();
 
 	for (const [j, f] of AREA) {
 		const jenis = JENIS_AREA[j];
 		const w = jenis === "lapangan" || jenis === "lapanganKeras" ? atas : area;
-		w.poligon(pasangan(f), 0.004, WARNA_AREA[jenis]);
+		w.poligon(pasangan(f), w === atas ? 0.018 : 0.01, WARNA_AREA[jenis]);
 	}
-	for (const [lebar, f] of SUNGAI) area.pita(pasangan(f), lebar, 0.006, "#3f7fa6");
+	for (const [lebar, f] of SUNGAI) area.pita(pasangan(f), lebar, 0.012, "#3f7fa6");
 
 	for (const [j, lebar, f] of JALAN_TAMPIL) {
 		const jenis = JENIS_JALAN[j];
 		const p = pasangan(f);
-		(jenis === "setapak" ? setapak : jalan).pita(p, lebar, Y_JALAN[jenis], WARNA_JALAN[jenis]);
+		jalan[jenis].pita(p, lebar, Y_JALAN[jenis], WARNA_JALAN[jenis]);
 		// marka putus-putus di as jalan besar
 		if (jenis === "utama" || jenis === "sedang") {
 			let sisa = 0;
@@ -349,7 +353,7 @@ function susunPermukaan() {
 							[ax + (bx - ax) * t1, az + (bz - az) * t1],
 						],
 						0.15,
-						0.02,
+						0.058,
 						"#f1f1ec",
 						false,
 					);
@@ -374,8 +378,7 @@ function susunPermukaan() {
 	return {
 		area: area.geometri(),
 		atas: atas.geometri(),
-		jalan: jalan.geometri(),
-		setapak: setapak.geometri(),
+		...Object.fromEntries(URUT_JALAN.map((j) => ["jalan_" + j, jalan[j].geometri()])),
 		marka: marka.geometri(),
 		talud: talud.geometri(),
 	};
@@ -383,7 +386,7 @@ function susunPermukaan() {
 
 // Tanah rumput seluas kawasan, berlubang tepat di situ supaya air bisa lebih rendah.
 function geometriTanah() {
-	const L = 1600;
+	const L = 2600;
 	const s = new Shape([new Vector2(-L, L), new Vector2(L, L), new Vector2(L, -L), new Vector2(-L, -L)]);
 	for (const f of AIR) s.holes.push(new Path(pasangan(f).map(([x, z]) => new Vector2(x, -z))));
 	const g = new ShapeGeometry(s);
@@ -443,9 +446,8 @@ function teksturRiak() {
 const BAHAN = {
 	area: lapis(1),
 	atas: lapis(2),
-	setapak: lapis(3),
-	jalan: lapis(4, { roughness: 0.9 }),
-	marka: lapis(6),
+	...Object.fromEntries(URUT_JALAN.map((j, i) => ["jalan_" + j, lapis(3 + i, { roughness: 0.9 })])),
+	marka: lapis(9),
 	talud: new MeshStandardMaterial({ vertexColors: true, roughness: 0.95, side: DoubleSide }),
 };
 

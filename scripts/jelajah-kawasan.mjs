@@ -40,9 +40,29 @@ const JALAN_DEPAN = { x0: -61, x1: 61, z0: 29, z1: 42 };
 // Pohon buatan tangan di sekitar halaman; pohon kawasan tidak ditanam di sini.
 const LUAR_LAMA = { x0: -36, x1: 36, z0: -24, z1: 48 };
 
+// Koridor Jl. Tegar Beriman: dari McD Sukahati (barat) sampai Cibinong City Mall (timur),
+// ±LEBAR_KORIDOR m di kiri-kanan as jalan. Kawasan jelajah = WILAYAH ∪ koridor ini.
+const LEBAR_KORIDOR = 140;
+const NAMA_KORIDOR = /tegar beriman/i;
+// Gedung yang digambar tangan (bisa dimasuki): tapaknya dari OSM, gedungnya diganti.
+const TAPAK_KHUSUS = { mcd: "224193803", ccm: "224198294" };
+// Koridor hanya sampai sedikit lewat McD (barat) dan CCM (timur); ruas bernama sama di luar itu dibuang.
+const KORIDOR_X = [-1990, 1090];
+// Lahan gedung buatan tangan (koordinat adegan, sejajar sumbu): gedung, jalan servis, area,
+// dan pohon OSM di dalamnya dibuang. Denah gedungnya di scene/gedungKhusus.js.
+const BERSIH = {
+	mcd: { x0: 852, x1: 922, z0: -1008, z1: -955 },
+	ccm: { x0: -1852, x1: -1663, z0: -600, z1: -536 },
+};
+const diBersih = (q, m = 0) => Object.values(BERSIH).some((k) => q[0] > k.x0 - m && q[0] < k.x1 + m && q[1] > k.z0 - m && q[1] < k.z1 + m);
+
 const UNDUH = [
 	[106.8190, -6.4845, 106.8245, -6.4725],
 	[106.8245, -6.4845, 106.8302, -6.4725],
+	[106.8140, -6.4870, 106.8190, -6.4790],
+	[106.8190, -6.4875, 106.8302, -6.4845],
+	[106.8302, -6.4880, 106.8375, -6.4800],
+	[106.8375, -6.4880, 106.8450, -6.4800],
 ];
 
 // ---------- unduh & urai OSM ----------
@@ -260,6 +280,45 @@ function hash(s) {
 	return (h >>> 0) / 4294967296;
 }
 
+// Ruas as Jl. Tegar Beriman (koordinat adegan) & uji "di dalam kawasan jelajah".
+let KORIDOR = [];
+function siapkanKoridor() {
+	KORIDOR = [];
+	for (const w of WAY.values()) {
+		if (!w.tag.highway || !NAMA_KORIDOR.test(w.tag.name || "")) continue;
+		let ruas = [];
+		for (const q of titikWay(w)) {
+			if (q[0] >= KORIDOR_X[0] && q[0] <= KORIDOR_X[1]) ruas.push(q);
+			else {
+				if (ruas.length >= 2) KORIDOR.push(sederhanakan(ruas, false));
+				ruas = [];
+			}
+		}
+		if (ruas.length >= 2) KORIDOR.push(sederhanakan(ruas, false));
+	}
+}
+const dekatKoridor = (q, lebar = LEBAR_KORIDOR) => KORIDOR.some((p) => p.some((a, i) => i && jarakRuas(q, p[i - 1], a) < lebar));
+const diDunia = (q) => di(WILAYAH, q) || dekatKoridor(q);
+
+// Kotak tapak gedung khusus (sejajar sumbu) + sudut sisi terpanjangnya.
+function kotakTapak(id) {
+	const w = WAY.get(id);
+	if (!w) return null;
+	const p = titikWay(w);
+	const xs = p.map((q) => q[0]);
+	const zs = p.map((q) => q[1]);
+	let sudut = 0;
+	let terpanjang = 0;
+	for (let i = 1; i < p.length; i++) {
+		const d = Math.hypot(p[i][0] - p[i - 1][0], p[i][1] - p[i - 1][1]);
+		if (d > terpanjang) {
+			terpanjang = d;
+			sudut = Math.atan2(p[i][1] - p[i - 1][1], p[i][0] - p[i - 1][0]);
+		}
+	}
+	return { x0: bulat(Math.min(...xs)), x1: bulat(Math.max(...xs)), z0: bulat(Math.min(...zs)), z1: bulat(Math.max(...zs)), sudut: Math.round(((sudut * 180) / Math.PI) * 10) / 10 };
+}
+
 function susun() {
 	const gedung = [];
 	const jalan = [];
@@ -283,13 +342,18 @@ function susun() {
 		const p0 = titikWay(w);
 		if (p0.length < 2) continue;
 		const c = pusat(p0);
-		if (!di(WILAYAH, c)) continue;
+		const jalanRaya = t.highway && LEBAR_JALAN[t.highway] && t.area !== "yes";
+		// jalan panjang bisa berpusat di luar kawasan padahal melintasinya — dipotong per titik di bawah
+		if (!jalanRaya && !diDunia(c)) continue;
+		if (Object.values(TAPAK_KHUSUS).includes(w.id)) continue;
 
 		// --- gedung ---
 		const gd = t.building || (["public_building", "townhall", "police", "courthouse"].includes(t.amenity) && !t.landuse ? "yes" : null);
 		if (gd && tertutup(w) && !t.landuse) {
 			const p = ccw(sederhanakan(p0.slice(0, -1), true));
 			if (p.some((q) => di(HALAMAN, q)) || di(HALAMAN, c)) continue;
+			// gedung lain yang menempel di tapak gedung buatan tangan dibuang
+			if (diBersih(c, 4) || Object.values(TAPAK).some((k) => k && c[0] > k.x0 - 6 && c[0] < k.x1 + 6 && c[1] > k.z0 - 6 && c[1] < k.z1 + 6)) continue;
 			const ls = Math.abs(luas(p));
 			if (ls < 6) continue;
 			let jenis = "rumah";
@@ -334,7 +398,7 @@ function susun() {
 		else if (t.amenity === "parking" && tertutup(w)) jenisArea = "parkir";
 		if (jenisArea && tertutup(w)) {
 			const p = ccw(sederhanakan(p0.slice(0, -1), true));
-			if (di(HALAMAN, c)) continue;
+			if (di(HALAMAN, c) || diBersih(c)) continue;
 			area.push([JENIS_AREA.indexOf(jenisArea), datar(p)]);
 			const nama = w.id in NAMA ? NAMA[w.id] : jenisArea !== "lapangan" || t.sport === "tennis" ? namaDari(t.name) : null;
 			if (nama) pasangLabel(nama, ...c, jenisArea === "stadion" ? 7 : 3, 1);
@@ -353,7 +417,8 @@ function susun() {
 			let ruas = [];
 			const p = sederhanakan(p0, false);
 			for (let i = 0; i < p.length; i++) {
-				const buang = (q) => di(HALAMAN, q) || di(JALAN_DEPAN, q);
+				// jalan raya tetap utuh; jalan servis & setapak di lahan gedung buatan tangan dibuang
+				const buang = (q) => di(HALAMAN, q) || di(JALAN_DEPAN, q) || !diDunia(q) || (jenis !== "utama" && diBersih(q, 1));
 				if (buang(p[i])) {
 					if (ruas.length >= 2) jalan.push([JENIS_JALAN.indexOf(jenis), bulat(lebar), datar(ruas)]);
 					// titik terakhir di luar dipertahankan sebagai ujung supaya jalan menyambung ke tepi
@@ -371,7 +436,7 @@ function susun() {
 		const nama = NAMA_NODE[n.tag.name];
 		if (!nama) continue;
 		const q = ke(n);
-		if (!di(WILAYAH, q) || di(HALAMAN, q)) continue;
+		if (!diDunia(q) || di(HALAMAN, q)) continue;
 		const g = gedung.find((g) => dalamPoligon(q, pasangan(g[2])));
 		pasangLabel(nama, ...q, g ? g[1] * 3.4 + 3.2 : 4, 0);
 	}
@@ -419,7 +484,8 @@ function tanam({ gedung, jalan, area, air, sungai }) {
 	const pohon = [];
 	const dekatPohon = new Map();
 	const kosong = (q, jarakPohon) => {
-		if (!di(WILAYAH, q) || di(LUAR_LAMA, q)) return false;
+		if (!diDunia(q) || di(LUAR_LAMA, q)) return false;
+		if (diBersih(q, 4)) return false;
 		for (const d of halang(q)) {
 			if (q[0] < d.kotak[0] || q[0] > d.kotak[1] || q[1] < d.kotak[2] || q[1] > d.kotak[3]) continue;
 			if (d.poli && dalamPoligon(q, d.p)) return false;
@@ -472,8 +538,8 @@ function tanam({ gedung, jalan, area, air, sungai }) {
 		}
 	}
 	// 4. Lahan kosong & pekarangan: sebaran acak yang tidak terlalu rapat.
-	const w = WILAYAH;
-	for (let k = 0; k < 9000 && pohon.length < 2600; k++) {
+	const w = BATAS;
+	for (let k = 0; k < 40000 && pohon.length < 5200; k++) {
 		const q = [w.x0 + acak() * (w.x1 - w.x0), w.z0 + acak() * (w.z1 - w.z0)];
 		if (kosong(q, 9)) tambah(q, 0.75 + acak() * 0.7);
 	}
@@ -483,6 +549,17 @@ function tanam({ gedung, jalan, area, air, sungai }) {
 // ---------- tulis ----------
 
 for (const b of UNDUH) urai(await unduh(b));
+siapkanKoridor();
+const TAPAK = Object.fromEntries(Object.entries(TAPAK_KHUSUS).map(([k, id]) => [k, kotakTapak(id)]));
+// Kotak pembatas seluruh kawasan jelajah (wilayah lama + koridor)
+const BATAS = { ...WILAYAH };
+for (const p of KORIDOR)
+	for (const [x, z] of p) {
+		BATAS.x0 = Math.min(BATAS.x0, Math.floor(x - LEBAR_KORIDOR));
+		BATAS.x1 = Math.max(BATAS.x1, Math.ceil(x + LEBAR_KORIDOR));
+		BATAS.z0 = Math.min(BATAS.z0, Math.floor(z - LEBAR_KORIDOR));
+		BATAS.z1 = Math.max(BATAS.z1, Math.ceil(z + LEBAR_KORIDOR));
+	}
 const data = susun();
 data.pohon = tanam(data);
 
@@ -494,8 +571,16 @@ const isi = `// DIBANGKITKAN OTOMATIS oleh scripts/jelajah-kawasan.mjs — janga
 // Koordinat adegan (meter): gedung DPMD di (0, 0), +x barat sepanjang jalan depan,
 // +z ≈ utara. Poligon ditulis datar [x0, z0, x1, z1, ...].
 
-// Batas jelajah (pemain & kendaraan tidak bisa keluar).
-export const BATAS_KAWASAN = ${s(WILAYAH)};
+// Kotak pembatas seluruh kawasan jelajah; yang boleh dijelajahi = WILAYAH_INTI ∪ koridor
+// Jl. Tegar Beriman (lihat diKawasan di kawasanBantu.js).
+export const BATAS_KAWASAN = ${s(BATAS)};
+export const WILAYAH_INTI = ${s(WILAYAH)};
+// [garis as Jl. Tegar Beriman], lebar koridor di kiri-kanannya
+export const LEBAR_KORIDOR = ${LEBAR_KORIDOR};
+export const KORIDOR = ${s(KORIDOR.map((p) => datar(p)))};
+// Lahan gedung buatan tangan (McD & Cibinong City Mall) — denahnya di gedungKhusus.js.
+// Tapak aslinya di OSM (kotak & sudut sisi terpanjang, derajat): ${s(TAPAK)}
+export const LAHAN_KHUSUS = ${s(BERSIH)};
 // Arah utara di adegan (radian dari +z, searah jarum jam dilihat dari atas).
 export const SUDUT_UTARA = ${bulat(PUTAR * 1000) / 1000};
 
@@ -536,6 +621,7 @@ ${data.label.map((l) => `\t${s(l)},`).join("\n")}
 ];
 `;
 fs.writeFileSync(KELUARAN, isi);
+console.log("tapak", JSON.stringify(TAPAK), "batas", JSON.stringify(BATAS), "koridor", KORIDOR.length);
 console.log(
 	`gedung ${data.gedung.length}, jalan ${data.jalan.length}, area ${data.area.length}, air ${data.air.length}, sungai ${data.sungai.length}, pohon ${data.pohon.length}, label ${data.label.length} → ${(isi.length / 1024).toFixed(0)} KB`,
 );

@@ -41,6 +41,16 @@ const GAYA = {
 		labelLatar: "#ffffff",
 		kasir: { seragam: "warga", perempuan: false, kulit: "#c68d5e", rambut: "#1a130d", baju: "#ffffff", celana: "#3f3f46", kacamata: true },
 	},
+	ccm: {
+		dinding: "#f8fafc",
+		bingkai: "#0f172a",
+		rakTiang: "#cbd5e1",
+		rakPapan: "#e2e8f0",
+		aksen: "#0e7490",
+		labelLatar: "#ecfeff",
+		papan: "SUPERMARKET",
+		kasir: { seragam: "warga", perempuan: true, jilbab: "#0e7490", kulit: "#d3a378", rambut: "#21180f", baju: "#0e7490", celana: "#1e293b" },
+	},
 };
 
 // Satu geometri berisi deretan barang di satu sisi rak (4 tingkat × 6 kolom × 2 baris).
@@ -175,7 +185,7 @@ function Cangkang({ t, gaya, daftarDinding }) {
 					</mesh>
 					<mesh position={[cx, 3.85, t.z0 - 0.02]}>
 						<boxGeometry args={[lebar + 0.4, 1.1, 0.25]} />
-						<meshStandardMaterial color="#d61f26" />
+						<meshStandardMaterial color={gaya.aksen} />
 					</mesh>
 					<mesh position={[cx, 3.3, t.z0 - 0.95]}>
 						<boxGeometry args={[lebar + 0.6, 0.12, 1.9]} />
@@ -380,7 +390,7 @@ function Toko({ t, daftarDinding }) {
 					<Bendera x={cx} y={t.tinggi + (lebar / 2) * Math.tan(0.42) - 0.1} z={t.z0 + 0.6} />
 				</>
 			) : (
-				<Papan posisi={[cx, 3.85, t.z0 - 0.16]} rotasi={Math.PI} lebar={6.4} tinggi={0.95} latar="#d61f26" baris={[{ teks: "Alfamart", ukuran: 0.7, tebal: true, warna: "#ffffff", y: 0.52 }]} />
+				<Papan posisi={[cx, 3.85, t.z0 - 0.16]} rotasi={Math.PI} lebar={6.4} tinggi={0.95} latar={gaya.aksen} baris={[{ teks: gaya.papan || "Alfamart", ukuran: gaya.papan ? 0.55 : 0.7, tebal: true, warna: "#ffffff", y: 0.52 }]} />
 			)}
 		</group>
 	);

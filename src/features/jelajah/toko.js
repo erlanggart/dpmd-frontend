@@ -2,6 +2,7 @@
 export const INFO_TOKO = {
 	alfamart: { nama: "Alfamart", ikon: "🛒" },
 	koperasi: { nama: "Koperasi Desa Merah Putih", ikon: "🇮🇩" },
+	ccm: { nama: "Supermarket Cibinong City Mall", ikon: "🛍️" },
 };
 
 // Barang di toko depan kantor, dibayar dengan koin hasil memancing (lihat belanja.js).
@@ -21,4 +22,11 @@ export const BARANG = [
 	{ id: "gula", nama: "Gula Pasir 1 kg", ikon: "🧂", harga: 20, tenaga: 12, ket: "Teman teh & kopi", bentuk: "bungkus", warna: "#f8fafc", olah: true },
 	{ id: "tempe", nama: "Tempe & Tahu", ikon: "🟫", harga: 18, tenaga: 16, ket: "Lauk murah bergizi", bentuk: "kotak", warna: "#d6b47a", olah: true },
 	{ id: "kopi", nama: "Kopi Sachet", ikon: "☕", harga: 8, tenaga: 6, ket: "Penghilang kantuk", bentuk: "bungkus", warna: "#78350f", olah: true },
+	// supermarket Cibinong City Mall
+	{ id: "keripik", nama: "Keripik Kentang", ikon: "🥔", harga: 22, tenaga: 14, ket: "Renyah, teman nonton", bentuk: "bungkus", warna: "#facc15" },
+	{ id: "cokelat", nama: "Cokelat Batang", ikon: "🍫", harga: 28, tenaga: 18, ket: "Manis penambah semangat", bentuk: "kotak", warna: "#7c2d12" },
+	{ id: "susu", nama: "Susu UHT", ikon: "🥛", harga: 18, tenaga: 15, ket: "Kotak 250 ml", bentuk: "kotak", warna: "#e0f2fe" },
+	{ id: "jus", nama: "Jus Jeruk", ikon: "🧃", harga: 24, tenaga: 18, ket: "Vitamin C segar", bentuk: "botol", warna: "#fb923c" },
+	{ id: "apel", nama: "Apel Merah", ikon: "🍎", harga: 20, tenaga: 16, ket: "Buah segar", bentuk: "kaleng", warna: "#dc2626" },
+	{ id: "eskrim", nama: "Es Krim Cup", ikon: "🍦", harga: 30, tenaga: 20, ket: "Vanila cokelat", bentuk: "cup", warna: "#fde68a" },
 ];

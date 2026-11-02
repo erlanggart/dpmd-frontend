@@ -2,7 +2,7 @@ import { useMemo, useRef } from "react";
 import { useFrame } from "@react-three/fiber";
 import { BufferGeometry, Float32BufferAttribute, Line, LineBasicMaterial, MeshBasicMaterial, Object3D, RingGeometry, SphereGeometry, Vector3 } from "three";
 import { posisi } from "../jelajahStore";
-import { IKAN, joranKini, panjangCm, pancing, tickPancing, useKoleksi } from "../pancing";
+import { IKAN, joranKini, panjangCm, pancing, senarKini, tickPancing, useKoleksi } from "../pancing";
 import { TANAH } from "./layout";
 import ModelIkan from "./ModelIkan";
 import { AIR_Y, perahuBebas } from "./situ";
@@ -148,6 +148,10 @@ export default function Pancingan() {
 	const ikanG = useRef();
 	const percik = useRef([]);
 	const st = useRef({ sudut: 0.5, lentur: 0, ikanId: null });
+	// riak melingkar di permukaan air (pelampung mendarat/dicolek/disambar, ikan melawan)
+	const riak = useRef([]);
+	const riakData = useRef(Array.from({ length: 8 }, () => ({ t: 99, x: 0, z: 0, besar: 1 })));
+	const riakSt = useRef({ fase: null, colek: false, jeda: 0, urut: 0 });
 	const v = useMemo(() => ({ ujung: new Vector3(), akhir: new Vector3(), kontrol: new Vector3(), p: new Vector3() }), []);
 	const senar = useMemo(() => {
 		const g = new BufferGeometry();
@@ -172,6 +176,7 @@ export default function Pancingan() {
 		}
 		// logika permainan berjalan di sini, satu kali per frame
 		tickPancing(dt);
+		senar.material.color.set(senarKini().warna);
 
 		// --- joran di tangan kanan pemancing ---
 		const arah = p.asal.rot + p.aim;
@@ -230,6 +235,43 @@ export default function Pancingan() {
 			v.akhir.set(p.ikanPos.x, AIR - 0.05, p.ikanPos.z);
 			ujungSenar = v.akhir;
 			lendut = Math.max(0, 0.08 * (1 - p.tegang));
+		}
+
+		// --- riak air ---
+		{
+			const rs = riakSt.current;
+			const tambahRiak = (x, z, besar) => {
+				const r = riakData.current[rs.urut++ % riakData.current.length];
+				Object.assign(r, { t: 0, x, z, besar });
+			};
+			if (p.fase !== rs.fase && p.fase === "tunggu") tambahRiak(p.pelampung.x, p.pelampung.z, 1.2);
+			if (p.fase === "tunggu" && p.colek && !rs.colek) tambahRiak(pl.position.x, pl.position.z, 0.6);
+			rs.colek = p.fase === "tunggu" && p.colek;
+			rs.jeda -= dt;
+			if (rs.jeda <= 0) {
+				if (p.fase === "gigit") {
+					tambahRiak(pl.position.x, pl.position.z, 1);
+					rs.jeda = 0.3;
+				} else if (p.fase === "tarik") {
+					tambahRiak(p.ikanPos.x, p.ikanPos.z, 0.8 + Math.min(1, p.tegang) * 0.8);
+					rs.jeda = 0.5 - Math.min(0.3, p.tegang * 0.25);
+				} else if (p.fase === "tunggu") {
+					tambahRiak(pl.position.x, pl.position.z, 0.35);
+					rs.jeda = 2.2;
+				}
+			}
+			rs.fase = p.fase;
+			riakData.current.forEach((r, i) => {
+				const m = riak.current[i];
+				if (!m) return;
+				r.t += dt;
+				const f = r.t / 1.6;
+				m.visible = f < 1;
+				if (!m.visible) return;
+				m.position.set(r.x, AIR + 0.012, r.z);
+				m.scale.setScalar((0.3 + f * 2.2) * r.besar);
+				m.material.opacity = 0.55 * (1 - f);
+			});
 		}
 
 		// --- penanda bidikan saat mengayun ---
@@ -331,6 +373,11 @@ export default function Pancingan() {
 			<Joran akar={akar} ruas={ruas} ujung={ujung} />
 			<primitive object={senar} />
 			<Pelampung g={pelampung} />
+			{riakData.current.map((_, i) => (
+				<mesh key={i} ref={(m) => (riak.current[i] = m)} geometry={GEO_CINCIN} visible={false}>
+					<meshBasicMaterial color="#e0f2fe" transparent opacity={0} depthWrite={false} />
+				</mesh>
+			))}
 			<mesh ref={bidik} geometry={GEO_CINCIN} visible={false}>
 				<meshBasicMaterial color="#4ade80" transparent opacity={0.9} depthWrite={false} />
 			</mesh>

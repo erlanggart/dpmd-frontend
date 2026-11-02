@@ -1,14 +1,17 @@
 import { useEffect, useLayoutEffect, useMemo, useRef } from "react";
 import { useFrame } from "@react-three/fiber";
 import { Object3D } from "three";
-import { ANAK_TANGGA, FONDASI, PILAR, POHON, PONDASI, SEMAK, TANAH, TERAS, TIANG_BENDERA } from "./layout";
+import { ANAK_TANGGA, FONDASI, GEROBAK_MIE, GEROBAK_PECEL, KURSI_PECEL, KURSI_WARUNG, MEJA_MIE, MEJA_PECEL, PILAR, POHON, PONDASI, SEMAK, TANAH, TERAS, TIANG_BENDERA, WARUNG_MIE, WARUNG_PECEL } from "./layout";
 import { teksturPaving } from "./tekstur";
 import Papan from "./Papan";
 import Gabung from "./Gabung";
 import JalanHidup from "./JalanHidup";
 import Kawasan from "./Kawasan.jsx";
 import Minimarket from "./Minimarket";
-import WarungMie from "./WarungMie";
+import WarungTenda from "./WarungTenda";
+import MakananMeja from "./MakananMeja";
+import McD from "./McD";
+import MalCcm from "./MalCcm";
 import Distro from "./Distro";
 import Balap from "./Balap";
 import PagarDepan from "./PagarDepan";
@@ -16,6 +19,41 @@ import Parkiran from "./Parkiran";
 
 // Pohon digambar sebagai InstancedMesh (batang, daun, bak tanam, rumput dalam bak):
 // puluhan pohon cukup empat draw call, penting untuk HP kelas menengah.
+// Warung tenda di seberang kantor: mie ayam (timur Alfamart) & pecel ayam (barat Koperasi).
+const TEMA_MIE = {
+	tenda: ["#f97316", "#ea580c"],
+	gerobak: "#1d4ed8",
+	meja: "#9a6b3f",
+	penjual: { seragam: "warga", perempuan: false, kulit: "#b9824f", rambut: "#141010", baju: "#f8fafc", celana: "#334155" },
+	papanLatar: "#fef3c7",
+	papanGerobak: [
+		{ teks: "MIE AYAM", ukuran: 0.2, tebal: true, warna: "#b91c1c", y: 0.36 },
+		{ teks: "Pak Kumis · Bakso · Pangsit", ukuran: 0.075, tebal: true, warna: "#1e3a8a", y: 0.78 },
+	],
+	spanduk: "#b91c1c",
+	judul: "🍜 MIE AYAM PAK KUMIS · 🪙 40",
+};
+const TEMA_PECEL = {
+	tenda: ["#2563eb", "#1d4ed8"],
+	gerobak: "#f8fafc",
+	meja: "#8b5a2b",
+	wajan: true,
+	penjual: { seragam: "warga", perempuan: true, jilbab: "#7e22ce", kulit: "#c68d5e", rambut: "#1a130d", baju: "#f59e0b", celana: "#3f3f46", rok: true },
+	papanLatar: "#ffffff",
+	papanGerobak: [
+		{ teks: "PECEL AYAM", ukuran: 0.19, tebal: true, warna: "#15803d", y: 0.36 },
+		{ teks: "Bude · Lele · Tahu Tempe", ukuran: 0.075, tebal: true, warna: "#b91c1c", y: 0.78 },
+	],
+	spanduk: "#15803d",
+	judul: "🍗 PECEL AYAM BUDE",
+	spandukSamping: [
+		{ teks: "PECEL AYAM", ukuran: 0.5, tebal: true, warna: "#b91c1c", y: 0.2 },
+		{ teks: "BUDE", ukuran: 0.42, tebal: true, warna: "#15803d", y: 0.43 },
+		{ teks: "🍗 Ayam · 🐟 Lele · Tahu Tempe", ukuran: 0.2, tebal: true, warna: "#1e3a8a", y: 0.66 },
+		{ teks: "Sambal Terasi Mantap! 🌶️", ukuran: 0.17, tebal: true, warna: "#c2410c", y: 0.85 },
+	],
+};
+
 function Pepohonan() {
 	const batang = useRef();
 	const daun = useRef();
@@ -236,7 +274,11 @@ export default function Lingkungan({ daftarDinding }) {
 				<Bendera />
 				<JalanHidup />
 				<Minimarket daftarDinding={daftarDinding} />
-				<WarungMie daftarDinding={daftarDinding} />
+				<WarungTenda w={WARUNG_MIE} g={GEROBAK_MIE} meja={MEJA_MIE} kursi={KURSI_WARUNG} tema={TEMA_MIE} daftarDinding={daftarDinding} />
+				<WarungTenda w={WARUNG_PECEL} g={GEROBAK_PECEL} meja={MEJA_PECEL} kursi={KURSI_PECEL} tema={TEMA_PECEL} daftarDinding={daftarDinding} />
+				<MakananMeja />
+				<McD daftarDinding={daftarDinding} />
+				<MalCcm daftarDinding={daftarDinding} />
 				<Distro daftarDinding={daftarDinding} />
 				<Balap />
 			</group>

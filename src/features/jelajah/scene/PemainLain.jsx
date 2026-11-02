@@ -184,6 +184,7 @@ function Tamu({ id, nama, jk, avatar, kulit, gaya }) {
 	const spLabel = useRef();
 	const gerak = useRef({ laju: 0, fase: 0, udara: false, isyarat: null });
 	const gerakDuduk = useRef({ aktivitas: null });
+	const mangkuk = useRef();
 	const tampil = useRef({ x: 0, y: 0, z: 0, rot: 0, ada: false, laju: 0 });
 	const tinggi = useRef(2.1);
 	const lihat = useRef(false);
@@ -227,6 +228,7 @@ function Tamu({ id, nama, jk, avatar, kulit, gaya }) {
 		if (bergerak) gr.fase += dt * (s.lari ? 13 : 9);
 		gr.udara = !!s.udara;
 		gerakDuduk.current.aktivitas = s.ak === "makan" ? "makan" : null;
+		mangkuk.current.visible = s.ak === "makan";
 		const kini = performance.now();
 		// sedang memancing: tangan menggenggam joran, atau mengangkat ikan hasil tangkapan
 		gr.isyarat = s.pc && s.pose === "mancing" ? (s.pc.f === 5 ? "angkat" : "mancing") : s.pose === "renang" ? "renang" : p.emote && kini < p.emote.sampai ? p.emote.jenis : s.kr ? "keranjang" : null;
@@ -240,7 +242,7 @@ function Tamu({ id, nama, jk, avatar, kulit, gaya }) {
 
 		// Kendaraan yang ia kemudikan ikut bergerak (kecuali sedang kita kemudikan sendiri).
 		// Kendaraan digerakkan oleh pengemudinya saja; penumpang hanya ikut duduk.
-		const k = s.kend && (s.kend.kursi ?? 0) === 0 && kendaraanDariId(s.kend.id);
+		const k = s.kend && (s.kend.kursi ?? 0) === 0 && kendaraanDariId(s.kend.id, s.kend);
 		if (k && !(posisi.kend === k && (posisi.kursi ?? 0) === 0)) {
 			const f = 1 - Math.exp(-12 * dt);
 			const lompat = Math.hypot(s.kend.x - k.x, s.kend.z - k.z) > 6;
@@ -275,6 +277,21 @@ function Tamu({ id, nama, jk, avatar, kulit, gaya }) {
 				</group>
 				<group ref={duduk} visible={false}>
 					<Tokoh penampilan={penampilan} pose="duduk" gerak={gerakDuduk} />
+					{/* mangkuk mie ayam di meja depannya saat ia makan */}
+					<group ref={mangkuk} position={[0, 0.75, 0.37]} visible={false}>
+						<mesh position-y={0.05}>
+							<cylinderGeometry args={[0.11, 0.06, 0.1, 14]} />
+							<meshStandardMaterial color="#f8fafc" />
+						</mesh>
+						<mesh position-y={0.085}>
+							<cylinderGeometry args={[0.098, 0.098, 0.02, 14]} />
+							<meshStandardMaterial color="#e8b04a" />
+						</mesh>
+						<mesh position={[0.12, 0.11, 0]} rotation-z={0.5}>
+							<boxGeometry args={[0.012, 0.24, 0.012]} />
+							<meshStandardMaterial color="#d6a96b" />
+						</mesh>
+					</group>
 				</group>
 			</group>
 			<sprite ref={spLabel} scale={[1.9, 0.27, 1]} visible={false} renderOrder={11}>

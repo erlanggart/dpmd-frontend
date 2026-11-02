@@ -6,98 +6,146 @@ const angka = (n) => n.toLocaleString("id-ID");
 const PratinjauAvatar = lazy(() => import("./PratinjauAvatar"));
 
 // Panel gaya dalam tiga mode:
-// - "toko"  : di Distro Gaya — beli pakai koin & langsung pakai;
-// - "coba"  : di bilik ruang coba — pakai sementara gratis (dilepas saat keluar bilik),
-//             lalu beli yang cocok;
+// - "toko"  : di Distro Gaya — pilih barang, lihat di pratinjau, lalu beli & pakai;
+// - "coba"  : di bilik ruang coba — barang yang dipilih langsung dicoba di badan (gratis,
+//             dilepas saat keluar bilik), lalu beli yang cocok;
 // - "lemari": dari HUD di mana saja — hanya ganti dengan yang sudah dimiliki.
+// Kiri: pratinjau avatar 3D (bisa diputar) + barang terpilih dengan satu tombol aksi.
+// Kanan: tab jenis & kisi kartu barang.
 export default function PanelGaya({ mode = "lemari", dasar }) {
 	const l = useLemari();
 	const { poin: koin } = useKoleksi();
 	const [jenis, setJenis] = useState("t");
-	const [kabar, setKabar] = useState(null);
 	const tampil = l.coba || l.pakai;
-	// barang yang diketuk terakhir ikut tampil di pratinjau 3D (belum dibeli pun boleh)
-	const [pilih, setPilih] = useState(null);
-	const gayaPratinjau = pilih ? { ...tampil, [pilih.k]: pilih.i } : tampil;
+	const [pilih, setPilih] = useState({ k: "t", i: tampil.t });
+	const [kabar, setKabar] = useState(null);
+
+	const gayaPratinjau = { ...tampil, [pilih.k]: pilih.i };
 	const kunci = JSON.stringify(gayaPratinjau);
 	// eslint-disable-next-line react-hooks/exhaustive-deps
 	const penampilan = useMemo(() => dasar && kenakanGaya(dasar, gayaPratinjau), [dasar, kunci]);
 
-	const beli = (i, item) => {
-		const baru = !punya(jenis, i);
-		const gagal = pakaiGaya(jenis, i);
+	const item = GAYA[pilih.k].isi[pilih.i];
+	const dipakai = l.pakai[pilih.k] === pilih.i;
+	const milik = punya(pilih.k, pilih.i);
+	const kurang = item.harga - koin;
+
+	const pilihBarang = (k, i) => {
+		setPilih({ k, i });
+		setKabar(null);
+		if (mode === "coba") cobaGaya(k, i);
+	};
+	const gantiJenis = (k) => {
+		setJenis(k);
+		pilihBarang(k, tampil[k]);
+	};
+	const aksi = () => {
+		const baru = !milik;
+		const gagal = pakaiGaya(pilih.k, pilih.i);
 		setKabar(gagal ? { ok: false, teks: gagal } : { ok: true, teks: `${item.nama} ${baru ? "dibeli & " : ""}dipakai ✨` });
 	};
 
+	let tombol;
+	if (dipakai) tombol = { teks: "✓ Sedang dipakai", nonaktif: true };
+	else if (milik) tombol = { teks: "Pakai sekarang" };
+	else if (mode === "lemari") tombol = { teks: "Beli dulu di Distro Gaya", nonaktif: true };
+	else if (kurang > 0) tombol = { teks: `Koin kurang 🪙 ${angka(kurang)}`, nonaktif: true };
+	else tombol = { teks: `Beli & pakai · 🪙 ${angka(item.harga)}` };
+
 	return (
-		<div>
-			<div className="mb-3 flex items-center justify-between rounded-2xl bg-amber-50 px-3 py-2 ring-1 ring-amber-200">
-				<span className="text-xs font-bold uppercase tracking-wider text-amber-700">Koin Anda</span>
-				<span className="text-lg font-black tabular-nums text-amber-900">🪙 {angka(koin)}</span>
-			</div>
-			{penampilan && (
-				<div className="relative mb-3 h-52 overflow-hidden rounded-2xl bg-gradient-to-b from-violet-100 via-slate-50 to-slate-200 ring-1 ring-slate-200">
-					<Suspense fallback={<div className="flex h-full items-center justify-center text-xs text-slate-400">Memuat pratinjau…</div>}>
-						<PratinjauAvatar penampilan={penampilan} />
-					</Suspense>
-					{pilih && <span className="absolute left-2 top-2 rounded-full bg-white/90 px-2 py-0.5 text-[10px] font-bold text-slate-600 shadow">Pratinjau: {GAYA[pilih.k].isi[pilih.i].nama}</span>}
-				</div>
-			)}
-			{mode === "coba" && <p className="mb-3 rounded-xl bg-violet-50 px-3 py-2 text-xs font-semibold text-violet-800">Ketuk pakaian untuk mencobanya (gratis). Tutup panel untuk melihat diri Anda; keluar bilik = pakaian coba dilepas.</p>}
-			{mode === "lemari" && <p className="mb-3 rounded-xl bg-slate-100 px-3 py-2 text-xs font-semibold text-slate-600">Koleksi baru dibeli di 👕 Distro Gaya (sebelah warung mie ayam, seberang kantor) — ada ruang cobanya.</p>}
-			<div className="mb-3 grid grid-cols-4 gap-1.5">
-				{JENIS_GAYA.map((k) => (
+		<div className="sm:grid sm:grid-cols-[minmax(0,5fr)_minmax(0,7fr)] sm:gap-5">
+			{/* --- pratinjau & barang terpilih --- */}
+			<aside className="sm:sticky sm:top-0 sm:self-start">
+				{penampilan && (
+					<div className="relative h-56 overflow-hidden rounded-2xl bg-gradient-to-b from-violet-100 via-slate-50 to-slate-200 ring-1 ring-slate-200 sm:h-80">
+						<Suspense fallback={<div className="flex h-full items-center justify-center text-xs text-slate-400">Memuat pratinjau…</div>}>
+							<PratinjauAvatar penampilan={penampilan} />
+						</Suspense>
+						<span className="pointer-events-none absolute right-2 top-2 rounded-full bg-amber-100/95 px-2.5 py-1 text-xs font-black text-amber-800 shadow">🪙 {angka(koin)}</span>
+						<span className="pointer-events-none absolute left-2 top-2 whitespace-nowrap rounded-full bg-white/80 px-2 py-0.5 text-[10px] font-semibold text-slate-500">⟲ seret untuk memutar</span>
+					</div>
+				)}
+				<div className="mt-3 rounded-2xl bg-slate-50 p-3 ring-1 ring-slate-200">
+					<div className="flex items-center gap-3">
+						<span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl text-2xl shadow-inner ring-1 ring-black/10" style={{ background: item.warna || "#f1f5f9" }}>
+							{item.ikon}
+						</span>
+						<div className="min-w-0 flex-1">
+							<p className="truncate font-black text-slate-900">{item.nama}</p>
+							<p className="text-xs text-slate-500">
+								{GAYA[pilih.k].judul} · {dipakai ? "sedang dipakai" : milik ? "sudah dimiliki" : item.harga ? `🪙 ${angka(item.harga)}` : "gratis"}
+							</p>
+						</div>
+					</div>
 					<button
-						key={k}
-						onClick={() => {
-							setJenis(k);
-							setKabar(null);
-						}}
-						className={`rounded-xl px-2 py-2 text-xs font-bold ${jenis === k ? "bg-slate-900 text-white" : "bg-slate-100 text-slate-700 hover:bg-slate-200"}`}
+						onClick={aksi}
+						disabled={tombol.nonaktif}
+						className="mt-3 w-full rounded-xl bg-violet-600 py-3 text-sm font-black text-white shadow hover:bg-violet-500 disabled:bg-slate-200 disabled:text-slate-500 disabled:shadow-none"
 					>
-						<span className="block text-lg">{GAYA[k].ikon}</span>
-						{GAYA[k].judul}
+						{tombol.teks}
 					</button>
-				))}
-			</div>
-			{kabar && <p className={`mb-3 rounded-xl px-3 py-2 text-sm font-semibold ${kabar.ok ? "bg-emerald-50 text-emerald-800" : "bg-rose-50 text-rose-700"}`}>{kabar.teks}</p>}
-			<ul className="space-y-2">
-				{GAYA[jenis].isi.map((item, i) => {
-					const dipakai = l.pakai[jenis] === i;
-					const dicoba = mode === "coba" && tampil[jenis] === i && !dipakai;
-					const milik = punya(jenis, i);
-					const status = dipakai ? "Sedang dipakai" : dicoba ? "Sedang dicoba" : milik ? "Sudah dimiliki" : `🪙 ${angka(item.harga)}`;
-					return (
-						<li
-							key={i}
-							onClick={() => {
-								setPilih({ k: jenis, i });
-								if (mode === "coba") cobaGaya(jenis, i);
-							}}
-							className={`flex items-center gap-3 rounded-2xl p-3 ring-1 ${dipakai ? "bg-emerald-50 ring-emerald-300" : dicoba ? "bg-violet-50 ring-violet-300" : "bg-slate-50 ring-slate-200"} cursor-pointer ${pilih?.k === jenis && pilih.i === i && !dipakai && !dicoba ? "ring-2 ring-violet-400" : ""}`}
-						>
-							<span className="h-10 w-10 shrink-0 rounded-xl shadow-inner ring-1 ring-black/10" style={{ background: item.warna || "repeating-linear-gradient(45deg,#e2e8f0 0 6px,#f8fafc 6px 12px)" }} />
-							<div className="min-w-0 flex-1">
-								<p className="font-bold text-slate-900">{item.nama}</p>
-								<p className="text-xs text-slate-500">{status}</p>
-							</div>
-							{!dipakai && (mode !== "lemari" || milik) && (mode !== "coba" || dicoba || milik) && (
+					{kurang > 0 && !milik && mode !== "lemari" && <p className="mt-2 text-center text-[11px] text-slate-500">Cari koin dari memancing, peti hadiah, misi harian, dan balapan motor.</p>}
+					{kabar && <p className={`mt-2 rounded-lg px-3 py-1.5 text-center text-xs font-semibold ${kabar.ok ? "bg-emerald-50 text-emerald-800" : "bg-rose-50 text-rose-700"}`}>{kabar.teks}</p>}
+				</div>
+				{mode === "coba" && <p className="mt-2 text-center text-[11px] text-violet-700">🪞 Barang yang dipilih langsung dicoba di badan Anda. Keluar bilik = pakaian coba dilepas.</p>}
+				{mode === "lemari" && <p className="mt-2 text-center text-[11px] text-slate-500">Koleksi baru dibeli di 👕 Distro Gaya, sebelah warung mie ayam seberang kantor.</p>}
+			</aside>
+
+			{/* --- jenis & kisi barang --- */}
+			<div className="mt-4 sm:mt-0">
+				<div className="mb-3 grid grid-cols-4 gap-1.5">
+					{JENIS_GAYA.map((k) => {
+						const dimiliki = GAYA[k].isi.filter((_, i) => punya(k, i)).length;
+						return (
+							<button
+								key={k}
+								onClick={() => gantiJenis(k)}
+								className={`rounded-xl px-1 py-2 text-xs font-bold transition ${jenis === k ? "bg-slate-900 text-white shadow" : "bg-slate-100 text-slate-700 hover:bg-slate-200"}`}
+							>
+								<span className="block text-lg leading-none">{GAYA[k].ikon}</span>
+								<span className="mt-1 block">{GAYA[k].judul}</span>
+								<span className={`block text-[10px] font-semibold ${jenis === k ? "text-slate-300" : "text-slate-400"}`}>
+									{dimiliki}/{GAYA[k].isi.length}
+								</span>
+							</button>
+						);
+					})}
+				</div>
+				<ul className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+					{GAYA[jenis].isi.map((b, i) => {
+						const dipilih = pilih.k === jenis && pilih.i === i;
+						const sedangDipakai = l.pakai[jenis] === i;
+						const sudahPunya = punya(jenis, i);
+						const mampu = koin >= b.harga;
+						if (mode === "lemari" && !sudahPunya) return null;
+						return (
+							<li key={i}>
 								<button
-									disabled={!milik && koin < item.harga}
-									onClick={(e) => {
-										e.stopPropagation();
-										beli(i, item);
-									}}
-									className="shrink-0 rounded-xl bg-slate-900 px-3 py-2 text-sm font-black text-white hover:bg-slate-700 disabled:bg-slate-300 disabled:text-slate-500"
+									onClick={() => pilihBarang(jenis, i)}
+									className={`flex h-full w-full flex-col items-center gap-1.5 rounded-2xl p-3 text-center ring-1 transition ${
+										dipilih ? "bg-violet-50 ring-2 ring-violet-500" : "bg-white ring-slate-200 hover:bg-slate-50"
+									}`}
 								>
-									{milik ? "Pakai" : `Beli 🪙${angka(item.harga)}`}
+									<span className="flex h-14 w-14 items-center justify-center rounded-full text-3xl shadow-inner ring-1 ring-black/10" style={{ background: b.warna || "#f1f5f9" }}>
+										{b.ikon}
+									</span>
+									<span className="line-clamp-2 min-h-[2.5em] text-xs font-bold leading-tight text-slate-800">{b.nama}</span>
+									{sedangDipakai ? (
+										<span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-black text-emerald-700">✓ Dipakai</span>
+									) : sudahPunya ? (
+										<span className="rounded-full bg-sky-100 px-2 py-0.5 text-[10px] font-black text-sky-700">Dimiliki</span>
+									) : (
+										<span className={`rounded-full px-2 py-0.5 text-[10px] font-black ${mampu ? "bg-amber-100 text-amber-800" : "bg-slate-100 text-slate-400"}`}>🪙 {angka(b.harga)}</span>
+									)}
 								</button>
-							)}
-						</li>
-					);
-				})}
-			</ul>
-			<p className="mt-3 text-center text-xs text-slate-500">Gaya Anda terlihat oleh tamu lain saat menjelajah bersama.</p>
+							</li>
+						);
+					})}
+				</ul>
+				{mode === "lemari" && GAYA[jenis].isi.every((_, i) => i === 0 || !punya(jenis, i)) && (
+					<p className="mt-3 rounded-xl bg-slate-50 p-3 text-center text-xs text-slate-500">Belum punya {GAYA[jenis].judul.toLowerCase()} lain. Belanja di Distro Gaya!</p>
+				)}
+			</div>
 		</div>
 	);
 }

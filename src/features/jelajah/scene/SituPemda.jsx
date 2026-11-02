@@ -5,11 +5,12 @@ import { IKAN_PER_ID, pancing } from "../pancing";
 import { posisi } from "../jelajahStore";
 import Gabung from "./Gabung";
 import { BAHAN_WARNA, gabung, warnai } from "./geometri";
-import { KENDARAAN } from "./kendaraan";
+import { KENDARAAN, useArmada } from "./kendaraan";
 import ModelIkan from "./ModelIkan";
 import Papan from "./Papan";
 import { AIR_Y, BAGIAN_DERMAGA, DEK_Y, DERMAGA, diSitu, jarakKeTepi } from "./situ";
 import { suasana } from "./suasana";
+import HiasanDermaga from "./HiasanDermaga";
 
 // Situ Pemda yang hidup: dermaga spot mancing, perahu dayung, ikan berenang & melompat.
 // Dipasang di grup halaman (y = TANAH); semua y relatif terhadap tanah.
@@ -148,6 +149,7 @@ function Dermaga({ d, daftarDinding }) {
 					{ teks: "Perahu dayung gratis · Jaga kebersihan situ", ukuran: 0.11, warna: "#6b5b4a", y: 0.84 },
 				]}
 			/>
+			<HiasanDermaga d={d} />
 		</group>
 	);
 }
@@ -339,6 +341,7 @@ function IkanSitu() {
 }
 
 export default function SituPemda({ daftarDinding }) {
+	useArmada(); // perahu tambahan yang dipanggil tamu ikut tergambar
 	const perahu = KENDARAAN.filter((k) => k.jenis === "perahu");
 	useFrame(() => {
 		BAHAN_LAMPU.emissiveIntensity = suasana.malam * 2.2;

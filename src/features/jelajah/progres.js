@@ -18,7 +18,10 @@ export const POOL_MISI = [
 	{ id: "langka", teks: "Tangkap 1 ikan Langka atau lebih tinggi", jenis: "ikanLangka", target: 1, koin: 90, xp: 80 },
 	{ id: "peti2", teks: "Buka 2 peti hadiah", jenis: "peti", target: 2, koin: 50, xp: 50 },
 	{ id: "mie", teks: "Makan semangkuk mie ayam", jenis: "mie", target: 1, koin: 30, xp: 30 },
-	{ id: "belanja", teks: "Belanja di Alfamart atau Koperasi", jenis: "belanja", target: 1, koin: 30, xp: 30 },
+	{ id: "belanja", teks: "Belanja di Alfamart, Koperasi, atau Supermarket CCM", jenis: "belanja", target: 1, koin: 30, xp: 30 },
+	{ id: "pecel", teks: "Makan di Pecel Ayam Bude", jenis: "pecel", target: 1, koin: 30, xp: 30 },
+	{ id: "mcd", teks: "Makan di McD Tegar Beriman", jenis: "mcd", target: 1, koin: 40, xp: 40 },
+	{ id: "bioskop", teks: "Nonton film di bioskop Cibinong City Mall", jenis: "bioskop", target: 1, koin: 50, xp: 50 },
 	{ id: "renang", teks: "Berenang 60 meter di Situ Pemda", jenis: "renang", target: 60, koin: 40, xp: 45 },
 	{ id: "perahu", teks: "Mendayung perahu sejauh 150 meter", jenis: "perahu", target: 150, koin: 40, xp: 40 },
 	{ id: "ruang", teks: "Kunjungi 3 ruang bidang", jenis: "ruang", target: 3, koin: 40, xp: 40 },
@@ -50,11 +53,15 @@ function misiUntuk(tanggal) {
 function baca() {
 	try {
 		const d = JSON.parse(localStorage.getItem(KUNCI));
-		if (d && typeof d === "object") return { xp: d.xp || 0, tanggal: d.tanggal || "", misi: Array.isArray(d.misi) ? d.misi : [], balap: d.balap ?? null };
+		if (d && typeof d === "object") {
+			// rekor lama (satu angka) = rekor trek sprint
+			const rekor = d.rekor && typeof d.rekor === "object" ? d.rekor : typeof d.balap === "number" ? { sprint: d.balap } : {};
+			return { xp: d.xp || 0, tanggal: d.tanggal || "", misi: Array.isArray(d.misi) ? d.misi : [], rekor };
+		}
 	} catch {
 		/* penyimpanan tidak tersedia */
 	}
-	return { xp: 0, tanggal: "", misi: [], balap: null };
+	return { xp: 0, tanggal: "", misi: [], rekor: {} };
 }
 
 export let progres = baca();
@@ -126,10 +133,11 @@ export function klaimMisi(id) {
 
 export const misiSiapKlaim = (p = progres) => p.misi.filter((m) => !m.diklaim && m.n >= (MISI_PER_ID[m.id]?.target ?? Infinity)).length;
 
-// Rekor balapan motor (detik, makin kecil makin baik).
-export function catatBalap(detik) {
-	const rekor = progres.balap == null || detik < progres.balap;
-	if (rekor) progres.balap = Math.round(detik * 100) / 100;
+// Rekor balapan motor per trek (detik, makin kecil makin baik).
+export function catatBalap(trek, detik) {
+	const lama = progres.rekor?.[trek];
+	const rekor = lama == null || detik < lama;
+	if (rekor) progres.rekor = { ...progres.rekor, [trek]: Math.round(detik * 100) / 100 };
 	simpan();
 	return rekor;
 }

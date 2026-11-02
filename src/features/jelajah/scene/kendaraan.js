@@ -1,3 +1,4 @@
+import { useSyncExternalStore } from "react";
 import { MOBIL, MOTOR } from "./layout";
 import { PERAHU } from "./situ";
 
@@ -40,13 +41,56 @@ export function titikNaikKursi(k, i) {
 }
 
 export const KENDARAAN = awal();
+const JUMLAH_AWAL = KENDARAAN.length;
+const JUMLAH_AWAL_PERAHU = KENDARAAN.filter((k) => k.jenis === "perahu").length;
+
+// Perahu tambahan: dimunculkan saat tamu memanggil perahu dan semua perahu sedang dipakai
+// (praktis tak terbatas; id tetap "perahu:N" supaya bisa dikirim ke tamu lain).
+const MAKS_PERAHU = 60;
+let versiArmada = 0;
+const pendengarArmada = new Set();
+const kabarArmada = () => {
+	versiArmada++;
+	pendengarArmada.forEach((f) => f());
+};
+export const useArmada = () =>
+	useSyncExternalStore(
+		(f) => (pendengarArmada.add(f), () => pendengarArmada.delete(f)),
+		() => versiArmada,
+	);
+// Nomor perahu panggilan diacak di antara nomor yang belum dipakai di perangkat ini. Dulu
+// nomornya = jumlah perahu; begitu perahu panggilan tamu lain ikut tercatat, nomor itu bisa
+// sudah dipakai — panggilan lalu "meminjam" perahu yang sedang dinaiki tamu lain dan
+// menyeretnya ke sini, sehingga di layar tamu itu perahunya hilang.
+function nomorBebas() {
+	const terpakai = new Set(KENDARAAN.filter((k) => k.jenis === "perahu").map((k) => k.id));
+	const bebas = [];
+	for (let n = JUMLAH_AWAL_PERAHU; n < 100; n++) if (!terpakai.has(`perahu:${n}`)) bebas.push(n);
+	return bebas.length ? bebas[Math.floor(Math.random() * bebas.length)] : null;
+}
+
+export function tambahPerahu(x, z, rot, id = null) {
+	const banyak = KENDARAAN.filter((k) => k.jenis === "perahu").length;
+	if (banyak >= MAKS_PERAHU) return null;
+	if (id && KENDARAAN.some((v) => v.id === id)) return KENDARAAN.find((v) => v.id === id);
+	const nomor = id ? +id.split(":")[1] : nomorBebas();
+	if (nomor === null) return null;
+	const k = { id: id || `perahu:${nomor}`, jenis: "perahu", warna: WARNA_PERAHU[nomor % WARNA_PERAHU.length], x, z, rot, laju: 0, setir: 0, pintu: 0, roda: 0, miring: 0 };
+	KENDARAAN.push(k);
+	kabarArmada();
+	return k;
+}
 
 export function resetKendaraan() {
 	const baru = awal();
+	KENDARAAN.length = JUMLAH_AWAL;
 	baru.forEach((k, i) => Object.assign(KENDARAAN[i], k));
+	kabarArmada();
 }
 
-export const kendaraanDariId = (id) => KENDARAAN.find((k) => k.id === id);
+// pos: bila diberikan & kendaraannya perahu tambahan yang belum ada di perangkat ini
+// (dipanggil tamu lain), perahu itu dibuat di posisi tersebut.
+export const kendaraanDariId = (id, pos) => KENDARAAN.find((k) => k.id === id) || (pos && /^perahu:\d{1,2}$/.test(id) ? tambahPerahu(pos.x, pos.z, pos.rot ?? 0, id) : undefined);
 
 // Titik lokal → dunia untuk kendaraan k.
 export function keDunia(k, lx, lz) {

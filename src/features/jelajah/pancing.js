@@ -77,7 +77,7 @@ const KUNCI = "jelajah-pancing-v1";
 function bacaSimpanan() {
 	try {
 		const d = JSON.parse(localStorage.getItem(KUNCI));
-		if (d && typeof d === "object") return { koleksi: d.koleksi || {}, poin: d.poin || 0, tangkapan: d.tangkapan || 0, joran: d.joran || 0 };
+		if (d && typeof d === "object") return { koleksi: d.koleksi || {}, poin: d.poin || 0, tangkapan: d.tangkapan || 0, joran: d.joran || 0, joranPunya: d.joranPunya, joranPakai: d.joranPakai, senar: d.senar || 0 };
 	} catch {
 		/* penyimpanan tidak tersedia */
 	}
@@ -101,28 +101,68 @@ export function bayarKoin(n) {
 	simpan();
 	return true;
 }
-// ---------- joran (di-upgrade berurutan pakai koin) ----------
-// lebar = pelebaran zona tegangan "pas" di kedua sisi; gulung = pengali tenaga ketukan;
-// senar = kekuatan senar (batas bahaya putus); panjang = panjang senar (m); hoki = pengali
-// peluang ikan Epik ke atas.
+// ---------- perlengkapan memancing: joran (jenis) & senar (tingkat) ----------
+// Joran dibeli lalu dipilih untuk dipakai; tiap jenis punya keunggulan sendiri:
+//   cepat = pengali lama menunggu sambaran (0,6 = ikan datang ±1,7× lebih cepat);
+//   hoki  = pengali peluang ikan Epik ke atas (premium);
+//   gulung = pengali tenaga ketukan; lebar = pelebaran zona tegangan "pas".
+// Senar di-upgrade berurutan: kuat = batas tegangan sebelum putus, panjang = senar (m).
 export const JORAN = [
-	{ nama: "Joran Bambu", harga: 0, warna: "#a16207", ujung: "#dc2626", lebar: 0, gulung: 1, senar: 1, panjang: 45, hoki: 1, ket: "Joran warisan kakek. Cukup untuk ikan biasa." },
-	{ nama: "Joran Fiber", harga: 300, warna: "#1f2937", ujung: "#dc2626", lebar: 0.02, gulung: 1.07, senar: 1.15, panjang: 48, hoki: 1.1, ket: "Lebih lentur: zona aman sedikit lebih lebar, senar lebih awet." },
-	{ nama: "Joran Karbon", harga: 900, warna: "#0f172a", ujung: "#22d3ee", lebar: 0.035, gulung: 1.14, senar: 1.3, panjang: 52, hoki: 1.25, ket: "Ringan & kaku: gulungan lebih cepat, ikan besar lebih sering datang." },
-	{ nama: "Joran Titanium Pro", harga: 2200, warna: "#94a3b8", ujung: "#f97316", lebar: 0.05, gulung: 1.22, senar: 1.5, panjang: 56, hoki: 1.45, ket: "Senar baja tipis yang tahan tarikan monster." },
-	{ nama: "Joran Naga Emas", harga: 5000, warna: "#ca8a04", ujung: "#facc15", lebar: 0.07, gulung: 1.32, senar: 1.75, panjang: 60, hoki: 1.8, ket: "Legenda para pemancing. Ikan langka seolah datang sendiri." },
+	{ id: "bambu", nama: "Joran Bambu", harga: 0, cepat: 1, hoki: 1, gulung: 1, lebar: 0, warna: "#a16207", ujung: "#dc2626", ket: "Joran warisan kakek. Cukup untuk ikan biasa." },
+	{ id: "fiber", nama: "Joran Fiber", harga: 300, cepat: 0.9, hoki: 1.1, gulung: 1.07, lebar: 0.02, warna: "#1f2937", ujung: "#dc2626", ket: "Lentur & ringan — serba sedikit lebih baik." },
+	{ id: "karbon", nama: "Joran Karbon", harga: 900, cepat: 0.8, hoki: 1.25, gulung: 1.14, lebar: 0.035, warna: "#0f172a", ujung: "#22d3ee", ket: "Kaku & peka: gulungan cepat, ikan besar lebih sering." },
+	{ id: "kilat", nama: "Joran Casting Kilat", harga: 1200, cepat: 0.5, hoki: 1, gulung: 1.1, lebar: 0.02, warna: "#0369a1", ujung: "#fde047", ket: "Spesialis cepat: umpan disambar 2× lebih cepat — panen ikan." },
+	{ id: "titanium", nama: "Joran Titanium Pro", harga: 2200, cepat: 0.7, hoki: 1.45, gulung: 1.22, lebar: 0.05, warna: "#94a3b8", ujung: "#f97316", ket: "Joran turnamen: cepat, kuat, dan sering disambar ikan premium." },
+	{ id: "dasar", nama: "Joran Dasar Monster", harga: 3500, cepat: 1.15, hoki: 2.3, gulung: 1.18, lebar: 0.04, warna: "#3f2a1d", ujung: "#ef4444", ket: "Spesialis premium: sabar menunggu, yang datang ikan-ikan monster." },
+	{ id: "naga", nama: "Joran Naga Emas", harga: 5000, cepat: 0.6, hoki: 1.9, gulung: 1.32, lebar: 0.07, warna: "#ca8a04", ujung: "#facc15", ket: "Legenda para pemancing: cepat & ikan langka seolah datang sendiri." },
 ];
-export const tingkatJoran = () => Math.min(JORAN.length - 1, simpanan.joran || 0);
-export const joranKini = () => JORAN[tingkatJoran()];
+export const JORAN_PER_ID = Object.fromEntries(JORAN.map((j) => [j.id, j]));
+export const SENAR = [
+	{ nama: "Senar Nilon 0,25 mm", harga: 0, kuat: 1, panjang: 45, warna: "#f1f5f9" },
+	{ nama: "Senar Nilon Kuat 0,35 mm", harga: 200, kuat: 1.12, panjang: 48, warna: "#e0f2fe" },
+	{ nama: "Senar PE Anyam ×4", harga: 600, kuat: 1.28, panjang: 52, warna: "#bbf7d0" },
+	{ nama: "Senar PE Anyam ×8", harga: 1500, kuat: 1.45, panjang: 56, warna: "#fde68a" },
+	{ nama: "Senar Fluorocarbon Pro", harga: 3000, kuat: 1.62, panjang: 62, warna: "#c4b5fd" },
+	{ nama: "Senar Kevlar Naga", harga: 6000, kuat: 1.85, panjang: 70, warna: "#fca5a5" },
+];
+// Simpanan lama (simpanan.joran = tingkat 0–4 dari daftar berurutan dulu) dipindahkan:
+// joran yang dulu terbeli tetap dimiliki & tingkat senar ikut naik setara.
+const JORAN_LAMA = ["bambu", "fiber", "karbon", "titanium", "naga"];
+function pindahkanSimpananLama() {
+	if (simpanan.joranPakai) return;
+	const lama = Math.max(0, Math.min(4, simpanan.joran || 0));
+	simpanan.joranPunya = JORAN_LAMA.slice(0, lama + 1);
+	simpanan.joranPakai = JORAN_LAMA[lama];
+	simpanan.senar = lama;
+}
+pindahkanSimpananLama();
+
+export const joranKini = () => JORAN_PER_ID[simpanan.joranPakai] || JORAN[0];
+export const senarKini = () => SENAR[Math.min(SENAR.length - 1, simpanan.senar || 0)];
+export const tingkatSenar = () => Math.min(SENAR.length - 1, simpanan.senar || 0);
+export const punyaJoran = (id) => id === "bambu" || (simpanan.joranPunya || []).includes(id);
 export const zonaKini = (kelas) => {
 	const [b, a] = KELAS[kelas].zona;
 	const l = joranKini().lebar;
 	return [b - l, Math.min(0.97, a + l)];
 };
-export function beliJoran(i) {
-	if (i !== tingkatJoran() + 1 || !JORAN[i]) return "Upgrade harus berurutan";
-	if (!bayarKoin(JORAN[i].harga)) return "Koin belum cukup (perlu 🪙 " + JORAN[i].harga + ")";
-	simpanan.joran = i;
+// Beli (bila belum punya) lalu langsung dipakai.
+export function pakaiJoran(id) {
+	const j = JORAN_PER_ID[id];
+	if (!j) return "Joran tidak dikenal";
+	if (!punyaJoran(id)) {
+		if (!bayarKoin(j.harga)) return "Koin belum cukup (perlu 🪙 " + j.harga + ")";
+		simpanan.joranPunya = [...(simpanan.joranPunya || []), id];
+	}
+	simpanan.joranPakai = id;
+	simpan();
+	return null;
+}
+export function upgradeSenar() {
+	const berikut = SENAR[tingkatSenar() + 1];
+	if (!berikut) return "Senar sudah yang terbaik";
+	if (!bayarKoin(berikut.harga)) return "Koin belum cukup (perlu 🪙 " + berikut.harga + ")";
+	simpanan.senar = tingkatSenar() + 1;
 	simpan();
 	return null;
 }
@@ -144,7 +184,35 @@ export const useKoleksi = () =>
 
 export const FASE_PANCING = ["siap", "lempar", "tunggu", "gigit", "tarik", "dapat", "gagal"];
 
+// ---------- jam ikan lapar ----------
+// Periode singkat ikan sedang lapar: sambaran 2× lebih cepat & ikan premium lebih sering.
+// Dihitung dari jam (slot 12 menit) sehingga sama untuk semua tamu jelajah bersama.
+const SLOT_LAPAR = 12 * 60 * 1000;
+function acakSlot(slot, k) {
+	let h = Math.imul(slot ^ 0x85ebca6b, 2654435761) ^ Math.imul(k + 7, 40503);
+	h = Math.imul(h ^ (h >>> 15), 2246822507);
+	h = Math.imul(h ^ (h >>> 13), 3266489909);
+	return ((h ^ (h >>> 16)) >>> 0) / 4294967296;
+}
+// { aktif, sisa (ms), berikut (ms sampai mulai, bila tidak aktif & ada di slot ini) }
+export function jamLapar(waktu = Date.now()) {
+	const slot = Math.floor(waktu / SLOT_LAPAR);
+	if (acakSlot(slot, 0) > 0.35) return { aktif: false };
+	const mulai = slot * SLOT_LAPAR + acakSlot(slot, 1) * 5 * 60000;
+	const selesai = mulai + (3 + acakSlot(slot, 2) * 2) * 60000;
+	if (waktu >= mulai && waktu < selesai) return { aktif: true, sisa: selesai - waktu };
+	return { aktif: false, berikut: waktu < mulai ? mulai - waktu : null };
+}
+
+// rating ukuran 1–3 bintang dari letak berat dalam rentang jenisnya
+export const bintangUkuran = (ikan, kg) => {
+	const b = (kg - ikan.kg[0]) / (ikan.kg[1] - ikan.kg[0] || 1);
+	return b >= 0.7 ? 3 : b >= 0.35 ? 2 : 1;
+};
+
 export const pancing = {
+	combo: 0, // tangkapan beruntun tanpa gagal (pengali koin)
+	perfect: false, // sentakan sangat cepat saat ikan menyambar
 	aktif: false,
 	perahu: false,
 	asal: { x: 0, z: 0, rot: 0 }, // posisi pemancing & arah hadap dasar
@@ -222,7 +290,7 @@ function pesanSaja(teks, jenis = "info") {
 	pancing.pesan = { teks, jenis, id: versi + 1 };
 	beritahu();
 }
-function percik(x, z, besar = 1) {
+export function percik(x, z, besar = 1) {
 	pancing.cipratan.push({ x, z, besar, t0: performance.now() / 1000 });
 	if (pancing.cipratan.length > 12) pancing.cipratan.shift();
 }
@@ -260,9 +328,36 @@ export function lanjutPancing() {
 
 function gagal(teks) {
 	hentikanLaga();
+	pancing.combo = 0;
 	suara("lepas");
 	pancing.ikan = null;
 	keFase("gagal", { teks, jenis: "buruk" });
+}
+
+// Pelampung (sudah) di air: pilih ikan berikutnya lalu tunggu sambarannya.
+function mulaiTunggu(teks, jenis) {
+	const p = pancing;
+	const calon = pilihIkan(jarakKeTepi(p.pelampung.x, p.pelampung.z));
+	p.ikanTunggu = calon;
+	const kls = KELAS[calon.ikan.kelas];
+	const cepat = (malam() ? 0.85 : 1) * (p.sempurna ? 0.8 : 1) * (1 + calon.ikan.kelas * 0.3) * (jamLapar().aktif ? 0.5 : 1) * (suasana.hujan > 0.5 ? 0.8 : 1); // ikan lebih aktif saat hujan
+	// ikan butuh waktu menemukan umpan; makin dalam & makin besar makin lama
+	p.tungguSampai = acak(4.5, 11) * cepat * joranKini().cepat;
+	const n = Math.floor(Math.random() * (kls.colek + 1));
+	p.colekBunyi = -1;
+	p.colek = false;
+	p.colekan = Array.from({ length: n }, () => acak(0.8, p.tungguSampai - 0.6)).sort((a, b) => a - b);
+	keFase("tunggu", { teks, jenis });
+}
+
+// Ikan lolos (telat/terlalu cepat menyentak) tapi umpan masih di kail: pelampung
+// dibiarkan di tempatnya dan menunggu ikan berikutnya — tidak perlu melempar ulang.
+function lepasTapiTunggu(teks) {
+	pancing.combo = 0;
+	suara("lepas");
+	pancing.ikan = null;
+	pancing.pelampung.y = 0;
+	mulaiTunggu(teks, "buruk");
 }
 
 // ---------- memilih ikan saat menyambar ----------
@@ -277,6 +372,7 @@ function pilihIkan(jauh) {
 	if (m) kalikan([1, 1, 1.2, 1.8, 1.6]);
 	if (pancing.perahu) kalikan([1, 1, 1.1, 1.3, 1.5]);
 	if (pancing.sempurna) kalikan([1, 1, 1.25, 1.5, 1.6]);
+	if (jamLapar().aktif) kalikan([1, 1, 1.3, 1.6, 1.8]);
 	const hoki = joranKini().hoki;
 	kalikan([1, 1, Math.sqrt(hoki), hoki, hoki * 1.1]);
 	const layak = (ikan) => {
@@ -362,16 +458,7 @@ export function tickPancing(dt) {
 			p.pelampung.y = 0;
 			percik(p.tujuan.x, p.tujuan.z, 0.6);
 			suara("cebur");
-			const calon = pilihIkan(jarakKeTepi(p.tujuan.x, p.tujuan.z));
-			p.ikanTunggu = calon;
-			const kls = KELAS[calon.ikan.kelas];
-			const cepat = (malam() ? 0.85 : 1) * (p.sempurna ? 0.8 : 1) * (1 + calon.ikan.kelas * 0.3);
-			// ikan butuh waktu menemukan umpan; makin dalam & makin besar makin lama
-			p.tungguSampai = acak(4.5, 11) * cepat;
-			const n = Math.floor(Math.random() * (kls.colek + 1));
-			p.colekBunyi = -1;
-			p.colekan = Array.from({ length: n }, () => acak(0.8, p.tungguSampai - 0.6)).sort((a, b) => a - b);
-			keFase("tunggu", { teks: "Tunggu pelampung tenggelam… jangan tergoda colekan!", jenis: "info" });
+			mulaiTunggu("Tunggu pelampung tenggelam… jangan tergoda colekan!", "info");
 		}
 		return;
 	}
@@ -384,7 +471,7 @@ export function tickPancing(dt) {
 			suara("colek");
 		}
 		if (tekan) {
-			if (p.colek) return gagal("Terlalu cepat! Ikannya cuma mencolek lalu kabur");
+			if (p.colek) return lepasTapiTunggu("Terlalu cepat! Ikannya cuma mencolek lalu kabur — umpan masih di air, tunggu lagi");
 			suara("gulung");
 			return keFase("siap", { teks: "Senar digulung. Lempar lagi!", jenis: "info" });
 		}
@@ -401,6 +488,7 @@ export function tickPancing(dt) {
 				/* tidak didukung */
 			}
 			// tanpa tanda seru: isyaratnya senar menegang & pelampung terseret ikan (Pancingan.jsx)
+			p.getar = Math.max(p.getar, 0.5);
 			keFase("gigit", { teks: "Senar menegang… sentak sekarang", jenis: "besar" });
 		}
 		return;
@@ -413,10 +501,12 @@ export function tickPancing(dt) {
 			p.besar = besar;
 			// sentakan cepat = kail menancap kuat; terlambat = kail hanya tersangkut di bibir
 			p.kailKuat = p.t < p.jendela * 0.45;
+			// PERFECT STRIKE: sentakan secepat kilat — ikan kaget & lebih cepat lelah, koin +15%
+			p.perfect = p.t < p.jendela * 0.3;
 			p.kendor = 0;
 			p.tegurKendor = false;
 			p.staminaMaks = k.stamina * (0.75 + 0.5 * besar);
-			p.stamina = p.staminaMaks;
+			p.stamina = p.staminaMaks * (p.perfect ? 0.85 : 1);
 			p.jarak = Math.hypot(p.pelampung.x - o.x, p.pelampung.z - o.z) + 2;
 			p.tegang = 0.35;
 			p.bahaya = 0;
@@ -435,16 +525,19 @@ export function tickPancing(dt) {
 			suara("kail");
 			// strike! musik sendu berganti backsound laga
 			putarLaga(p.ikan.kelas);
-			const teks = !p.kailKuat
+			const teks = p.perfect
+				? "⚡ PERFECT STRIKE! Ikan kaget & cepat lelah"
+				: !p.kailKuat
 				? "Kail cuma tersangkut di bibir — jaga senar tetap tegang!"
 				: p.ikan.kelas >= 3
 					? "Sesuatu yang SANGAT BESAR menarik senar!"
 					: p.ikan.kelas === 2
 						? "Tarikannya kuat sekali! Ketuk berulang untuk menggulung"
 						: "Kena! Ketuk berulang untuk menggulung";
-			return keFase("tarik", { teks, jenis: p.ikan.kelas >= 3 ? "besar" : "baik" });
+			if (p.perfect) p.getar = Math.max(p.getar, 0.8);
+			return keFase("tarik", { teks, jenis: p.ikan.kelas >= 3 || p.perfect ? "besar" : "baik" });
 		}
-		if (p.t > p.jendela) return gagal("Kurang cepat — ikannya melepas umpan");
+		if (p.t > p.jendela) return lepasTapiTunggu("Kurang cepat — ikannya lepas. Umpan masih di air, tunggu sambaran berikutnya");
 		return;
 	}
 
@@ -459,6 +552,7 @@ function tarik(dt, o, ketukBaru) {
 	const sisa = p.stamina / p.staminaMaks;
 	const sifat = p.ikan.sifat || {};
 	const jr = joranKini();
+	const sn = senarKini();
 	const [zonaBawah, zonaAtas] = zonaKini(p.ikan.kelas);
 	// laju mengetuk: tiap ketukan menambah, meluruh ±1 detik bila berhenti (±7 ketukan/dtk ≈ 1)
 	p.gulung = Math.min(1.3, p.gulung * Math.exp(-2.4 * dt) + ketukBaru * 0.28 * jr.gulung);
@@ -552,11 +646,11 @@ function tarik(dt, o, ketukBaru) {
 	// --- putus / habis senar / dapat ---
 	if (tegangan >= 1) p.bahaya += dt * (p.lari > 0 ? 1.6 : 1);
 	else p.bahaya = Math.max(0, p.bahaya - dt * 0.8);
-	if (p.bahaya > 0.75 * jr.senar) {
+	if (p.bahaya > 0.75 * sn.kuat) {
 		suara("putus");
 		return gagal(p.ikan.kelas >= 3 ? `Senar putus! ${p.ikan.nama} kembali ke kedalaman…` : "Senar putus! Tegangan terlalu tinggi");
 	}
-	if (p.jarak > jr.panjang) return gagal("Senar habis tertarik — ikannya kabur");
+	if (p.jarak > sn.panjang) return gagal("Senar habis tertarik — ikannya kabur");
 	// senar kendor terlalu lama (di luar saat ikan lari/melompat) = ikan menggeleng lepas dari kail
 	if (tegangan < zonaBawah * 0.7 && !(p.lari > 0) && !p.peristiwa) {
 		p.kendor += dt;
@@ -593,7 +687,10 @@ function dapat() {
 	const baru = !lama;
 	const rekor = !baru && p.kg > lama.terberat;
 	// poin tumbuh dengan akar berat: ikan monster tetap jauh lebih berharga, tapi tidak meledak
-	const poin = Math.round(KELAS[ikan.kelas].poin * (1 + Math.sqrt(p.kg)) * (p.sempurna ? 1.2 : 1));
+	p.combo += 1;
+	// pengali koin: combo tangkapan beruntun (maks ×1,5) & perfect strike (+15%)
+	const pengali = (1 + Math.min(p.combo - 1, 5) * 0.1) * (p.perfect ? 1.15 : 1);
+	const poin = Math.round(KELAS[ikan.kelas].poin * (1 + Math.sqrt(p.kg)) * (p.sempurna ? 1.2 : 1) * pengali);
 	simpanan.koleksi = {
 		...simpanan.koleksi,
 		[ikan.id]: { jumlah: (lama?.jumlah || 0) + 1, terberat: Math.max(lama?.terberat || 0, p.kg), pertama: lama?.pertama || Date.now() },
@@ -604,7 +701,7 @@ function dapat() {
 	catat("ikan");
 	if (ikan.kelas >= 1) catat("ikanLangka");
 	tambahXp(Math.round(poin * 0.6));
-	p.hasil = { ikan, kg: p.kg, cm: panjangCm(ikan, p.kg), baru, rekor, poin, total: simpanan.poin };
+	p.hasil = { ikan, kg: p.kg, cm: panjangCm(ikan, p.kg), baru, rekor, poin, total: simpanan.poin, combo: p.combo, perfect: p.perfect, pengali, bintang: bintangUkuran(ikan, p.kg), lapar: jamLapar().aktif };
 	percik(p.ikanPos.x, p.ikanPos.z, 1.4 + ikan.kelas * 0.3);
 	// backsound Ajojing / Mancing Mania; fanfare sintetis bila berkasnya tak bisa diputar
 	// laga selesai: musik riang "selamat" selama kartu hasil tampil

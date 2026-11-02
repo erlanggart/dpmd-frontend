@@ -125,7 +125,7 @@ export async function sambungJelajah(profil) {
 		for (const p of m.pemain || []) pemainLain.set(p.id, { profil: { nama: p.nama, jk: p.jk, avatar: p.avatar, kulit: p.kulit, gaya: bersihkanGaya(p.gaya) }, s: p.s });
 		// Mobil & motor yang sudah dipindahkan tamu lain sebelum kita masuk.
 		for (const [id, k] of Object.entries(m.kendaraan || {})) {
-			const kend = kendaraanDariId(id);
+			const kend = kendaraanDariId(id, k);
 			if (kend && posisi.kend !== kend) Object.assign(kend, { x: k.x, z: k.z, rot: k.rot });
 		}
 		ubah({ status: "tersambung", id: m.id, ruang: m.ruang ?? null, daftar: daftarDariMap(), galat: null });
@@ -243,7 +243,7 @@ function dataSkor() {
 	let ikan = null;
 	let kg = 0;
 	for (const [id, c] of Object.entries(koleksi)) if (c.terberat > kg) [ikan, kg] = [id, c.terberat];
-	return { level: levelDari(progres.xp), xp: progres.xp, ikan, kg, jenis: Object.keys(koleksi).length, balap: progres.balap };
+	return { level: levelDari(progres.xp), xp: progres.xp, ikan, kg, jenis: Object.keys(koleksi).length, balap: progres.rekor?.sprint ?? null, sirkuit: progres.rekor?.sirkuit ?? null };
 }
 let tundaSkor = null;
 const kirimSkor = () => {
