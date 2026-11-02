@@ -20,8 +20,10 @@ import {
 } from "three";
 import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils.js";
 import { warnai } from "./geometri";
-import { pasangan, tinggiGedung } from "./kawasanBantu";
-import { AIR, AREA, GEDUNG, JALAN, JENIS_AREA, JENIS_GEDUNG, JENIS_JALAN, LABEL, POHON_KAWASAN, SUNGAI } from "./kawasanData";
+import { POHON_TAMPIL as POHON_KAWASAN, pasangan, tinggiGedung } from "./kawasanBantu";
+import { AIR, AREA, GEDUNG, JALAN, JENIS_AREA, JENIS_GEDUNG, JENIS_JALAN, LABEL as LABEL_DATA, SUNGAI } from "./kawasanData";
+import { LABEL_SITU } from "./situ";
+import SituPemda from "./SituPemda.jsx";
 import { suasana } from "./suasana";
 
 // Kawasan Kompleks Perkantoran Pemda Kabupaten Bogor di sekeliling kantor DPMD, dari
@@ -34,6 +36,7 @@ import { suasana } from "./suasana";
 const PETAK = 200;
 const JARAK_GAMBAR = 380;
 const JARAK_LABEL = [170, 300]; // gedung, area
+const LABEL = [...LABEL_DATA, ...LABEL_SITU];
 
 const IDX = Object.fromEntries(JENIS_GEDUNG.map((j, i) => [j, i]));
 const WARNA_RUMAH = ["#efe6d2", "#f2e3c6", "#e8d8c3", "#f4efe6", "#dfe7e0", "#f0dcd0", "#e6e0cf", "#f6e7b8"];
@@ -542,7 +545,8 @@ function Label() {
 			const s = sprite.current[i];
 			if (!s) return;
 			const jarak = Math.hypot(camera.position.x - d.x, camera.position.z - d.z);
-			s.visible = jarak < JARAK_LABEL[d.jenis];
+			// papan hanya untuk penunjuk arah dari kejauhan; dari dekat malah menutupi layar
+			s.visible = jarak > 14 && jarak < JARAK_LABEL[d.jenis];
 			// yang jauh sedikit diperbesar supaya tetap terbaca
 			const tinggi = 1.5 * Math.min(2.6, Math.max(1, jarak / 35));
 			s.scale.set(tinggi * d.rasio, tinggi, 1);
@@ -556,10 +560,11 @@ function Label() {
 	));
 }
 
-export default function Kawasan() {
+export default function Kawasan({ daftarDinding }) {
 	return (
 		<group name="kawasan">
 			<Permukaan />
+			<SituPemda daftarDinding={daftarDinding} />
 			<Gedung />
 			<Pohon />
 			<Label />

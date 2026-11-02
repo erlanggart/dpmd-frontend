@@ -113,6 +113,19 @@ export default function Tokoh({ penampilan, pose = "jalan", gerak, aktivitas, as
 				lkn.current.rotation.z = 2.55 + Math.sin(t * 11) * 0.3;
 				sbkn.current.rotation.x = 0;
 				sbkn.current.rotation.z = 0.25;
+			} else if (isyarat === "mancing") {
+				// dua tangan menggenggam joran di depan perut
+				lkn.current.rotation.x = -0.95;
+				sbkn.current.rotation.x = -0.55;
+				lka.current.rotation.x = -0.85;
+				lka.current.rotation.z = -0.3;
+				sbka.current.rotation.x = -0.75;
+			} else if (isyarat === "angkat") {
+				// mengangkat ikan hasil tangkapan tinggi-tinggi
+				lka.current.rotation.x = -2.9;
+				lkn.current.rotation.x = -2.9;
+				sbka.current.rotation.x = -0.1;
+				sbkn.current.rotation.x = -0.1;
 			} else if (isyarat === "tepuk") {
 				const buka = Math.abs(Math.sin(t * 9)) * 0.25;
 				lka.current.rotation.x = -1.25;

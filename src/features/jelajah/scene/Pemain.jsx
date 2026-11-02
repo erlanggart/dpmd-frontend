@@ -3,10 +3,12 @@ import { useFrame, useThree } from "@react-three/fiber";
 import { Raycaster, Vector3 } from "three";
 import { BENDA, LOBI, RUANGAN, TINGGI_LANTAI, TITIK_MULAI, cariArea } from "../kantorConfig";
 import { kendali, posisi, setKeadaan } from "../jelajahStore";
-import { KENDARAAN, kendaraanDariId, keDunia, lingkaran, resetKendaraan, tabrakKendaraan, titikNaik } from "./kendaraan";
+import { KENDARAAN, KURSI as KURSI_KENDARAAN, kendaraanDariId, keDunia, kursiDunia, lingkaran, resetKendaraan, tabrakKendaraan, titikNaikKursi } from "./kendaraan";
 import { PERABOT, TANAH, cariJalur, langkah, tabrakKendaraanStatis, tanggaDi, tinggiTanah } from "./layout";
 import { tinggiGedungDi } from "./kawasanBantu";
-import { diriSendiri, kendaraanDipakaiLain, pemainLain } from "../multipemain";
+import { diriSendiri, kursiTerpakai, pemainLain } from "../multipemain";
+import { berhentiPancing, geserAsal, mulaiPancing, pancing } from "../pancing";
+import { AIR_Y, DEK_Y, DERMAGA, dermagaDi, diPanggung, perahuBebas, titikPancing, titikTurun } from "./situ";
 import Tokoh from "./Tokoh";
 
 const H = TINGGI_LANTAI;
@@ -30,7 +32,12 @@ const PENAMPILAN_BAWAAN = { seragam: "warga", perempuan: false, kulit: "#d9ad85"
 const KEMUDI = {
 	mobil: { maju: 10, turbo: 15, mundur: 4, gas: 6, rem: 12, sumbu: 2.6, belok: 0.55 },
 	motor: { maju: 12, turbo: 18, mundur: 2.5, gas: 8, rem: 14, sumbu: 1.3, belok: 0.6 },
+	perahu: { maju: 3.2, turbo: 5, mundur: 1.4, gas: 1.6, rem: 2.6, belok: 0.75 },
 };
+// Dasar tokoh yang duduk di perahu, relatif tanah halaman.
+const DUDUK_PERAHU = AIR_Y - 0.32;
+const JARAK_PERAHU = 3.2;
+const yKursi = (k) => (k.jenis === "perahu" ? TANAH + DUDUK_PERAHU : TANAH);
 
 const sudutDekat = (dari, ke) => dari + Math.atan2(Math.sin(ke - dari), Math.cos(ke - dari));
 const KURSI = PERABOT.filter((p) => ["kursi", "kursiEksekutif", "sofa"].includes(p.jenis));
@@ -62,6 +69,7 @@ export default function Pemain({ daftarDinding, penghuni, penampilan = PENAMPILA
 	useEffect(() => {
 		kamera.current.jarak = window.innerWidth < 640 ? 12 : 10;
 		resetKendaraan();
+		berhentiPancing();
 	}, []);
 
 	// Keyboard: tombol gerak & Spasi (loncat) ditangani di sini; E/Esc/M milik UI.
@@ -139,6 +147,7 @@ export default function Pemain({ daftarDinding, penghuni, penampilan = PENAMPILA
 		if (kendali.teleport) {
 			const t = kendali.teleport;
 			if (m.jenis !== "jalan") {
+				if (m.jenis === "mancing") berhentiPancing();
 				if (m.k) {
 					m.k.laju = 0;
 					m.k.pintu = 0;
@@ -173,16 +182,32 @@ export default function Pemain({ daftarDinding, penghuni, penampilan = PENAMPILA
 					mode.current = { jenis: "duduk", t: 0, k: null, kursi, dari: { x: p.x, z: p.z } };
 					rute.current = null;
 				}
-			} else if (md.jenis === "jalan" && (aksi.startsWith("mobil:") || aksi.startsWith("motor:"))) {
-				const kend = kendaraanDariId(aksi);
+			} else if (md.jenis === "jalan" && /^(mobil|motor|perahu):/.test(aksi)) {
+				// "mobil:0" = jadi pengemudi; "mobil:0#2" = duduk di kursi penumpang 2
+				const [id, no] = aksi.split("#");
+				const kend = kendaraanDariId(id);
 				if (kend) {
-					mode.current = { jenis: "masuk", t: 0, k: kend, kursi: null, dari: { x: p.x, z: p.z } };
+					mode.current = { jenis: "masuk", t: 0, k: kend, kursi: null, no: +no || 0, dari: { x: p.x, z: p.z, y: p.y } };
 					rute.current = null;
 				}
 			} else if (aksi === "berdiri" && md.jenis === "duduk") {
 				berdiri();
 			} else if (aksi === "keluar" && md.jenis === "kemudi") {
 				mode.current = { ...md, jenis: "turun", t: 0 };
+			} else if (md.jenis === "jalan" && aksi.startsWith("mancing:")) {
+				const d = DERMAGA.find((dd) => dd.id === aksi.slice(8));
+				if (d) {
+					const tp = titikPancing(d, p.x, p.z);
+					p.set(tp.x, TANAH + DEK_Y, tp.z);
+					mode.current = { jenis: "mancing", t: 0, k: null, kursi: null, dari: null };
+					rute.current = null;
+					mulaiPancing({ x: tp.x, z: tp.z, rot: tp.rot, perahu: false });
+				}
+			} else if (md.jenis === "kemudi" && aksi === "mancing:perahu" && md.k?.jenis === "perahu" && !md.no) {
+				mode.current = { ...md, jenis: "mancing", t: 0 };
+				mulaiPancing({ x: p.x, z: p.z, rot: md.k.rot, perahu: true });
+			} else if (md.jenis === "mancing" && aksi === "berhenti") {
+				berhentiPancing();
 			}
 		}
 
@@ -297,14 +322,14 @@ export default function Pemain({ daftarDinding, penghuni, penampilan = PENAMPILA
 			md.t += dt;
 			if (kend.jenis === "mobil") {
 				// 1) melangkah ke pintu sambil pintu dibuka, 2) masuk ke jok, 3) pintu ditutup
-				const pintu = titikNaik(kend);
-				const jok = keDunia(kend, -0.4, 0.1);
+				const pintu = titikNaikKursi(kend, md.no);
+				const jok = kursiDunia(kend, md.no);
 				if (md.t < 0.5) {
 					const f = md.t / 0.5;
 					p.x += (pintu.x - p.x) * Math.min(1, f * 1.5);
 					p.z += (pintu.z - p.z) * Math.min(1, f * 1.5);
 					kend.pintu = f;
-					g.rotation.y = kend.rot + Math.PI / 2;
+					g.rotation.y = kend.rot + (KURSI_KENDARAAN.mobil[md.no][0] < 0 ? Math.PI / 2 : -Math.PI / 2);
 					besar = 0.6;
 				} else if (md.t < 0.9) {
 					const f = (md.t - 0.5) / 0.4;
@@ -318,16 +343,78 @@ export default function Pemain({ daftarDinding, penghuni, penampilan = PENAMPILA
 					mode.current = { ...md, jenis: "kemudi", t: 0 };
 				}
 			} else {
-				const jok = keDunia(kend, 0, -0.1);
+				const jok = kursiDunia(kend, md.no);
 				const f = Math.min(1, md.t / 0.45);
 				p.x += (jok.x - p.x) * f;
 				p.z += (jok.z - p.z) * f;
+				// melangkah turun ke perahu
+				if (kend.jenis === "perahu") p.y = md.dari.y + (yKursi(kend) - md.dari.y) * f;
 				g.rotation.y = kend.rot;
-				kend.miring *= 1 - f;
+				if (kend.jenis === "motor") kend.miring *= 1 - f;
 				if (md.t >= 0.45) {
-					kend.miring = 0;
+					if (kend.jenis === "motor") kend.miring = 0;
 					mode.current = { ...md, jenis: "kemudi", t: 0 };
 				}
+			}
+		} else if (jenisMode === "kemudi" && mode.current.no > 0) {
+			// penumpang: ikut duduk di kursinya, kendaraan digerakkan pengemudi
+			const md = mode.current;
+			const kend = md.k;
+			kendali.loncat = false;
+			const jok = kursiDunia(kend, md.no);
+			p.set(jok.x, yKursi(kend), jok.z);
+			g.rotation.y = kend.rot;
+			if (Math.abs(kend.laju) > 0.5) {
+				const ke = kend.rot + Math.PI;
+				k.yaw += (sudutDekat(k.yaw, ke) - k.yaw) * (1 - Math.exp(-2.2 * dt));
+			}
+		} else if (jenisMode === "kemudi" && mode.current.k.jenis === "perahu") {
+			// mendayung: bisa berputar di tempat, hanya di air situ
+			const kend = mode.current.k;
+			const c = KEMUDI.perahu;
+			kendali.loncat = false;
+			const target = maju > 0.05 ? maju * (lari ? c.turbo : c.maju) : maju < -0.05 ? maju * c.mundur : 0;
+			const batas = (Math.abs(target) > Math.abs(kend.laju) ? c.gas : c.rem) * dt;
+			kend.laju += Math.max(-batas, Math.min(batas, target - kend.laju));
+			if (Math.abs(maju) < 0.05) kend.laju *= Math.exp(-0.6 * dt);
+			if (Math.abs(kend.laju) < 0.02 && Math.abs(maju) < 0.05) kend.laju = 0;
+			kend.setir += (Math.max(-1, Math.min(1, samping)) - kend.setir) * (1 - Math.exp(-5 * dt));
+			const lama = { x: kend.x, z: kend.z, rot: kend.rot };
+			kend.rot -= kend.setir * c.belok * dt * (0.45 + Math.min(1, Math.abs(kend.laju) / 3)) * (kend.laju < -0.1 ? -1 : 1);
+			kend.x += Math.sin(kend.rot) * kend.laju * dt;
+			kend.z += Math.cos(kend.rot) * kend.laju * dt;
+			const badan = lingkaran(kend);
+			if (!badan.every((o) => perahuBebas(o.x, o.z, o.r)) || badan.some((o) => tabrakKendaraan(o.x, o.z, o.r, kend))) {
+				Object.assign(kend, lama);
+				kend.laju *= -0.2;
+			}
+			const jok = kursiDunia(kend, 0);
+			p.set(jok.x, yKursi(kend), jok.z);
+			g.rotation.y = kend.rot;
+			if (Math.abs(kend.laju) > 0.4) {
+				const ke = kend.rot + Math.PI;
+				k.yaw += (sudutDekat(k.yaw, ke) - k.yaw) * (1 - Math.exp(-1.6 * dt));
+			}
+		} else if (jenisMode === "mancing") {
+			const md = mode.current;
+			kendali.loncat = false;
+			// kiri/kanan dipakai membidik & melawan arah lari ikan
+			pancing.arah = Math.abs(samping) > 0.3 ? Math.sign(samping) : 0;
+			if (md.k) {
+				// perahu terapung pelan sampai diam
+				const kend = md.k;
+				kend.laju *= Math.exp(-1.5 * dt);
+				kend.setir *= 0.9;
+				const jok = kursiDunia(kend, 0);
+				p.set(jok.x, yKursi(kend), jok.z);
+				geserAsal(jok.x, jok.z, kend.rot);
+			}
+			g.rotation.y = pancing.asal.rot + pancing.aim;
+			const ke = g.rotation.y + Math.PI;
+			k.yaw += (sudutDekat(k.yaw, ke) - k.yaw) * (1 - Math.exp(-3 * dt));
+			if (!pancing.aktif) {
+				pancing.arah = 0;
+				mode.current = md.k ? { ...md, jenis: "kemudi", t: 0 } : { jenis: "jalan", t: 0, k: null, kursi: null, dari: null };
 			}
 		} else if (jenisMode === "kemudi") {
 			const kend = mode.current.k;
@@ -356,7 +443,7 @@ export default function Pemain({ daftarDinding, penghuni, penampilan = PENAMPILA
 			kend.roda += (kend.laju * dt) / 0.32;
 			if (kend.jenis === "motor") kend.miring = -kend.setir * Math.min(1, Math.abs(kend.laju) / 8) * 0.35;
 			// pengemudi mengikuti kendaraan
-			const jok = kend.jenis === "mobil" ? keDunia(kend, -0.4, 0.1) : keDunia(kend, 0, -0.12);
+			const jok = kursiDunia(kend, 0);
 			p.set(jok.x, TANAH, jok.z);
 			g.rotation.y = kend.rot;
 			// kamera berangsur ke belakang kendaraan saat melaju
@@ -368,13 +455,34 @@ export default function Pemain({ daftarDinding, penghuni, penampilan = PENAMPILA
 			const md = mode.current;
 			const kend = md.k;
 			md.t += dt;
-			kend.laju = 0;
-			kend.setir *= 0.8;
-			if (kend.jenis === "mobil") {
+			if (!md.no) {
+				kend.laju = 0;
+				kend.setir *= 0.8;
+			}
+			if (kend.jenis === "perahu") {
+				// naik ke papan dermaga terdekat
+				if (!md.ke) md.ke = titikTurun(kend.x, kend.z) || { x: p.x, z: p.z };
+				const f = Math.min(1, md.t / 0.45);
+				p.x += (md.ke.x - p.x) * f;
+				p.z += (md.ke.z - p.z) * f;
+				p.y += (TANAH + DEK_Y - p.y) * f;
+				if (md.t >= 0.45) {
+					p.set(md.ke.x, tinggiTanah(md.ke.x, md.ke.z), md.ke.z);
+					mode.current = { jenis: "jalan", t: 0, k: null, kursi: null, dari: null };
+				}
+			} else if (kend.jenis === "mobil" && md.no) {
+				// penumpang keluar lewat pintunya sendiri (atau ke belakang mobil bila terhalang)
+				const ke = titikNaikKursi(kend, md.no);
+				const bisa = langkah(TANAH, ke.x, ke.z) !== null && !tabrakKendaraan(ke.x, ke.z, 0.38);
+				const tuju = bisa ? ke : keDunia(kend, 0, -2.8);
+				p.set(tuju.x, TANAH, tuju.z);
+				g.rotation.y = kend.rot + (KURSI_KENDARAAN.mobil[md.no][0] < 0 ? -Math.PI / 2 : Math.PI / 2);
+				mode.current = { jenis: "jalan", t: 0, k: null, kursi: null, dari: null };
+			} else if (kend.jenis === "mobil") {
 				kend.pintu = Math.min(1, md.t / 0.4);
 				if (md.t >= 0.4 && !md.keluar) {
 					// berdiri di samping pintu (atau di belakang mobil bila sisi pintu terhalang)
-					const pilihan = [titikNaik(kend), keDunia(kend, 1.3, 0.35), keDunia(kend, 0, -2.8)];
+					const pilihan = [titikNaikKursi(kend, 0), keDunia(kend, 1.3, 0.35), keDunia(kend, 0, -2.8)];
 					const ke = pilihan.find((q) => langkah(TANAH, q.x, q.z) !== null && !tabrakKendaraan(q.x, q.z, 0.38)) || pilihan[0];
 					p.set(ke.x, TANAH, ke.z);
 					g.rotation.y = kend.rot - Math.PI / 2;
@@ -386,10 +494,11 @@ export default function Pemain({ daftarDinding, penghuni, penampilan = PENAMPILA
 					mode.current = { jenis: "jalan", t: 0, k: null, kursi: null, dari: null };
 				}
 			} else {
-				const pilihan = [titikNaik(kend), keDunia(kend, 0.7, 0), keDunia(kend, 0, -1.3)];
+				const pilihan = [titikNaikKursi(kend, md.no || 0), keDunia(kend, 0.7, 0), keDunia(kend, 0, -1.6)];
 				const ke = pilihan.find((q) => langkah(TANAH, q.x, q.z) !== null && !tabrakKendaraan(q.x, q.z, 0.38)) || pilihan[0];
 				p.set(ke.x, TANAH, ke.z);
-				kend.miring = 0.12;
+				// standar motor diturunkan hanya bila tak ada lagi yang menunggangi
+				if (!md.no && !kursiTerpakai(kend.id).size) kend.miring = 0.12;
 				mode.current = { jenis: "jalan", t: 0, k: null, kursi: null, dari: null };
 			}
 		}
@@ -398,11 +507,12 @@ export default function Pemain({ daftarDinding, penghuni, penampilan = PENAMPILA
 		const mk = mode.current;
 		const diMobil = (mk.jenis === "kemudi" || (mk.jenis === "masuk" && mk.t > 0.85) || (mk.jenis === "turun" && !mk.keluar)) && mk.k?.jenis === "mobil";
 		const diMotor = (mk.jenis === "kemudi" || (mk.jenis === "masuk" && mk.t >= 0.3)) && mk.k?.jenis === "motor";
-		const duduk = mk.jenis === "duduk" || diMotor;
+		const diPerahu = (mk.jenis === "kemudi" || mk.jenis === "mancing" || (mk.jenis === "masuk" && mk.t >= 0.3)) && mk.k?.jenis === "perahu";
+		const duduk = mk.jenis === "duduk" || diMotor || diPerahu;
 		tokohJalan.current.visible = !diMobil && !duduk;
 		tokohDuduk.current.visible = duduk && !diMobil;
-		// di motor: jok lebih tinggi daripada kursi kantor
-		tokohDuduk.current.position.y = diMotor ? 0.38 : 0;
+		// di motor: jok lebih tinggi daripada kursi kantor; pembonceng sedikit lebih tinggi lagi
+		tokohDuduk.current.position.y = diMotor ? (mk.no ? 0.46 : 0.38) : 0;
 		badanLoncat.current.position.y = loncat.current.h;
 
 		const gr = gerak.current;
@@ -420,12 +530,13 @@ export default function Pemain({ daftarDinding, penghuni, penampilan = PENAMPILA
 		posisi.lantai = lantai;
 		// untuk tamu lain (jelajah bersama)
 		posisi.yTampil = p.y + loncat.current.h;
-		posisi.pose = diMobil ? "mobil" : diMotor ? "motor" : duduk ? "duduk" : "jalan";
+		posisi.pose = diMobil ? "mobil" : diMotor ? "motor" : diPerahu ? "perahu" : duduk ? "duduk" : mk.jenis === "mancing" ? "mancing" : "jalan";
+		posisi.kursi = mk.k ? mk.no || 0 : 0;
 		posisi.udara = gr.udara;
 		posisi.lari = lari && besar > 0.05;
 		posisi.kend = mk.k || null;
 		const em = diriSendiri.emote;
-		gr.isyarat = em && performance.now() < em.sampai ? em.jenis : null;
+		gr.isyarat = mk.jenis === "mancing" ? (pancing.fase === "dapat" ? "angkat" : "mancing") : em && performance.now() < em.sampai ? em.jenis : null;
 
 		const tujuanAkhir = rute.current?.titik[rute.current.titik.length - 1];
 		penandaTujuan.current.visible = !!tujuanAkhir;
@@ -434,7 +545,12 @@ export default function Pemain({ daftarDinding, penghuni, penampilan = PENAMPILA
 		const area = diTangga ? "tangga" : cariArea(p.x, p.z, lantai)?.id ?? (lantai ? "aula2" : "belakang1");
 		let dekat = null;
 		if (mk.jenis === "duduk") dekat = "berdiri";
-		else if (mk.jenis === "kemudi") dekat = "keluar";
+		else if (mk.jenis === "mancing") dekat = "berhenti";
+		else if (mk.jenis === "kemudi" && mk.k.jenis === "perahu") {
+			// di perahu: dekat dermaga → turun; di tengah situ & hampir diam → memancing
+			if (titikTurun(mk.k.x, mk.k.z)) dekat = "keluar";
+			else if (!mk.no && Math.abs(mk.k.laju) < 0.8) dekat = "mancing:perahu";
+		} else if (mk.jenis === "kemudi") dekat = "keluar";
 		else if (mk.jenis === "jalan" && !diTangga) {
 			// yang berjangkauan pendek (kursi, kendaraan, benda) didahulukan bila dalam jangkauan
 			let terdekat = Infinity;
@@ -448,15 +564,37 @@ export default function Pemain({ daftarDinding, penghuni, penampilan = PENAMPILA
 			for (const c of kursiBebas) if (c.lantai === lantai) coba(c.id, Math.hypot(c.x - p.x, c.z - p.z), JARAK_KURSI);
 			if (lantai === 0) {
 				for (const kend of KENDARAAN) {
-					if (kendaraanDipakaiLain(kend.id)) continue;
-					const t = titikNaik(kend);
-					coba(kend.id, Math.hypot(t.x - p.x, t.z - p.z), kend.jenis === "mobil" ? JARAK_MOBIL : JARAK_MOTOR);
+					// pengemudi dulu; bila sudah ada pengemudi (tamu lain), kursi penumpang yang kosong
+					const terisi = kursiTerpakai(kend.id);
+					const kosong = KURSI_KENDARAAN[kend.jenis].map((_, i) => i).filter((i) => !terisi.has(i));
+					if (!kosong.length || (kosong[0] > 0 && Math.abs(kend.laju) > 1.5)) continue;
+					const nama = (i) => (i ? `${kend.id}#${i}` : kend.id);
+					if (kend.jenis === "perahu") {
+						if (dermagaDi(p.x, p.z)) coba(nama(kosong[0]), Math.hypot(kend.x - p.x, kend.z - p.z), JARAK_PERAHU);
+						continue;
+					}
+					const batas = kend.jenis === "mobil" ? JARAK_MOBIL : JARAK_MOTOR;
+					if (kosong[0] === 0) {
+						const t = titikNaikKursi(kend, 0);
+						coba(kend.id, Math.hypot(t.x - p.x, t.z - p.z), batas);
+					} else {
+						// penumpang mobil masuk dari pintu kursi kosong yang terdekat
+						for (const i of kosong) {
+							const t = titikNaikKursi(kend, i);
+							coba(nama(i), Math.hypot(t.x - p.x, t.z - p.z), batas);
+						}
+					}
 				}
 			}
 			for (const [id, tamu] of pemainLain) {
 				const st = tamu.s;
 				if (!st || st.pose === "mobil" || (st.y > H / 2 ? 1 : 0) !== lantai) continue;
 				coba("tamu:" + id, Math.hypot(st.x - p.x, st.z - p.z), JARAK_TAMU);
+			}
+			// di panggung dermaga: mulai memancing
+			if (!dekat && lantai === 0) {
+				const d = diPanggung(p.x, p.z);
+				if (d) dekat = `mancing:${d.id}`;
 			}
 			if (!dekat) {
 				for (const a of PETUGAS) {
@@ -465,7 +603,7 @@ export default function Pemain({ daftarDinding, penghuni, penampilan = PENAMPILA
 				}
 			}
 		}
-		const modeUi = mk.jenis === "kemudi" ? mk.k.jenis : mk.jenis === "duduk" ? "duduk" : "jalan";
+		const modeUi = mk.jenis === "mancing" ? "mancing" : mk.jenis === "kemudi" ? (mk.no ? "penumpang" : mk.k.jenis) : mk.jenis === "duduk" ? "duduk" : "jalan";
 		setKeadaan({ area, lantai, dekat, mode: modeUi });
 
 		// Bidang klik mengikuti lantai & posisi pemain (kawasan jauh lebih luas dari bidangnya).
@@ -475,7 +613,7 @@ export default function Pemain({ daftarDinding, penghuni, penampilan = PENAMPILA
 		// Di halaman kamera lebih landai dan memandang lebih tinggi supaya tampak depan
 		// gedung (atap, menara) terlihat utuh; di dalam gedung kamera kembali menunduk.
 		k.luar += ((area === "luar" ? 1 : 0) - k.luar) * (1 - Math.exp(-3 * dt));
-		const jarakKamera = k.jarak + (mk.jenis === "kemudi" && mk.k.jenis === "mobil" ? 2.5 : 0);
+		const jarakKamera = k.jarak + (mk.jenis === "kemudi" && mk.k.jenis === "mobil" ? 2.5 : 0) + (mk.jenis === "mancing" ? 1.5 : 0);
 		const pitch = Math.max(0.12, k.pitch - 0.27 * k.luar);
 		const sy = Math.sin(k.yaw);
 		const cy = Math.cos(k.yaw);

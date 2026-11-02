@@ -30,6 +30,7 @@ import { suasana } from "./scene/suasana";
 import { susunPenghuni } from "./penghuni";
 import InfoPanel from "./ui/InfoPanel";
 import Minimap from "./ui/Minimap";
+import GamePancing from "./ui/GamePancing";
 import Joystick from "./ui/Joystick";
 import LayarAwal from "./ui/LayarAwal";
 import Denah2D from "./ui/Denah2D";
@@ -250,7 +251,7 @@ export default function JelajahPage() {
 			sapaPemain(id.slice(5));
 			return;
 		}
-		if (/^(kursi|mobil|motor):|^(berdiri|keluar)$/.test(id)) {
+		if (/^(kursi|mobil|motor|perahu|mancing):|^(berdiri|keluar|berhenti)$/.test(id)) {
 			kendali.aksi = id;
 			return;
 		}
@@ -363,6 +364,20 @@ export default function JelajahPage() {
 			? [`Sapa ${tamuDekat.nama} 👋`, "Sapa", "#0284c7"]
 		: dekat.startsWith("kursi:")
 			? ["Duduk di sini", "Duduk", "#475569"]
+			: dekat.includes("#")
+				? dekat.startsWith("motor:")
+					? ["Bonceng di belakang", "Bonceng", "#0369a1"]
+					: dekat.startsWith("perahu:")
+						? ["Ikut naik perahu", "Ikut", "#0e7490"]
+						: ["Ikut naik sebagai penumpang", "Ikut", "#0369a1"]
+			: dekat.startsWith("perahu:")
+				? ["Naik perahu dayung 🚣", "Naik", "#0e7490"]
+			: dekat === "mancing:perahu"
+				? ["Memancing dari perahu 🎣", "Mancing", "#0f766e"]
+			: dekat.startsWith("mancing:")
+				? ["Mulai memancing di sini 🎣", "Mancing", "#0f766e"]
+			: dekat === "berhenti"
+				? ["Selesai memancing", "Selesai", "#be123c"]
 			: dekat.startsWith("mobil:")
 				? ["Buka pintu & masuk mobil", "Masuk", "#334155"]
 				: dekat.startsWith("motor:")
@@ -372,16 +387,29 @@ export default function JelajahPage() {
 						: dekat === "keluar"
 							? modeMain === "motor"
 								? ["Turun dari motor", "Turun", "#c4532d"]
-								: ["Buka pintu & keluar", "Keluar", "#334155"]
+								: modeMain === "perahu"
+									? ["Naik ke dermaga", "Turun", "#0e7490"]
+									: modeMain === "penumpang"
+										? ["Turun dari kendaraan", "Turun", "#334155"]
+										: ["Buka pintu & keluar", "Keluar", "#334155"]
 							: null;
-	const sasaran = petugasDekat
+	// Saat memancing, tombol & tombol E dipegang HUD pancing sendiri.
+	const sasaran = modeMain === "mancing"
+		? null
+		: petugasDekat
 		? { id: petugasDekat.id, label: `Bicara dengan ${penghuni.petugas[petugasDekat.id]?.nama ?? petugasDekat.petugas}`, tombol: "Tanya", warna: petugasDekat.warna }
 		: bendaDekat
 			? { id: bendaDekat.id, label: bendaDekat.label, tombol: "Pakai", warna: "#1f6b50" }
 			: aksiGerak
 				? { id: dekat, label: aksiGerak[0], tombol: aksiGerak[1], warna: aksiGerak[2] }
 				: null;
-	const berkendara = modeMain === "mobil" || modeMain === "motor";
+	const berkendara = ["mobil", "motor", "perahu", "penumpang"].includes(modeMain);
+	const petunjukKendara = {
+		mobil: "W/S gas & mundur · A/D belok · Shift turbo · E keluar",
+		motor: "W/S gas & mundur · A/D belok · Shift turbo · E turun",
+		perahu: "W/S dayung · A/D belok · Shift dayung cepat · E mancing / naik ke dermaga",
+		penumpang: "Anda penumpang — duduk manis · E turun",
+	}[modeMain];
 	const ambilAntrean = () => setAntrean((n) => (n ?? 23) + 1);
 
 	return (
@@ -535,6 +563,7 @@ export default function JelajahPage() {
 							) : (
 								area === "luar" &&
 								!berkendara &&
+								modeMain !== "mancing" &&
 								(!sentuh || kini - mulaiPada < 12000) && (
 									<p className="rounded-full bg-slate-900/55 px-3.5 py-1.5 text-center text-[11px] text-white backdrop-blur sm:px-4 sm:py-2 sm:text-sm">
 										{sentuh ? "Geser analog atau ketuk lantai" : "Jalan dengan WASD, atau klik lantai"} untuk menuju pintu masuk
@@ -544,9 +573,11 @@ export default function JelajahPage() {
 						</div>
 					)}
 
+					{modeMain === "mancing" && !jeda && <GamePancing sentuh={sentuh} bersama={statusMp === "tersambung"} onSelesai={() => (kendali.aksi = "berhenti")} />}
+
 					{berkendara && !jeda && !sentuh && (
 						<p className="pointer-events-none absolute left-1/2 top-28 -translate-x-1/2 rounded-full bg-slate-900/65 px-4 py-2 text-center text-xs text-white backdrop-blur sm:top-24 sm:text-sm">
-							W/S gas & mundur · A/D belok · Shift turbo · E {modeMain === "motor" ? "turun" : "keluar"}
+							{petunjukKendara}
 						</p>
 					)}
 
@@ -810,6 +841,9 @@ export default function JelajahPage() {
 									["Tombol aksi (kanan)", "bicara, pakai benda, duduk, masuk mobil, naik motor"],
 									["Tombol Loncat", "meloncat"],
 									["Di mobil/motor", "analog = gas & setir, tombol Turbo untuk ngebut"],
+									["Mobil berempat", "dekati mobil/motor/perahu yang dikemudikan tamu lain untuk ikut naik"],
+									["Situ Pemda", "naik perahu di dermaga; di panggung dermaga atau dari perahu tekan Mancing"],
+									["Memancing", "tahan 🎣 lalu lepas untuk melempar; saat adu tarik tahan untuk menggulung, lawan arah lari ikan"],
 									["Tombol 💬 / 🙂", "ngobrol & kirim emote ke tamu lain; dekati tamu untuk menyapa"],
 								]
 							: [
@@ -820,6 +854,9 @@ export default function JelajahPage() {
 									["E", "bicara · pakai benda · duduk · naik/turun kendaraan"],
 									["Spasi", "loncat"],
 									["Di mobil/motor", "W/S gas & mundur, A/D belok, Shift turbo"],
+									["Mobil berempat", "E di dekat kendaraan yang dikemudikan tamu lain = ikut naik"],
+									["Situ Pemda", "E di dermaga: naik perahu · E di panggung / perahu: memancing"],
+									["Memancing", "tahan Spasi lalu lepas = lempar; tahan Spasi = gulung, A/D melawan arah ikan"],
 									["Enter / T", "ngobrol dengan tamu lain"],
 									["1 – 5", "emote: lambai, jempol, tepuk, tawa, hati"],
 									["M", "tampilkan/sembunyikan peta"],

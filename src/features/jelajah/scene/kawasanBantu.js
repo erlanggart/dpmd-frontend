@@ -1,10 +1,14 @@
 import { AIR, BATAS_KAWASAN, GEDUNG, JENIS_GEDUNG, POHON_KAWASAN } from "./kawasanData";
+import { DERMAGA, dermagaDi } from "./situ";
 
 // Bantuan kawasan Pemda di sekitar kantor (lihat kawasanData.js): tinggi gedung dan
 // tabrakan gedung, situ, dan pohon. Penghalang diindeks per sel grid supaya tiap
 // langkah cukup memeriksa beberapa benda di sel tempat pemain berada.
 
 export { BATAS_KAWASAN };
+
+// Pohon bantaran yang menghalangi jalan masuk dermaga tidak ditanam.
+export const POHON_TAMPIL = POHON_KAWASAN.filter(([x, z]) => DERMAGA.every((d) => Math.hypot(x - d.x, z - d.z) > 6.5));
 
 export const TINGGI_PER_LANTAI = { rumah: 3.2, kantor: 3.6 };
 const ATAP = JENIS_GEDUNG.indexOf("atap");
@@ -80,9 +84,9 @@ for (const [jenis, lantai, f] of GEDUNG) {
 }
 for (const f of AIR) {
 	const p = pasangan(f);
-	daftarkan({ p, kotak: kotakDari(p), tinggi: 0 });
+	daftarkan({ p, kotak: kotakDari(p), tinggi: 0, air: true });
 }
-for (const [x, z] of POHON_KAWASAN) daftarkan({ x, z, r: 0.4, kotak: [x, x, z, z] });
+for (const [x, z] of POHON_TAMPIL) daftarkan({ x, z, r: 0.4, kotak: [x, x, z, z] });
 
 const diSel = (x, z) => sel.get(kunci(Math.floor(x / SEL), Math.floor(z / SEL)));
 
@@ -92,6 +96,8 @@ export function tabrakKawasan(x, z, r) {
 	if (!daftar) return false;
 	for (const b of daftar) {
 		if (b.p) {
+			// di atas papan dermaga air tidak menghalangi (tepi dermaga tetap)
+			if (b.air && dermagaDi(x, z, r)) continue;
 			const [x0, x1, z0, z1] = b.kotak;
 			if (x < x0 - r || x > x1 + r || z < z0 - r || z > z1 + r) continue;
 			if (dalamPoligon(x, z, b.p) || dekatTepi(x, z, b.p, r)) return true;

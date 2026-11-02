@@ -172,7 +172,7 @@ export default function Parkiran() {
 				<meshStandardMaterial map={paving} />
 			</mesh>
 			<mesh geometry={garis} material={BAHAN_WARNA} />
-			{KENDARAAN.map((k) => (k.jenis === "mobil" ? <Mobil key={k.id} k={k} /> : <Motor key={k.id} k={k} />))}
+			{KENDARAAN.map((k) => (k.jenis === "mobil" ? <Mobil key={k.id} k={k} /> : k.jenis === "motor" ? <Motor key={k.id} k={k} /> : null))}
 			<Gabung>
 				<PagarBata />
 			</Gabung>

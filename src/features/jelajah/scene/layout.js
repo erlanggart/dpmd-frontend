@@ -1,5 +1,6 @@
 import { LOBI, RUANGAN, TINGGI_LANTAI } from "../kantorConfig";
 import { BATAS_KAWASAN, tabrakKawasan } from "./kawasanBantu";
+import { DEK_Y, dermagaDi } from "./situ";
 
 // Geometri turunan dari kantorConfig: dinding per lantai, pintu, tangga, perabot,
 // penghuni kantor, penghalang tabrakan, dan pencarian jalur. Semua dalam meter.
@@ -546,6 +547,7 @@ export const ANAK_TANGGA = { n: 2, dalam: 0.45 }; // dua pijakan di depan teras,
 // Tinggi pijakan lantai 1 di (x, z): 0 di atas pondasi & teras, bertingkat di anak
 // tangga, TANAH di halaman.
 export function tinggiTanah(x, z) {
+	if (dermagaDi(x, z)) return TANAH + DEK_Y;
 	const p = PONDASI;
 	if (x >= p.x0 && x <= p.x1 && z >= p.z0 && z <= p.z1) return 0;
 	const t = TERAS;

@@ -45,6 +45,13 @@ export function kendaraanDipakaiLain(id) {
 	return false;
 }
 
+// Kursi kendaraan yang sedang diduduki tamu lain (0 = pengemudi).
+export function kursiTerpakai(id) {
+	const hasil = new Set();
+	for (const p of pemainLain.values()) if (p.s?.kend?.id === id) hasil.add(p.s.kend.kursi ?? 0);
+	return hasil;
+}
+
 let socket = null;
 // Naik setiap sambung/putus, supaya sambungan yang masih memuat pustaka dibatalkan.
 let generasi = 0;
@@ -155,7 +162,7 @@ export async function sambungJelajah(profil) {
 			udara: !!posisi.udara,
 			lari: !!posisi.lari,
 			kend: k
-				? { id: k.id, x: +k.x.toFixed(2), z: +k.z.toFixed(2), rot: +k.rot.toFixed(2), laju: +k.laju.toFixed(2), setir: +k.setir.toFixed(2), pintu: +k.pintu.toFixed(2), miring: +k.miring.toFixed(2) }
+				? { id: k.id, x: +k.x.toFixed(2), z: +k.z.toFixed(2), rot: +k.rot.toFixed(2), laju: +k.laju.toFixed(2), setir: +k.setir.toFixed(2), pintu: +k.pintu.toFixed(2), miring: +k.miring.toFixed(2), kursi: posisi.kursi ?? 0 }
 				: undefined,
 		};
 		const kunci = JSON.stringify(data);

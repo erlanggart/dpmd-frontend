@@ -215,7 +215,7 @@ export default function Lingkungan({ daftarDinding }) {
 					<planeGeometry args={[h.x1 - h.x0, h.z1 - h.z0]} />
 					<meshStandardMaterial map={paving} />
 				</mesh>
-				<Kawasan />
+				<Kawasan daftarDinding={daftarDinding} />
 				<Parkiran />
 				{/* benda statis dipanggang jadi beberapa draw call saja */}
 				<Gabung>

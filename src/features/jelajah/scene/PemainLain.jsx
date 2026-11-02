@@ -16,6 +16,8 @@ const H = TINGGI_LANTAI;
 const FONT = '"Segoe UI", system-ui, -apple-system, Roboto, sans-serif';
 const EMOJI = { lambai: "👋", jempol: "👍", tepuk: "👏", tawa: "😂", hati: "❤️" };
 const sudutDekat = (dari, ke) => dari + Math.atan2(Math.sin(ke - dari), Math.cos(ke - dari));
+// Tinggi label nama di atas kepala per pose.
+const TINGGI_LABEL = { mobil: 1.85, motor: 2.0, duduk: 1.65, perahu: 1.35 };
 // Posisi tamu lain diputar TUNDA ms di belakang waktu nyata dan diinterpolasi di antara
 // dua kiriman server (±10x/detik), jadi tetap mulus walau paket datang tak teratur.
 // Bila kiriman terlambat, gerak diteruskan sebentar (maks. EKSTRA ms) lalu berhenti.
@@ -221,8 +223,9 @@ function Tamu({ id, nama, jk, avatar, kulit }) {
 		gr.isyarat = p.emote && kini < p.emote.sampai ? p.emote.jenis : null;
 
 		// Kendaraan yang ia kemudikan ikut bergerak (kecuali sedang kita kemudikan sendiri).
-		const k = s.kend && kendaraanDariId(s.kend.id);
-		if (k && posisi.kend !== k) {
+		// Kendaraan digerakkan oleh pengemudinya saja; penumpang hanya ikut duduk.
+		const k = s.kend && (s.kend.kursi ?? 0) === 0 && kendaraanDariId(s.kend.id);
+		if (k && !(posisi.kend === k && (posisi.kursi ?? 0) === 0)) {
 			const f = 1 - Math.exp(-12 * dt);
 			const lompat = Math.hypot(s.kend.x - k.x, s.kend.z - k.z) > 6;
 			k.x = lompat ? s.kend.x : k.x + (s.kend.x - k.x) * f;
@@ -238,10 +241,10 @@ function Tamu({ id, nama, jk, avatar, kulit }) {
 		const tampak = lantaiTampak(t.y);
 		lihat.current = tampak;
 		g.visible = tampak && s.pose !== "mobil";
-		jalan.current.visible = s.pose === "jalan";
-		duduk.current.visible = s.pose === "duduk" || s.pose === "motor";
+		jalan.current.visible = s.pose === "jalan" || s.pose === "mancing";
+		duduk.current.visible = s.pose === "duduk" || s.pose === "motor" || s.pose === "perahu";
 		duduk.current.position.y = s.pose === "motor" ? 0.38 : 0;
-		tinggi.current = s.pose === "mobil" ? 1.85 : s.pose === "motor" ? 2.0 : s.pose === "duduk" ? 1.65 : 2.05;
+		tinggi.current = TINGGI_LABEL[s.pose] ?? 2.05;
 		spLabel.current.visible = tampak;
 		spLabel.current.position.set(t.x, t.y + tinggi.current + 0.12, t.z);
 	});
@@ -273,7 +276,7 @@ function HiasanSendiri() {
 		pos.current.x = posisi.x;
 		pos.current.y = posisi.yTampil ?? posisi.y;
 		pos.current.z = posisi.z;
-		tinggi.current = posisi.pose === "mobil" ? 1.85 : posisi.pose === "motor" ? 2.0 : posisi.pose === "duduk" ? 1.65 : 2.05;
+		tinggi.current = TINGGI_LABEL[posisi.pose] ?? 2.05;
 	});
 	return <Hiasan sumber={() => diriSendiri} tinggiRef={tinggi} lihat={lihat} posisiRef={pos} />;
 }

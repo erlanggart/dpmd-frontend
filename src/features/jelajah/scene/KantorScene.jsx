@@ -5,6 +5,7 @@ import Gedung, { GrupLantai } from "./Gedung";
 import Lingkungan from "./Lingkungan";
 import Pegawai from "./Pegawai";
 import Pemain from "./Pemain";
+import Pancingan from "./Pancingan";
 import PemainLain from "./PemainLain";
 import SiangMalam from "./SiangMalam";
 import Petugas from "./Petugas";
@@ -79,6 +80,7 @@ export default function KantorScene({ statistik, dikunjungi, jeda, penghuni, pen
 			))}
 			<Pemain daftarDinding={daftarDinding} penghuni={penghuni} penampilan={penampilan} />
 			<PemainLain />
+			<Pancingan />
 		</Canvas>
 	);
 }
