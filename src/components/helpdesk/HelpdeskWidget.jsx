@@ -25,9 +25,11 @@ import { FormSambung, KUNCI_SAMBUNG, PercakapanPic, PilihProgram } from "./Sambu
  *
  * Pegawai DPMD tidak melihat widget ini — mereka menjawab tiket dari panel
  * Helpdesk. Notifikasi balasan membuka widget lewat ?bantuan=tiket.
+ *
+ * Tombol hanya tampil di landing page ("/"). Pengecualiannya halaman yang
+ * dibuka dari notifikasi balasan tiket, supaya balasan tetap bisa dibaca.
  */
 
-const JALUR_TERSEMBUNYI = ["/jelajah", "/meet/", "/core-dashboard", "/forbidden"];
 const PERAN_INTERNAL = ["superadmin", "kepala_dinas", "sekretaris_dinas", "kepala_bidang", "ketua_tim", "pegawai", "bendahara"];
 const KUNCI_WILAYAH = "helpdesk_wilayah";
 const KUNCI_SAPA = "helpdesk_sudah_disapa";
@@ -672,6 +674,7 @@ export default function HelpdeskWidget() {
 	const ujung = useRef(null);
 	const kolomMasukan = useRef(null);
 	const [lapisan, setLapisan] = useState(null);
+	const [jalurNotif, setJalurNotif] = useState(null);
 
 	const login = Boolean(user?.id);
 	const internal = PERAN_INTERNAL.includes(String(user?.role || "").toLowerCase());
@@ -688,10 +691,11 @@ export default function HelpdeskWidget() {
 		if (params.get("bantuan") !== "tiket") return;
 		setBuka(true);
 		setLayar("tiketSaya");
+		setJalurNotif(pathname);
 		const sisa = new URLSearchParams(params);
 		sisa.delete("bantuan");
 		setParams(sisa, { replace: true });
-	}, [params, setParams]);
+	}, [params, setParams, pathname]);
 
 	/* Data awal dimuat ulang saat status login berubah: wilayah dan FAQ yang
 	   boleh dipakai berbeda untuk tamu dan akun. */
@@ -795,7 +799,7 @@ export default function HelpdeskWidget() {
 		setLayar("chat");
 	};
 
-	if (internal || JALUR_TERSEMBUNYI.some((j) => pathname.startsWith(j))) return null;
+	if (internal || (pathname !== "/" && pathname !== jalurNotif)) return null;
 	/* Halaman desa di ponsel punya bilah navigasi bawah; tombol naik di atasnya. */
 	const bawah = pathname.startsWith("/desa") ? "bottom-[5.25rem] lg:bottom-4" : "bottom-4";
 	const bawahPanel = pathname.startsWith("/desa") ? "bottom-[9.5rem] lg:bottom-[5.5rem] h-[min(640px,calc(100dvh-11rem))] lg:h-[min(660px,calc(100dvh-7rem))]" : "bottom-[5.5rem] h-[min(660px,calc(100dvh-7rem))]";
