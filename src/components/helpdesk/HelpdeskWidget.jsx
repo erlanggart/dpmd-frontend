@@ -2,12 +2,12 @@ import { createContext, Fragment, useCallback, useContext, useEffect, useRef, us
 import { createPortal } from "react-dom";
 import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import {
-	ArrowLeft, ArrowRight, ArrowUpRight, Check, ChevronDown, ChevronRight, CircleCheck, Flame, House, Inbox,
-	LifeBuoy, MapPin, Search, Send, Star, Ticket, X, Zap,
+	ArrowLeft, ArrowRight, ArrowUpRight, Check, ChevronDown, ChevronRight, CircleCheck, House, Inbox,
+	MapPin, MessageCircle, Search, Send, Star, Ticket, X,
 } from "lucide-react";
 import api from "../../api";
 import { useAuth } from "../../context/AuthContext";
-import { LABEL_TINGKAT, STATUS_TIKET, ikonKategori, pesanGalat, waktu } from "./ikonHelpdesk";
+import { LABEL_TINGKAT, STATUS_TIKET, pesanGalat, waktu } from "./ikonHelpdesk";
 import { FormSambung, KUNCI_SAMBUNG, PercakapanPic, PilihProgram } from "./SambungPic";
 
 /**
@@ -35,10 +35,6 @@ const KUNCI_WILAYAH = "helpdesk_wilayah";
 const KUNCI_SAPA = "helpdesk_sudah_disapa";
 const KUNCI_TIKET_TAMU = "helpdesk_tiket_tamu";
 const MAKS_TIKET_TAMU = 10;
-const WARNA_TOPIK = [
-	"bg-emerald-50 text-emerald-600", "bg-sky-50 text-sky-600", "bg-violet-50 text-violet-600",
-	"bg-amber-50 text-amber-600", "bg-rose-50 text-rose-600", "bg-teal-50 text-teal-600",
-];
 
 const INPUT = "w-full px-3.5 py-2.5 text-sm bg-slate-50 border border-slate-200 text-slate-900 placeholder-slate-400 rounded-2xl focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-500/50 focus:bg-white transition";
 const MUNCUL = "transition duration-300 ease-out starting:opacity-0 starting:translate-y-2 motion-reduce:transition-none";
@@ -594,58 +590,43 @@ function TiketTamu({ onKembali }) {
 
 /* ── Layar sambutan ───────────────────────────────────────────────────────── */
 
+const CHIP = "rounded-full border border-slate-200 bg-white px-3 py-1.5 text-[12px] text-slate-700 transition hover:border-emerald-300 hover:text-emerald-800";
+
 function Sambutan({ awal, nama, onTanya, onTopik }) {
 	return (
-		<div className="space-y-4">
-			<div className={MUNCUL}>
-				<p className="m-0 text-[22px] font-extrabold leading-tight tracking-tight text-slate-900">Halo{nama ? `, ${nama}` : ""}! 👋</p>
-				<p className="m-0 mt-1 text-sm text-slate-500">{awal?.salam || "Ada yang bisa kami bantu hari ini?"}</p>
-			</div>
+		<div className="flex flex-col gap-4">
+			<p className={`m-0 text-sm text-slate-700 ${MUNCUL}`}>
+				Halo{nama ? `, ${nama}` : ""}. Ada yang bisa kami bantu? Ketik pertanyaan Anda atau pilih topik.
+			</p>
 
 			{awal?.pintasan_akun?.length > 0 && (
-				<div className="space-y-1.5">
-					<p className="m-0 text-[11px] font-bold uppercase tracking-wider text-slate-400">Cek data Anda</p>
-					<div className="flex flex-wrap gap-1.5">
-						{awal.pintasan_akun.map((p) => (
-							<button key={p} type="button" onClick={() => onTanya(p)}
-								className="inline-flex items-center gap-1.5 rounded-full bg-gradient-to-r from-emerald-600 to-teal-500 px-3 py-1.5 text-xs font-semibold text-white shadow-sm transition hover:brightness-105">
-								<Zap size={11} />{p}
-							</button>
-						))}
-					</div>
+				<div className="flex flex-wrap gap-1.5">
+					{awal.pintasan_akun.map((p) => (
+						<button key={p} type="button" onClick={() => onTanya(p)} className={CHIP}>{p}</button>
+					))}
 				</div>
 			)}
 
 			{awal?.kategori?.length > 0 && (
-				<div className="space-y-1.5">
-					<p className="m-0 text-[11px] font-bold uppercase tracking-wider text-slate-400">Pilih topik</p>
-					<div className="grid grid-cols-2 gap-2">
-						{awal.kategori.map((k, i) => {
-							const Ikon = ikonKategori(k.icon);
-							return (
-								<button key={k.id} type="button" onClick={() => onTopik(k)}
-									className="group flex items-center gap-2.5 rounded-2xl bg-white p-2.5 text-left ring-1 ring-slate-200/80 transition hover:-translate-y-0.5 hover:shadow-md hover:ring-emerald-200">
-									<span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl ${WARNA_TOPIK[i % WARNA_TOPIK.length]}`}><Ikon size={16} /></span>
-									<span className="text-[12px] font-bold leading-tight text-slate-800">{k.name}</span>
-								</button>
-							);
-						})}
+				<div className="flex flex-col gap-1.5">
+					<p className="m-0 text-[11px] font-medium text-slate-400">Topik</p>
+					<div className="flex flex-wrap gap-1.5">
+						{awal.kategori.map((k) => (
+							<button key={k.id} type="button" onClick={() => onTopik(k)} className={CHIP}>{k.name}</button>
+						))}
 					</div>
 				</div>
 			)}
 
 			{awal?.populer?.length > 0 && (
-				<div className="space-y-1.5">
-					<p className="m-0 flex items-center gap-1 text-[11px] font-bold uppercase tracking-wider text-slate-400"><Flame size={12} className="text-orange-400" />Sering ditanyakan</p>
-					<div className="overflow-hidden rounded-2xl bg-white ring-1 ring-slate-200/80">
-						{awal.populer.map((q) => (
-							<button key={q} type="button" onClick={() => onTanya(q)}
-								className="flex w-full items-center gap-2 border-b border-slate-100 px-3 py-2.5 text-left text-[13px] text-slate-700 transition last:border-0 hover:bg-emerald-50/60">
-								<span className="flex-1">{q}</span>
-								<ChevronRight size={13} className="text-slate-300" />
-							</button>
-						))}
-					</div>
+				<div className="flex flex-col gap-0.5">
+					<p className="m-0 text-[11px] font-medium text-slate-400">Sering ditanyakan</p>
+					{awal.populer.slice(0, 3).map((q) => (
+						<button key={q} type="button" onClick={() => onTanya(q)}
+							className="block w-full rounded-lg px-2 py-1.5 text-left text-[13px] text-emerald-800 transition hover:bg-slate-50">
+							{q}
+						</button>
+					))}
 				</div>
 			)}
 		</div>
@@ -802,30 +783,25 @@ export default function HelpdeskWidget() {
 	if (internal || (pathname !== "/" && pathname !== jalurNotif)) return null;
 	/* Halaman desa di ponsel punya bilah navigasi bawah; tombol naik di atasnya. */
 	const bawah = pathname.startsWith("/desa") ? "bottom-[5.25rem] lg:bottom-4" : "bottom-4";
-	const bawahPanel = pathname.startsWith("/desa") ? "bottom-[9.5rem] lg:bottom-[5.5rem] h-[min(640px,calc(100dvh-11rem))] lg:h-[min(660px,calc(100dvh-7rem))]" : "bottom-[5.5rem] h-[min(660px,calc(100dvh-7rem))]";
+	const bawahPanel = pathname.startsWith("/desa") ? "bottom-[9.5rem] lg:bottom-[5.5rem] h-[min(640px,calc(100dvh-11rem))] lg:h-[min(660px,calc(100dvh-7rem))]" : "bottom-[5rem] h-[min(560px,calc(100dvh-6.5rem))]";
 
 	return (
 		<>
 			{buka && (
-				<div className={`fixed right-3 z-[300] flex w-[calc(100vw-1.5rem)] origin-bottom-right flex-col overflow-hidden rounded-[28px] bg-white shadow-[0_30px_80px_-20px_rgba(15,23,42,.45)] ring-1 ring-black/5 transition duration-300 ease-out starting:scale-95 starting:opacity-0 motion-reduce:transition-none sm:right-5 sm:w-[400px] ${bawahPanel}`}
+				<div className={`fixed right-3 z-[300] flex w-[calc(100vw-1.5rem)] origin-bottom-right flex-col overflow-hidden rounded-2xl bg-white shadow-xl ring-1 ring-black/5 transition duration-200 ease-out starting:opacity-0 starting:translate-y-2 motion-reduce:transition-none sm:right-5 sm:w-[360px] ${bawahPanel}`}
 					role="dialog" aria-label="Helpdesk DPMD">
 					<div ref={setLapisan} className="pointer-events-none absolute inset-0 z-30" />
 					<KonteksLapisan.Provider value={lapisan}>
-						<div className="relative flex shrink-0 items-center gap-3 overflow-hidden bg-gradient-to-br from-emerald-600 via-emerald-500 to-teal-500 px-4 py-3.5 text-white">
-							<span aria-hidden className="pointer-events-none absolute -right-8 -top-10 h-32 w-32 rounded-full bg-white/10" />
-							<span aria-hidden className="pointer-events-none absolute -bottom-12 right-16 h-24 w-24 rounded-full bg-white/10" />
-							<AvatarBot besar />
-							<div className="relative min-w-0 flex-1">
-								<p className="m-0 text-[15px] font-bold leading-tight">Helpdesk DPMD</p>
-								<p className="m-0 text-[11px] text-emerald-50/90">Online · {awal?.ai ? "dibantu AI · " : ""}biasanya menjawab instan</p>
-							</div>
+						<div className="flex shrink-0 items-center gap-2.5 border-b border-slate-100 bg-white px-4 py-3 text-slate-800">
+							<AvatarBot />
+							<p className="m-0 min-w-0 flex-1 text-sm font-semibold">Helpdesk DPMD</p>
 							{layar === "chat" && (
-								<button type="button" onClick={() => setLayar("tiketSaya")} title="Tiket saya" aria-label="Tiket saya" className="relative flex h-9 w-9 items-center justify-center rounded-xl hover:bg-white/15"><Ticket size={17} /></button>
+								<button type="button" onClick={() => setLayar("tiketSaya")} title="Tiket saya" aria-label="Tiket saya" className="flex h-8 w-8 items-center justify-center rounded-lg text-slate-500 hover:bg-slate-100"><Ticket size={16} /></button>
 							)}
 							{pesan.length > 0 && layar === "chat" && (
-								<button type="button" onClick={mulaiUlang} title="Ke awal" aria-label="Ke awal" className="relative flex h-9 w-9 items-center justify-center rounded-xl hover:bg-white/15"><House size={17} /></button>
+								<button type="button" onClick={mulaiUlang} title="Ke awal" aria-label="Ke awal" className="flex h-8 w-8 items-center justify-center rounded-lg text-slate-500 hover:bg-slate-100"><House size={16} /></button>
 							)}
-							<button type="button" onClick={() => setBuka(false)} title="Tutup" aria-label="Tutup" className="relative flex h-9 w-9 items-center justify-center rounded-xl hover:bg-white/15"><X size={18} /></button>
+							<button type="button" onClick={() => setBuka(false)} title="Tutup" aria-label="Tutup" className="flex h-8 w-8 items-center justify-center rounded-lg text-slate-500 hover:bg-slate-100"><X size={17} /></button>
 						</div>
 
 						{layar === "tiketSaya" && (login ? <TiketSaya onKembali={() => setLayar("chat")} /> : <TiketTamu onKembali={() => setLayar("chat")} />)}
@@ -856,7 +832,7 @@ export default function HelpdeskWidget() {
 
 						{layar === "chat" && (
 							<>
-								<div className="flex-1 space-y-3 overflow-y-auto bg-gradient-to-b from-emerald-50/50 via-white to-white p-4">
+								<div className="flex-1 space-y-3 overflow-y-auto bg-white p-4">
 									{sesiPic && (
 										<button type="button" onClick={() => setLayar("pic")}
 											className="flex w-full items-center justify-between gap-2 rounded-2xl border border-emerald-200 bg-white px-3 py-2 text-left text-[12px] text-slate-700 hover:bg-emerald-50/60">
@@ -869,13 +845,13 @@ export default function HelpdeskWidget() {
 									{pesan.map((m, i) => (
 										m.peran === "user" ? (
 											<div key={i} className={`flex justify-end ${MUNCUL}`}>
-												<div className="max-w-[82%] whitespace-pre-line rounded-3xl rounded-br-lg bg-gradient-to-br from-emerald-600 to-teal-500 px-3.5 py-2 text-sm text-white shadow-sm">{m.teks}</div>
+												<div className="max-w-[82%] whitespace-pre-line rounded-2xl rounded-br-md bg-emerald-600 px-3.5 py-2 text-sm text-white">{m.teks}</div>
 											</div>
 										) : (
 											<div key={i} className={`flex gap-2 ${MUNCUL}`}>
 												<AvatarBot />
 												<div className="min-w-0 flex-1">
-													<div className={`inline-block max-w-full rounded-3xl rounded-tl-lg px-3.5 py-2.5 text-[13.5px] leading-relaxed shadow-sm ${m.meta?.galat ? "bg-rose-50 text-rose-700 ring-1 ring-rose-100" : "bg-white text-slate-700 ring-1 ring-slate-200/80"}`}>
+													<div className={`inline-block max-w-full rounded-2xl rounded-tl-md px-3.5 py-2.5 text-[13.5px] leading-relaxed ${m.meta?.galat ? "bg-rose-50 text-rose-700" : "bg-slate-100 text-slate-700"}`}>
 														{(m.meta?.kategori || m.meta?.sumber === "akun" || m.meta?.sumber === "data") && (
 															<span className="mb-1 flex flex-wrap gap-1">
 																{m.meta?.sumber === "akun" && !m.meta?.program_akun && <span className="rounded-full bg-sky-50 px-2 py-0.5 text-[10px] font-bold text-sky-700">Data akun Anda</span>}
@@ -937,7 +913,7 @@ export default function HelpdeskWidget() {
 									{menunggu && (
 										<div className="flex gap-2">
 											<AvatarBot />
-											<div className="flex gap-1 rounded-3xl rounded-tl-lg bg-white px-4 py-3 shadow-sm ring-1 ring-slate-200/80">
+											<div className="flex gap-1 rounded-2xl rounded-tl-md bg-slate-100 px-4 py-3">
 												{[0, 1, 2].map((d) => <span key={d} className="h-1.5 w-1.5 animate-bounce rounded-full bg-emerald-500" style={{ animationDelay: `${d * 120}ms` }} />)}
 											</div>
 										</div>
@@ -945,11 +921,11 @@ export default function HelpdeskWidget() {
 									<div ref={ujung} />
 								</div>
 
-								<form onSubmit={(e) => { e.preventDefault(); tanya(masukan); }} className="flex shrink-0 items-center gap-2 border-t border-slate-100 bg-white p-3">
-									<input ref={kolomMasukan} value={masukan} onChange={(e) => setMasukan(e.target.value)} placeholder="Tanya seputar layanan DPMD…" maxLength={1000} disabled={menunggu}
-										className="w-full rounded-full border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm text-slate-900 placeholder-slate-400 transition focus:border-emerald-500/50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500/30" />
+								<form onSubmit={(e) => { e.preventDefault(); tanya(masukan); }} className="flex shrink-0 items-center gap-2 border-t border-slate-100 bg-white p-2.5">
+									<input ref={kolomMasukan} value={masukan} onChange={(e) => setMasukan(e.target.value)} placeholder="Tulis pertanyaan…" maxLength={1000} disabled={menunggu}
+										className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 placeholder-slate-400 transition focus:border-emerald-500 focus:outline-none" />
 									<button type="submit" disabled={menunggu || !masukan.trim()} aria-label="Kirim"
-										className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-emerald-600 to-teal-500 text-white shadow-md shadow-emerald-600/25 transition hover:brightness-105 active:scale-95 disabled:opacity-40">
+										className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-emerald-600 text-white transition hover:bg-emerald-700 disabled:opacity-40">
 										<Send size={15} />
 									</button>
 								</form>
@@ -960,9 +936,9 @@ export default function HelpdeskWidget() {
 			)}
 
 			{sapa && !buka && (
-				<div className={`fixed right-3 z-[300] flex max-w-[250px] items-start gap-2 rounded-2xl rounded-br-md bg-white p-3 shadow-xl ring-1 ring-black/5 sm:right-5 ${pathname.startsWith("/desa") ? "bottom-[9rem] lg:bottom-[5rem]" : "bottom-[5rem]"} ${MUNCUL}`}>
+				<div className={`fixed right-3 z-[300] flex max-w-[250px] items-start gap-2 rounded-2xl rounded-br-md bg-white p-3 shadow-xl ring-1 ring-black/5 sm:right-5 ${pathname.startsWith("/desa") ? "bottom-[8.5rem] lg:bottom-[4.5rem]" : "bottom-[4.5rem]"} ${MUNCUL}`}>
 					<button type="button" onClick={bukaWidget} className="text-left">
-						<p className="m-0 text-[13px] font-bold text-slate-900">Ada yang bisa dibantu? 👋</p>
+						<p className="m-0 text-[13px] font-semibold text-slate-900">Ada yang bisa dibantu?</p>
 						<p className="m-0 mt-0.5 text-[11.5px] text-slate-500">Tanya soal Bankeu, BUMDes, aparatur, akun, atau layanan DPMD lainnya.</p>
 					</button>
 					<button type="button" onClick={() => { setSapa(false); tandaiDisapa(); }} aria-label="Tutup sapaan" className="-mr-1 -mt-1 flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-slate-400 hover:bg-slate-100"><X size={12} /></button>
@@ -970,12 +946,9 @@ export default function HelpdeskWidget() {
 			)}
 
 			<button type="button" onClick={bukaWidget} aria-label={buka ? "Tutup Helpdesk" : "Buka Helpdesk"}
-				className={`group fixed right-3 z-[300] flex h-14 items-center gap-2 rounded-full bg-gradient-to-br from-emerald-600 to-teal-500 pl-2 pr-2 text-white shadow-[0_16px_40px_-12px_rgba(5,150,105,.7)] transition hover:-translate-y-0.5 active:scale-95 sm:right-5 sm:pr-5 ${bawah}`}>
-				<span className="relative flex h-10 w-10 items-center justify-center rounded-full bg-white/15">
-					{!buka && <span aria-hidden className="absolute inset-0 animate-ping rounded-full bg-white/20 [animation-duration:2.4s] motion-reduce:hidden" />}
-					{buka ? <X size={20} className="relative" /> : <LifeBuoy size={20} className="relative" />}
-				</span>
-				<span className="hidden text-sm font-bold sm:inline">{buka ? "Tutup" : "Tanya DPMD"}</span>
+				className={`fixed right-3 z-[300] flex h-12 items-center gap-2 rounded-full bg-emerald-600 px-3.5 text-white shadow-lg transition hover:bg-emerald-700 sm:right-5 sm:px-4 ${bawah}`}>
+				{buka ? <X size={19} /> : <MessageCircle size={19} />}
+				<span className="hidden text-sm font-semibold sm:inline">{buka ? "Tutup" : "Tanya DPMD"}</span>
 			</button>
 		</>
 	);
