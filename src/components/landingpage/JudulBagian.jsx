@@ -1,8 +1,10 @@
 /* Judul bagian landing page: judul besar rata kiri, keterangan di sampingnya.
-   Kata-kata judul naik dari balik garis saat slide didatangi (lihat dek.css). */
+   Kata-kata judul naik dari balik garis saat slide didatangi (lihat dek.css).
+   Ruang bawah 0.25em (diimbangi margin negatif) supaya ekor huruf g/j/p/y
+   tidak terpotong oleh overflow-hidden. */
 export function KataNaik({ teks, mulai = 0 }) {
 	return String(teks).split(" ").map((k, i, semua) => (
-		<span key={i} className="inline-block overflow-hidden pb-[0.1em] align-bottom">
+		<span key={i} className="-mb-[0.25em] inline-block overflow-hidden pb-[0.25em] align-bottom">
 			<span data-masuk="kata" style={{ "--urut": mulai + i }}>{k}{i < semua.length - 1 ? " " : ""}</span>
 		</span>
 	));
