@@ -9,7 +9,7 @@ import { levelDari, misiSiapKlaim, useProgres, xpUntukLevel } from "../progres";
 // layar gelap saat pingsan.
 const TOMBOL = "rounded-xl bg-slate-950/60 px-2.5 py-1 text-xs font-bold text-white shadow-lg ring-1 ring-white/10 backdrop-blur hover:bg-slate-900/80";
 
-export default function BarTenaga({ onTas, onAlbum, onGaya, onMisi, onPeringkat, onPancing }) {
+export default function BarTenaga({ onTas, onAlbum, onGaya, onMisi, onPeringkat, onPancing, ringkas = false }) {
 	const progres = useProgres();
 	const lv = levelDari(progres.xp);
 	const persenXp = ((progres.xp - xpUntukLevel(lv)) / (xpUntukLevel(lv + 1) - xpUntukLevel(lv))) * 100;
@@ -45,7 +45,7 @@ export default function BarTenaga({ onTas, onAlbum, onGaya, onMisi, onPeringkat,
 				{nilai < TENAGA_LARI && !pingsan && <p className="mt-1 text-[10px] font-semibold text-rose-200">Lemas — tak bisa berlari. Makan di Alfamart!</p>}
 			</div>
 
-			<div className="absolute left-3 top-[8rem] z-20 flex flex-wrap items-center gap-1.5 sm:left-4 sm:top-[8.25rem]">
+			<div className={`absolute left-3 top-[8rem] z-20 flex flex-wrap items-center gap-1.5 sm:left-4 sm:top-[8.25rem] ${ringkas ? "hidden" : ""}`}>
 				{onMisi && (
 					<button onClick={onMisi} className={`relative ${TOMBOL}`} title="Level & misi harian">
 						⭐ Lv {lv}

@@ -4,18 +4,18 @@
 
 // Permukaan air (kotak). Pagar mengelilingi tiga sisi; sisi timur (menghadap kantor)
 // terbuka dan berloket.
-export const KOLAM_MONSTER = { x0: -38, x1: -26, z0: -8, z1: 6 };
+export const KOLAM_MONSTER = { x0: -54, x1: -28, z0: -16, z1: 6 };
 const K = KOLAM_MONSTER;
 // Kolam beton yang ditinggikan: bibir dinding batu setinggi lutut, air di atas tanah.
 export const AIR_KOLAM_Y = 0.4;
 export const BIBIR_KOLAM_Y = 0.56;
 export const TEBAL_DINDING_KOLAM = 0.35;
 // jarak pagar dari tepi air — ruang berdiri para pemancing
-export const RUANG_TEPI_KOLAM = 1.7;
+export const RUANG_TEPI_KOLAM = 1.8;
 export const PAGAR_KOLAM = { x0: K.x0 - RUANG_TEPI_KOLAM, x1: K.x1, z0: K.z0 - RUANG_TEPI_KOLAM, z1: K.z1 + RUANG_TEPI_KOLAM, tinggi: 1.05 };
 // kios loket di sisi timur; pembeli berdiri di sisi kantor
-export const LOKET_KOLAM = { x: -24.3, z: -1, lx: 1.5, lz: 2.4, tinggi: 2.5 };
-export const TITIK_LOKET_KOLAM = { x: -23.05, z: -1 };
+export const LOKET_KOLAM = { x: -26.2, z: -5, lx: 1.5, lz: 2.4, tinggi: 2.5 };
+export const TITIK_LOKET_KOLAM = { x: -24.95, z: -5 };
 
 export const diAirKolam = (x, z, tepi = 0) => x > K.x0 + tepi && x < K.x1 - tepi && z > K.z0 + tepi && z < K.z1 - tepi;
 
@@ -35,14 +35,14 @@ export function titikTepiKolam(x, z) {
 
 // bangku pemancing tetap kolam (lawan lomba), menghadap air
 export const BANGKU_KOLAM = [
-	{ x: K.x0 - 0.95, z: -4.5, rot: Math.PI / 2 },
-	{ x: K.x0 - 0.95, z: 2.5, rot: Math.PI / 2 },
-	{ x: -34, z: K.z0 - 0.95, rot: 0 },
-	{ x: -30, z: K.z1 + 0.95, rot: Math.PI },
-	{ x: -35.5, z: K.z1 + 0.95, rot: Math.PI },
+	{ x: K.x0 - 0.95, z: -10, rot: Math.PI / 2 },
+	{ x: K.x0 - 0.95, z: 1, rot: Math.PI / 2 },
+	{ x: -46, z: K.z0 - 0.95, rot: 0 },
+	{ x: -36, z: K.z0 - 0.95, rot: 0 },
+	{ x: -42, z: K.z1 + 0.95, rot: Math.PI },
 ];
 // papan juara di halaman depan loket
-export const PAPAN_JUARA_KOLAM = { x: -23.5, z: 3.4 };
+export const PAPAN_JUARA_KOLAM = { x: -25.4, z: 2.6 };
 
 // Penghalang untuk tabrakan & pencarian jalur (lantai 0): air, kios, ruas pagar.
 export const PENGHALANG_KOLAM = [

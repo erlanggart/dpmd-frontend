@@ -322,7 +322,7 @@ export default function GamePancing({ sentuh, bersama, onSelesai }) {
 			</div>
 
 			{/* kartu poin, album, suara */}
-			<div className="pointer-events-auto absolute right-3 top-[4.5rem] z-20 flex items-center gap-1.5 rounded-2xl bg-slate-950/70 px-2 py-1.5 text-white shadow-lg ring-1 ring-white/10 backdrop-blur sm:top-20">
+			<div className="pointer-events-auto absolute right-3 top-[6.75rem] z-20 flex max-w-[calc(100%-1.5rem)] flex-wrap items-center justify-end gap-1.5 rounded-2xl bg-slate-950/70 px-2 py-1.5 text-white shadow-lg ring-1 ring-white/10 backdrop-blur sm:top-20">
 				<span className="px-1.5 text-xs font-bold tabular-nums" title="Koin — belanja di Alfamart">🪙 {angka(poin)}</span>
 				{pancing.combo >= 2 && (
 					<span className="rounded-xl bg-gradient-to-r from-orange-500 to-rose-500 px-2 py-1 text-xs font-black" title="Tangkapan beruntun: koin bertambah">
@@ -330,17 +330,32 @@ export default function GamePancing({ sentuh, bersama, onSelesai }) {
 					</span>
 				)}
 				<button onClick={() => setJoran(true)} className="rounded-xl bg-amber-400/90 px-2 py-1 text-xs font-black text-slate-950 hover:bg-amber-300" aria-label="Toko pancing: joran & senar" title={`${joranKini().nama} · ${senarKini().nama}`}>
-					🎣 {joranKini().nama.replace("Joran ", "")}
+					🎣<span className="hidden sm:inline"> {joranKini().nama.replace("Joran ", "")}</span>
 				</button>
 				<button onClick={() => setAlbum(true)} className="flex items-center gap-1 rounded-xl bg-white/10 px-2 py-1 text-xs font-bold hover:bg-white/20" aria-label="Buka album ikan">
-					<FiBookOpen /> {jumlahJenis}/{IKAN.length}
+					<FiBookOpen />
+					<span className="hidden sm:inline">
+						{jumlahJenis}/{IKAN.length}
+					</span>
+				</button>
+				<button
+					onClick={() => aturOtomatis(!pancing.otomatis)}
+					className={`rounded-xl px-2 py-1 text-xs font-black transition ${pancing.otomatis ? "bg-violet-500 text-white shadow-[0_0_14px_rgba(139,92,246,0.8)]" : bolehOtomatis() ? "bg-white/10 hover:bg-white/20" : "bg-white/5 text-white/45"}`}
+					aria-pressed={pancing.otomatis}
+					title={bolehOtomatis() ? "Memancing otomatis (O) — koin hasil 75%" : "Butuh joran premium: Titanium Pro, Dasar Monster, atau Naga Emas"}
+				>
+					{bolehOtomatis() ? "🤖" : "🔒"} AUTO
+				</button>
+				<button onClick={gantiKamera} className="rounded-xl bg-white/10 px-2 py-1 text-xs font-bold hover:bg-white/20" title={`Sudut kamera: ${MODE_KAMERA.find((k) => k.id === pancing.kamera)?.nama} (C)`} aria-label="Ganti sudut kamera">
+					{MODE_KAMERA.find((k) => k.id === pancing.kamera)?.ikon}
+					<span className="hidden lg:inline"> {MODE_KAMERA.find((k) => k.id === pancing.kamera)?.nama}</span>
 				</button>
 				<button
 					onClick={() => {
 						aturSuara(!mati);
 						setMati(!mati);
 					}}
-					className="rounded-xl bg-white/10 p-1.5 hover:bg-white/20"
+					className="rounded-xl bg-white/10 p-1.5 hover:bg-white/20 max-[400px]:hidden"
 					aria-label={mati ? "Nyalakan suara" : "Matikan suara"}
 				>
 					{mati ? <FiVolumeX /> : <FiVolume2 />}
@@ -350,38 +365,17 @@ export default function GamePancing({ sentuh, bersama, onSelesai }) {
 				</button>
 			</div>
 
-			{/* AUTO & sudut kamera */}
-			<div className="pointer-events-auto absolute right-3 top-[7.4rem] z-20 flex items-center gap-1.5 sm:top-[7.75rem]">
-				<button
-					onClick={() => aturOtomatis(!pancing.otomatis)}
-					className={`flex items-center gap-1 rounded-xl px-2.5 py-1.5 text-xs font-black shadow-lg ring-1 backdrop-blur transition ${
-						pancing.otomatis ? "bg-violet-500 text-white ring-violet-300 shadow-[0_0_18px_rgba(139,92,246,0.7)]" : bolehOtomatis() ? "bg-slate-950/70 text-white ring-white/10 hover:bg-slate-900" : "bg-slate-950/50 text-white/50 ring-white/10"
-					}`}
-					aria-pressed={pancing.otomatis}
-					title={bolehOtomatis() ? "Memancing otomatis (O) — koin hasil 75%" : "Butuh joran premium: Titanium Pro, Dasar Monster, atau Naga Emas"}
-				>
-					{bolehOtomatis() ? "🤖" : "🔒"} AUTO<span className="hidden sm:inline">{pancing.otomatis ? " ON" : ""}</span>
-				</button>
-				<button onClick={gantiKamera} className="flex items-center gap-1 rounded-xl bg-slate-950/70 px-2.5 py-1.5 text-xs font-bold text-white shadow-lg ring-1 ring-white/10 backdrop-blur hover:bg-slate-900" title="Ganti sudut kamera (C)">
-					{MODE_KAMERA.find((k) => k.id === pancing.kamera)?.ikon} <span className="hidden sm:inline">{MODE_KAMERA.find((k) => k.id === pancing.kamera)?.nama}</span>
-				</button>
-			</div>
-
-			{/* jam ikan lapar */}
-			{lapar.aktif && (
-				<div className="pointer-events-none absolute inset-x-0 top-[6.6rem] z-20 flex justify-center sm:top-[6rem]">
+			{/* jam ikan lapar & pesan (satu tumpukan supaya tidak saling menutupi) */}
+			<div className="pointer-events-none absolute inset-x-0 top-[9.5rem] z-20 flex flex-col items-center gap-1.5 px-4 sm:top-[7.25rem]">
+				{lapar.aktif && (
 					<motion.p
 						animate={{ scale: [1, 1.04, 1] }}
 						transition={{ duration: 1.6, repeat: Infinity }}
-						className="rounded-full bg-gradient-to-r from-orange-500 via-amber-400 to-orange-500 px-4 py-1 text-xs font-black text-slate-950 shadow-lg ring-2 ring-amber-200"
+						className="rounded-full bg-gradient-to-r from-orange-500 via-amber-400 to-orange-500 px-4 py-1 text-center text-[11px] font-black text-slate-950 shadow-lg ring-2 ring-amber-200 sm:text-xs"
 					>
 						🐟 JAM IKAN LAPAR · sambaran 2× · premium ↑ · {Math.floor(lapar.sisa / 60000)}:{String(Math.floor((lapar.sisa % 60000) / 1000)).padStart(2, "0")}
 					</motion.p>
-				</div>
-			)}
-
-			{/* pesan */}
-			<div className="pointer-events-none absolute inset-x-0 top-32 z-20 flex justify-center px-4 sm:top-28">
+				)}
 				<AnimatePresence mode="wait">
 					{pesan && fase !== "dapat" && (
 						<motion.p
@@ -390,7 +384,7 @@ export default function GamePancing({ sentuh, bersama, onSelesai }) {
 							animate={{ opacity: 1, y: 0, scale: pesan.jenis === "besar" ? [1, 1.06, 1] : 1 }}
 							exit={{ opacity: 0, y: -8 }}
 							transition={{ duration: 0.25 }}
-							className={`max-w-md rounded-2xl px-4 py-2 text-center text-xs font-semibold shadow-xl backdrop-blur sm:text-sm ${WARNA_PESAN[pesan.jenis] || WARNA_PESAN.info}`}
+							className={`max-w-md rounded-2xl px-4 py-2 text-center text-xs font-semibold shadow-xl backdrop-blur sm:text-sm [@media(max-height:520px)]:max-w-sm [@media(max-height:520px)]:py-1.5 [@media(max-height:520px)]:text-xs ${WARNA_PESAN[pesan.jenis] || WARNA_PESAN.info}`}
 						>
 							{pesan.teks}
 						</motion.p>
@@ -399,7 +393,7 @@ export default function GamePancing({ sentuh, bersama, onSelesai }) {
 			</div>
 
 			{/* panel bawah */}
-			<div className={`pointer-events-none absolute inset-x-0 z-20 flex justify-center px-3 ${sentuh ? "bottom-40" : "bottom-24"}`}>
+			<div className={`pointer-events-none absolute inset-x-0 z-20 flex justify-center px-3 [@media(max-height:520px)]:bottom-3 ${sentuh ? "bottom-40" : "bottom-24"}`}>
 				{fase === "siap" && (
 					<motion.div initial={{ y: 30, opacity: 0, scale: 0.92 }} animate={{ y: 0, opacity: 1, scale: 1 }} transition={{ type: "spring", stiffness: 420, damping: 22 }} className="w-72 rounded-2xl bg-slate-950/65 p-3 text-white shadow-xl ring-1 ring-white/10 backdrop-blur">
 						<Batang label="Tenaga lemparan" refIsi={tenagaIsi}>
@@ -418,10 +412,15 @@ export default function GamePancing({ sentuh, bersama, onSelesai }) {
 			</div>
 
 			{/* panel tarik di pojok kiri bawah — tidak menutupi pemancing & ikannya di tengah layar */}
-			<div className={`pointer-events-none absolute left-3 z-20 sm:left-5 ${sentuh ? "bottom-[calc(max(1rem,env(safe-area-inset-bottom))+0.5rem)]" : "bottom-6"}`}>
+			{/* layar sentuh: di HP tegak di atas joystick, di tablet / HP mendatar di kanan joystick */}
+			<div
+				className={`pointer-events-none absolute left-3 z-20 sm:left-5 ${
+					sentuh ? "bottom-[calc(max(1rem,env(safe-area-inset-bottom))+8.75rem)] sm:bottom-[calc(max(1rem,env(safe-area-inset-bottom))+0.5rem)] sm:left-[9.75rem] [@media(max-height:520px)]:bottom-2" : "bottom-6"
+				}`}
+			>
 				{fase === "tarik" && ikan && (
 					<motion.div initial={{ x: -120, opacity: 0, rotate: -4, scale: 0.85 }} animate={{ x: 0, opacity: 1, rotate: 0, scale: 1 }} transition={{ type: "spring", stiffness: 500, damping: 20 }}>
-					<div ref={panelTarik} className="w-[min(18rem,58vw)] origin-bottom-left space-y-2 rounded-2xl bg-slate-950/75 p-2.5 text-white shadow-2xl ring-1 ring-white/10 backdrop-blur sm:w-[19rem] sm:space-y-2.5 sm:p-3">
+					<div ref={panelTarik} className="w-[min(18rem,58vw)] origin-bottom-left [@media(max-width:639px)_and_(min-height:761px)]:scale-[0.85] [@media(max-width:639px)_and_(max-height:760px)]:scale-[0.76] [@media(min-width:640px)_and_(max-height:520px)]:scale-[0.62] space-y-2 rounded-2xl bg-slate-950/75 p-2.5 text-white shadow-2xl ring-1 ring-white/10 backdrop-blur sm:w-[19rem] sm:space-y-2.5 sm:p-3">
 						{/* ikan misterius: belum terlihat jenisnya, hanya kilau kelasnya */}
 						<div className="flex items-center gap-3">
 							<motion.span
@@ -449,7 +448,9 @@ export default function GamePancing({ sentuh, bersama, onSelesai }) {
 								Ikan pulih — beri tekanan!
 							</span>
 						</Batang>
-						<Batang label="Senar terulur" kanan={senarTeks} refIsi={senarIsi} />
+						<div className="[@media(max-height:520px)]:hidden">
+							<Batang label="Senar terulur" kanan={senarTeks} refIsi={senarIsi} />
+						</div>
 						<Batang label="⚡ Tarikan sakti" kanan={kuasaTeks} refIsi={kuasaIsi} />
 						<div>
 							<div className="flex items-center gap-2">
@@ -461,7 +462,7 @@ export default function GamePancing({ sentuh, bersama, onSelesai }) {
 								</div>
 								<span ref={arahKanan} className="text-lg leading-none">➡</span>
 							</div>
-							<p className="mt-1 text-center text-[11px] font-semibold text-white/75">
+							<p className="mt-1 text-center text-[11px] font-semibold text-white/75 [@media(max-height:520px)]:hidden">
 								Ikan lari ke panah terang — {sentuh ? "dorong analog" : "arahkan mouse"} ke arah <b>sebaliknya</b>
 							</p>
 						</div>

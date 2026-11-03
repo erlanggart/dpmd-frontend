@@ -46,6 +46,32 @@ function tambahObrolan(m) {
 	ubah({ obrolan: [...ringkas.obrolan, m].slice(-MAKS_OBROLAN) });
 }
 
+// ---------- Lomba Galatama bersama (Kolam Monster) ----------
+// Keadaan lombanya dikelola kolamMonster.js; modul ini hanya meneruskan pesan server.
+let kaitLomba = null;
+let lombaDiumumkan = null;
+const antreIkanLomba = [];
+export const aturKaitLomba = (f) => (kaitLomba = f);
+// sedang dalam mode jelajah bersama (walau koneksinya sesaat terputus)
+export const modeBersama = () => !!socket;
+export const kirimLomba = (acara, data) =>
+	new Promise((ok) => {
+		if (!socket?.connected) return ok({ ok: false, alasan: "Belum tersambung ke jelajah bersama — coba lagi sebentar" });
+		socket.timeout(8000).emit(acara, data, (err, r) => ok(err || !r ? { ok: false, alasan: "Server tidak menjawab — coba lagi" } : r));
+	});
+// tangkapan saat lomba: bila koneksi sedang putus, dikirim begitu tersambung lagi
+export function kirimIkanLomba(data) {
+	if (socket?.connected) socket.emit("lomba:ikan", data);
+	else antreIkanLomba.push(data);
+}
+function terimaLomba(m) {
+	if (m?.fase === "daftar" && m.id !== lombaDiumumkan) {
+		lombaDiumumkan = m.id;
+		tambahObrolan({ sistem: true, teks: `🏆 Lomba Galatama dibuka di Kolam Monster — daftar di loket (${Math.ceil(m.sisa / 1000)} dtk lagi)`, waktu: Date.now() });
+	}
+	kaitLomba?.(m ?? null);
+}
+
 // Kendaraan yang sedang dikemudikan tamu lain tidak bisa dinaiki.
 export function kendaraanDipakaiLain(id) {
 	for (const p of pemainLain.values()) if (p.s?.kend?.id === id) return true;
@@ -129,6 +155,8 @@ export async function sambungJelajah(profil) {
 			if (kend && posisi.kend !== kend) Object.assign(kend, { x: k.x, z: k.z, rot: k.rot });
 		}
 		ubah({ status: "tersambung", id: m.id, ruang: m.ruang ?? null, daftar: daftarDariMap(), galat: null });
+		terimaLomba(m.lomba);
+		while (antreIkanLomba.length) s.emit("lomba:ikan", antreIkanLomba.shift());
 		kirimSkor();
 		if (!lepasSkor) {
 			const a = dengarProgres(kirimSkor);
@@ -136,6 +164,7 @@ export async function sambungJelajah(profil) {
 			lepasSkor = () => (a(), b());
 		}
 	});
+	s.on("lomba", terimaLomba);
 	s.on("masuk", (p) => {
 		pemainLain.set(p.id, { profil: { nama: p.nama, jk: p.jk, avatar: p.avatar, kulit: p.kulit, gaya: bersihkanGaya(p.gaya) }, s: p.s });
 		ubah({ daftar: daftarDariMap() });
@@ -275,6 +304,8 @@ export function putusJelajah() {
 	socket.removeAllListeners();
 	socket.disconnect();
 	socket = null;
+	antreIkanLomba.length = 0;
+	kaitLomba?.(undefined); // keluar dari mode bersama
 	pemainLain.clear();
 	diriSendiri.ucap = null;
 	diriSendiri.emote = null;

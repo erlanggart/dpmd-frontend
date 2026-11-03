@@ -21,7 +21,7 @@ const BAHAN_LAMPU = new MeshStandardMaterial({ color: "#fff7e0", emissive: "#ffd
 const BAHAN_AIR = new MeshStandardMaterial({ color: "#2c6b62", roughness: 0.12, metalness: 0.3, transparent: true, opacity: 0.88 });
 const GEO_BAYANG = new CircleGeometry(0.5, 12).rotateX(-Math.PI / 2);
 const BAHAN_BAYANG = new MeshBasicMaterial({ color: "#0b1f1c", transparent: true, opacity: 0.38, depthWrite: false });
-const N_BAYANG = 7;
+const N_BAYANG = 14;
 
 const CX = (K.x0 + K.x1) / 2;
 const CZ = (K.z0 + K.z1) / 2;
@@ -41,8 +41,10 @@ const PENJAGA = { seragam: "warga", kulit: "#c68d5e", baju: "#1f6b50", celana: "
 function Bangunan() {
 	// tiang pagar tiap ±2 m di tiga sisi (sisi timur terbuka ke halaman kantor)
 	const tiang = [];
-	for (let z = P.z0; z <= P.z1 + 0.01; z += (P.z1 - P.z0) / 9) tiang.push([P.x0, z]);
-	for (let x = P.x0 + (P.x1 - P.x0) / 7; x <= P.x1 + 0.01; x += (P.x1 - P.x0) / 7) {
+	const nz = Math.round((P.z1 - P.z0) / 2.2);
+	const nx = Math.round((P.x1 - P.x0) / 2.2);
+	for (let z = P.z0; z <= P.z1 + 0.01; z += (P.z1 - P.z0) / nz) tiang.push([P.x0, z]);
+	for (let x = P.x0 + (P.x1 - P.x0) / nx; x <= P.x1 + 0.01; x += (P.x1 - P.x0) / nx) {
 		tiang.push([x, P.z0]);
 		tiang.push([x, P.z1]);
 	}
@@ -58,7 +60,7 @@ function Bangunan() {
 		[K.x1 + T / 2, CZ, T, LZ],
 	];
 	const lantaiX0 = P.x0;
-	const lantaiX1 = K.x1 + 2.8;
+	const lantaiX1 = L.x + L.lx / 2 + 2.6;
 	return (
 		<Gabung>
 			{/* lantai paving */}
@@ -331,7 +333,7 @@ export default function KolamMonster() {
 				diterangi
 				baris={[
 					{ teks: "🦈 KOLAM MONSTER DPMD", ukuran: 0.24, tebal: true, warna: "#b91c1c", y: 0.36 },
-					{ teks: "Tiket 🪙 500 / 10 menit · Lomba Galatama 🏆", ukuran: 0.12, warna: "#3b2a1a", y: 0.66 },
+					{ teks: "Tiket 🪙 2.000 / 10 menit · Lomba Galatama 🏆", ukuran: 0.12, warna: "#3b2a1a", y: 0.66 },
 				]}
 			/>
 			{/* patung ikan raksasa di atas papan nama */}
@@ -343,6 +345,9 @@ export default function KolamMonster() {
 			{[
 				[P.x0 + 0.2, P.z0 + 0.2],
 				[P.x0 + 0.2, P.z1 - 0.2],
+				[P.x0 + 0.2, CZ],
+				[CX, P.z0 + 0.2],
+				[CX, P.z1 - 0.2],
 				[K.x1 + 0.9, P.z0 + 0.2],
 				[K.x1 + 0.9, P.z1 - 0.2],
 			].map(([x, z], i) => (
