@@ -32,7 +32,6 @@ import { FormSambung, KUNCI_SAMBUNG, PercakapanPic, PilihProgram } from "./Sambu
 
 const PERAN_INTERNAL = ["superadmin", "kepala_dinas", "sekretaris_dinas", "kepala_bidang", "ketua_tim", "pegawai", "bendahara"];
 const KUNCI_WILAYAH = "helpdesk_wilayah";
-const KUNCI_SAPA = "helpdesk_sudah_disapa";
 const KUNCI_TIKET_TAMU = "helpdesk_tiket_tamu";
 const MAKS_TIKET_TAMU = 10;
 
@@ -44,12 +43,6 @@ const bacaSimpan = (kunci, bawaan) => {
 };
 const tulisSimpan = (kunci, nilai) => {
 	try { localStorage.setItem(kunci, JSON.stringify(nilai)); } catch { /* opsional */ }
-};
-const sudahDisapa = () => {
-	try { return sessionStorage.getItem(KUNCI_SAPA) === "1"; } catch { return true; }
-};
-const tandaiDisapa = () => {
-	try { sessionStorage.setItem(KUNCI_SAPA, "1"); } catch { /* opsional */ }
 };
 const simpanTiketTamu = (kunci) => {
 	const daftar = [kunci, ...bacaSimpan(KUNCI_TIKET_TAMU, []).filter((x) => x.kode !== kunci.kode)].slice(0, MAKS_TIKET_TAMU);
@@ -641,7 +634,6 @@ export default function HelpdeskWidget() {
 	const [params, setParams] = useSearchParams();
 	const { user } = useAuth() || {};
 	const [buka, setBuka] = useState(false);
-	const [sapa, setSapa] = useState(false);
 	const [awal, setAwal] = useState(null);
 	const [pesan, setPesan] = useState([]);
 	const [masukan, setMasukan] = useState("");
@@ -660,12 +652,6 @@ export default function HelpdeskWidget() {
 	const login = Boolean(user?.id);
 	const internal = PERAN_INTERNAL.includes(String(user?.role || "").toLowerCase());
 	const nama = (awal?.nama || user?.name || "").split(/\s+/).slice(0, 2).join(" ");
-
-	useEffect(() => {
-		if (sudahDisapa()) return undefined;
-		const t = setTimeout(() => setSapa(true), 5000);
-		return () => clearTimeout(t);
-	}, []);
 
 	/* Notifikasi balasan tiket membuka widget langsung di Tiket Saya. */
 	useEffect(() => {
@@ -692,8 +678,6 @@ export default function HelpdeskWidget() {
 
 	const bukaWidget = () => {
 		setBuka((b) => !b);
-		setSapa(false);
-		tandaiDisapa();
 	};
 
 	const tanya = async (teks) => {
@@ -932,16 +916,6 @@ export default function HelpdeskWidget() {
 							</>
 						)}
 					</KonteksLapisan.Provider>
-				</div>
-			)}
-
-			{sapa && !buka && (
-				<div className={`fixed right-3 z-[300] flex max-w-[250px] items-start gap-2 rounded-2xl rounded-br-md bg-white p-3 shadow-xl ring-1 ring-black/5 sm:right-5 ${pathname.startsWith("/desa") ? "bottom-[8.5rem] lg:bottom-[4.5rem]" : "bottom-[4.5rem]"} ${MUNCUL}`}>
-					<button type="button" onClick={bukaWidget} className="text-left">
-						<p className="m-0 text-[13px] font-semibold text-slate-900">Ada yang bisa dibantu?</p>
-						<p className="m-0 mt-0.5 text-[11.5px] text-slate-500">Tanya soal Bankeu, BUMDes, aparatur, akun, atau layanan DPMD lainnya.</p>
-					</button>
-					<button type="button" onClick={() => { setSapa(false); tandaiDisapa(); }} aria-label="Tutup sapaan" className="-mr-1 -mt-1 flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-slate-400 hover:bg-slate-100"><X size={12} /></button>
 				</div>
 			)}
 
