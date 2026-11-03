@@ -8,16 +8,20 @@ import {
 import api from "../../api";
 import { useAuth } from "../../context/AuthContext";
 import { LABEL_TINGKAT, STATUS_TIKET, ikonKategori, pesanGalat, waktu } from "./ikonHelpdesk";
+import { FormSambung, KUNCI_SAMBUNG, PercakapanPic, PilihProgram } from "./SambungPic";
 
 /**
  * Helpdesk DPMD: tombol bantuan melayang untuk masyarakat, operator desa, dan
  * kecamatan.
  *
  * Bot menjawab dari data akun penanya (tiket, proposal Bankeu, aparatur), data
- * resmi sistem, dan FAQ DPMD — disusun Claude bila aktif di server. Bila belum
+ * resmi sistem, dan FAQ DPMD — disusun AI (Groq) bila aktif di server. Bila belum
  * terjawab, penanya ditawari pertanyaan terdekat, lalu diarahkan ke petugas
  * yang berwenang (kecamatan -> bidang DPMD -> DPMD) lewat WhatsApp atau tiket.
  * Tamu memilih kecamatan sendiri; akun memakai wilayah akunnya.
+ *
+ * Urusan akun tidak dijawab bot: penanya memilih program yang memakai akunnya,
+ * lalu disambungkan langsung ke PIC program di kolom chat ini (SambungPic.jsx).
  *
  * Pegawai DPMD tidak melihat widget ini — mereka menjawab tiket dari panel
  * Helpdesk. Notifikasi balasan membuka widget lewat ?bantuan=tiket.
@@ -661,7 +665,8 @@ export default function HelpdeskWidget() {
 	const [menunggu, setMenunggu] = useState(false);
 	const [kategoriId, setKategoriId] = useState(null);
 	const [wilayah, setWilayah] = useState(() => bacaSimpan(KUNCI_WILAYAH, {}));
-	const [layar, setLayar] = useState("chat"); // chat | tiket | tiketSaya | selesai
+	const [layar, setLayar] = useState("chat"); // chat | tiket | tiketSaya | selesai | pic
+	const [sesiPic, setSesiPic] = useState(() => bacaSimpan(KUNCI_SAMBUNG, null));
 	const [tiketAwal, setTiketAwal] = useState({});
 	const [hasilTiket, setHasilTiket] = useState(null);
 	const ujung = useRef(null);
@@ -767,6 +772,23 @@ export default function HelpdeskWidget() {
 		setLayar("tiket");
 	};
 
+	const pilihProgram = (idx, program) => {
+		setPesan((p) => [
+			...p.map((x, i) => (i === idx ? { ...x, meta: { ...x.meta, programDipilih: program } } : x)),
+		]);
+	};
+	const batalProgram = (idx) => setPesan((p) => p.map((x, i) => (i === idx ? { ...x, meta: { ...x.meta, programDipilih: null } } : x)));
+	const tersambung = (sesi) => {
+		setSesiPic(sesi);
+		tulisSimpan(KUNCI_SAMBUNG, sesi);
+		setLayar("pic");
+	};
+	const akhiriPic = useCallback(() => {
+		setSesiPic(null);
+		try { localStorage.removeItem(KUNCI_SAMBUNG); } catch { /* opsional */ }
+		setLayar("chat");
+	}, []);
+
 	const mulaiUlang = () => {
 		setPesan([]);
 		setKategoriId(null);
@@ -804,6 +826,8 @@ export default function HelpdeskWidget() {
 
 						{layar === "tiketSaya" && (login ? <TiketSaya onKembali={() => setLayar("chat")} /> : <TiketTamu onKembali={() => setLayar("chat")} />)}
 
+						{layar === "pic" && sesiPic && <PercakapanPic sesi={sesiPic} onKembali={() => setLayar("chat")} onAkhiri={akhiriPic} />}
+
 						{layar === "tiket" && awal && (
 							<FormTiket awal={tiketAwal} login={login} wilayahDariAkun={wilayahDariAkun} kategori={awal.kategori} wilayahAwal={wilayah} riwayat={riwayat}
 								onBatal={() => setLayar("chat")} onSelesai={(d) => { setHasilTiket(d); setLayar("selesai"); }} />
@@ -829,6 +853,13 @@ export default function HelpdeskWidget() {
 						{layar === "chat" && (
 							<>
 								<div className="flex-1 space-y-3 overflow-y-auto bg-gradient-to-b from-emerald-50/50 via-white to-white p-4">
+									{sesiPic && (
+										<button type="button" onClick={() => setLayar("pic")}
+											className="flex w-full items-center justify-between gap-2 rounded-2xl border border-emerald-200 bg-white px-3 py-2 text-left text-[12px] text-slate-700 hover:bg-emerald-50/60">
+											<span>Percakapan dengan <b>PIC {sesiPic.program}</b> masih terbuka</span>
+											<span className="shrink-0 font-semibold text-emerald-700">Buka</span>
+										</button>
+									)}
 									{pesan.length === 0 && <Sambutan awal={awal} nama={nama} onTanya={tanya} onTopik={pilihTopik} />}
 
 									{pesan.map((m, i) => (
@@ -843,7 +874,7 @@ export default function HelpdeskWidget() {
 													<div className={`inline-block max-w-full rounded-3xl rounded-tl-lg px-3.5 py-2.5 text-[13.5px] leading-relaxed shadow-sm ${m.meta?.galat ? "bg-rose-50 text-rose-700 ring-1 ring-rose-100" : "bg-white text-slate-700 ring-1 ring-slate-200/80"}`}>
 														{(m.meta?.kategori || m.meta?.sumber === "akun" || m.meta?.sumber === "data") && (
 															<span className="mb-1 flex flex-wrap gap-1">
-																{m.meta?.sumber === "akun" && <span className="rounded-full bg-sky-50 px-2 py-0.5 text-[10px] font-bold text-sky-700">Data akun Anda</span>}
+																{m.meta?.sumber === "akun" && !m.meta?.program_akun && <span className="rounded-full bg-sky-50 px-2 py-0.5 text-[10px] font-bold text-sky-700">Data akun Anda</span>}
 																{m.meta?.sumber === "data" && <span className="rounded-full bg-violet-50 px-2 py-0.5 text-[10px] font-bold text-violet-700">Data resmi DPMD</span>}
 																{m.meta?.kategori && <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-bold text-emerald-700">{m.meta.kategori.name}</span>}
 															</span>
@@ -873,10 +904,15 @@ export default function HelpdeskWidget() {
 														</div>
 													)}
 
+													{m.meta?.program_akun?.length > 0 && !m.meta.programDipilih && <PilihProgram program={m.meta.program_akun} onPilih={(p) => pilihProgram(i, p)} />}
+													{m.meta?.programDipilih && (
+														<FormSambung program={m.meta.programDipilih} pertanyaan={m.meta.pertanyaan_akun} login={login} wilayah={wilayah}
+															onBatal={() => batalProgram(i)} onTersambung={tersambung} />
+													)}
 													{m.meta?.butuh_wilayah && !m.meta?.kontak && <PilihWilayah nilai={wilayah} onPilih={(w) => pilihWilayah(i, w)} />}
 													{m.meta && !m.meta.galat && !m.lokal && <KartuKontak kontak={m.meta.kontak} ringkas={m.meta.terjawab} onTiket={() => keTiket(m.meta)} />}
 
-													{m.meta?.log_id && m.meta.terjawab && (
+													{m.meta?.log_id && m.meta.terjawab && !m.meta.program_akun && (
 														<div className="mt-1.5 flex items-center gap-1 text-[11px] text-slate-400">
 															{m.nilai === undefined ? (
 																<>

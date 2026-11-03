@@ -1,7 +1,7 @@
 import { useMemo, useRef } from "react";
 import { useFrame } from "@react-three/fiber";
 import { BufferGeometry, Float32BufferAttribute, Line, LineBasicMaterial, Vector3 } from "three";
-import { FASE_PANCING, IKAN, IKAN_PER_ID, panjangCm } from "../pancing";
+import { FASE_PANCING, IKAN, IKAN_PER_ID, pancing, panjangCm } from "../pancing";
 import { TANAH } from "./layout";
 import ModelIkan from "./ModelIkan";
 import { AIR_Y } from "./situ";
@@ -22,6 +22,8 @@ export default function PancinganTamu({ sumber, tampil }) {
 	const pelampung = useRef();
 	const ikanG = useRef();
 	const v = useMemo(() => ({ u: new Vector3(), e: new Vector3(), c: new Vector3() }), []);
+	// lompatan ikan tamu saat adu tarik: { mulai, arah } — diatur dari waktu, bukan dari server
+	const lompat = useRef({ berikut: 0, mulai: -9, lama: 0.9 });
 	const senar = useMemo(() => {
 		const g = new BufferGeometry();
 		g.setAttribute("position", new Float32BufferAttribute(new Float32Array(N * 3), 3));
@@ -64,7 +66,7 @@ export default function PancinganTamu({ sumber, tampil }) {
 			pl.visible = true;
 			akhir = pl.position;
 		} else if (fase === "tarik") {
-			v.e.set(pc.x, AIR - 0.05, pc.z);
+			v.e.set(pc.x, AIR + 0.02, pc.z);
 			akhir = v.e;
 		}
 		if (akhir) {
@@ -92,8 +94,20 @@ export default function PancinganTamu({ sumber, tampil }) {
 			const L = panjangCm(ikan, pc.kg || ikan.kg[0]) / 100;
 			ig.scale.setScalar(L);
 			if (fase === "tarik") {
-				ig.position.set(pc.x, AIR - 0.06 * L - 0.03, pc.z);
-				ig.rotation.set(0, Math.atan2(pc.x - p.x, pc.z - p.z) + Math.sin(t * 7) * 0.3, Math.sin(t * 9) * 0.15);
+				// Meronta di permukaan (punggung & sirip terlihat), sesekali melompat keluar
+				// air dengan cipratan — sama seperti yang dilihat pemancingnya sendiri.
+				const lp = lompat.current;
+				if (t > lp.berikut) {
+					lp.mulai = t;
+					lp.lama = 0.8 + Math.min(0.6, L * 0.25);
+					lp.berikut = t + 2.5 + Math.random() * 3.5;
+					pancing.cipratan.push({ x: pc.x, z: pc.z, besar: 0.6 + Math.min(1.4, L), t0: performance.now() / 1000 });
+				}
+				const fl = (t - lp.mulai) / lp.lama;
+				const naik = fl >= 0 && fl <= 1 ? Math.sin(fl * Math.PI) * (0.5 + Math.min(1.2, L * 0.6)) : 0;
+				if (fl > 1 && fl < 1.05) pancing.cipratan.push({ x: pc.x, z: pc.z, besar: 0.5 + Math.min(1.2, L), t0: performance.now() / 1000 });
+				ig.position.set(pc.x, AIR - 0.015 * L + naik + Math.sin(t * 9) * 0.02, pc.z);
+				ig.rotation.set(naik > 0 ? -(fl - 0.5) * 1.8 : Math.sin(t * 6) * 0.1, Math.atan2(pc.x - p.x, pc.z - p.z) + Math.sin(t * 7) * 0.35, Math.sin(t * 9) * 0.25);
 			} else {
 				// dipegang di depan dada (joran diletakkan)
 				ig.position.set(p.x + Math.sin(pc.a) * 0.45, p.y + (duduk ? 0.8 : 1.12) + Math.abs(Math.sin(t * 7)) * 0.06, p.z + Math.cos(pc.a) * 0.45);

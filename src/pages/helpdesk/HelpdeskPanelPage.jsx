@@ -18,10 +18,34 @@ import { IKON_KATEGORI, LABEL_TINGKAT, STATUS_TIKET, ikonKategori, pesanGalat, w
  */
 
 const AUDIENS = { semua: "Semua", publik: "Hanya tamu", akun: "Hanya akun desa/kecamatan" };
-const INPUT = "w-full px-3.5 py-2.5 text-sm bg-slate-50 border border-slate-200 text-slate-900 placeholder-slate-400 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-500/50 transition";
-const PILIH = "pl-3 pr-8 py-2 text-sm bg-slate-50 border border-slate-200 rounded-xl";
-const KARTU = "bg-white rounded-2xl ring-1 ring-slate-200";
-const TOMBOL = "inline-flex items-center justify-center gap-1.5 px-3.5 py-2 text-sm font-bold rounded-xl transition-colors disabled:opacity-50";
+const INPUT = "w-full px-3 py-2 text-sm bg-white border border-slate-300 text-slate-900 placeholder-slate-400 rounded-lg focus:outline-none focus:border-slate-500 focus:ring-1 focus:ring-slate-500 transition";
+const PILIH = "pl-2.5 pr-8 py-1.5 text-sm bg-white border border-slate-300 rounded-lg text-slate-700";
+const KARTU = "bg-white rounded-xl border border-slate-200";
+const TOMBOL = "inline-flex items-center justify-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded-lg transition-colors disabled:opacity-50";
+const TOMBOL_GARIS = `${TOMBOL} border border-slate-300 bg-white text-slate-700 hover:bg-slate-50`;
+
+// Status tiket: titik warna + teks, bukan lencana berwarna penuh.
+const WARNA_STATUS = { baru: "bg-amber-500", diproses: "bg-sky-500", dijawab: "bg-emerald-500", selesai: "bg-slate-300" };
+const TitikStatus = ({ status }) => (
+	<span className="inline-flex items-center gap-1.5 text-slate-600">
+		<span className={`h-1.5 w-1.5 rounded-full ${WARNA_STATUS[status] || "bg-slate-300"}`} />
+		{(STATUS_TIKET[status] || STATUS_TIKET.baru).label}
+	</span>
+);
+const teksTunggu = (tunggu) => (tunggu.jam < 1 ? `${Math.max(1, Math.round(tunggu.jam * 60))} mnt` : tunggu.jam < 48 ? `${Math.floor(tunggu.jam)} jam` : `${Math.floor(tunggu.jam / 24)} hari`);
+const WARNA_TUNGGU = { terlambat: "text-rose-600", waspada: "text-amber-600", segar: "text-slate-500" };
+
+/* Isi pesan: **tebal** dan baris baru dirender, tidak tampil sebagai markdown mentah. */
+function TeksPesan({ teks }) {
+	return String(teks || "")
+		.split("\n")
+		.map((baris, i) => (
+			<span key={i} className="block min-h-[0.5em]">
+				{baris.split(/(\*\*[^*]+\*\*)/g).map((p, j) => (/^\*\*[^*]+\*\*$/.test(p) ? <strong key={j} className="font-semibold">{p.slice(2, -2)}</strong> : p))}
+			</span>
+		));
+}
+const riwayatBot = (m) => m.sender_type === "sistem" && /^Riwayat percakapan dengan bot:/.test(m.body || "");
 
 // Tiket & percakapan diperbarui diam-diam supaya balasan pelapor dan tiket
 // baru muncul tanpa menekan muat ulang.
@@ -73,8 +97,6 @@ const tungguTiket = (t) => {
 		balasanPelapor: Boolean(t.first_response_at) && t.pengirim_terakhir === 'pelapor',
 	};
 };
-
-const inisial = (nama = "") => String(nama).trim().split(/\s+/).slice(0, 2).map((k) => k[0] || "").join("").toUpperCase() || "?";
 
 /** Pemisah tanggal di percakapan: "Hari ini", "Kemarin", atau tanggal. */
 const labelHari = (s) => {
@@ -220,30 +242,30 @@ function DetailTiket({ id, onBerubah, onKembali }) {
 	const tunggu = tungguTiket(t);
 	const IkonKat = ikonKategori(t.category_icon);
 
+	const ubahStatus = (status) => jalankan(() => api.patch(`/helpdesk/petugas/tiket/${id}/status`, { status }));
+
 	return (
 		<div className={`${KARTU} flex h-full min-h-[70vh] flex-col overflow-hidden lg:min-h-0`}>
 			{/* ---------- Kepala ---------- */}
-			<div className="border-b border-slate-100 p-3 sm:p-4">
-				<div className="flex items-start gap-3">
+			<header className="border-b border-slate-200 px-4 py-3">
+				<div className="flex items-start gap-2">
 					{onKembali && (
-						<button type="button" onClick={onKembali} className="-ml-1 mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-slate-500 hover:bg-slate-100 lg:hidden" aria-label="Kembali ke daftar">
+						<button type="button" onClick={onKembali} className="-ml-1.5 mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-slate-500 hover:bg-slate-100 lg:hidden" aria-label="Kembali ke daftar">
 							<ArrowLeft size={18} />
 						</button>
 					)}
-					<div className="hidden h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-emerald-50 text-emerald-600 sm:flex"><IkonKat size={18} /></div>
 					<div className="min-w-0 flex-1">
-						<div className="flex flex-wrap items-center gap-1.5">
-							<button type="button" onClick={salinKode} title="Salin kode tiket" className="inline-flex items-center gap-1 rounded-md font-mono text-xs font-bold text-slate-500 hover:text-slate-900">
+						<div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs">
+							<button type="button" onClick={salinKode} title="Salin kode tiket" className="inline-flex items-center gap-1 font-mono text-slate-500 hover:text-slate-900">
 								{t.code}<Copy size={11} />
 							</button>
-							<Lencana status={t.status} />
-							{t.priority === "tinggi" && <LencanaMendesak />}
-							<ChipTunggu tunggu={tunggu} />
-							{t.rating && <span className="inline-flex items-center gap-1 rounded-full bg-amber-50 px-2 py-0.5 text-[11px] font-bold text-amber-700 ring-1 ring-amber-200"><Star size={11} className="fill-amber-400 text-amber-400" />{t.rating}/5</span>}
+							<TitikStatus status={t.status} />
+							{t.priority === "tinggi" && <span className="font-medium text-rose-600">Mendesak</span>}
+							{tunggu && <span className={WARNA_TUNGGU[tunggu.nada]}>Menunggu {teksTunggu(tunggu)}</span>}
+							{t.rating && <span className="text-slate-500">Dinilai {t.rating}/5</span>}
 						</div>
-						<h3 className="m-0 mt-1 text-base font-bold leading-snug text-slate-900">{t.subject}</h3>
-						<button type="button" onClick={() => setInfoBuka((b) => !b)} className="mt-1 inline-flex max-w-full items-center gap-1 text-left text-xs text-slate-500 hover:text-slate-800">
-							<User size={12} className="shrink-0" />
+						<h3 className="m-0 mt-1 text-[15px] font-semibold leading-snug text-slate-900">{t.subject}</h3>
+						<button type="button" onClick={() => setInfoBuka((b) => !b)} className="mt-0.5 inline-flex max-w-full items-center gap-1 text-left text-xs text-slate-500 hover:text-slate-800">
 							<span className="truncate">
 								{t.reporter_name}{t.user_id ? " · akun" : " · tamu"}{t.desa_nama ? ` · ${t.desa_nama}` : ""} · {t.category_name || "Tanpa kategori"}
 							</span>
@@ -253,7 +275,7 @@ function DetailTiket({ id, onBerubah, onKembali }) {
 				</div>
 
 				{infoBuka && (
-					<dl className="mt-3 grid grid-cols-2 gap-x-4 gap-y-2 rounded-xl bg-slate-50 p-3 text-xs sm:grid-cols-3">
+					<dl className="mt-3 grid grid-cols-2 gap-x-6 gap-y-2.5 border-t border-slate-100 pt-3 text-xs sm:grid-cols-4">
 						{[
 							["Pelapor", `${t.reporter_name}${t.user_id ? " (akun)" : " (tamu)"}`],
 							["Wilayah", [t.desa_nama, t.kecamatan_nama && `Kec. ${t.kecamatan_nama}`].filter(Boolean).join(", ") || "—"],
@@ -265,43 +287,37 @@ function DetailTiket({ id, onBerubah, onKembali }) {
 							["Pesan", `${t.pesan?.length || 0}`],
 						].map(([l, v]) => (
 							<div key={l} className="min-w-0">
-								<dt className="text-[10px] font-semibold uppercase tracking-wide text-slate-400">{l}</dt>
-								<dd className="m-0 truncate font-medium text-slate-800" title={v}>{v}</dd>
+								<dt className="text-slate-400">{l}</dt>
+								<dd className="m-0 truncate text-slate-800" title={v}>{v}</dd>
 							</div>
 						))}
-						{t.rating_note && <p className="col-span-full m-0 rounded-lg bg-amber-50 px-2.5 py-1.5 text-amber-800">Catatan penilaian: “{t.rating_note}”</p>}
+						{t.rating_note && <p className="col-span-full m-0 text-slate-600">Catatan penilaian: “{t.rating_note}”</p>}
 					</dl>
 				)}
 
 				{/* Bilah aksi */}
 				<div className="mt-3 flex flex-wrap items-center gap-2">
-					<div className="inline-flex rounded-xl bg-slate-100 p-0.5" role="group" aria-label="Status tiket">
-						{Object.entries(STATUS_TIKET).map(([k, v]) => (
-							<button key={k} type="button" disabled={sibuk || t.status === k}
-								onClick={() => jalankan(() => api.patch(`/helpdesk/petugas/tiket/${id}/status`, { status: k }))}
-								className={`rounded-lg px-2.5 py-1 text-xs font-bold transition-colors ${t.status === k ? "bg-white text-slate-900 shadow-sm" : "text-slate-500 hover:text-slate-900"}`}>
-								{v.label}
-							</button>
-						))}
-					</div>
+					<select className={PILIH} value={t.status} disabled={sibuk} onChange={(e) => ubahStatus(e.target.value)} aria-label="Status tiket">
+						{Object.entries(STATUS_TIKET).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
+					</select>
 					<button type="button" disabled={sibuk} onClick={() => jalankan(() => api.patch(`/helpdesk/petugas/tiket/${id}/prioritas`, { prioritas: t.priority === "tinggi" ? "normal" : "tinggi" }))}
-						className={`inline-flex items-center gap-1 rounded-xl px-2.5 py-1.5 text-xs font-bold transition-colors disabled:opacity-50 ${t.priority === "tinggi" ? "bg-rose-600 text-white hover:bg-rose-700" : "bg-rose-50 text-rose-700 hover:bg-rose-100"}`}>
-						<Siren size={13} />{t.priority === "tinggi" ? "Mendesak" : "Tandai mendesak"}
+						className={t.priority === "tinggi" ? `${TOMBOL} border border-rose-200 bg-rose-50 text-rose-700 hover:bg-rose-100` : TOMBOL_GARIS}>
+						{t.priority === "tinggi" ? "Batalkan mendesak" : "Tandai mendesak"}
 					</button>
 					{(t.teruskan_ke || t.bisa_alihkan_bidang) && (
-						<button type="button" onClick={() => setTeruskanBuka((b) => !b)} className={`inline-flex items-center gap-1 rounded-xl px-2.5 py-1.5 text-xs font-bold transition-colors ${teruskanBuka ? "bg-slate-900 text-white" : "bg-slate-100 text-slate-700 hover:bg-slate-200"}`}>
-							<Route size={13} />Teruskan
+						<button type="button" onClick={() => setTeruskanBuka((b) => !b)} className={teruskanBuka ? `${TOMBOL} bg-slate-900 text-white` : TOMBOL_GARIS}>
+							Teruskan
 						</button>
 					)}
 					{t.reporter_whatsapp_url && (
-						<a href={t.reporter_whatsapp_url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 rounded-xl bg-[#25D366] px-2.5 py-1.5 text-xs font-bold text-white no-underline hover:brightness-95">
-							<ArrowUpRight size={13} />WhatsApp
+						<a href={t.reporter_whatsapp_url} target="_blank" rel="noopener noreferrer" className="ml-auto inline-flex items-center gap-1 text-sm text-slate-600 no-underline hover:text-slate-900">
+							WhatsApp pelapor<ArrowUpRight size={13} />
 						</a>
 					)}
 				</div>
 
 				{teruskanBuka && (
-					<div className="mt-3 space-y-2 rounded-xl bg-slate-50 p-3 ring-1 ring-slate-200">
+					<div className="mt-3 space-y-2 border-t border-slate-100 pt-3">
 						{t.bisa_alihkan_bidang && (
 							<select className={`${PILIH} w-full`} value={bidangTujuan} onChange={(e) => setBidangTujuan(e.target.value)}>
 								<option value="">{t.teruskan_ke ? `Tingkat berikutnya: ${t.teruskan_ke.nama}` : "Pilih bidang tujuan"}</option>
@@ -320,78 +336,83 @@ function DetailTiket({ id, onBerubah, onKembali }) {
 									}
 								}}
 								className={`${TOMBOL} whitespace-nowrap bg-slate-900 text-white hover:bg-slate-700`}>
-								Teruskan
+								Teruskan tiket
 							</button>
 						</div>
 					</div>
 				)}
-			</div>
+			</header>
 
 			{/* ---------- Percakapan ---------- */}
-			<div className="min-h-[240px] flex-1 overflow-y-auto bg-slate-50/70 px-3 py-4 sm:px-4">
+			<div className="min-h-[240px] flex-1 space-y-4 overflow-y-auto bg-slate-50 px-4 py-4">
 				{kelompok.map((g) => (
 					<div key={g.label} className="space-y-3">
-						<div className="sticky top-0 z-10 flex justify-center py-1">
-							<span className="rounded-full bg-white/90 px-3 py-0.5 text-[11px] font-semibold text-slate-500 shadow-sm ring-1 ring-slate-200 backdrop-blur">{g.label}</span>
+						<div className="flex items-center gap-3 text-[11px] text-slate-400">
+							<span className="h-px flex-1 bg-slate-200" />{g.label}<span className="h-px flex-1 bg-slate-200" />
 						</div>
-						{g.pesan.map((m) => (
-							m.sender_type === "sistem" ? (
-								<p key={m.id} className="mx-auto m-0 max-w-md whitespace-pre-line rounded-xl bg-white/80 px-3 py-2 text-center text-[11px] text-slate-500 ring-1 ring-slate-200">{m.body}</p>
-							) : (
-								<div key={m.id} className={`flex items-end gap-2 ${m.sender_type === "petugas" ? "flex-row-reverse" : ""}`}>
-									<span className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-[10px] font-bold ${m.sender_type === "petugas" ? "bg-emerald-100 text-emerald-700" : "bg-slate-200 text-slate-600"}`}>
-										{inisial(m.sender_name)}
-									</span>
-									<div className={`max-w-[85%] whitespace-pre-line break-words rounded-2xl px-3.5 py-2.5 text-sm shadow-sm sm:max-w-[75%] ${m.sender_type === "petugas" ? "rounded-br-md bg-emerald-600 text-white" : "rounded-bl-md bg-white text-slate-800 ring-1 ring-slate-200"}`}>
-										<p className={`m-0 mb-0.5 text-[11px] font-bold ${m.sender_type === "petugas" ? "text-emerald-100" : "text-slate-500"}`}>{m.sender_name}</p>
-										{m.body}
-										<p className={`m-0 mt-1 text-right text-[10px] ${m.sender_type === "petugas" ? "text-emerald-100" : "text-slate-400"}`}>{jam(m.created_at)}</p>
+						{g.pesan.map((m) => {
+							if (riwayatBot(m)) {
+								const baris = m.body.split("\n").slice(1).map((b) => b.replace(/^🤖\s*/, "Bot: ").replace(/^👤\s*/, "Penanya: "));
+								return (
+									<details key={m.id} className="rounded-lg border border-slate-200 bg-white text-xs text-slate-600">
+										<summary className="cursor-pointer select-none px-3 py-2 text-slate-500 hover:text-slate-800">Percakapan dengan bot sebelum tiket dibuat ({baris.length} pesan)</summary>
+										<div className="space-y-1.5 border-t border-slate-100 px-3 py-2.5 leading-relaxed"><TeksPesan teks={baris.join("\n")} /></div>
+									</details>
+								);
+							}
+							if (m.sender_type === "sistem") return <p key={m.id} className="m-0 text-center text-[11px] leading-snug text-slate-400">{m.body}</p>;
+							const petugas = m.sender_type === "petugas";
+							return (
+								<div key={m.id} className={`flex ${petugas ? "justify-end" : "justify-start"}`}>
+									<div className={`max-w-[85%] rounded-lg border px-3.5 py-2.5 text-sm leading-relaxed sm:max-w-[72%] ${petugas ? "border-emerald-200 bg-emerald-50 text-slate-800" : "border-slate-200 bg-white text-slate-800"}`}>
+										<p className="m-0 mb-1 flex items-baseline justify-between gap-3 text-[11px] text-slate-500">
+											<span className="font-medium text-slate-700">{m.sender_name || (petugas ? "Petugas" : "Pelapor")}</span>
+											<span className="tabular-nums">{jam(m.created_at)}</span>
+										</p>
+										<div className="break-words"><TeksPesan teks={m.body} /></div>
 									</div>
 								</div>
-							)
-						))}
+							);
+						})}
 					</div>
 				))}
 				<div ref={ujungPesan} />
 			</div>
 
 			{/* ---------- Penulis balasan ---------- */}
-			<form onSubmit={kirimBalas} className="space-y-2 border-t border-slate-100 bg-white p-3 sm:p-4">
-				<div className="-mx-1 flex items-center gap-1.5 overflow-x-auto px-1 pb-0.5">
-					<Zap size={13} className="shrink-0 text-amber-500" />
-					{BALASAN_CEPAT.map((b) => (
-						<button key={b.label} type="button" onClick={() => pakaiTemplat(b.teks)}
-							className="shrink-0 rounded-full bg-slate-100 px-2.5 py-1 text-[11px] font-semibold text-slate-600 transition-colors hover:bg-emerald-50 hover:text-emerald-700">
-							{b.label}
-						</button>
-					))}
-					<button type="button" onClick={susunDraf} disabled={menyusun || sibuk}
-						className="ml-auto inline-flex shrink-0 items-center gap-1.5 rounded-full bg-gradient-to-r from-violet-600 to-fuchsia-500 px-3 py-1 text-[11px] font-bold text-white shadow-sm transition hover:brightness-110 disabled:opacity-50">
-						{menyusun ? <LoaderCircle size={12} className="animate-spin" /> : <WandSparkles size={12} />}{menyusun ? "Menyusun…" : "Draf AI"}
-					</button>
-				</div>
+			<form onSubmit={kirimBalas} className="space-y-2 border-t border-slate-200 bg-white px-4 py-3">
 				<div className="relative">
-					<textarea ref={kotakBalas} className={`${INPUT} min-h-[96px] resize-y pb-6`} value={balas} onChange={(e) => setBalas(e.target.value)}
+					<textarea ref={kotakBalas} className={`${INPUT} min-h-[88px] resize-y`} value={balas} onChange={(e) => setBalas(e.target.value)}
 						onKeyDown={(e) => { if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) kirimBalas(e); }}
-						placeholder="Tulis balasan untuk pelapor…" maxLength={4000} />
-					<span className={`pointer-events-none absolute bottom-2 right-3 text-[10px] tabular-nums ${balas.length > 3800 ? "text-rose-500" : "text-slate-400"}`}>{balas.length}/4000</span>
+						placeholder={`Balas ${t.reporter_name || "pelapor"}…`} maxLength={4000} />
+					{balas.length > 3500 && <span className="pointer-events-none absolute bottom-2 right-3 text-[10px] tabular-nums text-rose-500">{balas.length}/4000</span>}
 				</div>
-				<div className="flex flex-wrap items-center justify-between gap-2">
-					<p className="m-0 hidden max-w-md text-[11px] leading-snug text-slate-500 sm:block">
-						{t.user_id ? "Pelapor menerima notifikasi dan melihat balasan di widget Helpdesk." : "Pelapor tamu melihat balasan saat membuka tiketnya — hubungi juga lewat WhatsApp bila mendesak."}
-					</p>
-					<div className="flex w-full items-center gap-2 sm:w-auto">
-						<select className={`${PILIH} flex-1 sm:flex-none`} value={statusBalas} onChange={(e) => setStatusBalas(e.target.value)} aria-label="Status setelah dibalas">
+				<div className="flex flex-wrap items-center gap-x-3 gap-y-2">
+					<div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs">
+						<span className="text-slate-400">Templat:</span>
+						{BALASAN_CEPAT.map((b) => (
+							<button key={b.label} type="button" onClick={() => pakaiTemplat(b.teks)} className="text-slate-600 underline-offset-2 hover:text-slate-900 hover:underline">
+								{b.label}
+							</button>
+						))}
+					</div>
+					<div className="ml-auto flex items-center gap-2">
+						<button type="button" onClick={susunDraf} disabled={menyusun || sibuk} className={TOMBOL_GARIS} title="Susun draf balasan dari FAQ (periksa sebelum mengirim)">
+							{menyusun ? <LoaderCircle size={14} className="animate-spin" /> : <Sparkles size={14} />}{menyusun ? "Menyusun…" : "Draf"}
+						</button>
+						<select className={PILIH} value={statusBalas} onChange={(e) => setStatusBalas(e.target.value)} aria-label="Status setelah dibalas">
 							<option value="dijawab">Lalu: Dijawab</option>
 							<option value="diproses">Lalu: Diproses</option>
 							<option value="selesai">Lalu: Selesai</option>
 						</select>
-						<button type="submit" disabled={sibuk || !balas.trim()} className={`${TOMBOL} bg-emerald-600 text-white hover:bg-emerald-700`} title="Kirim (Ctrl + Enter)">
+						<button type="submit" disabled={sibuk || !balas.trim()} className={`${TOMBOL} bg-emerald-700 text-white hover:bg-emerald-800`} title="Kirim (Ctrl + Enter)">
 							{sibuk ? <LoaderCircle size={14} className="animate-spin" /> : <Send size={14} />}Kirim
-							<kbd className="ml-1 hidden rounded bg-emerald-700/60 px-1 text-[10px] font-semibold lg:inline-flex lg:items-center"><CornerDownLeft size={10} /></kbd>
 						</button>
 					</div>
 				</div>
+				<p className="m-0 text-[11px] text-slate-400">
+					{t.user_id ? "Pelapor menerima notifikasi dan melihat balasan di Helpdesk." : "Pelapor tamu melihat balasan di chat Helpdesk saat membuka tiketnya."} Ctrl + Enter untuk mengirim.
+				</p>
 			</form>
 		</div>
 	);
@@ -480,45 +501,44 @@ function TabTiket({ awalId, saring, setSaring }) {
 	const adaSaring = Boolean(tingkat || bidang || prioritas || cari || menunggu || status !== "terbuka");
 
 	return (
-		<div className="grid items-stretch gap-4 lg:h-[calc(100vh-17rem)] lg:min-h-[560px] lg:grid-cols-[minmax(320px,400px)_1fr]">
+		<div className="grid items-stretch gap-4 lg:h-[calc(100vh-15rem)] lg:min-h-[560px] lg:grid-cols-[minmax(320px,380px)_1fr]">
 			{/* ---------- Daftar ---------- */}
 			<div className={`${KARTU} flex min-h-0 flex-col overflow-hidden ${pilih ? "hidden lg:flex" : "flex"}`}>
-				<div className="space-y-2.5 border-b border-slate-100 p-3">
+				<div className="space-y-2.5 border-b border-slate-200 p-3">
 					<div className="relative">
 						<Search size={15} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-						<input ref={kolomCari} className={`${INPUT} pl-9 pr-9`} value={cariKetik} onChange={(e) => setCariKetik(e.target.value)} placeholder="Cari kode, judul, nama, desa…  ( / )" />
+						<input ref={kolomCari} className={`${INPUT} pl-9 pr-9`} value={cariKetik} onChange={(e) => setCariKetik(e.target.value)} placeholder="Cari kode, judul, nama, desa" />
 						{cariKetik && (
 							<button type="button" onClick={() => setCariKetik("")} className="absolute right-2.5 top-1/2 -translate-y-1/2 rounded p-0.5 text-slate-400 hover:text-slate-700" aria-label="Hapus pencarian"><X size={14} /></button>
 						)}
 					</div>
-					<div className="-mx-1 flex gap-1.5 overflow-x-auto px-1 pb-0.5">
-						{PILIHAN_STATUS.map(([k, l]) => (
-							<button key={k || "semua"} type="button" onClick={() => ubah("status", k)} className={`shrink-0 rounded-full px-3 py-1 text-xs font-bold transition-colors ${status === k ? "bg-slate-900 text-white" : "bg-slate-100 text-slate-600 hover:bg-slate-200"}`}>{l}</button>
-						))}
-					</div>
-					<div className="flex flex-wrap items-center gap-1.5">
-						<button type="button" onClick={() => ubah("prioritas", prioritas ? "" : "tinggi")} className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-bold transition-colors ${prioritas ? "bg-rose-600 text-white" : "bg-rose-50 text-rose-700 hover:bg-rose-100"}`}><Siren size={11} />Mendesak</button>
-						<button type="button" onClick={() => ubah("menunggu", !menunggu)} className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-bold transition-colors ${menunggu ? "bg-amber-500 text-white" : "bg-amber-50 text-amber-700 hover:bg-amber-100"}`}><Hourglass size={11} />Lewat {JAM_TERLAMBAT} jam</button>
+					<div className="flex flex-wrap items-center gap-2">
+						<select className={PILIH} value={status} onChange={(e) => ubah("status", e.target.value)} aria-label="Status">
+							{PILIHAN_STATUS.map(([k, l]) => <option key={k || "semua"} value={k}>{l}</option>)}
+						</select>
 						{dpmd && (
 							<>
-								<select className={`${PILIH} py-1 text-xs`} value={tingkat} onChange={(e) => ubah("tingkat", e.target.value)} aria-label="Tingkat">
+								<select className={PILIH} value={tingkat} onChange={(e) => ubah("tingkat", e.target.value)} aria-label="Tingkat">
 									<option value="">Semua tingkat</option>
 									{Object.entries(LABEL_TINGKAT).map(([k, v]) => <option key={k} value={k}>Di {v}</option>)}
 								</select>
-								<select className={`${PILIH} py-1 text-xs`} value={bidang} onChange={(e) => ubah("bidang", e.target.value)} aria-label="Bidang">
+								<select className={PILIH} value={bidang} onChange={(e) => ubah("bidang", e.target.value)} aria-label="Bidang">
 									<option value="">Semua bidang</option>
 									{(data?.bidang || []).map((b) => <option key={b.id} value={b.id}>{b.nama}</option>)}
 								</select>
 							</>
 						)}
 					</div>
-					<div className="flex items-center justify-between text-[11px] text-slate-500">
-						<span>
-							{data?.cakupan && <>Tiket <b className="text-slate-700">{data.cakupan.nama}</b> · </>}
+					<div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs">
+						<label className="inline-flex cursor-pointer items-center gap-1.5 text-slate-600">
+							<input type="checkbox" checked={Boolean(prioritas)} onChange={() => ubah("prioritas", prioritas ? "" : "tinggi")} />Mendesak
+						</label>
+						<label className="inline-flex cursor-pointer items-center gap-1.5 text-slate-600">
+							<input type="checkbox" checked={menunggu} onChange={() => ubah("menunggu", !menunggu)} />Lewat {JAM_TERLAMBAT} jam
+						</label>
+						<span className="ml-auto flex items-center gap-2 text-slate-500">
 							{items.length} tiket
-						</span>
-						<span className="flex items-center gap-2">
-							{adaSaring && <button type="button" onClick={() => { setCariKetik(""); setSaring(SARING_TIKET_AWAL); }} className="font-semibold hover:text-slate-800">Reset</button>}
+							{adaSaring && <button type="button" onClick={() => { setCariKetik(""); setSaring(SARING_TIKET_AWAL); }} className="hover:text-slate-800">Reset</button>}
 							<button type="button" onClick={() => muat()} title="Muat ulang" className="rounded p-0.5 hover:text-slate-800"><RefreshCw size={12} className={memuat ? "animate-spin" : ""} /></button>
 						</span>
 					</div>
@@ -526,55 +546,44 @@ function TabTiket({ awalId, saring, setSaring }) {
 
 				<div className="min-h-[50vh] flex-1 overflow-y-auto lg:min-h-0">
 					{data === null && Array.from({ length: 6 }).map((_, i) => (
-						<div key={i} className="flex gap-3 border-b border-slate-100 p-3">
-							<div className="h-9 w-9 animate-pulse rounded-xl bg-slate-100" />
-							<div className="flex-1 space-y-2"><div className="h-3 w-2/3 animate-pulse rounded bg-slate-100" /><div className="h-2.5 w-1/2 animate-pulse rounded bg-slate-100" /></div>
+						<div key={i} className="space-y-2 border-b border-slate-100 px-4 py-3">
+							<div className="h-3 w-2/3 animate-pulse rounded bg-slate-100" /><div className="h-2.5 w-1/2 animate-pulse rounded bg-slate-100" />
 						</div>
 					))}
 					{data && items.length === 0 && (
-						<div className="flex flex-col items-center px-6 py-14 text-center">
-							<Inbox size={30} className="text-slate-300" />
-							<p className="m-0 mt-2 text-sm font-semibold text-slate-700">{adaSaring ? "Tidak ada tiket yang cocok" : "Tidak ada tiket"}</p>
-							<p className="m-0 mt-0.5 text-xs text-slate-500">{adaSaring ? "Coba longgarkan saringan." : "Semua pertanyaan sudah tertangani."}</p>
+						<div className="px-6 py-14 text-center">
+							<p className="m-0 text-sm font-medium text-slate-700">{adaSaring ? "Tidak ada tiket yang cocok" : "Tidak ada tiket"}</p>
+							<p className="m-0 mt-1 text-xs text-slate-500">{adaSaring ? "Coba longgarkan saringan." : "Semua pertanyaan sudah tertangani."}</p>
 						</div>
 					)}
 					{items.map((t) => {
 						const tunggu = tungguTiket(t);
-						const IkonKat = ikonKategori(t.category_icon);
 						const aktif = pilih === t.id;
 						return (
 							<button key={t.id} ref={(el) => { simpulDaftar.current[t.id] = el; }} type="button" onClick={() => setPilih(t.id)}
-								className={`relative flex w-full gap-3 border-b border-slate-100 p-3 text-left transition-colors ${aktif ? "bg-emerald-50/70" : "hover:bg-slate-50"}`}>
-								{aktif && <span className="absolute inset-y-0 left-0 w-1 bg-emerald-500" />}
-								<span className={`relative flex h-9 w-9 shrink-0 items-center justify-center rounded-xl ${t.priority === "tinggi" ? "bg-rose-50 text-rose-600" : "bg-slate-100 text-slate-500"}`}>
-									<IkonKat size={16} />
-									{tunggu && <span className={`absolute -right-0.5 -top-0.5 h-2.5 w-2.5 rounded-full ring-2 ring-white ${tunggu.nada === "terlambat" ? "bg-rose-500" : "bg-amber-400"}`} />}
+								className={`relative block w-full border-b border-slate-100 px-4 py-3 text-left transition-colors ${aktif ? "bg-slate-100" : "hover:bg-slate-50"}`}>
+								{aktif && <span className="absolute inset-y-0 left-0 w-0.5 bg-slate-900" />}
+								<span className="flex items-baseline gap-2">
+									<span className={`mt-1.5 h-1.5 w-1.5 shrink-0 self-start rounded-full ${WARNA_STATUS[t.status] || "bg-slate-300"}`} title={STATUS_TIKET[t.status]?.label} />
+									<span className={`min-w-0 flex-1 truncate text-sm ${t.status === "baru" ? "font-semibold text-slate-900" : "text-slate-700"}`}>{t.subject}</span>
+									<span className="shrink-0 text-[11px] tabular-nums text-slate-400">{relatif(t.last_message_at)}</span>
 								</span>
-								<span className="min-w-0 flex-1">
-									<span className="flex items-baseline justify-between gap-2">
-										<span className={`truncate text-sm ${t.status === "baru" ? "font-bold text-slate-900" : "font-semibold text-slate-700"}`}>{t.subject}</span>
-										<span className="shrink-0 text-[10px] text-slate-400">{relatif(t.last_message_at)}</span>
-									</span>
-									<span className="mt-0.5 block truncate text-[11px] text-slate-500">
-										{t.reporter_name}{t.desa_nama ? ` · ${t.desa_nama}` : ""}{dpmd ? ` · ${tujuanTiket(t)}` : ""}
-									</span>
-									<span className="mt-1.5 flex flex-wrap items-center gap-1">
-										<Lencana status={t.status} />
-										{t.priority === "tinggi" && <Siren size={12} className="text-rose-600" />}
-										<ChipTunggu tunggu={tunggu} />
-										{tunggu?.balasanPelapor && (
-											<span className="inline-flex items-center gap-1 rounded-full bg-violet-50 px-1.5 py-0.5 text-[10px] font-bold text-violet-700 ring-1 ring-violet-200"><MessageCircleReply size={10} />Pelapor membalas</span>
-										)}
-										<span className="ml-auto inline-flex items-center gap-0.5 text-[10px] text-slate-400"><MessagesSquare size={10} />{t.jumlah_pesan}</span>
-									</span>
+								<span className="mt-0.5 block truncate pl-3.5 text-xs text-slate-500">
+									{t.reporter_name}{t.desa_nama ? ` · ${t.desa_nama}` : ""}{dpmd ? ` · ${tujuanTiket(t)}` : ""}
 								</span>
+								{(t.priority === "tinggi" || tunggu || t.jumlah_pesan > 1) && (
+									<span className="mt-1 flex flex-wrap items-center gap-x-3 pl-3.5 text-[11px]">
+										{t.priority === "tinggi" && <span className="font-medium text-rose-600">Mendesak</span>}
+										{tunggu && <span className={WARNA_TUNGGU[tunggu.nada]}>Menunggu {teksTunggu(tunggu)}</span>}
+										{tunggu?.balasanPelapor && <span className="text-slate-600">Pelapor membalas</span>}
+										<span className="ml-auto text-slate-400">{t.jumlah_pesan} pesan</span>
+									</span>
+								)}
 							</button>
 						);
 					})}
 				</div>
-				<p className="m-0 hidden border-t border-slate-100 px-3 py-1.5 text-[10px] text-slate-400 lg:block">
-					<kbd className="font-sans font-semibold">↑</kbd> <kbd className="font-sans font-semibold">↓</kbd> pindah tiket · <kbd className="font-sans font-semibold">/</kbd> cari · <kbd className="font-sans font-semibold">Ctrl+Enter</kbd> kirim
-				</p>
+				<p className="m-0 hidden border-t border-slate-100 px-4 py-1.5 text-[10px] text-slate-400 lg:block">↑ ↓ pindah tiket · / cari · Ctrl+Enter kirim</p>
 			</div>
 
 			{/* ---------- Percakapan ---------- */}
@@ -583,9 +592,8 @@ function TabTiket({ awalId, saring, setSaring }) {
 					<DetailTiket key={pilih} id={pilih} onBerubah={() => muat({ senyap: true })} onKembali={() => setPilih(null)} />
 				) : (
 					<div className={`${KARTU} flex h-full min-h-[420px] flex-col items-center justify-center p-10 text-center`}>
-						<div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-emerald-50 text-emerald-500"><MessagesSquare size={26} /></div>
-						<p className="m-0 mt-3 text-sm font-semibold text-slate-700">Pilih tiket untuk membuka percakapan</p>
-						<p className="m-0 mt-1 text-xs text-slate-500">Tiket yang menunggu paling lama ditandai merah.</p>
+						<p className="m-0 text-sm font-medium text-slate-700">Pilih tiket di sebelah kiri</p>
+						<p className="m-0 mt-1 text-xs text-slate-500">Tiket yang menunggu lebih dari {JAM_TERLAMBAT} jam ditandai merah.</p>
 					</div>
 				)}
 			</div>
@@ -936,6 +944,8 @@ function TabTakTerjawab({ onJadikanFaq }) {
 
 function TabPengaturan({ data, muat }) {
 	const [form, setForm] = useState({ salam: "", dpmd_nama: "", dpmd_whatsapp: "", dpmd_profil: "", ...data.pengaturan });
+	// PIC tiap program akun: kosong = otomatis (staf bidang pemilik program)
+	const [pic, setPic] = useState(() => Object.fromEntries((data.program_akun || []).map((p) => [p.key, p.pic_id ? String(p.pic_id) : ""])));
 	const [sibuk, setSibuk] = useState(false);
 	const r = data.ringkasan;
 	const isi = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }));
@@ -944,7 +954,7 @@ function TabPengaturan({ data, muat }) {
 		e.preventDefault();
 		setSibuk(true);
 		try {
-			await api.put("/helpdesk/petugas/pengaturan", form);
+			await api.put("/helpdesk/petugas/pengaturan", { ...form, pic_akun: pic });
 			toast.success("Pengaturan disimpan");
 			muat();
 		} catch (err) {
@@ -972,6 +982,28 @@ function TabPengaturan({ data, muat }) {
 							<input className={`${INPUT} mt-0.5`} value={form[`wa_bidang_${b.id}`] || ""} onChange={isi(`wa_bidang_${b.id}`)} placeholder="081234567890" inputMode="tel" /></label>
 					))}
 				</div>
+				{(data.program_akun || []).length > 0 && (
+					<div className="space-y-2 rounded-xl bg-slate-50 p-3">
+						<p className="m-0 text-xs font-semibold text-slate-600">PIC akun per program</p>
+						<p className="m-0 text-[11px] text-slate-500">
+							Pertanyaan akun di chatbot (lupa sandi, tidak bisa masuk, menu tidak muncul) disambungkan langsung ke PIC program yang dipilih penanya,
+							dan percakapannya masuk ke menu <b>Pesan</b> PIC. Kosong = otomatis staf bidang pemilik program.
+						</p>
+						{data.program_akun.map((p) => (
+							<label key={p.key} className="grid items-center gap-1 sm:grid-cols-[10rem_1fr]">
+								<span className="text-[12px] text-slate-700">{p.label}</span>
+								<select className={`${PILIH} w-full`} value={pic[p.key] || ""} onChange={(e) => setPic((x) => ({ ...x, [p.key]: e.target.value }))}>
+									<option value="">Otomatis{p.pic_efektif && !p.pic_id ? ` (${p.pic_efektif.name})` : ""}</option>
+									{(data.calon_pic || []).map((u) => (
+										<option key={u.id} value={u.id}>
+											{u.name}{u.bidang ? ` · ${u.bidang}` : ""}
+										</option>
+									))}
+								</select>
+							</label>
+						))}
+					</div>
+				)}
 				<label className="block"><span className="text-xs font-semibold text-slate-600">Profil DPMD untuk bot</span>
 					<textarea className={`${INPUT} mt-1 min-h-[120px]`} value={form.dpmd_profil} onChange={isi("dpmd_profil")} maxLength={3000}
 						placeholder={"Alamat kantor: ...\nJam layanan: Senin–Jumat 08.00–16.00\nEmail: ...\nInstagram: ..."} />
@@ -981,10 +1013,10 @@ function TabPengaturan({ data, muat }) {
 
 			<div className="space-y-4">
 				<div className={`${KARTU} p-4`}>
-					<p className="m-0 flex items-center gap-1.5 text-sm font-bold text-slate-900"><Sparkles size={15} className="text-violet-600" />Mesin AI</p>
+					<p className="m-0 flex items-center gap-1.5 text-sm font-bold text-slate-900">Mesin AI</p>
 					{data.ai.aktif
 						? <p className="m-0 mt-1 text-sm text-emerald-700">Aktif · model <code>{data.ai.model}</code></p>
-						: <p className="m-0 mt-1 text-sm text-amber-700">Belum aktif — bot menjawab dari pencocokan FAQ dan data resmi saja. Isi <code>ANTHROPIC_API_KEY</code> di .env server.</p>}
+						: <p className="m-0 mt-1 text-sm text-amber-700">Belum aktif — bot menjawab dari pencocokan FAQ dan data resmi saja. Isi <code>HELPDESK_AI_API_KEY</code> (Groq) di .env server.</p>}
 				</div>
 				<div className={`${KARTU} p-4`}>
 					<p className="m-0 mb-3 text-sm font-bold text-slate-900">Chatbot 30 hari terakhir</p>
@@ -1054,6 +1086,11 @@ export default function HelpdeskPanelPage() {
 			toast.error(pesanGalat(err, "memuat data Helpdesk"));
 		}
 	}, []);
+	// Pengelola langsung memuat data kelola supaya tab Pengaturan (pimpinan) langsung tersedia.
+	useEffect(() => {
+		if (bolehKelola) muatKelola();
+	}, [bolehKelola, muatKelola]);
+
 	const pilihTab = (key) => {
 		setTab(key);
 		if (["faq", "kategori", "tak_terjawab", "pengaturan"].includes(key) && !kelola) muatKelola();
@@ -1076,48 +1113,46 @@ export default function HelpdeskPanelPage() {
 		...(kelola?.pimpinan ? [{ key: "pengaturan", label: "Pengaturan", Ikon: Settings }] : []),
 	];
 
-	const s = saringTiket;
-	return (
-		<div className="space-y-4">
-			<section className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-emerald-50 via-white to-teal-50 p-4 ring-1 ring-emerald-100 sm:p-5">
-				<div className="pointer-events-none absolute -right-16 -top-16 h-48 w-48 rounded-full bg-emerald-200/40 blur-3xl" />
-				<div className="relative flex flex-wrap items-start justify-between gap-3">
-					<div className="flex items-start gap-3">
-						<span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-emerald-600 text-white shadow-lg shadow-emerald-600/25"><Flame size={22} /></span>
-						<div>
-							<h2 className="m-0 text-xl font-extrabold tracking-tight text-slate-900">Helpdesk</h2>
-							<p className="m-0 mt-0.5 hidden max-w-xl text-sm text-slate-600 sm:block">Pertanyaan masyarakat, desa, dan kecamatan yang diteruskan chatbot ke petugas sesuai kategori dan wilayah.</p>
+		return (
+		<div className="space-y-5">
+			<header className="flex flex-col gap-4 2xl:flex-row 2xl:items-end 2xl:justify-between">
+				<div className="min-w-0">
+					<h2 className="m-0 text-xl font-semibold tracking-tight text-slate-900">Helpdesk</h2>
+					<p className="m-0 mt-1 max-w-xl text-sm text-slate-500">Pertanyaan masyarakat, desa, dan kecamatan yang diteruskan chatbot ke petugas sesuai kategori dan wilayah.</p>
+				</div>
+				<dl className="m-0 grid grid-cols-3 gap-x-6 gap-y-3 sm:flex sm:flex-wrap sm:gap-x-8 2xl:shrink-0">
+					{[
+						["Menunggu", ringkas ? ringkas.menunggu : "…", ringkas?.menunggu ? "text-amber-600" : "", () => saringCepat({ status: "baru" })],
+						[`Lewat ${JAM_TERLAMBAT} jam`, ringkas ? ringkas.terlambat ?? 0 : "…", ringkas?.terlambat ? "text-rose-600" : "", () => saringCepat({ status: "baru", menunggu: true })],
+						["Mendesak", ringkas ? ringkas.mendesak ?? 0 : "…", ringkas?.mendesak ? "text-rose-600" : "", () => saringCepat({ prioritas: "tinggi" })],
+						["Tanggapan pertama", ringkas ? durasi(ringkas.menit_tanggap) : "…", "", null],
+						["Kepuasan", ringkas?.rating ? `${Number(ringkas.rating).toFixed(1)}/5` : "—", "", null],
+					].map(([label, nilai, warna, klik]) => (
+						<div key={label} className="min-w-0">
+							<dt className="text-xs text-slate-500">{label}</dt>
+							<dd className="m-0">
+								{klik ? (
+									<button type="button" onClick={klik} className={`text-lg font-semibold tabular-nums hover:underline ${warna || "text-slate-900"}`}>{nilai}</button>
+								) : (
+									<span className={`text-lg font-semibold tabular-nums ${warna || "text-slate-900"}`}>{nilai}</span>
+								)}
+							</dd>
 						</div>
-					</div>
-					<span className="inline-flex items-center gap-1.5 rounded-full bg-white/80 px-2.5 py-1 text-[11px] font-semibold text-emerald-700 ring-1 ring-emerald-200">
-						<span className="relative flex h-2 w-2"><span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-60" /><span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-500" /></span>
-						Diperbarui otomatis
-					</span>
-				</div>
+					))}
+				</dl>
+			</header>
 
-				<div className="relative -mx-1 mt-4 flex gap-2 overflow-x-auto px-1 pb-1 sm:mx-0 sm:grid sm:grid-cols-3 sm:overflow-visible sm:px-0 sm:pb-0 xl:grid-cols-5">
-					<KartuRingkas Ikon={Inbox} label="Menunggu jawaban" nilai={ringkas ? ringkas.menunggu : "…"} nada={ringkas?.menunggu ? "text-amber-600" : "text-slate-900"} aksen="bg-amber-50 text-amber-600"
-						onClick={() => saringCepat({ status: "baru" })} aktif={tab === "tiket" && s.status === "baru" && !s.menunggu && !s.prioritas} />
-					<KartuRingkas Ikon={TriangleAlert} label={`Lewat ${JAM_TERLAMBAT} jam`} nilai={ringkas ? ringkas.terlambat ?? 0 : "…"} nada={ringkas?.terlambat ? "text-rose-600" : "text-slate-900"} aksen="bg-rose-50 text-rose-600"
-						onClick={() => saringCepat({ status: "baru", menunggu: true })} aktif={tab === "tiket" && s.menunggu} />
-					<KartuRingkas Ikon={Siren} label="Mendesak terbuka" nilai={ringkas ? ringkas.mendesak ?? 0 : "…"} nada={ringkas?.mendesak ? "text-rose-600" : "text-slate-900"} aksen="bg-rose-50 text-rose-600"
-						onClick={() => saringCepat({ prioritas: "tinggi" })} aktif={tab === "tiket" && s.prioritas === "tinggi" && !s.menunggu} />
-					<KartuRingkas Ikon={Timer} label="Tanggapan pertama (30 hr)" nilai={ringkas ? durasi(ringkas.menit_tanggap) : "…"} nada="text-sky-700" aksen="bg-sky-50 text-sky-600" />
-					<KartuRingkas Ikon={Smile} label={`Kepuasan (${ringkas?.jumlah_rating || 0} nilai)`} nilai={ringkas?.rating ? `${Number(ringkas.rating).toFixed(1)}/5` : "—"} nada="text-amber-600" aksen="bg-amber-50 text-amber-500" />
-				</div>
-			</section>
-
-			<div className="-mx-1 overflow-x-auto px-1">
-				<div className="inline-flex items-center gap-1 rounded-2xl bg-white p-1 ring-1 ring-slate-200">
-					{tabs.map(({ key, label, Ikon, angka }) => (
+			<nav className="-mx-1 overflow-x-auto border-b border-slate-200 px-1">
+				<div className="flex gap-5">
+					{tabs.map(({ key, label, angka }) => (
 						<button key={key} type="button" onClick={() => pilihTab(key)}
-							className={`inline-flex items-center gap-1.5 whitespace-nowrap rounded-xl px-3 py-2 text-sm font-bold transition-colors ${tab === key ? "bg-emerald-600 text-white shadow-sm" : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"}`}>
-							<Ikon size={15} />{label}
-							{angka > 0 && <span className={`rounded-full px-1.5 text-[10px] tabular-nums ${tab === key ? "bg-white/25 text-white" : "bg-amber-100 text-amber-700"}`}>{angka}</span>}
+							className={`-mb-px inline-flex items-center gap-1.5 whitespace-nowrap border-b-2 px-0.5 pb-2.5 pt-1 text-sm transition-colors ${tab === key ? "border-slate-900 font-medium text-slate-900" : "border-transparent text-slate-500 hover:text-slate-800"}`}>
+							{label}
+							{angka > 0 && <span className="rounded bg-slate-100 px-1.5 text-[11px] tabular-nums text-slate-600">{angka}</span>}
 						</button>
 					))}
 				</div>
-			</div>
+			</nav>
 
 			{tab === "tiket" && <TabTiket awalId={tiketAwal} saring={saringTiket} setSaring={setSaringTiket} />}
 			{tab === "statistik" && <TabStatistik />}
