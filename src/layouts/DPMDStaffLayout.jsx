@@ -13,7 +13,8 @@ import {
 	FiUsers, FiBriefcase, FiChevronRight,
 	FiSettings, FiX, FiVideo, FiGrid
 } from "react-icons/fi";
-import { Landmark, ChevronDown, PanelLeftClose, PanelLeftOpen, ScanFace } from "lucide-react";
+import { Landmark, ChevronDown, PanelLeftClose, PanelLeftOpen, ScanFace, ArrowLeft, AlertTriangle, History, PlayCircle, BarChart3, Camera, Cctv, Users } from "lucide-react";
+import { useCctvAlerts } from "../hooks/useCctvAlerts";
 import AnimatedIcon from '../components/AnimatedIcon';
 import ChatBot from '../components/chatbot/ChatBot';
 import { performFullLogout } from "../utils/sessionPersistence";
@@ -237,6 +238,11 @@ const DPMDStaffLayout = () => {
 	const roleType = 'pegawai';
 	const navigate = useNavigate();
 	const location = useLocation();
+	// Mode khusus Smart CCTV: saat berada di /dpmd/cctv/*, sidebar berganti
+	// menjadi menu pengawasan (gaya dashboard Laravel — pindah fitur lewat
+	// sidebar, bukan tab bar di atas konten).
+	const isCctvMode = location.pathname === "/dpmd/cctv" || location.pathname.startsWith("/dpmd/cctv/");
+	const { jumlahBelumDibaca: cctvBelumDibaca } = useCctvAlerts();
 	const { confirmDialog, showConfirm } = useConfirm();
 	const { isDesktop, isSidebarCollapsed, setIsSidebarCollapsed } = useResponsive();
 
@@ -496,10 +502,23 @@ const DPMDStaffLayout = () => {
 		{ path: "/dpmd/bank-surat", label: "Bank Surat", icon: 'archive' },
 		{ path: "/dpmd/video-meeting", label: "Video Meeting", icon: 'video' },
 		{ path: "/dpmd/pesan", label: "Pesan", icon: 'chatbot' },
+		{ path: "/dpmd/cctv", label: "Smart CCTV", icon: 'camera' },
 		// Tiket Helpdesk dari masyarakat, desa, dan kecamatan yang menjadi wewenang bidang/pimpinan.
 		{ path: "/dpmd/helpdesk", label: "Helpdesk", icon: 'helpdesk' },
 		// Tur 3D kantor (halaman publik /jelajah) — untuk semua pegawai.
 		{ path: "/jelajah", label: "Jelajahi Kantor", icon: 'building' },
+	];
+
+	// Menu sidebar saat mode Smart CCTV (meniru pola dashboard Laravel:
+	// seluruh fitur pengawasan dipindai dari rail kiri).
+	const cctvNavItems = [
+		{ path: "/dpmd/cctv", label: "Live Monitoring", lucideIcon: Camera, exact: true },
+		{ path: "/dpmd/cctv/peringatan", label: "Peringatan", lucideIcon: AlertTriangle, badge: cctvBelumDibaca },
+		{ path: "/dpmd/cctv/riwayat", label: "Riwayat", lucideIcon: History },
+		{ path: "/dpmd/cctv/kamera", label: "Kamera", lucideIcon: Cctv },
+		{ path: "/dpmd/cctv/wajah", label: "Wajah", lucideIcon: Users },
+		{ path: "/dpmd/cctv/playback", label: "Playback", lucideIcon: PlayCircle },
+		{ path: "/dpmd/cctv/analitik", label: "Analitik", lucideIcon: BarChart3 },
 	];
 
 	// Mobile bottom nav - 3 items: Home, Aksi Cepat (FAB), Profil
@@ -537,6 +556,10 @@ const DPMDStaffLayout = () => {
 					byPath("/dpmd/helpdesk"),
 				],
 			},
+			{
+				title: "Pengawasan",
+				items: [byPath("/dpmd/cctv")],
+			},
 		];
 
 		// Bidang milik user (beserta submenu-nya)
@@ -566,10 +589,26 @@ const DPMDStaffLayout = () => {
 		return groups.map((group) => ({ ...group, items: group.items.filter(Boolean) }));
 	};
 
-	const sidebarGroups = buildSidebarGroups();
+	const sidebarGroups = isCctvMode
+		? [
+				{
+					title: "Smart CCTV",
+					items: cctvNavItems,
+				},
+				{
+					title: "Menu Lain",
+					items: [
+						{ path: "/dpmd/dashboard", label: "Kembali ke Menu", lucideIcon: ArrowLeft },
+						{ path: `${config.basePath}/profile`, label: "Profil Saya", icon: "user" },
+					],
+				},
+			]
+		: buildSidebarGroups();
 
-	const isNavItemActive = (path) =>
-		location.pathname === path || location.pathname.startsWith(`${path}/`);
+	const isNavItemActive = (path, exact) =>
+		exact
+			? location.pathname === path
+			: location.pathname === path || location.pathname.startsWith(`${path}/`);
 
 	return (
 		<div className="min-h-screen bg-slate-50">
@@ -587,7 +626,7 @@ const DPMDStaffLayout = () => {
 								<img src="/logo-dpmd.png" alt="DPMD" className="h-9 w-auto" />
 								<div className="min-w-0">
 									<p className="truncate text-sm font-semibold leading-tight text-slate-900">DPMD</p>
-									<p className="truncate text-[11px] leading-tight text-slate-400">Kabupaten Bogor</p>
+									<p className="truncate text-[11px] leading-tight text-slate-400">{isCctvMode ? "Smart CCTV" : "Kabupaten Bogor"}</p>
 								</div>
 							</div>
 						)}
@@ -619,7 +658,7 @@ const DPMDStaffLayout = () => {
 										const hasSubmenus = item.submenus && item.submenus.length > 0;
 										const isSubmenuActive =
 											hasSubmenus && item.submenus.some((sub) => location.pathname.startsWith(sub.path));
-										const isActive = isNavItemActive(item.path) || isSubmenuActive;
+										const isActive = isNavItemActive(item.path, item.exact) || isSubmenuActive;
 										const LucideIcon = item.lucideIcon;
 
 										return (
@@ -657,6 +696,11 @@ const DPMDStaffLayout = () => {
 														{!isSidebarCollapsed && (
 															<span className="flex-1 truncate text-left text-sm font-medium">
 																{item.label}
+															</span>
+														)}
+														{!isSidebarCollapsed && item.badge > 0 && (
+															<span className="ml-auto flex-shrink-0 rounded-full bg-red-500 px-1.5 py-0.5 text-[10px] font-semibold leading-none text-white">
+																{item.badge > 99 ? "99+" : item.badge}
 															</span>
 														)}
 													</button>

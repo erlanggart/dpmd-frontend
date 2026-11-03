@@ -437,6 +437,15 @@ const DPMDDashboard = lazy(
 const InformasiPage = lazy(
   () => import("./pages/dpmd/InformasiPage"),
 );
+// Smart CCTV — pengawasan kamera terpadu (dipakai rute /dpmd/cctv & /superadmin/cctv)
+const CctvShell = lazy(() => import("./pages/dpmd/cctv/CctvShell"));
+const CctvLivePage = lazy(() => import("./pages/dpmd/cctv/CctvLivePage"));
+const CctvAlertsPage = lazy(() => import("./pages/dpmd/cctv/CctvAlertsPage"));
+const CctvHistoryPage = lazy(() => import("./pages/dpmd/cctv/CctvHistoryPage"));
+const CctvDevicesPage = lazy(() => import("./pages/dpmd/cctv/CctvDevicesPage"));
+const CctvFacesPage = lazy(() => import("./pages/dpmd/cctv/CctvFacesPage"));
+const CctvPlaybackPage = lazy(() => import("./pages/dpmd/cctv/CctvPlaybackPage"));
+const CctvAnalyticsPage = lazy(() => import("./pages/dpmd/cctv/CctvAnalyticsPage"));
 // Legacy individual dashboards (masih digunakan di beberapa tempat)
 const KepalaDinasDashboard = lazy(
   () => import("./pages/kepala-dinas/KepalaDinasDashboard"),
@@ -1303,6 +1312,17 @@ function App() {
                   <Route path="pesan" element={<MessagingPage />} />
                   <Route path="helpdesk" element={<HelpdeskPanelPage />} />
                   <Route path="bank-surat" element={<BankSuratPage />} />
+
+                  {/* Smart CCTV — seluruh staf DPMD */}
+                  <Route path="cctv" element={<CctvShell dasar="/dpmd" />}>
+                    <Route index element={<CctvLivePage />} />
+                    <Route path="peringatan" element={<CctvAlertsPage />} />
+                    <Route path="riwayat" element={<CctvHistoryPage />} />
+                    <Route path="kamera" element={<CctvDevicesPage />} />
+                    <Route path="wajah" element={<CctvFacesPage />} />
+                    <Route path="playback" element={<CctvPlaybackPage />} />
+                    <Route path="analitik" element={<CctvAnalyticsPage />} />
+                  </Route>
                 </Route>
 
                 {/* Rute Bidang - Accessible by pegawai/kepala_bidang/ketua_tim (their own bidang) & kepala_dinas/superadmin (all) */}
@@ -1606,6 +1626,17 @@ function App() {
                   <Route path="server" element={<ServerManagementPage />} />
                   <Route path="settings" element={<SettingsPage />} />
                   <Route path="profile" element={<ProfilePage />} />
+
+                  {/* Smart CCTV — cerminan tampilan staf, untuk superadmin */}
+                  <Route path="cctv" element={<CctvShell dasar="/superadmin" />}>
+                    <Route index element={<CctvLivePage />} />
+                    <Route path="peringatan" element={<CctvAlertsPage />} />
+                    <Route path="riwayat" element={<CctvHistoryPage />} />
+                    <Route path="kamera" element={<CctvDevicesPage />} />
+                    <Route path="wajah" element={<CctvFacesPage />} />
+                    <Route path="playback" element={<CctvPlaybackPage />} />
+                    <Route path="analitik" element={<CctvAnalyticsPage />} />
+                  </Route>
 
                   {/* Bidang landing pages - tetap di SuperadminLayout */}
                   <Route path="bidang/sekretariat" element={<SekretariatPage />} />

@@ -23,6 +23,7 @@ import {
 	FiUser,
 	FiUsers,
 	FiX,
+	FiVideo,
 } from "react-icons/fi";
 import toast from "react-hot-toast";
 import api from "../api";
@@ -30,6 +31,8 @@ import { ambilToken } from "../utils/tokenSesi";
 import { useAuth } from "../context/AuthContext";
 import { useConfirm } from "../hooks/useConfirm.jsx";
 import { getAvatarUrl } from "../utils/avatarUtils";
+import { ArrowLeft, AlertTriangle, History, PlayCircle, BarChart3, Camera, Cctv, Users } from "lucide-react";
+import { useCctvAlerts } from "../hooks/useCctvAlerts";
 import { performFullLogout } from "../utils/sessionPersistence";
 import MessageLottieIcon from "../components/MessageLottieIcon";
 
@@ -70,6 +73,10 @@ const MENU_GROUPS = [
 		],
 	},
 	{
+		title: "Pengawasan",
+		items: [{ path: "/superadmin/cctv", label: "Smart CCTV", icon: FiVideo }],
+	},
+	{
 		title: "Sistem",
 		items: [
 			{ path: "/superadmin/server", label: "Manajemen Server", icon: FiServer },
@@ -79,6 +86,28 @@ const MENU_GROUPS = [
 			{ path: "/superadmin/helpdesk", label: "Helpdesk", icon: FiLifeBuoy },
 			{ path: "/superadmin/settings", label: "Settings", icon: FiSettings },
 		],
+	},
+];
+
+// Menu sidebar saat mode Smart CCTV — pola dashboard Laravel: seluruh fitur
+// pengawasan (live, peringatan, riwayat, kamera, wajah, playback, analitik)
+// dipindai dari rail kiri, bukan tab bar di atas konten.
+const buildCctvGroups = (badgePeringatan) => [
+	{
+		title: "Smart CCTV",
+		items: [
+			{ path: "/superadmin/cctv", label: "Live Monitoring", icon: Camera, exact: true },
+			{ path: "/superadmin/cctv/peringatan", label: "Peringatan", icon: AlertTriangle, badge: badgePeringatan },
+			{ path: "/superadmin/cctv/riwayat", label: "Riwayat", icon: History },
+			{ path: "/superadmin/cctv/kamera", label: "Kamera", icon: Cctv },
+			{ path: "/superadmin/cctv/wajah", label: "Wajah", icon: Users },
+			{ path: "/superadmin/cctv/playback", label: "Playback", icon: PlayCircle },
+			{ path: "/superadmin/cctv/analitik", label: "Analitik", icon: BarChart3 },
+		],
+	},
+	{
+		title: "Menu Lain",
+		items: [{ path: "/superadmin/dashboard", label: "Kembali ke Menu", icon: ArrowLeft }],
 	},
 ];
 
@@ -114,6 +143,10 @@ const SuperadminLayout = () => {
 	const [user, setUser] = React.useState(() => JSON.parse(localStorage.getItem("user") || "{}"));
 	const navigate = useNavigate();
 	const location = useLocation();
+	const isCctvMode =
+		location.pathname === "/superadmin/cctv" || location.pathname.startsWith("/superadmin/cctv/");
+	const { jumlahBelumDibaca: cctvBelumDibaca } = useCctvAlerts();
+	const menuGroups = isCctvMode ? buildCctvGroups(cctvBelumDibaca) : MENU_GROUPS;
 
 	const { confirmDialog, showConfirm } = useConfirm();
 	const { isDesktop, isSidebarCollapsed, setIsSidebarCollapsed } = useResponsive();
@@ -267,7 +300,7 @@ const SuperadminLayout = () => {
 								<img src="/logo-dpmd.png" alt="DPMD" className="h-9 w-auto" />
 								<div className="min-w-0">
 									<p className="truncate text-sm font-semibold leading-tight text-slate-900">DPMD</p>
-									<p className="truncate text-[11px] leading-tight text-slate-400">Control Panel</p>
+									<p className="truncate text-[11px] leading-tight text-slate-400">{isCctvMode ? "Smart CCTV" : "Control Panel"}</p>
 								</div>
 							</div>
 						)}
@@ -287,7 +320,7 @@ const SuperadminLayout = () => {
 					</div>
 
 					<nav className="flex-1 overflow-y-auto px-2.5 py-3 scrollbar-thin scrollbar-track-transparent scrollbar-thumb-slate-200">
-						{MENU_GROUPS.map((group) => (
+						{menuGroups.map((group) => (
 							<div key={group.title} className="mb-4 last:mb-0">
 								{!isSidebarCollapsed && (
 									<p className="mb-1.5 px-2 text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-400">
@@ -296,7 +329,9 @@ const SuperadminLayout = () => {
 								)}
 								<div className="space-y-0.5">
 									{group.items.map((item) => {
-										const isActive = isMenuItemActive(location.pathname, item.path);
+										const isActive = item.exact
+											? location.pathname === item.path
+											: isMenuItemActive(location.pathname, item.path);
 										const Icon = item.icon;
 
 										return (
@@ -316,6 +351,11 @@ const SuperadminLayout = () => {
 												{!isSidebarCollapsed && (
 													<span className="flex-1 truncate text-left text-sm font-medium">
 														{item.label}
+													</span>
+												)}
+												{!isSidebarCollapsed && item.badge > 0 && (
+													<span className="ml-auto flex-shrink-0 rounded-full bg-red-500 px-1.5 py-0.5 text-[10px] font-semibold leading-none text-white">
+														{item.badge > 99 ? "99+" : item.badge}
 													</span>
 												)}
 											</button>
@@ -634,7 +674,7 @@ const SuperadminLayout = () => {
 								</div>
 
 								<div className="max-h-[50vh] overflow-y-auto px-6 py-4">
-									{MENU_GROUPS.map((group) => (
+									{menuGroups.map((group) => (
 										<div key={group.title} className="mb-4 last:mb-0">
 											<p className="mb-1.5 px-2 text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-400">
 												{group.title}
@@ -642,7 +682,9 @@ const SuperadminLayout = () => {
 											<div className="space-y-1">
 												{group.items.map((item) => {
 													const Icon = item.icon;
-													const isActive = isMenuItemActive(location.pathname, item.path);
+													const isActive = item.exact
+														? location.pathname === item.path
+														: isMenuItemActive(location.pathname, item.path);
 
 													return (
 														<button
