@@ -40,10 +40,16 @@ import {
 	Download,
 	FileSpreadsheet,
 	Bell,
+	Keyboard,
+	ListChecks,
+	Maximize2,
+	RotateCw,
+	ZoomIn,
+	ZoomOut,
 } from 'lucide-react';
 import { PieChart, Pie, Cell, Tooltip as RechartsTooltip } from 'recharts';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import api from '../../../api';
 import { useAuth } from '../../../context/AuthContext';
 import toast from 'react-hot-toast';
@@ -110,7 +116,46 @@ const useIngatSesi = (kunci, awal) => {
 	}, [kunci, nilai]);
 	return [nilai, setNilai];
 };
+// Orang terakhir yang dibuka beserta desa & kecamatannya. Halaman detail yang
+// menulisnya, dari mana pun orang itu dibuka (per wilayah, tabel, notifikasi,
+// pop-up grafik) — jadi kembali dari detail selalu mendarat di desanya.
 const KUNCI_FOKUS = 'aparatur-fokus';
+const ingatFokus = (aparatur) => {
+	try {
+		sessionStorage.setItem(
+			KUNCI_FOKUS,
+			JSON.stringify({
+				id: String(aparatur.id),
+				desa_id: aparatur.desas?.id != null ? String(aparatur.desas.id) : aparatur.desa_id != null ? String(aparatur.desa_id) : null,
+				kecamatan_id: aparatur.desas?.kecamatans?.id != null ? String(aparatur.desas.kecamatans.id) : null,
+			})
+		);
+	} catch {
+		/* penyimpanan sesi tidak tersedia */
+	}
+};
+/** Dibaca sekali lalu dihapus. Bentuk lama (id saja) tetap diterima. */
+const ambilFokus = () => {
+	try {
+		const isi = sessionStorage.getItem(KUNCI_FOKUS);
+		sessionStorage.removeItem(KUNCI_FOKUS);
+		if (!isi) return null;
+		return isi.startsWith('{') ? JSON.parse(isi) : { id: isi };
+	} catch {
+		return null;
+	}
+};
+/** Baris yang terlihat untuk satu aparatur — tabel desktop & kartu ponsel sama-sama ada di DOM. */
+const gulirKeAparatur = (fokus) => {
+	const kandidat = [
+		...document.querySelectorAll(`[data-aparatur="${fokus.id}"]`),
+		document.getElementById(`aparatur-${fokus.id}`),
+		fokus.desa_id ? document.getElementById(`desa-${fokus.desa_id}`) : null,
+	];
+	const el = kandidat.find((node) => node && node.offsetParent !== null);
+	el?.scrollIntoView({ block: 'center' });
+	return Boolean(el);
+};
 
 const AVATAR_TONES = [
 	'bg-slate-100 text-slate-700',
@@ -661,6 +706,44 @@ const TandaVerifikasi = ({ status }) => {
 	if (!rupa) return null;
 	const Icon = rupa.icon;
 	return <Icon className={`h-4 w-4 shrink-0 ${rupa.warna}`} aria-label={rupa.singkat}><title>{rupa.singkat}</title></Icon>;
+};
+
+/**
+ * Status verifikasi + seberapa jauh pemeriksaannya (progres_verifikasi dari
+ * server). Yang setengah diperiksa dibedakan dari yang belum disentuh sama sekali.
+ */
+const ProgresVerifikasi = ({ aparatur, ringkas = false }) => {
+	const p = aparatur.progres_verifikasi;
+	const rupa = RUPA_VERIFIKASI[aparatur.status_verifikasi];
+	const sebagian = !rupa && p?.diperiksa > 0;
+	const persen = p?.total ? Math.round((p.diperiksa / p.total) * 100) : 0;
+	return (
+		<div className={ringkas ? 'min-w-0' : 'min-w-[8.5rem]'}>
+			<span
+				className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-semibold ${
+					rupa ? rupa.pill : sebagian ? 'bg-sky-50 text-sky-700' : BELUM_VERIFIKASI.pill
+				}`}
+			>
+				{rupa ? <rupa.icon className="h-3 w-3" /> : <Clock className="h-3 w-3" />}
+				{rupa ? rupa.singkat : sebagian ? 'Sedang diperiksa' : 'Belum diperiksa'}
+			</span>
+			{p && !rupa && p.total > 0 && (
+				<div className="mt-1 flex items-center gap-1.5">
+					<div className="h-1 w-16 overflow-hidden rounded-full bg-slate-100">
+						<div className="h-full rounded-full bg-sky-500" style={{ width: `${persen}%` }} />
+					</div>
+					<span className="text-[10px] tabular-nums text-slate-500">
+						{p.diperiksa}/{p.total} item
+					</span>
+				</div>
+			)}
+			{p?.wajib_kosong?.length > 0 && !ringkas && (
+				<p className="mt-0.5 text-[10px] text-amber-700" title={`Berkas wajib belum diunggah: ${p.wajib_kosong.join(', ')}`}>
+					{p.wajib_kosong.length} berkas wajib kosong
+				</p>
+			)}
+		</div>
+	);
 };
 
 const JabatanBadge = ({ jabatan }) => (
@@ -1608,6 +1691,7 @@ const BarisBerkas = ({ label, nama, verifikasi, onBuka }) => {
 export const AparaturDesaDetailPage = ({ backPath }) => {
 	const { id } = useParams();
 	const navigate = useNavigate();
+	const location = useLocation();
 	const { user } = useAuth();
 	const bolehKelola = bolehKelolaAparatur(user);
 	const [a, setA] = useState(null);
@@ -1622,7 +1706,12 @@ export const AparaturDesaDetailPage = ({ backPath }) => {
 		let batal = false;
 		setMemuat(true);
 		api.get(`/pemdes/aparatur-desa/${id}`)
-			.then((response) => { if (!batal) setA(response.data?.data || null); })
+			.then((response) => {
+				if (batal) return;
+				const data = response.data?.data || null;
+				setA(data);
+				if (data) ingatFokus(data);
+			})
 			.catch((error) => {
 				console.error('Failed to fetch aparatur detail:', error);
 				if (!batal) toast.error('Gagal memuat detail aparatur');
@@ -1631,7 +1720,15 @@ export const AparaturDesaDetailPage = ({ backPath }) => {
 		return () => { batal = true; };
 	}, [id]);
 
-	const kembali = () => (backPath ? navigate(backPath) : navigate(-1));
+	// Kembali ke daftar yang membuka halaman ini (keadaannya diingat sesi).
+	// Dibuka langsung dari tautan = tidak ada riwayat di aplikasi, jadi
+	// daftarnya dituju sendiri alih-alih keluar dari aplikasi.
+	const kembali = () => {
+		if (backPath) return navigate(backPath);
+		if ((window.history.state?.idx ?? 0) > 0) return navigate(-1);
+		const daftar = location.pathname.replace(/\/aparatur\/[^/]+\/?$/, `/${a && isBpd(a.jabatan) ? 'bpd' : 'perangkat-desa'}`);
+		return navigate(daftar !== location.pathname ? daftar : '/');
+	};
 
 	// Balasan simpan/verifikasi tidak membawa relasi desa & produk hukum, jadi
 	// ditimpakan ke data yang sudah ada, bukan menggantikannya.
@@ -2152,7 +2249,8 @@ const useDesaKecamatan = (idKecamatan, kecamatanList) => {
 const namaWilayahTunggal = (ids, opsi) =>
 	ids.length === 1 ? opsi.find((o) => String(o.value) === String(ids[0]))?.label || '' : '';
 
-const EMPTY_FILTERS = { search: '', kecamatan_id: [], desa_id: [], jabatan: '', jenis_kelamin: '', status: '', pendidikan: '' };
+const EMPTY_FILTERS = { search: '', kecamatan_id: [], desa_id: [], jabatan: '', jenis_kelamin: '', status: '', pendidikan: '', verifikasi: '' };
+const LABEL_SARING_VERIFIKASI = { belum: 'Belum diverifikasi', terverifikasi: 'Terverifikasi', ditolak: 'Dikembalikan ke desa' };
 
 // ============================================================
 // Ringkasan kabupaten
@@ -2815,7 +2913,7 @@ const PratinjauBerkas = ({ label, nama, onTutup }) => {
 // dikembalikan ke desa. Sama dengan ringkasan status kelembagaan.
 const WARNA_VERIFIKASI = { terverifikasi: '#16a34a', belum: '#eab308', ditolak: '#e11d48' };
 
-const CapaianVerifikasiAparatur = ({ stats, loading, onBuka }) => {
+const CapaianVerifikasiAparatur = ({ stats, loading, onBuka, onMulai }) => {
 	const [semua, setSemua] = useState(false);
 	const v = stats?.verifikasi;
 	const daftar = stats?.verifikasi_per_kecamatan || [];
@@ -2840,15 +2938,27 @@ const CapaianVerifikasiAparatur = ({ stats, loading, onBuka }) => {
 						<h3 className="text-base font-bold text-slate-900">Capaian Verifikasi per Kecamatan</h3>
 						<p className="text-xs text-slate-500">Aparatur yang datanya dinyatakan valid oleh Bidang Pemdes</p>
 					</div>
-					{daftar.length > 8 && (
-						<button
-							type="button"
-							onClick={() => setSemua((x) => !x)}
-							className="shrink-0 rounded-lg bg-slate-100 px-3 py-1.5 text-xs font-semibold text-slate-700 transition-colors hover:bg-slate-200"
-						>
-							{semua ? 'Ringkas' : `Semua ${daftar.length} kecamatan`}
-						</button>
-					)}
+					<div className="flex shrink-0 flex-wrap justify-end gap-2">
+						{onMulai && v.belum > 0 && (
+							<button
+								type="button"
+								onClick={() => onMulai()}
+								className="inline-flex items-center gap-1.5 rounded-lg bg-slate-900 px-3 py-1.5 text-xs font-semibold text-white transition-colors hover:bg-slate-800"
+							>
+								<BadgeCheck className="h-3.5 w-3.5" />
+								Mulai verifikasi · {fmt(v.belum)} menunggu
+							</button>
+						)}
+						{daftar.length > 8 && (
+							<button
+								type="button"
+								onClick={() => setSemua((x) => !x)}
+								className="rounded-lg bg-slate-100 px-3 py-1.5 text-xs font-semibold text-slate-700 transition-colors hover:bg-slate-200"
+							>
+								{semua ? 'Ringkas' : `Semua ${daftar.length} kecamatan`}
+							</button>
+						)}
+					</div>
 				</div>
 				<div className="mt-3 divide-y divide-slate-100">
 					{tampil.map((k) => {
@@ -2867,6 +2977,20 @@ const CapaianVerifikasiAparatur = ({ stats, loading, onBuka }) => {
 									<span className="text-slate-400">/{fmt(k.total)}</span>
 								</div>
 								<div className="w-11 text-right text-xs font-semibold tabular-nums text-emerald-700">{persen}%</div>
+								{onMulai && (
+									<button
+										type="button"
+										onClick={(event) => {
+											event.stopPropagation();
+											onMulai(k.id);
+										}}
+										disabled={!k.belum}
+										title={k.belum ? `Verifikasi ${fmt(k.belum)} aparatur yang menunggu di kecamatan ini` : 'Tidak ada yang menunggu'}
+										className="w-[4.5rem] shrink-0 rounded-md px-2 py-1 text-right text-[11px] font-semibold text-slate-500 transition-colors hover:bg-slate-900 hover:text-white disabled:pointer-events-none disabled:opacity-30"
+									>
+										{k.belum ? `${fmt(k.belum)} antre →` : '—'}
+									</button>
+								)}
 							</div>
 						);
 					})}
@@ -2881,6 +3005,7 @@ const CapaianVerifikasiAparatur = ({ stats, loading, onBuka }) => {
 						<span className="text-slate-400">/{fmt(v.total)}</span>
 					</div>
 					<div className="w-11 text-right text-xs font-bold tabular-nums text-slate-900">{v.persen}%</div>
+					{onMulai && <div className="w-[4.5rem] shrink-0" />}
 				</div>
 			</div>
 
@@ -2976,6 +3101,15 @@ const DatabaseTab = ({ refreshKey = 0, jenis, stats, statsLoading, detailBasePat
 		fetchData();
 	}, [fetchData]);
 
+	// Kembali dari detail: gulir ke baris orang yang tadi dibuka.
+	const sudahGulir = useRef(false);
+	useEffect(() => {
+		if (loading || sudahGulir.current) return;
+		sudahGulir.current = true;
+		const fokus = ambilFokus();
+		if (fokus) requestAnimationFrame(() => gulirKeAparatur(fokus));
+	}, [loading]);
+
 	useEffect(() => {
 		onLoadingChange?.(loading);
 	}, [loading, onLoadingChange]);
@@ -3062,6 +3196,8 @@ const DatabaseTab = ({ refreshKey = 0, jenis, stats, statsLoading, detailBasePat
 					return `Kelamin: ${value === 'Laki_laki' ? 'Laki-laki' : 'Perempuan'}`;
 				case 'status':
 					return `Status: ${value === 'Aktif' ? 'Aktif' : 'Tidak Aktif'}`;
+				case 'verifikasi':
+					return `Verifikasi: ${LABEL_SARING_VERIFIKASI[value] || value}`;
 				default:
 					return value;
 			}
@@ -3172,7 +3308,7 @@ const DatabaseTab = ({ refreshKey = 0, jenis, stats, statsLoading, detailBasePat
 				</div>
 
 				{showFilters && (
-					<div className="mt-3 grid grid-cols-1 gap-3 border-t border-slate-100 pt-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
+					<div className="mt-3 grid grid-cols-1 gap-3 border-t border-slate-100 pt-3 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-7">
 						<SelectBox
 							multiple
 							label="Kecamatan"
@@ -3247,6 +3383,17 @@ const DatabaseTab = ({ refreshKey = 0, jenis, stats, statsLoading, detailBasePat
 								{ value: '', label: 'Semua' },
 								{ value: 'Aktif', label: 'Aktif' },
 								{ value: 'Tidak_Aktif', label: 'Tidak Aktif' },
+							]}
+						/>
+
+						<SelectBox
+							label="Verifikasi"
+							value={filters.verifikasi || ''}
+							onChange={(value) => handleFilterChange('verifikasi', value)}
+							placeholder="Semua"
+							options={[
+								{ value: '', label: 'Semua' },
+								...Object.entries(LABEL_SARING_VERIFIKASI).map(([value, label]) => ({ value, label })),
 							]}
 						/>
 					</div>
@@ -3354,6 +3501,9 @@ const DatabaseTab = ({ refreshKey = 0, jenis, stats, statsLoading, detailBasePat
 										<th className="px-5 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-brand-600">
 											Status
 										</th>
+										<th className="px-5 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-brand-600">
+											Verifikasi
+										</th>
 										<th className="px-5 py-3 text-right text-[11px] font-semibold uppercase tracking-wider text-brand-600">
 											Aksi
 										</th>
@@ -3363,6 +3513,7 @@ const DatabaseTab = ({ refreshKey = 0, jenis, stats, statsLoading, detailBasePat
 									{data.map((aparatur) => (
 										<tr
 											key={aparatur.id}
+											data-aparatur={aparatur.id}
 											onClick={() => bukaDetail(aparatur.id)}
 											className="cursor-pointer transition-colors hover:bg-slate-50"
 										>
@@ -3400,6 +3551,9 @@ const DatabaseTab = ({ refreshKey = 0, jenis, stats, statsLoading, detailBasePat
 											<td className="px-5 py-3.5">
 												<StatusBadge status={aparatur.status} />
 											</td>
+											<td className="px-5 py-3.5">
+												<ProgresVerifikasi aparatur={aparatur} />
+											</td>
 											<td className="px-5 py-3.5 text-right">
 												<span className="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-medium text-brand-600 transition-colors hover:bg-slate-50">
 													<Eye className="h-4 w-4" />
@@ -3417,6 +3571,7 @@ const DatabaseTab = ({ refreshKey = 0, jenis, stats, statsLoading, detailBasePat
 							{data.map((aparatur) => (
 								<div
 									key={aparatur.id}
+									data-aparatur={aparatur.id}
 									role="button"
 									tabIndex={0}
 									onClick={() => bukaDetail(aparatur.id)}
@@ -3508,6 +3663,1153 @@ const DatabaseTab = ({ refreshKey = 0, jenis, stats, statsLoading, detailBasePat
 };
 
 // ============================================================
+// Tab: Meja Verifikasi
+// ============================================================
+// Lewat halaman detail, memeriksa satu orang berarti bolak-balik: buka orang,
+// buka berkas di pop-up, putuskan, kembali, cari orang berikutnya. Meja ini
+// menaruh ketiganya berdampingan — antrean, data per item, dan berkas
+// pembandingnya — lalu pindah sendiri ke item dan orang berikutnya. Keputusan
+// tetap per item lewat endpoint yang sama dengan halaman detail, jadi aturan
+// status ringkas & NIPD tidak berlipat.
+const SARING_MEJA_AWAL = { verifikasi: 'belum', kecamatan_id: [], desa_id: [], search: '' };
+
+const PILIHAN_ANTREAN = [
+	{ value: 'belum', label: 'Menunggu', kunciStat: 'belum' },
+	{ value: 'ditolak', label: 'Dikembalikan', kunciStat: 'ditolak' },
+	{ value: 'terverifikasi', label: 'Terverifikasi', kunciStat: 'terverifikasi' },
+	{ value: '', label: 'Semua', kunciStat: 'total' },
+];
+
+// Berkas yang dibaca bersama tiap kelompok data: biodata dicocokkan ke KTP,
+// jabatan ke SK. Item berkas berpasangan dengan dirinya sendiri.
+const BERKAS_PEMBANDING = {
+	biodata: ['file_ktp', 'file_kk', 'file_akta_kelahiran', 'file_ijazah_terakhir'],
+	jabatan_sk: ['file_sk_terakhir'],
+	bpjs: ['file_bpjs_kesehatan', 'file_bpjs_ketenagakerjaan'],
+};
+
+// Alasan yang paling sering ditulis, supaya desa membaca kalimat yang seragam.
+// Mengisi kolom alasan saja — tetap bisa disunting sebelum disimpan.
+const ALASAN_CEPAT = {
+	biodata: ['Tidak sama dengan KTP', 'Tanggal lahir berbeda dengan KTP', 'Ejaan nama berbeda dengan KTP', 'Pendidikan tidak sesuai ijazah'],
+	jabatan_sk: ['Nomor SK tidak sesuai berkas SK', 'Tanggal pengangkatan berbeda dengan SK', 'Jabatan tidak sesuai SK'],
+	bpjs: ['Nomor BPJS tidak sesuai kartu', 'Nomor BPJS tidak lengkap'],
+	berkas: ['Berkas buram / tidak terbaca', 'Bukan dokumen yang diminta', 'Berkas terpotong', 'Dokumen milik orang lain'],
+};
+
+const KOLOM_WAJIB_MEJA = ['nama_lengkap', 'jabatan', 'tempat_lahir', 'tanggal_lahir', 'jenis_kelamin', 'agama', 'pendidikan_terakhir', 'tanggal_pengangkatan', 'nomor_sk_pengangkatan'];
+
+const labelKelamin = (jk) => (jk === 'Laki_laki' ? 'Laki-laki' : jk === 'Perempuan' ? 'Perempuan' : null);
+
+/** Isian yang dibaca untuk tiap item data — pasangan [label, nilai]. */
+const ISI_ITEM = {
+	biodata: (a) => {
+		const usia = usiaTahun(a.tanggal_lahir);
+		return [
+			['Nama lengkap', a.nama_lengkap],
+			['Tempat lahir', a.tempat_lahir],
+			['Tanggal lahir', a.tanggal_lahir ? `${formatDate(a.tanggal_lahir)}${usia !== null ? ` · ${usia} th` : ''}` : null],
+			['Jenis kelamin', labelKelamin(a.jenis_kelamin)],
+			['Agama', a.agama],
+			['Pendidikan', a.pendidikan_terakhir],
+		];
+	},
+	jabatan_sk: (a) => [
+		['Jabatan', a.jabatan],
+		['No. SK pengangkatan', a.nomor_sk_pengangkatan],
+		['Tgl. pengangkatan', a.tanggal_pengangkatan ? formatDate(a.tanggal_pengangkatan) : null],
+		[
+			'Dasar hukum',
+			a.produk_hukums
+				? [a.produk_hukums.judul, a.produk_hukums.nomor && `No. ${a.produk_hukums.nomor}`, a.produk_hukums.tahun].filter(Boolean).join(' · ')
+				: null,
+		],
+	],
+	bpjs: (a) => [
+		['BPJS Kesehatan', a.bpjs_kesehatan_nomor],
+		['BPJS Ketenagakerjaan', a.bpjs_ketenagakerjaan_nomor],
+	],
+};
+
+const itemDiperiksa = (a) => (a?.item_verifikasi || []).filter((item) => item.ada);
+const statusItem = (a, key) => a?.verifikasi_item?.[key]?.status || null;
+const semuaDiputus = (a) => {
+	const daftar = itemDiperiksa(a);
+	return daftar.length > 0 && daftar.every((item) => statusItem(a, item.key));
+};
+
+/** Sama dengan progresVerifikasi di server, dihitung dari detail yang sudah dimuat. */
+const hitungProgres = (a) => {
+	const daftar = itemDiperiksa(a);
+	return {
+		total: daftar.length,
+		diperiksa: daftar.filter((item) => statusItem(a, item.key)).length,
+		tidak_sesuai: daftar.filter((item) => statusItem(a, item.key) === 'tidak_sesuai').length,
+		wajib_kosong: (a?.item_verifikasi || []).filter((item) => item.wajib && !item.ada).map((item) => item.label),
+	};
+};
+
+/** Item pertama yang perlu diputus — atau item pertama bila semua sudah. */
+const itemAwal = (a) => {
+	const daftar = a?.item_verifikasi || [];
+	return (daftar.find((item) => item.ada && !statusItem(a, item.key)) || daftar.find((item) => item.ada) || daftar[0])?.key || null;
+};
+
+/** Item berikutnya yang belum diputus, memutar dari sesudah `dari`. */
+const itemBerikut = (a, dari) => {
+	const daftar = itemDiperiksa(a);
+	const mulai = daftar.findIndex((item) => item.key === dari);
+	for (let langkah = 1; langkah <= daftar.length; langkah += 1) {
+		const item = daftar[(mulai + langkah) % daftar.length];
+		if (!statusItem(a, item.key)) return item.key;
+	}
+	return dari;
+};
+
+const usiaPada = (lahir, pada) => {
+	let tahun = pada.getFullYear() - lahir.getFullYear();
+	if (pada.getMonth() < lahir.getMonth() || (pada.getMonth() === lahir.getMonth() && pada.getDate() < lahir.getDate())) tahun -= 1;
+	return tahun;
+};
+const keTanggal = (nilai) => {
+	const d = nilai ? new Date(nilai) : null;
+	return d && !Number.isNaN(d.getTime()) ? d : null;
+};
+const digitSaja = (nilai) => String(nilai || '').replace(/\D/g, '');
+
+/**
+ * Hal yang bisa diperiksa mesin sebelum mata manusia: berkas wajib kosong,
+ * isian kosong, usia, tanggal yang mustahil, panjang nomor BPJS, dan riwayat
+ * pengembalian sebelumnya. Petunjuk saja — keputusan tetap di pemeriksa.
+ */
+const temuanOtomatis = (a) => {
+	const temuan = [];
+	for (const item of a.item_verifikasi || []) {
+		if (item.wajib && !item.ada) {
+			temuan.push({
+				nada: 'rose',
+				judul: `${item.label} belum diunggah`,
+				teks: 'Berkas wajib. Setelah item lain diperiksa, data ini otomatis dikembalikan ke desa.',
+			});
+		}
+	}
+
+	const kosong = KOLOM_KELENGKAPAN.filter((k) => KOLOM_WAJIB_MEJA.includes(k.key) && !String(a[k.key] ?? '').trim());
+	if (kosong.length) temuan.push({ nada: 'amber', judul: 'Isian wajib kosong', teks: kosong.map((k) => k.label).join(', ') });
+
+	if (a.tanggal_lahir_taksiran) {
+		temuan.push({
+			nada: 'amber',
+			judul: 'Tanggal lahir masih taksiran arsip Dapur Desa',
+			teks: 'Cocokkan dengan KTP. NIPD ditahan sampai tanggalnya dikoreksi atau dikonfirmasi.',
+			aksi: 'konfirmasi_tanggal',
+		});
+	}
+
+	const lahir = keTanggal(a.tanggal_lahir);
+	const angkat = keTanggal(a.tanggal_pengangkatan);
+	const usia = lahir ? usiaPada(lahir, new Date()) : null;
+	if (usia !== null && usia >= BATAS_USIA_PERANGKAT) {
+		temuan.push(
+			tanpaBatasUsia(a.jabatan)
+				? { nada: 'sky', judul: `Berusia ${usia} tahun`, teks: `${isBpd(a.jabatan) ? 'BPD' : 'Kepala desa'} tidak dibatasi usia — bukan alasan menolak.` }
+				: { nada: 'amber', judul: `Berusia ${usia} tahun`, teks: `Perangkat desa diberhentikan setelah berusia ${BATAS_USIA_PERANGKAT} tahun (UU 6/2014 Pasal 53).` }
+		);
+	}
+	if (lahir && angkat) {
+		const usiaAngkat = usiaPada(lahir, angkat);
+		if (usiaAngkat < 0) {
+			temuan.push({ nada: 'rose', judul: 'Tanggal pengangkatan sebelum tanggal lahir', teks: 'Kemungkinan salah ketik — cocokkan dengan KTP dan SK.' });
+		} else if (usiaAngkat < 20 && !tanpaBatasUsia(a.jabatan)) {
+			temuan.push({
+				nada: 'amber',
+				judul: `Diangkat pada usia ${usiaAngkat} tahun`,
+				teks: 'Perangkat desa minimal berusia 20 tahun saat diangkat (UU 6/2014 Pasal 50). Periksa tanggal lahir & SK.',
+			});
+		}
+	}
+	if (angkat && angkat > new Date()) temuan.push({ nada: 'amber', judul: 'Tanggal pengangkatan di masa depan', teks: formatDate(a.tanggal_pengangkatan) });
+
+	const kes = digitSaja(a.bpjs_kesehatan_nomor);
+	if (kes && kes.length !== 13) temuan.push({ nada: 'amber', judul: `No. BPJS Kesehatan ${kes.length} digit`, teks: 'Nomor kartu BPJS Kesehatan umumnya 13 digit.' });
+	const tk = digitSaja(a.bpjs_ketenagakerjaan_nomor);
+	if (tk && tk.length !== 11) temuan.push({ nada: 'amber', judul: `No. BPJS Ketenagakerjaan ${tk.length} digit`, teks: 'Nomor peserta (KPJ) BPJS Ketenagakerjaan umumnya 11 digit.' });
+
+	if (a.nipd_info?.kendala) temuan.push({ nada: 'amber', judul: 'NIPD belum bisa terbit walau data valid', teks: a.nipd_info.kendala });
+	if (a.status !== 'Aktif') temuan.push({ nada: 'sky', judul: 'Sudah tidak aktif', teks: a.keterangan || 'Tanpa keterangan alasan.' });
+
+	// Data yang pernah dikembalikan lalu dibetulkan desa kembali ke antrean
+	// tanpa jejak keputusan lama (keputusannya gugur saat data berubah). Riwayat
+	// masih menyimpannya — itulah yang perlu dicek ulang lebih dulu.
+	const riwayat = [...(a.riwayat || [])].sort((x, y) => new Date(y.created_at) - new Date(x.created_at));
+	const tolak = riwayat.find((r) => r.aksi === 'ditolak');
+	if (tolak && !a.status_verifikasi) {
+		const diubahSesudah = riwayat.some((r) => r.aksi === 'diubah' && new Date(r.created_at) > new Date(tolak.created_at));
+		temuan.push({
+			nada: 'sky',
+			judul: `Pernah dikembalikan ke desa · ${formatWaktu(tolak.created_at)}`,
+			teks: `${tolak.keterangan || 'Tanpa catatan.'}${diubahSesudah ? '\nDesa sudah memperbarui data sesudahnya — cek apakah catatan di atas sudah dibetulkan.' : ''}`,
+		});
+	}
+	return temuan;
+};
+
+const NADA_TEMUAN = {
+	rose: { kotak: 'border-rose-200 bg-rose-50 text-rose-800', ikon: XCircle, warna: 'text-rose-600' },
+	amber: { kotak: 'border-amber-200 bg-amber-50 text-amber-800', ikon: AlertTriangle, warna: 'text-amber-600' },
+	sky: { kotak: 'border-sky-200 bg-sky-50 text-sky-800', ikon: Info, warna: 'text-sky-600' },
+};
+
+const Kbd = ({ children }) => (
+	<kbd className="inline-flex min-w-[1.25rem] items-center justify-center rounded border border-slate-300 bg-white px-1 font-mono text-[10px] font-semibold text-slate-600 shadow-[0_1px_0_#cbd5e1]">
+		{children}
+	</kbd>
+);
+
+const PINTASAN = [
+	[['S'], 'Sesuai'],
+	[['T'], 'Tidak sesuai'],
+	[['↑', '↓'], 'Pindah item'],
+	[['←', '→'], 'Orang sebelum / berikut'],
+	[['A'], 'Semua sisa sesuai'],
+	[['R'], 'Putar berkas'],
+	[['F'], 'Perbesar berkas'],
+];
+
+/** Kalau fokus sedang di kolom isian atau pilihan, huruf adalah ketikan — bukan pintasan. */
+const sedangMengetik = (el) =>
+	Boolean(
+		el &&
+			(el.isContentEditable ||
+				(el.tagName === 'INPUT' && !['checkbox', 'radio', 'button'].includes(el.type)) ||
+				['TEXTAREA', 'SELECT'].includes(el.tagName) ||
+				el.closest?.('[role="listbox"],[role="combobox"],[role="dialog"]'))
+	);
+
+/**
+ * Berkas pembanding di samping data. Gambar bisa diperbesar & diputar (foto
+ * KTP dari ponsel sering miring); PDF disematkan. Jenis lain dibuka di tab baru.
+ */
+const PenampilBerkas = ({ aparatur, kunci, pembanding = [], zoom, putar, onPilih, onZoom, onPutar, onPerbesar }) => {
+	const [rusak, setRusak] = useState(false);
+	const tersedia = BERKAS.filter((b) => aparatur?.[b.kunci]);
+	const urut = [...tersedia].sort((x, y) => Number(pembanding.includes(y.kunci)) - Number(pembanding.includes(x.kunci)));
+	const nama = kunci ? aparatur?.[kunci] : null;
+	const url = berkasUrl(nama);
+	const ext = String(nama || '').split('.').pop().toLowerCase();
+	const gambar = ['jpg', 'jpeg', 'png', 'webp', 'gif'].includes(ext);
+	const pdf = ext === 'pdf';
+	const label = BERKAS.find((b) => b.kunci === kunci)?.label;
+	const pembandingKosong = pembanding.length > 0 && !pembanding.some((k) => aparatur?.[k]);
+
+	useEffect(() => setRusak(false), [url]);
+
+	return (
+		<section className="flex h-[70vh] flex-col overflow-hidden rounded-2xl border border-slate-200 bg-slate-900 shadow-sm xl:sticky xl:top-4 xl:h-[calc(100vh-2rem)]">
+			<div className="shrink-0 border-b border-white/10 p-2">
+				{urut.length === 0 ? (
+					<p className="px-2 py-1.5 text-xs text-slate-400">Belum ada berkas yang diunggah desa.</p>
+				) : (
+					<div className="flex gap-1 overflow-x-auto pb-0.5">
+						{urut.map((b) => {
+							const s = statusItem(aparatur, b.kunci);
+							const aktif = b.kunci === kunci;
+							return (
+								<button
+									key={b.kunci}
+									type="button"
+									onClick={() => onPilih(b.kunci)}
+									className={`inline-flex shrink-0 items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-medium transition-colors ${
+										aktif ? 'bg-white text-slate-900' : pembanding.includes(b.kunci) ? 'bg-white/15 text-white hover:bg-white/25' : 'text-slate-400 hover:bg-white/10 hover:text-white'
+									}`}
+								>
+									{s === 'sesuai' ? (
+										<CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" />
+									) : s === 'tidak_sesuai' ? (
+										<XCircle className="h-3.5 w-3.5 text-rose-500" />
+									) : (
+										<FileText className="h-3.5 w-3.5 opacity-60" />
+									)}
+									{b.label}
+								</button>
+							);
+						})}
+					</div>
+				)}
+			</div>
+
+			<div className="relative min-h-0 flex-1">
+				{!url ? (
+					<div className="flex h-full flex-col items-center justify-center gap-2 px-6 text-center">
+						<Paperclip className="h-8 w-8 text-slate-600" />
+						<p className="text-sm text-slate-400">
+							{pembandingKosong ? 'Berkas pembanding untuk item ini belum diunggah.' : 'Pilih berkas di atas untuk ditampilkan.'}
+						</p>
+					</div>
+				) : gambar && !rusak ? (
+					<div className="h-full overflow-auto">
+						<div className={`flex items-center justify-center p-3 ${zoom === 1 ? 'h-full' : 'min-h-full'}`}>
+							<img
+								key={url}
+								src={url}
+								alt={label}
+								onError={() => setRusak(true)}
+								onClick={() => onZoom(zoom === 1 ? 2 : 1)}
+								style={{
+									transform: `rotate(${putar}deg)`,
+									...(zoom === 1 ? {} : { width: `${zoom * 100}%`, maxWidth: 'none' }),
+								}}
+								className={`rounded-lg object-contain shadow-2xl transition-transform ${zoom === 1 ? 'max-h-full max-w-full cursor-zoom-in' : 'cursor-zoom-out'}`}
+							/>
+						</div>
+					</div>
+				) : pdf ? (
+					<iframe key={url} src={url} title={label} className="h-full w-full bg-white" />
+				) : (
+					<div className="flex h-full flex-col items-center justify-center gap-2 px-6 text-center">
+						<FileText className="h-8 w-8 text-slate-600" />
+						<p className="text-sm text-slate-400">{rusak ? 'Berkas gagal dimuat.' : 'Jenis berkas ini tidak bisa dipratinjau.'}</p>
+						<a href={url} target="_blank" rel="noreferrer" className="text-sm font-semibold text-white underline">
+							Buka di tab baru
+						</a>
+					</div>
+				)}
+			</div>
+
+			{url && (
+				<div className="flex shrink-0 items-center justify-between gap-2 border-t border-white/10 px-3 py-2 text-white">
+					<p className="min-w-0 truncate text-xs font-semibold">{label}</p>
+					<div className="flex shrink-0 items-center gap-1">
+						{gambar && !rusak && (
+							<>
+								<button type="button" onClick={() => onZoom(Math.max(1, zoom - 0.5))} disabled={zoom <= 1} title="Perkecil" className="rounded-md p-1.5 hover:bg-white/10 disabled:opacity-30">
+									<ZoomOut className="h-4 w-4" />
+								</button>
+								<span className="w-10 text-center text-[11px] tabular-nums text-slate-300">{Math.round(zoom * 100)}%</span>
+								<button type="button" onClick={() => onZoom(Math.min(4, zoom + 0.5))} disabled={zoom >= 4} title="Perbesar" className="rounded-md p-1.5 hover:bg-white/10 disabled:opacity-30">
+									<ZoomIn className="h-4 w-4" />
+								</button>
+								<button type="button" onClick={onPutar} title="Putar (R)" className="rounded-md p-1.5 hover:bg-white/10">
+									<RotateCw className="h-4 w-4" />
+								</button>
+							</>
+						)}
+						<button type="button" onClick={onPerbesar} title="Layar penuh (F)" className="rounded-md p-1.5 hover:bg-white/10">
+							<Maximize2 className="h-4 w-4" />
+						</button>
+						<a href={url} target="_blank" rel="noreferrer" title="Buka di tab baru" className="rounded-md p-1.5 hover:bg-white/10">
+							<ExternalLink className="h-4 w-4" />
+						</a>
+					</div>
+				</div>
+			)}
+		</section>
+	);
+};
+
+/** Satu baris pemeriksaan: isi data (atau keterangan berkas) + keputusannya. */
+const BarisPeriksa = ({ item, nomor, aparatur, aktif, sibuk, menulis, alasan, onFokus, onSesuai, onTidak, onAlasan, onSimpanAlasan, onBatalTulis, simpulRef }) => {
+	const k = aparatur.verifikasi_item?.[item.key] || null;
+	const isi = ISI_ITEM[item.key]?.(aparatur);
+	const pilihanAlasan = ALASAN_CEPAT[item.key] || (item.jenis === 'berkas' ? ALASAN_CEPAT.berkas : []);
+
+	return (
+		<li
+			ref={simpulRef}
+			onClick={onFokus}
+			className={`cursor-pointer rounded-xl border p-3 transition-all ${
+				aktif
+					? 'border-slate-900 bg-white shadow-md ring-1 ring-slate-900'
+					: k?.status === 'sesuai'
+						? 'border-emerald-200 bg-emerald-50/40 hover:border-emerald-300'
+						: k?.status === 'tidak_sesuai'
+							? 'border-rose-200 bg-rose-50/40 hover:border-rose-300'
+							: 'border-slate-200 bg-white hover:border-slate-300'
+			}`}
+		>
+			<div className="flex flex-wrap items-center justify-between gap-2">
+				<div className="flex min-w-0 items-center gap-2">
+					<span
+						className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[11px] font-bold ${
+							k?.status === 'sesuai'
+								? 'bg-emerald-600 text-white'
+								: k?.status === 'tidak_sesuai'
+									? 'bg-rose-600 text-white'
+									: !item.ada
+										? 'bg-amber-100 text-amber-700'
+										: 'bg-slate-100 text-slate-600'
+						}`}
+					>
+						{k?.status === 'sesuai' ? <CheckCircle2 className="h-3.5 w-3.5" /> : k?.status === 'tidak_sesuai' ? <XCircle className="h-3.5 w-3.5" /> : nomor}
+					</span>
+					<span className="truncate text-sm font-semibold text-slate-900">{item.label}</span>
+					{item.wajib && <span className="text-[10px] font-bold uppercase tracking-wide text-brand-600">wajib</span>}
+				</div>
+
+				{item.ada ? (
+					<div className="flex shrink-0 items-center gap-1" onClick={(event) => event.stopPropagation()}>
+						<button
+							type="button"
+							disabled={sibuk}
+							onClick={onSesuai}
+							title={k?.status === 'sesuai' ? 'Batalkan keputusan' : 'Tandai sesuai (S)'}
+							className={`inline-flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-xs font-semibold transition-colors disabled:opacity-50 ${
+								k?.status === 'sesuai' ? 'bg-emerald-600 text-white shadow-sm' : 'bg-white text-emerald-700 ring-1 ring-emerald-200 hover:bg-emerald-50'
+							}`}
+						>
+							{sibuk ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <CheckCircle2 className="h-3.5 w-3.5" />}
+							Sesuai
+						</button>
+						<button
+							type="button"
+							disabled={sibuk}
+							onClick={onTidak}
+							title={k?.status === 'tidak_sesuai' ? 'Batalkan keputusan' : 'Tandai tidak sesuai (T)'}
+							className={`inline-flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-xs font-semibold transition-colors disabled:opacity-50 ${
+								k?.status === 'tidak_sesuai' || menulis ? 'bg-rose-600 text-white shadow-sm' : 'bg-white text-rose-700 ring-1 ring-rose-200 hover:bg-rose-50'
+							}`}
+						>
+							<XCircle className="h-3.5 w-3.5" />
+							Tidak sesuai
+						</button>
+					</div>
+				) : (
+					<span className="inline-flex items-center gap-1 rounded-full bg-amber-50 px-2 py-0.5 text-[11px] font-semibold text-amber-700 ring-1 ring-amber-200">
+						<Clock className="h-3 w-3" />
+						Belum diunggah
+					</span>
+				)}
+			</div>
+
+			{isi && (
+				<dl className="mt-2.5 grid grid-cols-1 gap-x-4 gap-y-1.5 pl-8 sm:grid-cols-2">
+					{isi.map(([label, nilai]) => (
+						<div key={label} className="min-w-0">
+							<dt className="text-[11px] text-slate-500">{label}</dt>
+							<dd className={`break-words text-sm font-medium ${nilai ? 'text-slate-900' : 'text-rose-500'}`}>{nilai || 'Kosong'}</dd>
+						</div>
+					))}
+				</dl>
+			)}
+			{!isi && item.ada && aktif && <p className="mt-1.5 pl-8 text-xs text-slate-500">Berkasnya tampil di panel pembanding.</p>}
+
+			{k?.status === 'tidak_sesuai' && k.catatan && !menulis && <p className="mt-2 pl-8 text-xs font-medium text-rose-700">Alasan: {k.catatan}</p>}
+			{k?.status && k.oleh && (
+				<p className="mt-1 pl-8 text-[11px] text-slate-400">
+					{k.oleh} · {formatWaktu(k.pada)}
+				</p>
+			)}
+
+			<AnimatePresence initial={false}>
+				{menulis && (
+					<motion.div
+						initial={{ height: 0, opacity: 0 }}
+						animate={{ height: 'auto', opacity: 1 }}
+						exit={{ height: 0, opacity: 0 }}
+						className="overflow-hidden"
+						onClick={(event) => event.stopPropagation()}
+					>
+						<div className="mt-3 rounded-xl bg-rose-50/70 p-2.5 ring-1 ring-rose-200">
+							{pilihanAlasan.length > 0 && (
+								<div className="mb-2 flex flex-wrap gap-1.5">
+									{pilihanAlasan.map((teks) => (
+										<button
+											key={teks}
+											type="button"
+											onClick={() => onAlasan(teks)}
+											className={`rounded-full px-2.5 py-1 text-[11px] font-medium transition-colors ${
+												alasan === teks ? 'bg-rose-600 text-white' : 'bg-white text-rose-700 ring-1 ring-rose-200 hover:bg-rose-100'
+											}`}
+										>
+											{teks}
+										</button>
+									))}
+								</div>
+							)}
+							<div className="flex gap-2">
+								<input
+									autoFocus
+									value={alasan}
+									onChange={(event) => onAlasan(event.target.value)}
+									onKeyDown={(event) => {
+										if (event.key === 'Enter' && alasan.trim()) onSimpanAlasan();
+										if (event.key === 'Escape') onBatalTulis();
+									}}
+									placeholder="Alasan untuk desa — pilih di atas atau tulis sendiri"
+									className={`${KELAS_INPUT} min-w-0 flex-1 bg-white`}
+								/>
+								<button
+									type="button"
+									disabled={sibuk || !alasan.trim()}
+									onClick={onSimpanAlasan}
+									className="shrink-0 rounded-xl bg-rose-600 px-3 py-2 text-xs font-semibold text-white transition-colors hover:bg-rose-700 disabled:opacity-50"
+								>
+									Simpan
+								</button>
+							</div>
+							<p className="mt-1.5 text-[11px] text-rose-700/80">
+								<Kbd>Enter</Kbd> simpan · <Kbd>Esc</Kbd> batal
+							</p>
+						</div>
+					</motion.div>
+				)}
+			</AnimatePresence>
+		</li>
+	);
+};
+
+const MejaVerifikasi = ({ refreshKey = 0, jenis, stats, saring, setSaring, detailBasePath, jeda = false, onLoadingChange, onUpdated, onUbah, onBerubah }) => {
+	const navigate = useNavigate();
+	const sesi = `aparatur-meja:${jenis || 'semua'}`;
+	const [pilihId, setPilihId] = useIngatSesi(`${sesi}:pilih`, null);
+	const [lanjutOtomatis, setLanjutOtomatis] = useIngatSesi(`${sesi}:lanjut`, true);
+	const [tampilPintasan, setTampilPintasan] = useIngatSesi(`${sesi}:pintasan`, true);
+	const [searchInput, setSearchInput] = useState(() => saring.search || '');
+	const [kecamatanList, setKecamatanList] = useState([]);
+	const pilihanDesa = useDesaKecamatan(saring.kecamatan_id, kecamatanList);
+
+	const [antrean, setAntrean] = useState([]);
+	const [meta, setMeta] = useState({ page: 1, totalPages: 1, totalItems: 0 });
+	const [memuatAntrean, setMemuatAntrean] = useState(true);
+	const permintaan = useRef(0);
+
+	const [a, setA] = useState(null);
+	const [memuatDetail, setMemuatDetail] = useState(false);
+	const [muatUlang, setMuatUlang] = useState(0);
+	const [aktifKey, setAktifKey] = useState(null);
+	const [kunciBerkas, setKunciBerkas] = useState(null);
+	const [zoom, setZoom] = useState(1);
+	const [putar, setPutar] = useState(0);
+	const [layarPenuh, setLayarPenuh] = useState(false);
+	const [menulis, setMenulis] = useState(null);
+	const [alasan, setAlasan] = useState('');
+	const [sibukKey, setSibukKey] = useState(null);
+	const [diputusSesi, setDiputusSesi] = useState(0);
+	const simpul = useRef({});
+	const simpulAntrean = useRef({});
+	// Id orang yang sedang terbuka — memuat ulang orang yang sama (setelah
+	// dibetulkan / dikonfirmasi) tidak boleh melempar pemeriksa ke item pertama,
+	// dan balasan untuk orang yang sudah ditinggal tidak boleh menggeser apa pun.
+	const idKini = useRef(null);
+
+	useEffect(() => {
+		// Kembali dari "Detail lengkap" sudah mendarat di meja (orangnya diingat
+		// sesi) — penanda fokus dibuang supaya tab lain tidak ikut melompat nanti.
+		ambilFokus();
+		api.get('/kecamatans')
+			.then((response) => { if (response.data.success) setKecamatanList(response.data.data || []); })
+			.catch((error) => console.error('Failed to fetch kecamatan:', error));
+	}, []);
+
+	useEffect(() => {
+		const timer = setTimeout(() => setSaring((prev) => (prev.search === searchInput ? prev : { ...prev, search: searchInput })), 400);
+		return () => clearTimeout(timer);
+	}, [searchInput, setSaring]);
+
+	const ubahSaring = (kunci, nilai) =>
+		setSaring((prev) => ({ ...prev, [kunci]: nilai, ...(kunci === 'kecamatan_id' ? { desa_id: [] } : {}) }));
+
+	// Halaman ke-n antrean. Permintaan yang tersusul saringan baru dibuang,
+	// supaya klik cepat antar-saringan tidak menampilkan antrean yang salah.
+	const muatAntrean = useCallback(
+		async (page = 1) => {
+			const nomor = ++permintaan.current;
+			setMemuatAntrean(true);
+			try {
+				const params = new URLSearchParams(keParamSemua(saring));
+				if (jenis) params.append('jenis', jenis);
+				params.append('page', page);
+				params.append('limit', 30);
+				const response = await api.get(`/pemdes/aparatur-desa?${params.toString()}`);
+				if (nomor !== permintaan.current) return [];
+				const baris = response.data?.data || [];
+				setAntrean((prev) => (page === 1 ? baris : [...prev, ...baris.filter((b) => !prev.some((p) => p.id === b.id))]));
+				setMeta({ page, totalPages: response.data?.meta?.totalPages || 1, totalItems: response.data?.meta?.totalItems || 0 });
+				onUpdated?.(new Date());
+				return baris;
+			} catch (error) {
+				console.error('Failed to fetch antrean verifikasi:', error);
+				if (nomor === permintaan.current) toast.error('Gagal memuat antrean verifikasi');
+				return [];
+			} finally {
+				if (nomor === permintaan.current) setMemuatAntrean(false);
+			}
+		},
+		[saring, jenis, onUpdated]
+	);
+
+	useEffect(() => {
+		muatAntrean(1);
+	}, [muatAntrean, refreshKey]);
+
+	useEffect(() => {
+		onLoadingChange?.(memuatAntrean || memuatDetail);
+	}, [memuatAntrean, memuatDetail, onLoadingChange]);
+
+	// Orang yang dipilih tidak ada di antrean (saringan berganti) → yang pertama.
+	useEffect(() => {
+		if (memuatAntrean) return;
+		if (!antrean.length) setPilihId(null);
+		else if (!antrean.some((b) => b.id === pilihId)) setPilihId(antrean[0].id);
+	}, [antrean, memuatAntrean, pilihId, setPilihId]);
+
+	useEffect(() => {
+		if (!pilihId) {
+			setA(null);
+			return undefined;
+		}
+		let batal = false;
+		setMemuatDetail(true);
+		api.get(`/pemdes/aparatur-desa/${pilihId}`)
+			.then((response) => {
+				if (batal) return;
+				const data = response.data?.data || null;
+				const orangSama = data && idKini.current === data.id;
+				idKini.current = data?.id ?? null;
+				setA(data);
+				setAktifKey((sebelum) => (orangSama && (data.item_verifikasi || []).some((i) => i.key === sebelum) ? sebelum : itemAwal(data)));
+				setMenulis(null);
+			})
+			.catch((error) => {
+				console.error('Failed to fetch aparatur detail:', error);
+				if (!batal) toast.error('Gagal memuat data aparatur');
+			})
+			.finally(() => { if (!batal) setMemuatDetail(false); });
+		return () => { batal = true; };
+	}, [pilihId, refreshKey, muatUlang]);
+
+	// Berkas pembanding mengikuti item yang sedang diperiksa.
+	useEffect(() => {
+		if (!a || !aktifKey) return;
+		const item = (a.item_verifikasi || []).find((i) => i.key === aktifKey);
+		const calon = item?.jenis === 'berkas' ? [aktifKey] : BERKAS_PEMBANDING[aktifKey] || [];
+		const pilihan = calon.find((k) => a[k]);
+		setKunciBerkas((sebelum) => pilihan || (sebelum && a[sebelum] ? sebelum : BERKAS.find((b) => a[b.kunci])?.kunci || null));
+		setZoom(1);
+		setPutar(0);
+		simpul.current[aktifKey]?.scrollIntoView?.({ block: 'nearest', behavior: 'smooth' });
+		// eslint-disable-next-line react-hooks/exhaustive-deps
+	}, [aktifKey, a?.id]);
+
+	useEffect(() => {
+		simpulAntrean.current[pilihId]?.scrollIntoView?.({ block: 'nearest', behavior: 'smooth' });
+	}, [pilihId]);
+
+	const keOrang = async (arah, { lewatiSelesai = false } = {}) => {
+		const indeks = antrean.findIndex((b) => b.id === pilihId);
+		let tujuan = indeks + arah;
+		// Lanjut otomatis di antrean "menunggu": lompati orang yang sudah diputus.
+		if (lewatiSelesai) while (antrean[tujuan] && antrean[tujuan].status_verifikasi) tujuan += arah;
+		if (tujuan < 0) return;
+		if (tujuan < antrean.length) {
+			setPilihId(antrean[tujuan].id);
+			return;
+		}
+		if (meta.page < meta.totalPages) {
+			const baris = await muatAntrean(meta.page + 1);
+			const calon = lewatiSelesai ? baris.find((b) => !b.status_verifikasi) : baris[0];
+			if (calon) setPilihId(calon.id);
+			return;
+		}
+		toast(lewatiSelesai ? 'Antrean ini sudah habis diperiksa' : 'Sudah di ujung antrean', { icon: '✅', duration: 2500 });
+	};
+	const keOrangRef = useRef(keOrang);
+	keOrangRef.current = keOrang;
+
+	const perbaruiAntrean = (baru) =>
+		setAntrean((prev) =>
+			prev.map((b) =>
+				b.id === baru.id
+					? { ...b, status_verifikasi: baru.status_verifikasi, verifikasi_item: baru.verifikasi_item, nipd: baru.nipd, progres_verifikasi: hitungProgres(baru) }
+					: b
+			)
+		);
+
+	// Satu kiriman keputusan (satu item atau beberapa sekaligus).
+	const kirim = async (items, kunciSibuk) => {
+		if (!a || sibukKey) return;
+		setSibukKey(kunciSibuk);
+		const statusSebelum = a.status_verifikasi;
+		const idSaatKirim = a.id;
+		try {
+			const response = await api.post(`/pemdes/aparatur-desa/${idSaatKirim}/verifikasi`, { items });
+			const hasil = response.data?.data || {};
+			// Balasan berupa baris mentah tanpa relasi & aturan item — ditimpakan.
+			const baru = { ...a, ...hasil, verifikasi_item: hasil.verifikasi_item ?? null };
+			setA((kini) => (kini?.id === idSaatKirim ? baru : kini));
+			perbaruiAntrean(baru);
+			setMenulis(null);
+			if (response.data?.peringatan) toast(response.data.peringatan, { icon: '⚠️', duration: 6000 });
+
+			const berubah = baru.status_verifikasi !== statusSebelum;
+			if (berubah) onBerubah?.();
+			if (idKini.current !== idSaatKirim) return;
+			if (berubah && baru.status_verifikasi && semuaDiputus(baru)) {
+				toast.success(response.data?.message || 'Verifikasi selesai');
+				setDiputusSesi((n) => n + 1);
+				if (lanjutOtomatis) setTimeout(() => keOrangRef.current(1, { lewatiSelesai: saring.verifikasi === 'belum' }), 650);
+			} else {
+				if (berubah && baru.status_verifikasi === 'ditolak') toast('Ada item tidak sesuai — lanjutkan memeriksa sisanya', { icon: '↩️', duration: 2500 });
+				const satu = Object.keys(items).length === 1 ? Object.keys(items)[0] : null;
+				if (satu && items[satu]?.status) setAktifKey(itemBerikut(baru, satu));
+			}
+		} catch (error) {
+			toast.error(error.response?.data?.message || 'Gagal menyimpan keputusan');
+		} finally {
+			setSibukKey(null);
+		}
+	};
+
+	const putuskan = (key, status, catatan = null) => kirim({ [key]: { status, catatan } }, key);
+
+	const tandaiSesuai = (key, { alih = true } = {}) => {
+		const item = (a?.item_verifikasi || []).find((i) => i.key === key);
+		if (!item?.ada) return;
+		// Klik ulang tombol yang sudah aktif = batalkan; pintasan S selalu menandai.
+		if (alih && statusItem(a, key) === 'sesuai') putuskan(key, null);
+		else putuskan(key, 'sesuai');
+	};
+
+	const mulaiTolak = (key, { alih = true } = {}) => {
+		const item = (a?.item_verifikasi || []).find((i) => i.key === key);
+		if (!item?.ada) return;
+		if (alih && statusItem(a, key) === 'tidak_sesuai' && menulis !== key) {
+			putuskan(key, null);
+			return;
+		}
+		setAktifKey(key);
+		setAlasan(a.verifikasi_item?.[key]?.catatan || '');
+		setMenulis((x) => (x === key && alih ? null : key));
+	};
+
+	const semuaSisaSesuai = () => {
+		const sisa = itemDiperiksa(a).filter((item) => !statusItem(a, item.key));
+		if (!sisa.length) {
+			toast('Semua item sudah diputus', { duration: 1800 });
+			return;
+		}
+		kirim(Object.fromEntries(sisa.map((item) => [item.key, { status: 'sesuai' }])), 'semua');
+	};
+
+	const konfirmasiTanggalLahir = async () => {
+		setSibukKey('tanggal');
+		try {
+			const response = await api.put(`/pemdes/aparatur-desa/${a.id}`, { konfirmasi_tanggal_lahir: true });
+			toast.success(response.data?.data?.nipd ? `Tanggal lahir dikonfirmasi — NIPD ${response.data.data.nipd}` : 'Tanggal lahir dikonfirmasi');
+			setMuatUlang((n) => n + 1);
+		} catch (error) {
+			toast.error(error.response?.data?.message || 'Gagal mengonfirmasi tanggal lahir');
+		} finally {
+			setSibukKey(null);
+		}
+	};
+
+	const pindahItem = (arah) => {
+		const daftar = a?.item_verifikasi || [];
+		const i = daftar.findIndex((item) => item.key === aktifKey);
+		const tujuan = daftar[Math.min(Math.max(i + arah, 0), daftar.length - 1)];
+		if (tujuan) {
+			setAktifKey(tujuan.key);
+			setMenulis(null);
+		}
+	};
+
+	// Pintasan dipasang sekali; isinya selalu versi terbaru lewat ref.
+	const pintasan = useRef(null);
+	pintasan.current = (event) => {
+		if (jeda || layarPenuh || !a || event.ctrlKey || event.metaKey || event.altKey || sedangMengetik(event.target)) return;
+		const tombol = event.key.length === 1 ? event.key.toLowerCase() : event.key;
+		const aksi = {
+			s: () => aktifKey && tandaiSesuai(aktifKey, { alih: false }),
+			t: () => aktifKey && mulaiTolak(aktifKey, { alih: false }),
+			ArrowDown: () => pindahItem(1),
+			j: () => pindahItem(1),
+			ArrowUp: () => pindahItem(-1),
+			k: () => pindahItem(-1),
+			ArrowRight: () => keOrang(1),
+			n: () => keOrang(1),
+			ArrowLeft: () => keOrang(-1),
+			p: () => keOrang(-1),
+			a: () => semuaSisaSesuai(),
+			r: () => kunciBerkas && setPutar((x) => (x + 90) % 360),
+			f: () => kunciBerkas && setLayarPenuh(true),
+			'?': () => setTampilPintasan((x) => !x),
+		}[tombol];
+		if (!aksi) return;
+		event.preventDefault();
+		aksi();
+	};
+	useEffect(() => {
+		const dengar = (event) => pintasan.current?.(event);
+		window.addEventListener('keydown', dengar);
+		return () => window.removeEventListener('keydown', dengar);
+	}, []);
+
+	const temuan = useMemo(() => (a ? temuanOtomatis(a) : []), [a]);
+	const progres = a ? hitungProgres(a) : null;
+	const indeksKini = antrean.findIndex((b) => b.id === pilihId);
+	const adaSaringWilayah = saring.kecamatan_id.length > 0 || saring.desa_id.length > 0 || Boolean(saring.search);
+	const itemAktif = (a?.item_verifikasi || []).find((i) => i.key === aktifKey);
+	const pembanding = itemAktif?.jenis === 'berkas' ? [aktifKey] : BERKAS_PEMBANDING[aktifKey] || [];
+	const pilihanKecamatan = kecamatanList.map((k) => ({ value: String(k.id || k.id_kecamatan), label: k.nama || k.name }));
+
+	return (
+		<div className="space-y-4">
+			{/* ---------- Saringan antrean ---------- */}
+			<section className="rounded-2xl border border-slate-200 bg-white p-3 shadow-sm">
+				<div className="flex flex-col gap-3 xl:flex-row xl:items-end">
+					<div className="flex gap-1 rounded-xl bg-slate-100 p-1">
+						{PILIHAN_ANTREAN.map((pilihan) => {
+							const aktif = (saring.verifikasi || '') === pilihan.value;
+							const jumlah = stats?.verifikasi?.[pilihan.kunciStat];
+							return (
+								<button
+									key={pilihan.label}
+									type="button"
+									onClick={() => ubahSaring('verifikasi', pilihan.value)}
+									className={`flex flex-1 items-center justify-center gap-1.5 whitespace-nowrap rounded-lg px-3 py-2 text-xs font-semibold transition-colors sm:text-sm ${
+										aktif ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-900'
+									}`}
+								>
+									{pilihan.label}
+									{!adaSaringWilayah && jumlah !== undefined && (
+										<span className={`rounded-full px-1.5 text-[11px] tabular-nums ${aktif ? 'bg-slate-900 text-white' : 'bg-slate-200 text-slate-600'}`}>{fmt(jumlah)}</span>
+									)}
+								</button>
+							);
+						})}
+					</div>
+					<div className="grid flex-1 grid-cols-1 gap-2 sm:grid-cols-3">
+						<SelectBox
+							multiple
+							label="Kecamatan"
+							value={saring.kecamatan_id}
+							onChange={(nilai) => ubahSaring('kecamatan_id', nilai)}
+							placeholder="Semua Kecamatan"
+							emptyText="Kecamatan tidak ditemukan"
+							options={[{ value: '', label: 'Semua Kecamatan' }, ...pilihanKecamatan]}
+						/>
+						<SelectBox
+							multiple
+							label="Desa"
+							value={saring.desa_id}
+							onChange={(nilai) => ubahSaring('desa_id', nilai)}
+							disabled={!saring.kecamatan_id.length}
+							placeholder={saring.kecamatan_id.length ? 'Semua Desa' : 'Pilih kecamatan dulu'}
+							emptyText="Desa tidak ditemukan"
+							options={[{ value: '', label: 'Semua Desa' }, ...pilihanDesa]}
+						/>
+						<label className="block">
+							<span className="mb-1.5 block text-[11px] font-semibold uppercase tracking-[0.12em] text-brand-600">Cari</span>
+							<div className="relative">
+								<Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+								<input
+									value={searchInput}
+									onChange={(event) => setSearchInput(event.target.value)}
+									placeholder="Nama atau jabatan"
+									className="h-11 w-full rounded-xl border border-slate-200 bg-white pl-9 pr-3 text-sm text-slate-900 shadow-sm placeholder:text-slate-400 focus:border-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-900/10"
+								/>
+							</div>
+						</label>
+					</div>
+				</div>
+			</section>
+
+			<div className="grid gap-4 lg:grid-cols-[17rem_minmax(0,1fr)] xl:grid-cols-[17rem_minmax(0,1fr)_minmax(0,1.05fr)]">
+				{/* ---------- Antrean ---------- */}
+				<aside className="flex max-h-80 flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm lg:sticky lg:top-4 lg:row-span-2 lg:max-h-[calc(100vh-2rem)] lg:self-start">
+					<div className="flex shrink-0 items-center justify-between gap-2 border-b border-slate-100 px-4 py-3">
+						<div>
+							<p className="text-sm font-semibold text-slate-900">Antrean</p>
+							<p className="text-[11px] text-slate-500">
+								{memuatAntrean && !antrean.length ? 'Memuat…' : `${fmt(meta.totalItems)} orang${indeksKini >= 0 ? ` · ke-${indeksKini + 1}` : ''}`}
+							</p>
+						</div>
+						{diputusSesi > 0 && (
+							<span className="rounded-full bg-emerald-50 px-2 py-1 text-[11px] font-semibold text-emerald-700 ring-1 ring-emerald-200" title="Orang yang tuntas diputus sejak meja ini dibuka">
+								{diputusSesi} tuntas
+							</span>
+						)}
+					</div>
+					<div className="min-h-0 flex-1 overflow-y-auto">
+						{memuatAntrean && !antrean.length ? (
+							<TableSkeleton rows={6} />
+						) : !antrean.length ? (
+							<div className="px-5 py-12 text-center">
+								<CheckCircle2 className="mx-auto h-8 w-8 text-emerald-400" />
+								<p className="mt-2 text-sm font-medium text-slate-700">Antrean kosong</p>
+								<p className="mt-1 text-xs text-slate-500">Tidak ada aparatur yang cocok dengan saringan ini.</p>
+							</div>
+						) : (
+							<ul className="divide-y divide-slate-100">
+								{antrean.map((b, i) => (
+									<li key={b.id} ref={(el) => { simpulAntrean.current[b.id] = el; }}>
+										<button
+											type="button"
+											onClick={() => setPilihId(b.id)}
+											className={`flex w-full items-start gap-2.5 px-3 py-2.5 text-left transition-colors ${
+												b.id === pilihId ? 'bg-slate-900 text-white' : 'hover:bg-slate-50'
+											}`}
+										>
+											<span className="mt-2.5 w-5 shrink-0 text-right text-[10px] tabular-nums text-slate-400">{i + 1}</span>
+											<Avatar person={b} className="h-9 w-9 text-xs" />
+											<span className="min-w-0 flex-1">
+												<span className={`block truncate text-sm font-medium ${b.id === pilihId ? 'text-white' : 'text-slate-900'}`}>{b.nama_lengkap}</span>
+												<span className={`block truncate text-[11px] ${b.id === pilihId ? 'text-slate-300' : 'text-slate-500'}`}>
+													{b.jabatan} · {b.desas?.nama || '-'}
+												</span>
+												<span className="mt-1 block">
+													<ProgresVerifikasi aparatur={b} ringkas />
+												</span>
+											</span>
+										</button>
+									</li>
+								))}
+							</ul>
+						)}
+						{meta.page < meta.totalPages && antrean.length > 0 && (
+							<button
+								type="button"
+								onClick={() => muatAntrean(meta.page + 1)}
+								disabled={memuatAntrean}
+								className="flex w-full items-center justify-center gap-2 border-t border-slate-100 py-3 text-xs font-semibold text-slate-600 hover:bg-slate-50 disabled:opacity-60"
+							>
+								{memuatAntrean ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <ChevronDown className="h-3.5 w-3.5" />}
+								Muat {Math.min(30, meta.totalItems - antrean.length)} berikutnya
+							</button>
+						)}
+					</div>
+				</aside>
+
+				{/* ---------- Pemeriksaan ---------- */}
+				<section className="min-w-0">
+					{!a ? (
+						<div className="flex h-64 items-center justify-center rounded-2xl border border-dashed border-slate-300 bg-white text-sm text-slate-500">
+							{memuatDetail || memuatAntrean ? <Loader2 className="h-5 w-5 animate-spin text-slate-400" /> : 'Pilih aparatur di antrean untuk mulai memeriksa.'}
+						</div>
+					) : (
+						<div className={`space-y-3 transition-opacity ${memuatDetail ? 'opacity-50' : ''}`}>
+							{/* Kepala: siapa, di mana, dan seberapa jauh */}
+							<div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+								<div className="flex items-start gap-3">
+									<button
+										type="button"
+										onClick={() => a.file_pas_foto && setKunciBerkas('file_pas_foto')}
+										title={a.file_pas_foto ? 'Tampilkan pas foto di panel berkas' : undefined}
+									>
+										<Avatar person={a} className="h-14 w-14 text-base" />
+									</button>
+									<div className="min-w-0 flex-1">
+										<div className="flex flex-wrap items-center gap-2">
+											<h3 className="truncate text-lg font-bold text-slate-900">{a.nama_lengkap}</h3>
+											<BadgeVerifikasi status={a.status_verifikasi} />
+										</div>
+										<p className="truncate text-sm text-slate-600">{a.jabatan}</p>
+										<p className="mt-0.5 flex flex-wrap items-center gap-x-2 text-xs text-slate-500">
+											<span className="inline-flex items-center gap-1">
+												<MapPin className="h-3 w-3" />
+												{a.desas?.nama || '-'} · Kec. {a.desas?.kecamatans?.nama || '-'}
+											</span>
+											{a.nipd && <span className="font-mono text-slate-700">NIPD {formatNipd(a.nipd)}</span>}
+										</p>
+									</div>
+									<div className="flex shrink-0 items-center gap-1">
+										<button
+											type="button"
+											onClick={() => keOrang(-1)}
+											disabled={indeksKini <= 0}
+											title="Orang sebelumnya (←)"
+											className="rounded-lg border border-slate-200 p-2 text-slate-600 hover:bg-slate-50 disabled:opacity-30"
+										>
+											<ChevronLeft className="h-4 w-4" />
+										</button>
+										<button
+											type="button"
+											onClick={() => keOrang(1)}
+											title="Orang berikutnya (→)"
+											className="rounded-lg border border-slate-200 p-2 text-slate-600 hover:bg-slate-50"
+										>
+											<ChevronRight className="h-4 w-4" />
+										</button>
+									</div>
+								</div>
+
+								{progres && (
+									<div className="mt-3">
+										<div className="flex items-center justify-between text-xs">
+											<span className="font-medium text-slate-600">
+												{progres.diperiksa} dari {progres.total} item diperiksa
+												{progres.tidak_sesuai > 0 && <span className="text-rose-600"> · {progres.tidak_sesuai} tidak sesuai</span>}
+											</span>
+											<span className="tabular-nums text-slate-400">{progres.total ? Math.round((progres.diperiksa / progres.total) * 100) : 0}%</span>
+										</div>
+										<div className="mt-1.5 flex h-1.5 gap-0.5 overflow-hidden rounded-full">
+											{itemDiperiksa(a).map((item) => {
+												const s = statusItem(a, item.key);
+												return (
+													<span
+														key={item.key}
+														className={`flex-1 ${s === 'sesuai' ? 'bg-emerald-500' : s === 'tidak_sesuai' ? 'bg-rose-500' : item.key === aktifKey ? 'bg-slate-500' : 'bg-slate-200'}`}
+													/>
+												);
+											})}
+										</div>
+									</div>
+								)}
+
+								<div className="mt-3 flex flex-wrap items-center gap-2">
+									<button
+										type="button"
+										onClick={semuaSisaSesuai}
+										disabled={Boolean(sibukKey) || !progres || progres.diperiksa === progres.total}
+										title="Tandai semua item yang belum diputus sebagai sesuai (A)"
+										className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-600 px-3 py-2 text-xs font-semibold text-white transition-colors hover:bg-emerald-700 disabled:opacity-50"
+									>
+										{sibukKey === 'semua' ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <ListChecks className="h-3.5 w-3.5" />}
+										Semua sisa sesuai
+									</button>
+									{onUbah && (
+										<button
+											type="button"
+											onClick={() => onUbah(a.id)}
+											className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50"
+										>
+											<Pencil className="h-3.5 w-3.5" />
+											Betulkan data
+										</button>
+									)}
+									<button
+										type="button"
+										onClick={() => navigate(`${detailBasePath}/${a.id}`)}
+										className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50"
+									>
+										<Eye className="h-3.5 w-3.5" />
+										Detail lengkap
+									</button>
+									<label className="ml-auto inline-flex cursor-pointer items-center gap-2 text-xs text-slate-600" title="Setelah semua item diputus, pindah sendiri ke orang berikutnya">
+										<input type="checkbox" checked={lanjutOtomatis} onChange={(event) => setLanjutOtomatis(event.target.checked)} className="h-3.5 w-3.5 rounded border-slate-300" />
+										Lanjut otomatis
+									</label>
+								</div>
+							</div>
+
+							{/* Temuan otomatis */}
+							{temuan.length > 0 && (
+								<div className="space-y-1.5">
+									{temuan.map((t) => {
+										const nada = NADA_TEMUAN[t.nada];
+										return (
+											<div key={t.judul} className={`flex items-start gap-2.5 rounded-xl border px-3 py-2 text-xs ${nada.kotak}`}>
+												<nada.ikon className={`mt-0.5 h-4 w-4 shrink-0 ${nada.warna}`} />
+												<div className="min-w-0 flex-1">
+													<p className="font-semibold">{t.judul}</p>
+													{t.teks && <p className="mt-0.5 whitespace-pre-line opacity-90">{t.teks}</p>}
+												</div>
+												{t.aksi === 'konfirmasi_tanggal' && onUbah && (
+													<button
+														type="button"
+														onClick={konfirmasiTanggalLahir}
+														disabled={Boolean(sibukKey)}
+														className="shrink-0 rounded-lg bg-white px-2.5 py-1.5 font-semibold text-amber-800 ring-1 ring-amber-300 hover:bg-amber-100 disabled:opacity-60"
+													>
+														{sibukKey === 'tanggal' ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : 'Sesuai KTP'}
+													</button>
+												)}
+											</div>
+										);
+									})}
+								</div>
+							)}
+
+							{/* Daftar item */}
+							<ol className="space-y-2">
+								{(a.item_verifikasi || []).map((item, i) => (
+									<BarisPeriksa
+										key={item.key}
+										simpulRef={(el) => { simpul.current[item.key] = el; }}
+										item={item}
+										nomor={i + 1}
+										aparatur={a}
+										aktif={item.key === aktifKey}
+										sibuk={sibukKey === item.key || sibukKey === 'semua'}
+										menulis={menulis === item.key}
+										alasan={alasan}
+										onFokus={() => {
+											setAktifKey(item.key);
+											if (menulis !== item.key) setMenulis(null);
+										}}
+										onSesuai={() => {
+											setAktifKey(item.key);
+											tandaiSesuai(item.key);
+										}}
+										onTidak={() => mulaiTolak(item.key)}
+										onAlasan={setAlasan}
+										onSimpanAlasan={() => alasan.trim() && putuskan(item.key, 'tidak_sesuai', alasan.trim())}
+										onBatalTulis={() => setMenulis(null)}
+									/>
+								))}
+							</ol>
+
+							{/* Pintasan keyboard */}
+							<div className="hidden rounded-xl border border-slate-200 bg-white px-3 py-2 lg:block">
+								<button
+									type="button"
+									onClick={() => setTampilPintasan((x) => !x)}
+									className="flex w-full items-center gap-2 text-xs font-semibold text-slate-600"
+								>
+									<Keyboard className="h-4 w-4 text-slate-400" />
+									Pintasan keyboard
+									<ChevronDown className={`ml-auto h-3.5 w-3.5 transition-transform ${tampilPintasan ? 'rotate-180' : ''}`} />
+								</button>
+								{tampilPintasan && (
+									<div className="mt-2 flex flex-wrap gap-x-4 gap-y-1.5 text-[11px] text-slate-500">
+										{PINTASAN.map(([tombol, arti]) => (
+											<span key={arti} className="inline-flex items-center gap-1">
+												{tombol.map((t) => <Kbd key={t}>{t}</Kbd>)}
+												<span className="ml-0.5">{arti}</span>
+											</span>
+										))}
+									</div>
+								)}
+							</div>
+						</div>
+					)}
+				</section>
+
+				{/* ---------- Berkas pembanding ---------- */}
+				{a && (
+					<div className="min-w-0 lg:col-start-2 xl:col-start-3 xl:row-start-1">
+						<PenampilBerkas
+							aparatur={a}
+							kunci={kunciBerkas}
+							pembanding={pembanding}
+							zoom={zoom}
+							putar={putar}
+							onPilih={(kunci) => {
+								setKunciBerkas(kunci);
+								setZoom(1);
+								setPutar(0);
+							}}
+							onZoom={setZoom}
+							onPutar={() => setPutar((x) => (x + 90) % 360)}
+							onPerbesar={() => setLayarPenuh(true)}
+						/>
+					</div>
+				)}
+			</div>
+
+			{layarPenuh && kunciBerkas && a?.[kunciBerkas] && (
+				<PratinjauBerkas
+					label={BERKAS.find((b) => b.kunci === kunciBerkas)?.label}
+					nama={a[kunciBerkas]}
+					onTutup={() => setLayarPenuh(false)}
+				/>
+			)}
+		</div>
+	);
+};
+
+// ============================================================
 // Tab: Per Wilayah
 // ============================================================
 // Peta kelengkapan isian: Kecamatan → Desa → aparatur. Pertanyaan yang dijawab
@@ -3588,14 +4890,17 @@ const BarisAparatur = ({ person, nomor, onBuka, onUbah }) => (
 	</div>
 );
 
-const KartuDesa = ({ desa, jenis, terbuka, onToggle, onBuka, onTambah, onUbah }) => {
+const KartuDesa = ({ desa, jenis, terbuka, sorot = false, onToggle, onBuka, onTambah, onUbah }) => {
 	const kosong = desa.aparatur.length === 0;
 	const pimpinan = pimpinanDesa(desa, jenis);
 	const belumVerifikasi = desa.aparatur.length - desa.aparatur.filter((orang) => orang.status_verifikasi === 'terverifikasi').length;
 	const labelPimpinan = jenis === 'bpd' ? 'Ketua BPD' : 'Kepala Desa';
 
 	return (
-		<div className={`overflow-hidden rounded-xl border bg-white ${kosong ? 'border-amber-200' : 'border-slate-200'}`}>
+		<div
+			id={`desa-${desa.id}`}
+			className={`scroll-mt-24 overflow-hidden rounded-xl border bg-white transition-shadow ${kosong ? 'border-amber-200' : 'border-slate-200'} ${sorot ? 'ring-2 ring-sky-400 ring-offset-1' : ''}`}
+		>
 			<div className="flex items-center gap-2 px-3 py-2.5">
 				<button
 					type="button"
@@ -3684,14 +4989,7 @@ const WilayahTab = ({ refreshKey = 0, jenis, detailBasePath, onLoadingChange, on
 	const navigate = useNavigate();
 	// Orang yang dibuka diingat, supaya saat kembali dari detail baris itu
 	// digulir ke tengah layar di dalam desanya yang masih terbuka.
-	const bukaDetail = (idAparatur) => {
-		try {
-			sessionStorage.setItem(KUNCI_FOKUS, String(idAparatur));
-		} catch {
-			/* abaikan */
-		}
-		navigate(`${detailBasePath}/${idAparatur}`);
-	};
+	const bukaDetail = (idAparatur) => navigate(`${detailBasePath}/${idAparatur}`);
 	const sesi = `aparatur-wilayah:${jenis || 'semua'}`;
 	const [loading, setLoading] = useState(true);
 	const [data, setData] = useState([]);
@@ -3700,18 +4998,33 @@ const WilayahTab = ({ refreshKey = 0, jenis, detailBasePath, onLoadingChange, on
 	const [kecamatanTerbuka, setKecamatanTerbuka] = useIngatSesi(`${sesi}:kecamatan`, []);
 	const [desaTerbuka, setDesaTerbuka] = useIngatSesi(`${sesi}:desa`, []);
 
+	// Kembali dari detail: kecamatan & desa orang itu dibuka, disorot, dan
+	// digulir ke tengah. Desanya tetap tampil walau saringan "belum verifikasi"
+	// akan menyembunyikannya — justru setelah diverifikasi ia lolos dari saringan.
+	const [desaFokus, setDesaFokus] = useState(null);
+	const [gulirKe, setGulirKe] = useState(null);
 	useEffect(() => {
 		if (loading) return;
-		let id = null;
-		try {
-			id = sessionStorage.getItem(KUNCI_FOKUS);
-			sessionStorage.removeItem(KUNCI_FOKUS);
-		} catch {
-			/* abaikan */
-		}
-		if (!id) return;
-		requestAnimationFrame(() => document.getElementById(`aparatur-${id}`)?.scrollIntoView({ block: 'center' }));
+		const fokus = ambilFokus();
+		if (!fokus) return;
+		const tambahkan = (nilai) => (sebelumnya) => (!nilai || sebelumnya.includes(nilai) ? sebelumnya : [...sebelumnya, nilai]);
+		setKecamatanTerbuka(tambahkan(fokus.kecamatan_id));
+		setDesaTerbuka(tambahkan(fokus.desa_id));
+		setDesaFokus(fokus.desa_id || null);
+		setGulirKe(fokus);
+		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, [loading]);
+	useEffect(() => {
+		if (!gulirKe) return undefined;
+		const bingkai = requestAnimationFrame(() => {
+			gulirKeAparatur(gulirKe);
+			setGulirKe(null);
+		});
+		return () => cancelAnimationFrame(bingkai);
+	}, [gulirKe]);
+	// Sorotan dilepas begitu pengguna menyaring ulang.
+	const ubahCari = (nilai) => { setDesaFokus(null); setCari(nilai); };
+	const ubahSaringan = (nilai) => { setDesaFokus(null); setSaringan(nilai); };
 
 	useEffect(() => {
 		let batal = false;
@@ -3751,6 +5064,7 @@ const WilayahTab = ({ refreshKey = 0, jenis, detailBasePath, onLoadingChange, on
 	const hasil = useMemo(() => {
 		const cocok = (teks) => String(teks || '').toLowerCase().includes(kata);
 		const lolosSaringan = (desa) => {
+			if (desa.id === desaFokus) return true;
 			if (saringan === 'kosong') return desa.aparatur.length === 0;
 			if (saringan === 'belum-verifikasi') return desa.aparatur.some((orang) => orang.status_verifikasi !== 'terverifikasi');
 			return true;
@@ -3769,7 +5083,7 @@ const WilayahTab = ({ refreshKey = 0, jenis, detailBasePath, onLoadingChange, on
 				return desa.length ? { ...kecamatan, desa } : null;
 			})
 			.filter(Boolean);
-	}, [data, kata, saringan]);
+	}, [data, kata, saringan, desaFokus]);
 
 	// Sedang mencari = semua yang lolos saring dibuka; kalau tidak, hasilnya
 	// cuma tumpukan baris tertutup yang harus diklik satu per satu.
@@ -3812,7 +5126,7 @@ const WilayahTab = ({ refreshKey = 0, jenis, detailBasePath, onLoadingChange, on
 						<Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
 						<input
 							value={cari}
-							onChange={(event) => setCari(event.target.value)}
+							onChange={(event) => ubahCari(event.target.value)}
 							placeholder="Cari nama, jabatan, desa, atau kecamatan…"
 							className="w-full rounded-xl border border-slate-200 py-2.5 pl-10 pr-3 text-sm text-slate-900 placeholder:text-slate-400 focus:border-slate-400 focus:outline-none"
 						/>
@@ -3822,7 +5136,7 @@ const WilayahTab = ({ refreshKey = 0, jenis, detailBasePath, onLoadingChange, on
 							<button
 								key={item.id}
 								type="button"
-								onClick={() => setSaringan(item.id)}
+								onClick={() => ubahSaringan(item.id)}
 								className={`rounded-lg px-3 py-1.5 text-xs font-medium transition-colors ${
 									saringan === item.id ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-900'
 								}`}
@@ -3898,6 +5212,7 @@ const WilayahTab = ({ refreshKey = 0, jenis, detailBasePath, onLoadingChange, on
 												desa={desa}
 												jenis={jenis}
 												terbuka={sedangMencari || desaTerbuka.includes(desa.id)}
+												sorot={desa.id === desaFokus}
 												onToggle={() => toggleDesa(desa.id)}
 												onBuka={bukaDetail}
 												onTambah={
@@ -4262,6 +5577,14 @@ const TAB_DEFINITIONS = [
 		desc: 'Kelengkapan isian tiap kecamatan dan desa, termasuk desa yang belum terisi.',
 	},
 	{
+		id: 'verifikasi',
+		label: 'Meja Verifikasi',
+		icon: BadgeCheck,
+		desc: 'Periksa data dan berkasnya berdampingan, satu per satu dari antrean.',
+		// Memutus verifikasi hanya untuk staf Bidang Pemdes.
+		khususPengelola: true,
+	},
+	{
 		id: 'database',
 		label: 'Tabel & Statistik',
 		icon: Database,
@@ -4283,7 +5606,7 @@ const AparaturDesaPage = ({
 	// Halaman ini dipasang di beberapa layout dengan awalan URL berbeda, jadi
 	// alamat halaman detailnya ikut diantar dari rute — bukan ditebak di sini.
 	detailBasePath = '/bidang/pemdes/aparatur',
-	allowedTabs = ['wilayah', 'database', 'akun'],
+	allowedTabs = ['wilayah', 'verifikasi', 'database', 'akun'],
 	initialTab,
 }) => {
 	const { user } = useAuth();
@@ -4312,6 +5635,10 @@ const AparaturDesaPage = ({
 	// daftar yang sama. Satu panggilan untuk dua pemakai.
 	const [stats, setStats] = useState(null);
 	const [statsLoading, setStatsLoading] = useState(true);
+	// Keputusan di Meja Verifikasi mengubah capaian, tapi tidak perlu memuat
+	// ulang antrean — jadi statistik punya pemicunya sendiri.
+	const [statsKey, setStatsKey] = useState(0);
+	const muatUlangStats = useCallback(() => setStatsKey((key) => key + 1), []);
 
 	useEffect(() => {
 		let batal = false;
@@ -4321,7 +5648,19 @@ const AparaturDesaPage = ({
 			.catch((error) => console.error('Failed to fetch stats:', error))
 			.finally(() => { if (!batal) setStatsLoading(false); });
 		return () => { batal = true; };
-	}, [jenis, refreshKey]);
+	}, [jenis, refreshKey, statsKey]);
+
+	// Saringan meja dipegang di sini supaya kartu capaian bisa membuka meja
+	// langsung untuk satu kecamatan.
+	const [saringMeja, setSaringMeja] = useIngatSesi(`aparatur-meja:${jenis || 'semua'}:saring`, SARING_MEJA_AWAL);
+	const bukaMeja = useCallback(
+		(idKecamatan) => {
+			setSaringMeja({ ...SARING_MEJA_AWAL, kecamatan_id: idKecamatan ? [String(idKecamatan)] : [] });
+			setActiveTab('verifikasi');
+		},
+		[setSaringMeja, setActiveTab]
+	);
+	const mejaTersedia = tabs.some((tab) => tab.id === 'verifikasi');
 
 	const handleUpdated = useCallback((date) => setLastUpdated(date), []);
 	const handleLoading = useCallback((value) => setBusy(value), []);
@@ -4437,9 +5776,9 @@ const AparaturDesaPage = ({
 
 			{/* Capaian verifikasi berlaku untuk kedua mode baca, jadi berdiri di
 			    luar tab — tapi tidak di tab akun, yang urusannya lain. */}
-			{activeTab !== 'akun' && (
+			{activeTab !== 'akun' && activeTab !== 'verifikasi' && (
 				<div className="mb-4">
-					<CapaianVerifikasiAparatur stats={stats} loading={statsLoading} onBuka={bukaPopup} />
+					<CapaianVerifikasiAparatur stats={stats} loading={statsLoading} onBuka={bukaPopup} onMulai={mejaTersedia ? bukaMeja : undefined} />
 				</div>
 			)}
 
@@ -4474,6 +5813,22 @@ const AparaturDesaPage = ({
 							/>
 						)}
 
+						{activeTab === 'verifikasi' && (
+							<MejaVerifikasi
+								refreshKey={refreshKey}
+								jenis={jenis}
+								stats={stats}
+								saring={saringMeja}
+								setSaring={setSaringMeja}
+								detailBasePath={detailBasePath}
+								jeda={Boolean(panel || popup || memuatUbah)}
+								onLoadingChange={handleLoading}
+								onUpdated={handleUpdated}
+								onUbah={bolehKelola ? bukaUbah : undefined}
+								onBerubah={muatUlangStats}
+							/>
+						)}
+
 						{activeTab === 'database' && (
 							<DatabaseTab
 								refreshKey={refreshKey}
@@ -4489,7 +5844,7 @@ const AparaturDesaPage = ({
 						)}
 					</div>
 
-					<PantauanMelayang jenis={jenis} detailBasePath={detailBasePath} />
+					{activeTab !== 'verifikasi' && <PantauanMelayang jenis={jenis} detailBasePath={detailBasePath} />}
 				</>
 			)}
 
