@@ -54,17 +54,22 @@ const BumdesEksporPanel = ({ ids = [], total = 0, adaFilter = false }) => {
   const [memuat, setMemuat] = useState(false);
   const [galat, setGalat] = useState(null);
   const [sibuk, setSibuk] = useState(null); // 'data' | 'berkas' | null
+  // 'semua' | 'baru' | 'lama' — data baru = pernah diisi/diubah akun desa lewat
+  // web; data lama = impor/arsip yang belum pernah disentuh desa.
+  const [sumber, setSumber] = useState('semua');
 
   const tersaring = lingkup === 'filter';
   const paramIds = tersaring ? ids.join(',') : '';
-  const jumlahBaris = tersaring ? ids.length : total;
+  const paramSumber = sumber === 'semua' ? '' : sumber;
+  const jumlahBaris = paramSumber ? ringkasan?.jumlah_bumdes ?? 0 : tersaring ? ids.length : total;
+  const perSumber = ringkasan?.jumlah_per_sumber;
 
   const ambilRingkasan = useCallback(async () => {
     setMemuat(true);
     setGalat(null);
     try {
       const res = await api.get('/bumdes/ekspor/ringkasan', {
-        params: paramIds ? { ids: paramIds } : {},
+        params: { ...(paramIds ? { ids: paramIds } : {}), ...(paramSumber ? { sumber: paramSumber } : {}) },
       });
       setRingkasan(res.data?.data || null);
     } catch (err) {
@@ -73,7 +78,7 @@ const BumdesEksporPanel = ({ ids = [], total = 0, adaFilter = false }) => {
     } finally {
       setMemuat(false);
     }
-  }, [paramIds]);
+  }, [paramIds, paramSumber]);
 
   useEffect(() => {
     if (!terbuka) return;
@@ -96,6 +101,7 @@ const BumdesEksporPanel = ({ ids = [], total = 0, adaFilter = false }) => {
       const res = await api.post('/bumdes/ekspor/tiket', {
         jenis,
         ...(paramIds ? { ids: paramIds } : {}),
+        ...(paramSumber ? { sumber: paramSumber } : {}),
       });
       const tiket = res.data?.data?.tiket;
       if (!tiket) throw new Error('Server tidak mengembalikan tiket unduhan.');
@@ -196,6 +202,41 @@ const BumdesEksporPanel = ({ ids = [], total = 0, adaFilter = false }) => {
                 </div>
               </fieldset>
 
+              {/* Sumber data: isian desa lewat web vs data lama hasil impor */}
+              <fieldset className="mt-4">
+                <legend className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">
+                  Sumber data
+                </legend>
+                <div className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-3">
+                  {[
+                    { nilai: 'semua', judul: 'Semua', angka: perSumber ? perSumber.baru + perSumber.lama : null, ket: 'Excel dipisah: lembar data baru & lembar data lama.' },
+                    { nilai: 'baru', judul: 'Data baru', angka: perSumber?.baru, ket: 'Pernah diisi/diubah akun desa lewat web.' },
+                    { nilai: 'lama', judul: 'Data lama', angka: perSumber?.lama, ket: 'Impor/arsip, belum pernah diisi desa.' },
+                  ].map((o) => (
+                    <label
+                      key={o.nilai}
+                      className={`flex cursor-pointer flex-col gap-0.5 rounded-xl border p-3 transition-colors ${
+                        sumber === o.nilai ? 'border-slate-900 bg-slate-50' : 'border-slate-200 hover:bg-slate-50'
+                      }`}
+                    >
+                      <span className="flex items-center gap-2">
+                        <input
+                          type="radio"
+                          name="sumber-ekspor-bumdes"
+                          value={o.nilai}
+                          checked={sumber === o.nilai}
+                          onChange={() => setSumber(o.nilai)}
+                          className="h-4 w-4 accent-slate-900"
+                        />
+                        <span className="text-sm font-medium text-slate-900">{o.judul}</span>
+                        {o.angka != null && <span className="ml-auto text-xs font-semibold tabular-nums text-slate-500">{nf.format(o.angka)}</span>}
+                      </span>
+                      <span className="text-[11px] leading-4 text-slate-500">{o.ket}</span>
+                    </label>
+                  ))}
+                </div>
+              </fieldset>
+
               {/* Ringkasan isi */}
               <div className="mt-4 rounded-xl border border-slate-200 p-3.5">
                 <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">
@@ -240,7 +281,9 @@ const BumdesEksporPanel = ({ ids = [], total = 0, adaFilter = false }) => {
                     {sibuk === 'data' ? <Loader2 className="h-4 w-4 animate-spin" /> : <FileSpreadsheet className="h-4 w-4" />}
                   </span>
                   <span className="min-w-0">
-                    <span className="block text-sm font-semibold text-slate-900">Ekspor Seluruh Data (Excel)</span>
+                    <span className="block text-sm font-semibold text-slate-900">
+                      {sumber === 'baru' ? 'Ekspor Data Baru (Excel)' : sumber === 'lama' ? 'Ekspor Data Lama (Excel)' : 'Ekspor Seluruh Data (Excel)'}
+                    </span>
                     <span className="block text-xs leading-5 text-slate-500">
                       Semua kolom tabel BUM Desa, ditambah lembar terpisah untuk permodalan, aset,
                       omset &amp; laba, PADes, kemitraan, program, LPJ, dan ketahanan pangan per tahun.
