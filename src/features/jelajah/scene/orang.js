@@ -129,6 +129,104 @@ function motifBaju(p, u) {
 				bentuk(new BoxGeometry(0.1, 0.06, 0.03), gelapkan(p.baju, 0.7), [-0.07, 1.47 + u, 0.1], [0, 0, -0.5]),
 			);
 			break;
+		case "grafis": {
+			// sablon dada: bidang warna + lingkaran motif + garis bawah; sablon besar di punggung
+			const { cetak = "#facc15", aksen = "#f8fafc" } = p.motifWarna || {};
+			d.push(
+				bentuk(new BoxGeometry(0.17, 0.15, 0.01), cetak, [0, 1.29 + u, depan]),
+				bentuk(new CylinderGeometry(0.045, 0.045, 0.012, 12), aksen, [0, 1.3 + u, depan + 0.006], [Math.PI / 2, 0, 0]),
+				bentuk(new BoxGeometry(0.012, 0.11, 0.014), cetak, [0, 1.3 + u, depan + 0.012], [0, 0, 0.35]),
+				bentuk(new BoxGeometry(0.13, 0.015, 0.012), aksen, [0, 1.195 + u, depan + 0.002]),
+				bentuk(new BoxGeometry(0.22, 0.2, 0.01), cetak, [0, 1.27 + u, -depan]),
+			);
+			break;
+		}
+		case "garis": {
+			const { aksen = "#1e3a8a" } = p.motifWarna || {};
+			for (let r = 0; r < 6; r++) d.push(bentuk(new CylinderGeometry(0.209 - r * 0.004, 0.207 - r * 0.004, 0.028, 12, 1, true), aksen, [0, 0.99 + r * 0.075 + u, 0], [0, 0, 0], [1, 1, 0.64]));
+			break;
+		}
+		case "flanel": {
+			// kotak-kotak: pita tegak & mendatar gelap, depan & belakang
+			const { aksen = "#1f2937" } = p.motifWarna || {};
+			for (const z of [depan, -depan]) {
+				for (const x of [-0.12, -0.04, 0.04, 0.12]) d.push(bentuk(new BoxGeometry(0.025, 0.5, 0.006), aksen, [x, 1.19 + u, z]));
+				for (let r = 0; r < 5; r++) d.push(bentuk(new BoxGeometry(0.3, 0.022, 0.008), aksen, [0, 0.99 + r * 0.1 + u, z]));
+			}
+			d.push(bentuk(new BoxGeometry(0.012, 0.42, 0.012), gelapkan(p.baju, 0.6), [0, 1.18 + u, depan + 0.004]));
+			break;
+		}
+		case "varsity": {
+			const { aksen = "#f8fafc", cetak = "#facc15" } = p.motifWarna || {};
+			d.push(
+				bentuk(new CylinderGeometry(0.183, 0.18, 0.06, 12), aksen, [0, 0.96 + u, 0], [0, 0, 0], [1, 1, 0.66]),
+				bentuk(new CylinderGeometry(0.184, 0.182, 0.015, 12), p.baju, [0, 0.965 + u, 0], [0, 0, 0], [1, 1, 0.67]),
+				bentuk(new TorusGeometry(0.075, 0.016, 4, 14), aksen, [0, 1.5 + u, 0.01], [Math.PI / 2, 0, 0], [1, 1, 0.8]),
+				// huruf "B" di dada kiri: tiang + dua lengkung
+				bentuk(new BoxGeometry(0.018, 0.1, 0.012), cetak, [-0.115, 1.33 + u, depan]),
+				bentuk(new TorusGeometry(0.025, 0.009, 4, 10, Math.PI), cetak, [-0.106, 1.355 + u, depan], [0, 0, -Math.PI / 2]),
+				bentuk(new TorusGeometry(0.027, 0.009, 4, 10, Math.PI), cetak, [-0.106, 1.305 + u, depan], [0, 0, -Math.PI / 2]),
+				...[1.36, 1.26, 1.16, 1.06].map((y) => bentuk(new SphereGeometry(0.01, 6, 4), aksen, [0.01, y + u, depan + 0.004])),
+			);
+			break;
+		}
+		case "bomber": {
+			const { aksen = "#f97316" } = p.motifWarna || {};
+			d.push(
+				bentuk(new TorusGeometry(0.08, 0.02, 4, 14), aksen, [0, 1.5 + u, 0.01], [Math.PI / 2, 0, 0], [1, 1, 0.8]),
+				bentuk(new CylinderGeometry(0.183, 0.18, 0.07, 12), gelapkan(p.baju, 0.7), [0, 0.97 + u, 0], [0, 0, 0], [1, 1, 0.66]),
+				bentuk(new BoxGeometry(0.008, 0.46, 0.016), "#d4d4d8", [0, 1.2 + u, depan + 0.003]),
+				bentuk(new BoxGeometry(0.07, 0.05, 0.012), gelapkan(p.baju, 0.75), [-0.11, 1.08 + u, depan], [0, 0, 0.25]),
+				bentuk(new BoxGeometry(0.07, 0.05, 0.012), gelapkan(p.baju, 0.75), [0.11, 1.08 + u, depan], [0, 0, -0.25]),
+			);
+			break;
+		}
+		case "tropis": {
+			// daun & bunga bertebaran
+			const { aksen = "#4ade80", cetak = "#f472b6" } = p.motifWarna || {};
+			const titik = [[-0.12, 1.36], [0.06, 1.4], [0.13, 1.24], [-0.05, 1.22], [-0.13, 1.08], [0.08, 1.06], [0.0, 1.32], [-0.08, 1.15]];
+			for (const z of [depan, -depan])
+				titik.forEach(([x, y], i) =>
+					d.push(i % 3 === 2 ? bentuk(new SphereGeometry(0.022, 6, 4), cetak, [x, y + u, z], [0, 0, 0], [1, 1, 0.3]) : bentuk(new BoxGeometry(0.05, 0.022, 0.006), aksen, [x, y + u, z], [0, 0, (i * 1.3) % 3])),
+				);
+			d.push(bentuk(new BoxGeometry(0.1, 0.05, 0.02), p.baju, [0.06, 1.47 + u, 0.1], [0, 0, 0.6]), bentuk(new BoxGeometry(0.1, 0.05, 0.02), p.baju, [-0.06, 1.47 + u, 0.1], [0, 0, -0.6]));
+			break;
+		}
+		case "kujang": {
+			// Batik Bogor: kujang emas berderet + pinggiran
+			const { aksen = "#fbbf24" } = p.motifWarna || {};
+			for (const z of [depan, -depan]) {
+				for (let r = 0; r < 4; r++)
+					[-0.11, -0.035, 0.04, 0.115].forEach((x, c) => {
+						const y = 1.02 + r * 0.11 + (c % 2 ? 0.03 : 0);
+						d.push(bentuk(new BoxGeometry(0.014, 0.06, 0.006), aksen, [x, y + u, z], [0, 0, 0.25]), bentuk(new SphereGeometry(0.012, 6, 4), aksen, [x - 0.012, y + 0.03 + u, z], [0, 0, 0], [1, 1, 0.4]));
+					});
+				d.push(bentuk(new BoxGeometry(0.3, 0.02, 0.006), aksen, [0, 0.96 + u, z]));
+			}
+			break;
+		}
+		case "koko": {
+			const { aksen = "#ca8a04" } = p.motifWarna || {};
+			d.push(
+				bentuk(new TorusGeometry(0.06, 0.012, 4, 14), aksen, [0, 1.52 + u, 0.01], [Math.PI / 2, 0, 0], [1, 1, 0.8]),
+				bentuk(new BoxGeometry(0.05, 0.22, 0.01), aksen, [0, 1.38 + u, depan]),
+				...[1.44, 1.38, 1.32].map((y) => bentuk(new SphereGeometry(0.009, 6, 4), "#f8fafc", [0, y + u, depan + 0.006])),
+				bentuk(new BoxGeometry(0.08, 0.008, 0.008), aksen, [0.085, 1.27 + u, depan]),
+			);
+			break;
+		}
+		case "polo": {
+			const { aksen = "#f8fafc" } = p.motifWarna || {};
+			d.push(
+				bentuk(new BoxGeometry(0.1, 0.05, 0.03), gelapkan(p.baju, 0.85), [0.065, 1.49 + u, 0.095], [0, 0, 0.55]),
+				bentuk(new BoxGeometry(0.1, 0.05, 0.03), gelapkan(p.baju, 0.85), [-0.065, 1.49 + u, 0.095], [0, 0, -0.55]),
+				bentuk(new BoxGeometry(0.03, 0.12, 0.01), gelapkan(p.baju, 0.85), [0, 1.42 + u, depan]),
+				bentuk(new SphereGeometry(0.008, 6, 4), aksen, [0, 1.44 + u, depan + 0.006]),
+				bentuk(new SphereGeometry(0.008, 6, 4), aksen, [0, 1.4 + u, depan + 0.006]),
+				bentuk(new BoxGeometry(0.03, 0.025, 0.008), aksen, [-0.09, 1.34 + u, depan]),
+			);
+			break;
+		}
 		case "jas":
 			d.push(
 				bentuk(new BoxGeometry(0.08, 0.28, 0.012), "#f8fafc", [0, 1.33 + u, depan]),
@@ -169,6 +267,29 @@ function topiGaya(t) {
 				bentuk(new CylinderGeometry(0.116, 0.116, 0.025, 14), "#1c1917", [0, 0.22, -0.005], [0, 0, 0], [1, 1, 0.85]),
 				bentuk(new CylinderGeometry(0.26, 0.26, 0.015, 18), w, [0, 0.205, -0.005]),
 			];
+		case "caping":
+			return [bentuk(new ConeGeometry(0.3, 0.16, 18, 1, true), w, [0, 0.27, -0.005]), bentuk(new TorusGeometry(0.3, 0.008, 4, 20), gelapkan(w, 0.75), [0, 0.19, -0.005], [Math.PI / 2, 0, 0])];
+		case "blangkon":
+			return [
+				bentuk(new CylinderGeometry(0.12, 0.122, 0.085, 16), w, [0, 0.215, -0.005], [0, 0, 0], [1, 1, 0.92]),
+				bentuk(new SphereGeometry(0.045, 8, 6), gelapkan(w, 0.85), [0, 0.18, -0.12], [0, 0, 0], [1.2, 0.9, 1]),
+				bentuk(new BoxGeometry(0.2, 0.012, 0.012), "#fbbf24", [0, 0.19, 0.105]),
+			];
+		case "bandana":
+			return [
+				bentuk(new CylinderGeometry(0.121, 0.123, 0.05, 16, 1, true), w, [0, 0.2, -0.005]),
+				bentuk(new SphereGeometry(0.11, 12, 6, 0, Math.PI * 2, 0, Math.PI * 0.4), w, [0, 0.2, -0.005]),
+				bentuk(new BoxGeometry(0.03, 0.08, 0.02), gelapkan(w, 0.8), [0.03, 0.17, -0.13], [0.3, 0, 0.4]),
+				bentuk(new BoxGeometry(0.03, 0.08, 0.02), gelapkan(w, 0.8), [-0.03, 0.17, -0.13], [0.3, 0, -0.4]),
+			];
+		case "beret":
+			return [bentuk(new SphereGeometry(0.14, 14, 8), w, [0.02, 0.25, -0.01], [0, 0, -0.15], [1, 0.4, 1]), bentuk(new CylinderGeometry(0.008, 0.008, 0.03, 6), gelapkan(w, 0.7), [0.03, 0.31, -0.01])];
+		case "helm":
+			return [
+				bentuk(new SphereGeometry(0.13, 14, 8, 0, Math.PI * 2, 0, Math.PI * 0.5), w, [0, 0.17, -0.005], [0, 0, 0], [1, 1.05, 1.08]),
+				bentuk(new CylinderGeometry(0.15, 0.15, 0.012, 16), w, [0, 0.175, 0.015], [0, 0, 0], [1, 1, 1.15]),
+				bentuk(new BoxGeometry(0.02, 0.03, 0.26), gelapkan(w, 0.85), [0, 0.3, -0.005]),
+			];
 		case "mahkota":
 			return [
 				bentuk(new CylinderGeometry(0.118, 0.12, 0.07, 14, 1, true), w, [0, 0.245, -0.005]),
@@ -185,6 +306,25 @@ function geometriSepatu(p, [x, y, z]) {
 	const s = p.sepatu;
 	if (!s) return [bentuk(new BoxGeometry(0.12, 0.08, 0.25), "#141414", [x, y, z])];
 	if (s.id === "boots") return [bentuk(new BoxGeometry(0.13, 0.2, 0.25), s.warna, [x, y + 0.06, z]), bentuk(new BoxGeometry(0.135, 0.03, 0.26), s.sol, [x, y - 0.03, z])];
+	if (s.id === "hightop")
+		return [
+			bentuk(new BoxGeometry(0.125, 0.15, 0.25), s.warna, [x, y + 0.04, z]),
+			bentuk(new BoxGeometry(0.13, 0.035, 0.26), s.sol, [x, y - 0.028, z]),
+			bentuk(new BoxGeometry(0.128, 0.04, 0.07), s.sol, [x, y - 0.005, z + 0.1]),
+			bentuk(new CylinderGeometry(0.025, 0.025, 0.006, 10), "#f8fafc", [x + 0.064, y + 0.07, z - 0.06], [0, 0, Math.PI / 2]),
+		];
+	if (s.id === "pantofel")
+		return [
+			bentuk(new BoxGeometry(0.115, 0.065, 0.26), s.warna, [x, y + 0.005, z]),
+			bentuk(new BoxGeometry(0.12, 0.02, 0.265), s.sol, [x, y - 0.03, z]),
+			bentuk(new BoxGeometry(0.06, 0.012, 0.02), "#3f3f46", [x, y + 0.04, z + 0.06]),
+		];
+	if (s.id === "slipon")
+		return [
+			bentuk(new BoxGeometry(0.12, 0.065, 0.25), s.warna, [x, y + 0.005, z]),
+			bentuk(new BoxGeometry(0.126, 0.03, 0.26), s.sol, [x, y - 0.028, z]),
+			...[-0.08, -0.02, 0.04, 0.1].map((dz, i) => bentuk(new BoxGeometry(0.122, 0.067, 0.025), i % 2 ? s.warna : "#18181b", [x, y + 0.006, z + dz])),
+		];
 	if (s.id === "sandal")
 		return [
 			bentuk(new BoxGeometry(0.1, 0.05, 0.22), p.kulit, [x, y + 0.005, z]),
@@ -270,6 +410,9 @@ function geometriKaki(p) {
 			? [bentuk(new BoxGeometry(0.14, 0.38, 0.155), celana, [0, -0.19, 0]), bentuk(new BoxGeometry(0.1, 0.44, 0.11), p.kulit, [0, -0.6, 0])]
 			: [bentuk(new BoxGeometry(0.135, 0.8, 0.15), celana, [0, -0.4, 0])];
 	if (m === "training") kaki.push(bentuk(new BoxGeometry(0.14, 0.78, 0.02), "#f8fafc", [0, -0.4, 0]));
+	if (m === "robek") for (const [y, s, w] of [[-0.42, 1, p.kulit], [-0.26, -1, "#e5e7eb"], [-0.5, -1, "#e5e7eb"]]) kaki.push(bentuk(new BoxGeometry(0.06, 0.03, 0.155), w, [s * 0.02, y, 0.002]));
+	if (m === "jogger") kaki.push(bentuk(new BoxGeometry(0.14, 0.06, 0.155), gelapkan(celana, 0.7), [0, -0.77, 0]), bentuk(new BoxGeometry(0.012, 0.78, 0.155), gelapkan(celana, 0.8), [0.068, -0.4, 0]));
+	if (m === "chino") kaki.push(bentuk(new BoxGeometry(0.14, 0.04, 0.155), gelapkan(celana, 0.88), [0, -0.78, 0]));
 	if (m === "cargo") for (const s of [-1, 1]) kaki.push(bentuk(new BoxGeometry(0.012, 0.12, 0.09), gelapkan(celana, 0.8), [s * 0.072, -0.36, 0]));
 	return gabung([...kaki, ...geometriSepatu(p, [0, -0.84, 0.04])]);
 }
