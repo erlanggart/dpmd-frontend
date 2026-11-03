@@ -8,7 +8,7 @@ import Gabung from "./Gabung";
 import ModelIkan from "./ModelIkan";
 import Papan from "./Papan";
 import Tokoh from "./Tokoh";
-import { AIR_KOLAM_Y, BANGKU_KOLAM, BIBIR_KOLAM_Y, PAPAN_JUARA_KOLAM, KOLAM_MONSTER as K, LOKET_KOLAM as L, PAGAR_KOLAM as P, TEBAL_DINDING_KOLAM as T, diAirKolam } from "./kolamMonsterData";
+import { AIR_KOLAM_Y, BANGKU_KOLAM, BANGKU_TAMU_KOLAM, BIBIR_KOLAM_Y, PAPAN_JUARA_KOLAM, KOLAM_MONSTER as K, LOKET_KOLAM as L, PAGAR_KOLAM as P, TEBAL_DINDING_KOLAM as T, diAirKolam } from "./kolamMonsterData";
 import { suasana } from "./suasana";
 
 // Kolam Monster DPMD: kolam beton berbayar di sisi barat kantor. Dinding batu setinggi
@@ -148,6 +148,27 @@ function Bangunan() {
 						<cylinderGeometry args={[0.025, 0.025, 2.2, 6]} />
 						<meshStandardMaterial color="#d1d5db" metalness={0.5} />
 					</mesh>
+				</group>
+			))}
+			{/* bangku pancing tamu + ember umpan */}
+			{BANGKU_TAMU_KOLAM.map((b, i) => (
+				<group key={`t${i}`} position={[b.x, 0, b.z]} rotation-y={b.rot}>
+					<mesh position={[0, 0.42, -0.05]}>
+						<boxGeometry args={[0.42, 0.05, 0.36]} />
+						<meshStandardMaterial color={["#2563eb", "#16a34a", "#dc2626", "#f59e0b"][i % 4]} />
+					</mesh>
+					{[-1, 1].map((s) => (
+						<mesh key={s} position={[s * 0.16, 0.2, -0.05]}>
+							<boxGeometry args={[0.04, 0.4, 0.3]} />
+							<meshStandardMaterial color="#374151" />
+						</mesh>
+					))}
+					{i % 2 === 0 && (
+						<mesh position={[0.42, 0.13, 0.05]}>
+							<cylinderGeometry args={[0.12, 0.1, 0.26, 10]} />
+							<meshStandardMaterial color="#e5e7eb" />
+						</mesh>
+					)}
 				</group>
 			))}
 			{/* papan juara: kaki */}

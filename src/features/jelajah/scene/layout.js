@@ -2,7 +2,7 @@ import { AREA_LAIN, LOBI, RUANGAN, TINGGI_LANTAI } from "../kantorConfig";
 import { diKawasan, tabrakKawasan } from "./kawasanBantu";
 import { KURSI_BIOSKOP_DASAR, KURSI_FC_DASAR, KURSI_KOPI_DASAR, KURSI_MCD_DASAR, SUPERMARKET_CCM, dalamLahanCcm, malAktif, tinggiMal, yLantaiMal } from "./gedungKhusus";
 import { AIR_Y, DEK_Y, DERMAGA, KIOS_TOKO_PANCING, dermagaDi, diSitu, jarakKeTepi, keDuniaDermaga } from "./situ";
-import { PENGHALANG_KOLAM } from "./kolamMonsterData";
+import { BANGKU_TAMU_KOLAM, PENGHALANG_KOLAM } from "./kolamMonsterData";
 import { KURSI_PASAR_DASAR, KURSI_PASAR_NPC, PENGHALANG_PASAR } from "./pasarBumdesData";
 
 // Geometri turunan dari kantorConfig: dinding per lantai, pintu, tangga, perabot,
@@ -675,6 +675,8 @@ export const KURSI_MCD = kursiDari(KURSI_MCD_DASAR, { warung: "mcd" }).map((k, i
 export const KURSI_KOPI = kursiDari(KURSI_KOPI_DASAR, { warung: "kopi" }).map((k, i) => ([2, 9].includes(i) ? { ...k, npc: true } : k));
 export const KURSI_FC = kursiDari(KURSI_FC_DASAR, { warung: "foodcourt" }, 2).map((k, i) => (i % 5 === 1 ? { ...k, npc: true } : k));
 export const KURSI_BIOSKOP = kursiDari(KURSI_BIOSKOP_DASAR, { bioskop: true }, 3);
+// bangku pancing Kolam Monster (kolam: dari bangku bisa langsung memancing)
+export const KURSI_KOLAM = BANGKU_TAMU_KOLAM.map((b) => ({ ...b, lantai: 0, y: TANAH, kolam: true }));
 // food court Pasar BUMDes: kursi bersama semua lapak (grup "pasar" di warung.js)
 export const KURSI_PASAR = kursiDari(KURSI_PASAR_DASAR, { warung: "pasar" }).map((k, i) => (KURSI_PASAR_NPC.has(i) ? { ...k, npc: true } : k));
 export const KURSI_MAKAN = [...KURSI_WARUNG, ...KURSI_PECEL, ...KURSI_MCD, ...KURSI_KOPI, ...KURSI_FC, ...KURSI_PASAR];

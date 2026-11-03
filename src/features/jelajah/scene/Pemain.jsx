@@ -4,7 +4,7 @@ import { Raycaster, Vector2, Vector3 } from "three";
 import { BENDA, LOBI, RUANGAN, TINGGI_LANTAI, TITIK_MULAI, cariArea } from "../kantorConfig";
 import { kendali, posisi, setKeadaan } from "../jelajahStore";
 import { KENDARAAN, KURSI as KURSI_KENDARAAN, tambahPerahu, kendaraanDariId, keDunia, kursiDunia, lingkaran, resetKendaraan, tabrakKendaraan, titikNaikKursi } from "./kendaraan";
-import { KURSI_BIOSKOP, KURSI_MAKAN, TITIK_PESAN_PECEL, TOKO_PER_ID, PERMUKAAN_SITU, aturBadanRenang, diAirSitu, langkahRenang, PERABOT, PETI_HADIAH, TITIK_DISTRO, bilikDi, dalamDistro, TITIK_PESAN_MIE, tokoDi, TANAH, cariJalur, langkah, tabrakKendaraanStatis, tanggaDi, tinggiTanah } from "./layout";
+import { KURSI_BIOSKOP, KURSI_KOLAM, KURSI_MAKAN, TITIK_PESAN_PECEL, TOKO_PER_ID, PERMUKAAN_SITU, aturBadanRenang, diAirSitu, langkahRenang, PERABOT, PETI_HADIAH, TITIK_DISTRO, bilikDi, dalamDistro, TITIK_PESAN_MIE, tokoDi, TANAH, cariJalur, langkah, tabrakKendaraanStatis, tanggaDi, tinggiTanah } from "./layout";
 import { diJalan, tinggiGedungDi } from "./kawasanBantu";
 import { langkahKaki } from "../suasanaSuara";
 import { diriSendiri, kursiTerpakai, pemainLain } from "../multipemain";
@@ -127,7 +127,7 @@ function panggilPerahu(x, z) {
 }
 
 // kursi kantor, bangku/kursi tempat makan (yang tidak diduduki pelanggan NPC), kursi bioskop
-const KURSI = [...PERABOT.filter((p) => ["kursi", "kursiEksekutif", "sofa"].includes(p.jenis)), ...KURSI_MAKAN.filter((k) => !k.npc), ...KURSI_BIOSKOP];
+const KURSI = [...PERABOT.filter((p) => ["kursi", "kursiEksekutif", "sofa"].includes(p.jenis)), ...KURSI_MAKAN.filter((k) => !k.npc), ...KURSI_BIOSKOP, ...KURSI_KOLAM];
 
 export default function Pemain({ daftarDinding, penghuni, penampilan = PENAMPILAN_BAWAAN }) {
 	const grup = useRef();
@@ -363,6 +363,13 @@ export default function Pemain({ daftarDinding, penghuni, penampilan = PENAMPILA
 					rute.current = null;
 					mulaiPancing({ x: p.x, z: p.z, rot: tp.rot, perahu: false });
 				}
+			} else if (md.jenis === "duduk" && aksi === "mancing:kolam" && md.kursi?.kolam && aksesKolam()) {
+				// dari bangku pancing: berdiri di depan bangku lalu langsung melempar
+				const c = md.kursi;
+				p.set(c.x, TANAH, c.z);
+				mode.current = { jenis: "mancing", t: 0, k: null, kursi: null, dari: null };
+				rute.current = null;
+				mulaiPancing({ x: c.x, z: c.z, rot: c.rot, perahu: false, kolam: true });
 			} else if (md.jenis === "jalan" && aksi === "mancing:kolam") {
 				// Kolam Monster: hanya dengan tiket aktif atau saat lomba berlangsung
 				const tp = titikTepiKolam(p.x, p.z);
@@ -851,7 +858,8 @@ export default function Pemain({ daftarDinding, penghuni, penampilan = PENAMPILA
 
 		const area = diTangga ? "tangga" : cariArea(p.x, p.z, lantai)?.id ?? (lantai ? "aula2" : "belakang1");
 		let dekat = null;
-		if (mk.jenis === "duduk") dekat = "berdiri";
+		// di bangku Kolam Monster: tombol aksinya memancing (berdiri cukup dengan bergerak)
+		if (mk.jenis === "duduk") dekat = mk.kursi?.kolam ? (aksesKolam() ? "mancing:kolam" : "kolam:tiket") : "berdiri";
 		else if (mk.jenis === "mancing") dekat = "berhenti";
 		else if (mk.jenis === "kemudi" && mk.k.jenis === "perahu") {
 			// di perahu: dekat dermaga → turun; di tengah situ & hampir diam → memancing

@@ -41,6 +41,23 @@ export const BANGKU_KOLAM = [
 	{ x: -36, z: K.z0 - 0.95, rot: 0 },
 	{ x: -42, z: K.z1 + 0.95, rot: Math.PI },
 ];
+// bangku pancing untuk tamu di keempat sisi (bisa diduduki; dari bangku bisa langsung
+// memancing). Dihindarkan dari bangku pemancing tetap & kios loket.
+export const BANGKU_TAMU_KOLAM = (() => {
+	const hasil = [];
+	const jauhDari = (x, z) => BANGKU_KOLAM.every((b) => Math.hypot(b.x - x, b.z - z) > 1.4) && !(x > LOKET_KOLAM.x - 2 && Math.abs(z - LOKET_KOLAM.z) < LOKET_KOLAM.lz / 2 + 1);
+	const tambah = (x, z, rot) => jauhDari(x, z) && hasil.push({ x, z, rot });
+	for (let x = K.x0 + 1.4; x <= K.x1 - 1.2; x += 2.3) {
+		tambah(x, K.z0 - 0.95, 0);
+		tambah(x, K.z1 + 0.95, Math.PI);
+	}
+	for (let z = K.z0 + 1.5; z <= K.z1 - 1.4; z += 2.3) {
+		tambah(K.x0 - 0.95, z, Math.PI / 2);
+		tambah(K.x1 + 0.95, z, -Math.PI / 2);
+	}
+	return hasil;
+})();
+
 // papan juara di halaman depan loket
 export const PAPAN_JUARA_KOLAM = { x: -25.4, z: 2.6 };
 
