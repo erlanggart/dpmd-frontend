@@ -446,6 +446,7 @@ const CctvDevicesPage = lazy(() => import("./pages/dpmd/cctv/CctvDevicesPage"));
 const CctvFacesPage = lazy(() => import("./pages/dpmd/cctv/CctvFacesPage"));
 const CctvPlaybackPage = lazy(() => import("./pages/dpmd/cctv/CctvPlaybackPage"));
 const CctvAnalyticsPage = lazy(() => import("./pages/dpmd/cctv/CctvAnalyticsPage"));
+const CctvAksesPage = lazy(() => import("./pages/dpmd/cctv/CctvAksesPage"));
 // Legacy individual dashboards (masih digunakan di beberapa tempat)
 const KepalaDinasDashboard = lazy(
   () => import("./pages/kepala-dinas/KepalaDinasDashboard"),
@@ -1313,7 +1314,7 @@ function App() {
                   <Route path="helpdesk" element={<HelpdeskPanelPage />} />
                   <Route path="bank-surat" element={<BankSuratPage />} />
 
-                  {/* Smart CCTV — seluruh staf DPMD */}
+                  {/* Smart CCTV — staf yang diberi akses superadmin (dijaga CctvShell & API) */}
                   <Route path="cctv" element={<CctvShell dasar="/dpmd" />}>
                     <Route index element={<CctvLivePage />} />
                     <Route path="peringatan" element={<CctvAlertsPage />} />
@@ -1636,6 +1637,8 @@ function App() {
                     <Route path="wajah" element={<CctvFacesPage />} />
                     <Route path="playback" element={<CctvPlaybackPage />} />
                     <Route path="analitik" element={<CctvAnalyticsPage />} />
+                    {/* superadmin menentukan siapa memakai bagian Smart CCTV mana */}
+                    <Route path="akses" element={<CctvAksesPage />} />
                   </Route>
 
                   {/* Bidang landing pages - tetap di SuperadminLayout */}

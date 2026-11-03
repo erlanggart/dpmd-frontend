@@ -24,6 +24,7 @@ import {
 	FiUsers,
 	FiX,
 	FiVideo,
+	FiCompass,
 } from "react-icons/fi";
 import toast from "react-hot-toast";
 import api from "../api";
@@ -31,7 +32,7 @@ import { ambilToken } from "../utils/tokenSesi";
 import { useAuth } from "../context/AuthContext";
 import { useConfirm } from "../hooks/useConfirm.jsx";
 import { getAvatarUrl } from "../utils/avatarUtils";
-import { ArrowLeft, AlertTriangle, History, PlayCircle, BarChart3, Camera, Cctv, Users } from "lucide-react";
+import { ArrowLeft, AlertTriangle, History, PlayCircle, BarChart3, Camera, Cctv, Users, ShieldCheck } from "lucide-react";
 import { useCctvAlerts } from "../hooks/useCctvAlerts";
 import { performFullLogout } from "../utils/sessionPersistence";
 import MessageLottieIcon from "../components/MessageLottieIcon";
@@ -74,7 +75,11 @@ const MENU_GROUPS = [
 	},
 	{
 		title: "Pengawasan",
-		items: [{ path: "/superadmin/cctv", label: "Smart CCTV", icon: FiVideo }],
+		items: [
+			{ path: "/superadmin/cctv", label: "Smart CCTV", icon: FiVideo },
+			// Tur 3D kantor (halaman publik /jelajah)
+			{ path: "/jelajah", label: "Jelajahi Kantor", icon: FiCompass },
+		],
 	},
 	{
 		title: "Sistem",
@@ -103,6 +108,7 @@ const buildCctvGroups = (badgePeringatan) => [
 			{ path: "/superadmin/cctv/wajah", label: "Wajah", icon: Users },
 			{ path: "/superadmin/cctv/playback", label: "Playback", icon: PlayCircle },
 			{ path: "/superadmin/cctv/analitik", label: "Analitik", icon: BarChart3 },
+			{ path: "/superadmin/cctv/akses", label: "Akses Pengguna", icon: ShieldCheck },
 		],
 	},
 	{

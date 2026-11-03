@@ -15,6 +15,7 @@ import {
 } from "react-icons/fi";
 import { Landmark, ChevronDown, PanelLeftClose, PanelLeftOpen, ScanFace, ArrowLeft, AlertTriangle, History, PlayCircle, BarChart3, Camera, Cctv, Users } from "lucide-react";
 import { useCctvAlerts } from "../hooks/useCctvAlerts";
+import { bolehBuka, useAksesCctv } from "../hooks/useAksesCctv";
 import AnimatedIcon from '../components/AnimatedIcon';
 import ChatBot from '../components/chatbot/ChatBot';
 import { performFullLogout } from "../utils/sessionPersistence";
@@ -243,6 +244,7 @@ const DPMDStaffLayout = () => {
 	// sidebar, bukan tab bar di atas konten).
 	const isCctvMode = location.pathname === "/dpmd/cctv" || location.pathname.startsWith("/dpmd/cctv/");
 	const { jumlahBelumDibaca: cctvBelumDibaca } = useCctvAlerts();
+	const aksesCctv = useAksesCctv();
 	const { confirmDialog, showConfirm } = useConfirm();
 	const { isDesktop, isSidebarCollapsed, setIsSidebarCollapsed } = useResponsive();
 
@@ -502,7 +504,8 @@ const DPMDStaffLayout = () => {
 		{ path: "/dpmd/bank-surat", label: "Bank Surat", icon: 'archive' },
 		{ path: "/dpmd/video-meeting", label: "Video Meeting", icon: 'video' },
 		{ path: "/dpmd/pesan", label: "Pesan", icon: 'chatbot' },
-		{ path: "/dpmd/cctv", label: "Smart CCTV", icon: 'camera' },
+		// Smart CCTV hanya untuk staf yang diberi akses oleh superadmin
+		...(aksesCctv.adaAkses ? [{ path: "/dpmd/cctv", label: "Smart CCTV", icon: 'camera' }] : []),
 		// Tiket Helpdesk dari masyarakat, desa, dan kecamatan yang menjadi wewenang bidang/pimpinan.
 		{ path: "/dpmd/helpdesk", label: "Helpdesk", icon: 'helpdesk' },
 		// Tur 3D kantor (halaman publik /jelajah) — untuk semua pegawai.
@@ -519,7 +522,7 @@ const DPMDStaffLayout = () => {
 		{ path: "/dpmd/cctv/wajah", label: "Wajah", lucideIcon: Users },
 		{ path: "/dpmd/cctv/playback", label: "Playback", lucideIcon: PlayCircle },
 		{ path: "/dpmd/cctv/analitik", label: "Analitik", lucideIcon: BarChart3 },
-	];
+	].filter((it) => bolehBuka(aksesCctv.akses, it.path.replace("/dpmd/cctv", "").replace(/^\//, "")));
 
 	// Mobile bottom nav - 3 items: Home, Aksi Cepat (FAB), Profil
 	const userBidang = BIDANG_ROUTES[user.bidang_id];

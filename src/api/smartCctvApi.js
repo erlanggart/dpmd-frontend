@@ -73,3 +73,10 @@ export const urlWebRtcGo2rtc = (src) => `/go2rtc/api/webrtc?src=${encodeURICompo
 
 /** Asal absolut — hanya untuk keperluan yang butuh origin penuh. */
 export const asalServerCctv = ASAL_SERVER;
+
+// ---------- Hak akses Smart CCTV (diatur superadmin) ----------
+export const getAksesSaya = () => api.get("/smart-cctv/akses/saya");
+export const getDaftarAkses = () => api.get("/smart-cctv/akses");
+export const aturAkses = (userId, data) => api.put(`/smart-cctv/akses/${userId}`, data);
+export const aturAksesMassal = (data) => api.put("/smart-cctv/akses", data);
+export const getRiwayatAkses = () => api.get("/smart-cctv/akses/riwayat");

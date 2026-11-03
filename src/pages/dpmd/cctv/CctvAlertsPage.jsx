@@ -6,8 +6,8 @@ import {
 	ackSemuaPeristiwa,
 	getPeristiwa,
 	resolvePeristiwa,
-	urlSnapshotPeristiwa,
 } from "../../../api/smartCctvApi";
+import GambarPeristiwa from "./GambarPeristiwa";
 import { useCctvAlerts } from "../../../hooks/useCctvAlerts";
 
 /**
@@ -29,6 +29,7 @@ const TIPE_LABEL = {
 	fall_warning: "Peringatan jatuh",
 	immobility: "Tidak bergerak",
 	other: "Lainnya",
+	person: "Orang terdeteksi",
 };
 
 const LencanaTipe = ({ type }) => (
@@ -234,11 +235,7 @@ const CctvAlertsPage = () => {
 								✕
 							</button>
 						</div>
-						<img
-							src={urlSnapshotPeristiwa(snapshot.id)}
-							alt="Snapshot peristiwa"
-							className="w-full rounded-lg border border-slate-200"
-						/>
+						<GambarPeristiwa id={snapshot.id} className="w-full rounded-lg border border-slate-200" />
 					</div>
 				</div>
 			)}

@@ -2,14 +2,15 @@ import React, { useCallback, useEffect, useState } from "react";
 import { useLocation } from "react-router-dom";
 import { Check, CheckCheck, Eye, Filter, Search } from "lucide-react";
 import toast from "react-hot-toast";
-import { ackPeristiwa, getKamera, getPeristiwa, resolvePeristiwa, urlSnapshotPeristiwa } from "../../../api/smartCctvApi";
+import { ackPeristiwa, getKamera, getPeristiwa, resolvePeristiwa } from "../../../api/smartCctvApi";
+import GambarPeristiwa from "./GambarPeristiwa";
 
 /**
  * Riwayat deteksi: filter kamera/tipe/statusrentang tanggal, halaman demi
  * halaman, pratinjau snapshot, akui/selesaikan.
  */
 
-const TIPE = ["known", "unknown", "fall", "fall_warning", "immobility", "other"];
+const TIPE = ["known", "unknown", "person", "fall", "fall_warning", "immobility", "other"];
 const STATUS = ["active", "acknowledged", "resolved"];
 
 const TIPE_LABEL = {
@@ -19,6 +20,7 @@ const TIPE_LABEL = {
 	fall_warning: "Peringatan jatuh",
 	immobility: "Tidak bergerak",
 	other: "Lainnya",
+	person: "Orang terdeteksi",
 };
 
 const STATUS_LABEL = { active: "Baru", acknowledged: "Diakui", resolved: "Selesai" };
@@ -30,6 +32,7 @@ const GAYA_TIPE = {
 	fall_warning: "border-orange-200 bg-orange-50 text-orange-700",
 	immobility: "border-purple-200 bg-purple-50 text-purple-700",
 	other: "border-slate-200 bg-slate-50 text-slate-600",
+	person: "border-sky-200 bg-sky-50 text-sky-700",
 };
 
 const GAYA_STATUS = {
@@ -290,11 +293,7 @@ const CctvHistoryPage = () => {
 								✕
 							</button>
 						</div>
-						<img
-							src={urlSnapshotPeristiwa(snapshot.id)}
-							alt="Snapshot peristiwa"
-							className="w-full rounded-lg border border-slate-200"
-						/>
+						<GambarPeristiwa id={snapshot.id} className="w-full rounded-lg border border-slate-200" />
 					</div>
 				</div>
 			)}

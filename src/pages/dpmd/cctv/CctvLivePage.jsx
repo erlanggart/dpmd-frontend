@@ -2,11 +2,12 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { Link, useLocation } from "react-router-dom";
 import {
 	RefreshCw, Radio, Waves, AlertTriangle, Plus, MonitorPlay, CameraOff, Maximize2, Minimize2, X, ChevronLeft, ChevronRight,
-	LayoutGrid, Expand,
+	LayoutGrid, Expand, ScanSearch,
 } from "lucide-react";
 import toast from "react-hot-toast";
-import { getKamera, getStreamUrl, urlMjpegAI } from "../../../api/smartCctvApi";
+import { getKamera, getStreamUrl } from "../../../api/smartCctvApi";
 import { useCctvAlerts } from "../../../hooks/useCctvAlerts";
+import { sambungMse, urlWs } from "./mse";
 
 /**
  * Grid kamera langsung + pemutar besar.
@@ -67,124 +68,19 @@ const sambungWebRtc = async (url, videoEl, onGagal) => {
 	};
 };
 
-// ---------------------------------------------------------------------------
-// MSE lewat WebSocket go2rtc: klien mengirim daftar kodek yang didukung,
-// go2rtc menjawab tipe MIME lalu mengalirkan potongan fMP4.
-// ---------------------------------------------------------------------------
-const KODEK_MSE = ["avc1.640029", "avc1.64002A", "avc1.640033", "hvc1.1.6.L153.B0", "mp4a.40.2", "mp4a.40.5", "flac", "opus"];
-const kodekDidukung = () =>
-	KODEK_MSE.filter((k) => window.MediaSource?.isTypeSupported(`video/mp4; codecs="${k}"`)).join(",");
 
-/** URL WebSocket bertoken, diturunkan dari URL potret go2rtc dari stream-url. */
-const urlWs = (u) => {
-	if (!u?.go2rtc_frame_url) return null;
-	const alamat = new URL(u.go2rtc_frame_url.replace("/api/frame.jpeg", "/api/ws"), window.location.origin);
-	alamat.protocol = alamat.protocol === "https:" ? "wss:" : "ws:";
-	return alamat.toString();
-};
-
-/** Sambungkan <video> ke go2rtc lewat MSE. Mengembalikan fungsi pembersih. */
-const sambungMse = (wsUrl, video, onGagal) => {
-	if (!window.MediaSource || !wsUrl || !video) {
-		onGagal?.(new Error("MSE tidak didukung"));
-		return () => {};
-	}
-	let ws = null;
-	let sb = null;
-	let selesai = false;
-	const antre = [];
-	const gagal = (err) => {
-		if (!selesai) onGagal?.(err);
-	};
-	const ms = new MediaSource();
-	video.src = URL.createObjectURL(ms);
-
-	ms.addEventListener(
-		"sourceopen",
-		() => {
-			URL.revokeObjectURL(video.src);
-			ws = new WebSocket(wsUrl);
-			ws.binaryType = "arraybuffer";
-			ws.onopen = () => ws.send(JSON.stringify({ type: "mse", value: kodekDidukung() }));
-			ws.onmessage = (ev) => {
-				if (typeof ev.data === "string") {
-					let pesan = null;
-					try {
-						pesan = JSON.parse(ev.data);
-					} catch {
-						return;
-					}
-					if (pesan.type === "mse" && !sb) {
-						try {
-							sb = ms.addSourceBuffer(pesan.value);
-						} catch (err) {
-							gagal(err);
-							return;
-						}
-						sb.mode = "segments";
-						sb.addEventListener("updateend", () => {
-							if (sb.updating) return;
-							try {
-								if (antre.length) {
-									sb.appendBuffer(antre.shift());
-									return;
-								}
-								// Buang buffer lama dan tetap di ujung siaran langsung.
-								const b = sb.buffered;
-								if (b.length) {
-									const akhir = b.end(b.length - 1);
-									if (akhir - b.start(0) > 30) sb.remove(b.start(0), akhir - 10);
-									if (akhir - video.currentTime > 2.5) video.currentTime = akhir - 0.5;
-								}
-							} catch {
-								/* buffer sedang dibongkar — abaikan */
-							}
-						});
-					} else if (pesan.type === "error") {
-						gagal(new Error(pesan.value));
-					}
-					return;
-				}
-				if (!sb) return;
-				if (sb.updating || antre.length) {
-					if (antre.length < 60) antre.push(ev.data);
-				} else {
-					try {
-						sb.appendBuffer(ev.data);
-					} catch (err) {
-						gagal(err);
-					}
-				}
-			};
-			ws.onerror = () => gagal(new Error("WebSocket gagal"));
-			ws.onclose = () => gagal(new Error("Sambungan terputus"));
-		},
-		{ once: true }
-	);
-	video.play?.().catch(() => {});
-
-	return () => {
-		selesai = true;
-		try {
-			ws?.close();
-		} catch {
-			/* sudah tertutup */
-		}
-		video.removeAttribute("src");
-		video.load?.();
-	};
-};
-
-// Sumber yang dicoba berurutan; yang gagal digeser ke berikutnya.
-const URUTAN_SUMBER = ["ai", "mse", "go2rtc", "bingkai"];
+// Sumber yang dicoba berurutan; yang gagal digeser ke berikutnya. Tampilan deteksi AI
+// (bingkai bertanda kotak orang/wajah, diperbarui tiap analisis) dibuka lewat tombol.
+const URUTAN_SUMBER = ["mse", "go2rtc", "bingkai"];
 const BUTUH_GO2RTC = new Set(["mse", "go2rtc", "bingkai"]);
 const BATAS_MSE_MS = 8000;
 const JEDA_BINGKAI_MS = 3000;
-const LABEL_SUMBER = { mse: "live", go2rtc: "go2rtc", bingkai: "potret" };
+const LABEL_SUMBER = { mse: "live", go2rtc: "go2rtc", bingkai: "potret", ai: "deteksi AI" };
+const LABEL_PERISTIWA = { known: "Dikenal", unknown: "Tak dikenal", person: "Orang", fall: "Jatuh", fall_warning: "Rawan jatuh", immobility: "Diam lama", other: "Peristiwa" };
 
 /** Tile kamera. `ringkas` = mode dinding (nama di atas gambar, tanpa kaki). */
 const KartuKamera = ({ kamera, peristiwaTerbaru, dasar, ringkas = false, onPerbesar }) => {
-	const [mode, setMode] = useState("ai"); // ai | mse | go2rtc | bingkai | webrtc | mati
+	const [mode, setMode] = useState("mse"); // mse | go2rtc | bingkai | ai | webrtc | mati
 	const [selesaiMuat, setSelesaiMuat] = useState(false);
 	const [url, setUrl] = useState(null); // balasan stream-url (bertoken)
 	const [detak, setDetak] = useState(0); // pemicu bingkai berikutnya
@@ -215,7 +111,8 @@ const KartuKamera = ({ kamera, peristiwaTerbaru, dasar, ringkas = false, onPerbe
 	const sumberBerikut = useCallback(
 		(dari) => {
 			setSelesaiMuat(false);
-			let i = URUTAN_SUMBER.indexOf(dari) + 1;
+			// tampilan deteksi gagal → kembali ke video langsung
+			let i = dari === "ai" ? 0 : URUTAN_SUMBER.indexOf(dari) + 1;
 			// Sumber go2rtc butuh URL bertoken; tanpa itu langsung lewati.
 			while (URUTAN_SUMBER[i] && BUTUH_GO2RTC.has(URUTAN_SUMBER[i]) && !url?.go2rtc_frame_url) i += 1;
 			setMode(URUTAN_SUMBER[i] || "mati");
@@ -263,7 +160,7 @@ const KartuKamera = ({ kamera, peristiwaTerbaru, dasar, ringkas = false, onPerbe
 		matikanWebRtc();
 		setSelesaiMuat(false);
 		await muatUrl(); // token media mungkin sudah kedaluwarsa
-		setMode("ai");
+		setMode("mse");
 	};
 
 	const nyalakanWebRtc = async () => {
@@ -283,13 +180,19 @@ const KartuKamera = ({ kamera, peristiwaTerbaru, dasar, ringkas = false, onPerbe
 	const kembaliGambar = () => {
 		matikanWebRtc();
 		setSelesaiMuat(false);
-		setMode("ai");
+		setMode("mse");
+	};
+
+	const gantiDeteksi = () => {
+		matikanWebRtc();
+		setSelesaiMuat(false);
+		setMode((m) => (m === "ai" ? "mse" : "ai"));
 	};
 
 	const nonaktif = kamera.status !== "active";
 	const srcGambar =
 		mode === "ai"
-			? urlMjpegAI(kamera.id, 5)
+			? url?.ai_mjpeg_url
 			: mode === "go2rtc"
 				? url?.go2rtc_mjpeg_url
 				: mode === "bingkai" && url?.go2rtc_frame_url
@@ -388,7 +291,7 @@ const KartuKamera = ({ kamera, peristiwaTerbaru, dasar, ringkas = false, onPerbe
 					{peristiwaTerbaru && (
 						<span className="flex items-center gap-1 rounded bg-red-600 px-1.5 py-0.5 text-[10px] font-bold text-white">
 							<AlertTriangle className="h-3 w-3" />
-							{peristiwaTerbaru.type}
+							{LABEL_PERISTIWA[peristiwaTerbaru.type] || peristiwaTerbaru.type}
 						</span>
 					)}
 				</div>
@@ -412,6 +315,15 @@ const KartuKamera = ({ kamera, peristiwaTerbaru, dasar, ringkas = false, onPerbe
 								className="rounded-lg p-1.5 text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-900"
 							>
 								<Maximize2 className="h-4 w-4" />
+							</button>
+						)}
+						{!nonaktif && url?.ai_mjpeg_url && (
+							<button
+								onClick={gantiDeteksi}
+								title={mode === "ai" ? "Kembali ke video langsung" : "Tampilan deteksi AI: kotak orang & wajah"}
+								className={`rounded-lg p-1.5 transition-colors ${mode === "ai" ? "bg-slate-900 text-white" : "text-slate-400 hover:bg-slate-100 hover:text-slate-900"}`}
+							>
+								<ScanSearch className="h-4 w-4" />
 							</button>
 						)}
 						{mode !== "webrtc" && !nonaktif && url?.webrtc_url && (

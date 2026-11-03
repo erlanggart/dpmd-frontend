@@ -1,5 +1,4 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
-import Hls from "hls.js";
 import {
 	Play,
 	Pause,
@@ -21,6 +20,7 @@ import {
 	seekSesiPlayback,
 	stopSesiPlayback,
 } from "../../../api/smartCctvApi";
+import { sambungMse } from "./mse";
 
 /**
  * Playback DVR (Hikvision) lewat mesin AI.
@@ -126,7 +126,7 @@ const CctvPlaybackPage = () => {
 	const [cameraId, setCameraId] = useState("");
 	const [tanggal, setTanggal] = useState(() => hariLokal(new Date()));
 
-	const [sesi, setSesi] = useState(null); // { sid, stream_url, start_ts, end_ts }
+	const [sesi, setSesi] = useState(null); // { sid, ws_url, start_ts }
 	const [memuat, setMemuat] = useState(false);
 	const [mencari, setMencari] = useState(false);
 	const [ketersediaan, setKetersediaan] = useState(null);
@@ -135,7 +135,6 @@ const CctvPlaybackPage = () => {
 	const [kecepatan, setKecepatan] = useState(1);
 
 	const videoRef = useRef(null);
-	const hlsRef = useRef(null);
 	const wrapRef = useRef(null);
 	// Salinan sesi terkini — dipakai cleanup tanpa menaruh `sesi` di dependensi
 	// (dependensi sesi membuat cleanup berjalan tiap sesi berubah dan langsung
@@ -206,51 +205,35 @@ const CctvPlaybackPage = () => {
 		};
 	}, [cameraId, tanggal]);
 
-	// Pasang HLS.js ke <video> tiap sesi berubah.
+	// Pasang pemutar MSE (go2rtc) ke <video> tiap sesi berubah. Rekaman DVR ditarik
+	// go2rtc dari RTSP "tracks" Hikvision (lihat putarPlayback di smartCctv.service.js).
 	useEffect(() => {
 		const video = videoRef.current;
-		if (!video || !sesi) return undefined;
-		// stream_url SUDAH berawalan "/ai" — Express menambahkannya di
-		// smartCctv.service.js (putarPlayback/seekPlayback). JANGAN menambah
-		// "/ai" lagi di sini: double prefix → /ai/ai/... → 404 manifestLoadError.
-		const url = sesi.stream_url;
-		const putar = () => {
-			video.playbackRate = kecepatanRef.current;
-			video.play().catch(() => {});
-		};
+		if (!video || !sesi?.ws_url) return undefined;
+		const alamat = new URL(sesi.ws_url, window.location.origin);
+		alamat.protocol = alamat.protocol === "https:" ? "wss:" : "ws:";
 		const onPlay = () => setJalan(true);
 		const onPause = () => setJalan(false);
+		const onMain = () => {
+			video.playbackRate = kecepatanRef.current;
+		};
 		video.addEventListener("play", onPlay);
 		video.addEventListener("pause", onPause);
-
-		let hls = null;
-		if (Hls.isSupported()) {
-			hls = new Hls({ lowLatencyMode: false });
-			hlsRef.current = hls;
-			hls.loadSource(url);
-			hls.attachMedia(video);
-			hls.on(Hls.Events.MANIFEST_PARSED, putar);
-			hls.on(Hls.Events.ERROR, (_, data) => {
-				// Sesi lama dibunuh server saat seek — jangan tampilkan galatnya.
-				if (data.fatal && !mencariRef.current) {
-					toast.error("Pemutaran terputus: " + (data.details || "galat tidak diketahui"));
-				}
-			});
-		} else if (video.canPlayType("application/vnd.apple.mpegurl")) {
-			// Safari: HLS bawaan.
-			video.src = url;
-			putar();
-		} else {
-			toast.error("Peramban ini tidak mendukung HLS.");
-		}
-
+		video.addEventListener("playing", onMain);
+		const putus = sambungMse(
+			alamat.toString(),
+			video,
+			(err) => {
+				// Sesi lama ditutup server saat geser waktu — jangan tampilkan galatnya.
+				if (!mencariRef.current) toast.error(`Pemutaran terputus: ${err.message}`);
+			},
+			{ ikutiUjung: false },
+		);
 		return () => {
 			video.removeEventListener("play", onPlay);
 			video.removeEventListener("pause", onPause);
-			if (hls) {
-				hls.destroy();
-				hlsRef.current = null;
-			}
+			video.removeEventListener("playing", onMain);
+			putus();
 		};
 	}, [sesi]);
 
@@ -283,7 +266,7 @@ const CctvPlaybackPage = () => {
 		if (!cameraId || !tanggal) return toast.error("Pilih kamera terlebih dahulu.");
 		setMemuat(true);
 		try {
-			// Sesi lama ditutup dulu — mesin AI hanya mendukung satu sesi.
+			// Sesi lama ditutup dulu supaya stream go2rtc-nya tidak menumpuk.
 			if (sesiRef.current?.sid) await stopSesiPlayback(sesiRef.current.sid).catch(() => {});
 			const r = await buatSesiPlayback({
 				camera_id: Number(cameraId),
@@ -294,7 +277,7 @@ const CctvPlaybackPage = () => {
 			setSesi(r.data.data);
 			setPosisiMenit(0);
 		} catch (e) {
-			toast.error(pesanApi(e, "Gagal memulai playback. Pastikan layanan AI berjalan."));
+			toast.error(pesanApi(e, "Gagal memulai pemutaran ulang rekaman DVR."));
 		} finally {
 			setMemuat(false);
 		}

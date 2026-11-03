@@ -10,7 +10,7 @@
  *   { id, event_uuid, camera_id, kamera, lokasi, type, severity, nama,
  *     similarity, occurred_at, snapshot_url }
  *
- * `type` dikenal: known | unknown | fall | fall_warning | immobility | other.
+ * `type` dikenal: known | unknown | person | fall | fall_warning | immobility | other.
  */
 import { useCallback, useEffect, useRef, useState } from "react";
 import { io } from "socket.io-client";

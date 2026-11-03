@@ -15,6 +15,7 @@ const TIPE_LABEL = {
 	fall_warning: "Peringatan jatuh",
 	immobility: "Tidak bergerak",
 	other: "Lainnya",
+	person: "Orang terdeteksi",
 };
 
 const WARNA_TIPE = {
@@ -24,6 +25,7 @@ const WARNA_TIPE = {
 	fall_warning: "#f97316",
 	immobility: "#8b5cf6",
 	other: "#94a3b8",
+	person: "#0ea5e9",
 };
 
 const Kartu = ({ ikon: Ikon, angka, label, warna }) => (
