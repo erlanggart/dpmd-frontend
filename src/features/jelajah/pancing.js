@@ -530,6 +530,10 @@ function mulaiTunggu(teks, jenis) {
 	const n = Math.floor(Math.random() * (kls.colek + 1));
 	p.colekBunyi = -1;
 	p.colek = false;
+	// gulung ulang pelan-pelan (seperti pemancing sungguhan), lihat fase "tunggu"
+	p.menggulung = false;
+	p.gulungTerakhir = -9;
+	p.klikGulung = 0;
 	p.colekan = Array.from({ length: n }, () => acak(0.8, p.tungguSampai - 0.6)).sort((a, b) => a - b);
 	// joran mulai dari posisi diam: ayunan saat menunggu relatif dari mouse sekarang
 	p.mouseBasis = p.arahMouse;
@@ -711,10 +715,35 @@ export function tickPancing(dt) {
 			p.colekBunyi = i;
 			suara("colek");
 		}
+		// Menggulung ulang: senar ditarik masuk pelan-pelan selama SPASI ditahan / diketuk,
+		// pelampung menyusuri air mendekat; baru terangkat saat sudah dekat tepi. Umpan yang
+		// bergerak tetap bisa disambar ikan.
 		if (tekan) {
-			if (p.colek) return lepasTapiTunggu("Terlalu cepat! Ikannya cuma mencolek lalu kabur — umpan masih di air, tunggu lagi");
-			suara("gulung");
-			return keFase("siap", { teks: "Senar digulung. Lempar lagi!", jenis: "info" });
+			p.gulungTerakhir = p.t;
+			if (!p.menggulung) {
+				if (p.colek) return lepasTapiTunggu("Terlalu cepat! Ikannya cuma mencolek lalu kabur — umpan masih di air, tunggu lagi");
+				p.menggulung = true;
+				pesanSaja("Menggulung senar pelan-pelan… tahan / ketuk terus. Umpan yang bergerak bisa disambar!", "info");
+			}
+		}
+		if (p.menggulung && (p.tahan || p.t - p.gulungTerakhir < 0.35)) {
+			const jarak = Math.hypot(p.pelampung.x - o.x, p.pelampung.z - o.z);
+			const langkahGulung = Math.min(jarak, 1.7 * joranKini().gulung * dt);
+			const nx = p.pelampung.x - ((p.pelampung.x - o.x) / (jarak || 1)) * langkahGulung;
+			const nz = p.pelampung.z - ((p.pelampung.z - o.z) / (jarak || 1)) * langkahGulung;
+			if (jarak - langkahGulung < 2.2 || !bebasLempar(nx, nz, 0.1)) {
+				suara("gulung");
+				p.menggulung = false;
+				return keFase("siap", { teks: "Senar tergulung. Lempar lagi!", jenis: "info" });
+			}
+			p.pelampung.x = nx;
+			p.pelampung.z = nz;
+			p.klikGulung -= dt;
+			if (p.klikGulung <= 0) {
+				suara("klik");
+				percik(nx, nz, 0.14);
+				p.klikGulung = 0.16;
+			}
 		}
 		if (p.t >= p.tungguSampai) {
 			const { ikan, kg } = p.ikanTunggu || pilihIkan(kedalaman(p.pelampung.x, p.pelampung.z));

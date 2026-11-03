@@ -268,7 +268,7 @@ export default function Pancingan() {
 		let lentur = 0.03;
 		if (p.fase === "siap") sudut = p.tahan ? 0.5 - p.tenaga * 1.5 : 0.55;
 		else if (p.fase === "lempar") sudut = 1.2;
-		else if (p.fase === "tunggu") sudut = 0.95 + (p.colek ? Math.sin(t * 40) * 0.05 : 0);
+		else if (p.fase === "tunggu") sudut = (p.menggulung ? 0.72 + Math.sin(t * 14) * 0.03 : 0.95) + (p.colek ? Math.sin(t * 40) * 0.05 : 0);
 		else if (p.fase === "gigit") {
 			// joran tertarik ke depan & melengkung berat
 			sudut = 0.8 + Math.sin(t * 30) * 0.05;
