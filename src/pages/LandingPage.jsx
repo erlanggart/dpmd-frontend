@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import { Link as RouterLink } from "react-router-dom";
 import { FiMenu, FiX } from "react-icons/fi";
-import { BarChart3, House, LayoutGrid, ListChecks, Map as IkonPeta, Newspaper, Phone } from "lucide-react";
+import { BarChart3, House, LayoutGrid, Map as IkonPeta, Newspaper, Phone } from "lucide-react";
 import "@fontsource-variable/plus-jakarta-sans";
 import { useScrollPosition } from "../hooks/useScrollPosition";
 import HeroRelief from "../components/landingpage/HeroRelief";
@@ -9,7 +9,6 @@ import SectionAngka from "../components/landingpage/angka/SectionAngka";
 import FeatureSection from "../components/landingpage/FeatureSection";
 import SectionKontak from "../components/landingpage/SectionKontak";
 import NewsSection from "../components/landingpage/NewsSection";
-import KegiatanSection from "../components/landingpage/KegiatanSection";
 import MapSection from "../components/landingpage/MapSection";
 import InstallPWA from "../components/InstallPWA";
 import DokBagian from "../components/landingpage/dek/DokBagian";
@@ -31,7 +30,6 @@ const BAGIAN = [
 	{ id: "beranda", label: "Beranda", ikon: House, isi: <HeroRelief /> },
 	{ id: "angka", label: "Angka", ikon: BarChart3, isi: <SectionAngka /> },
 	{ id: "peta", label: "Peta", ikon: IkonPeta, isi: <MapSection /> },
-	{ id: "program", label: "Program", ikon: ListChecks, isi: <KegiatanSection /> },
 	{ id: "berita", label: "Berita", ikon: Newspaper, isi: <NewsSection /> },
 	{ id: "layanan", label: "Layanan", ikon: LayoutGrid, isi: <FeatureSection /> },
 	{ id: "kontak", label: "Kontak", ikon: Phone, isi: <SectionKontak /> },
