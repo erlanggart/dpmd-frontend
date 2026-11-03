@@ -2,6 +2,7 @@ import { AREA_LAIN, LOBI, RUANGAN, TINGGI_LANTAI } from "../kantorConfig";
 import { diKawasan, tabrakKawasan } from "./kawasanBantu";
 import { KURSI_BIOSKOP_DASAR, KURSI_FC_DASAR, KURSI_KOPI_DASAR, KURSI_MCD_DASAR, SUPERMARKET_CCM, dalamLahanCcm, malAktif, tinggiMal, yLantaiMal } from "./gedungKhusus";
 import { AIR_Y, DEK_Y, DERMAGA, KIOS_TOKO_PANCING, dermagaDi, diSitu, jarakKeTepi, keDuniaDermaga } from "./situ";
+import { PENGHALANG_KOLAM } from "./kolamMonsterData";
 
 // Geometri turunan dari kantorConfig: dinding per lantai, pintu, tangga, perabot,
 // penghuni kantor, penghalang tabrakan, dan pencarian jalur. Semua dalam meter.
@@ -788,6 +789,8 @@ export const PENGHALANG = [0, 1].map((l) => [
 				titik(PAPAN_NAMA.x - 1.3, PAPAN_NAMA.z, 0.12),
 				titik(PAPAN_NAMA.x + 1.3, PAPAN_NAMA.z, 0.12),
 				...POHON.map(([x, z]) => titik(x, z, 0.5)),
+				// Kolam Monster DPMD: air, kios loket, pagar tiga sisi
+				...PENGHALANG_KOLAM,
 			]
 		: []),
 ]);

@@ -14,6 +14,8 @@ import { LAMA_AMBIL, belanja, kembalikanKeranjang, selesaiAmbil } from "../belan
 import { TENAGA_LARI, setTenaga, tenaga, ubahTenaga } from "../tenaga";
 import { AIR_Y, DEK_Y, DERMAGA, KIOS_TOKO_PANCING, PERAHU, dermagaDi, jarakKeTepi, diPanggung, perahuBebas, titikPancing, titikTepi, titikTurun } from "./situ";
 import { bukaPeti, petiSiap } from "../harta";
+import { aksesKolam } from "../kolamMonster";
+import { AIR_KOLAM_Y, TITIK_LOKET_KOLAM, titikTepiKolam } from "./kolamMonsterData";
 import { berhentiMakan, mulaiMakan, tickMakan, warung } from "../warung";
 import { berhentiNonton, tickNonton } from "../bioskop";
 import { AULA_CCM, dalamStudio, TITIK_BUTIK, TITIK_LIFT, TITIK_LOKET, TITIK_PESAN_FC, TITIK_PESAN_KOPI, TITIK_PESAN_MCD, dalamAulaCcm, dalamGedungKhusus, dalamLahanCcm, dalamMcd, lantaiMalDariY, malAktif } from "./gedungKhusus";
@@ -359,6 +361,14 @@ export default function Pemain({ daftarDinding, penghuni, penampilan = PENAMPILA
 					mode.current = { jenis: "mancing", t: 0, k: null, kursi: null, dari: null };
 					rute.current = null;
 					mulaiPancing({ x: p.x, z: p.z, rot: tp.rot, perahu: false });
+				}
+			} else if (md.jenis === "jalan" && aksi === "mancing:kolam") {
+				// Kolam Monster: hanya dengan tiket aktif atau saat lomba berlangsung
+				const tp = titikTepiKolam(p.x, p.z);
+				if (tp && aksesKolam()) {
+					mode.current = { jenis: "mancing", t: 0, k: null, kursi: null, dari: null };
+					rute.current = null;
+					mulaiPancing({ x: p.x, z: p.z, rot: tp.rot, perahu: false, kolam: true });
 				}
 			} else if (md.jenis === "jalan" && aksi.startsWith("mancing:")) {
 				const d = DERMAGA.find((dd) => dd.id === aksi.slice(8));
@@ -933,6 +943,11 @@ export default function Pemain({ daftarDinding, penghuni, penampilan = PENAMPILA
 				for (const t of TITIK_BUTIK) if (diLt(t)) coba("distro:butik", Math.hypot(t.x - p.x, t.z - p.z), 1.6);
 				if (dalamLahanCcm(p.x, p.z)) coba("lift", Math.hypot(TITIK_LIFT.x - p.x, TITIK_LIFT.z - p.z), 1.8);
 			}
+			// Kolam Monster: loket tiket/lomba, dan memancing di tepinya (bertiket)
+			if (!dekat && lantai === 0) {
+				coba("kolam:loket", Math.hypot(TITIK_LOKET_KOLAM.x - p.x, TITIK_LOKET_KOLAM.z - p.z), 1.8);
+				if (!dekat && titikTepiKolam(p.x, p.z)) dekat = aksesKolam() ? "mancing:kolam" : "kolam:tiket";
+			}
 			// di panggung dermaga: mulai memancing; di papan dermaga tanpa perahu: panggil perahu
 			if (!dekat && lantai === 0) {
 				const d = diPanggung(p.x, p.z);
@@ -1001,9 +1016,56 @@ export default function Pemain({ daftarDinding, penghuni, penampilan = PENAMPILA
 		// dan menatap ikan di depan dada, bukan ke langit
 		const angkatIkan = mk.jenis === "mancing" && pancing.fase === "dapat";
 		bantu.fokus.set(p.x, p.y + (angkatIkan ? 1.35 : 1.2 + 1.8 * k.luar), p.z);
-		const tx = p.x + sy * datar;
-		const ty = angkatIkan ? Math.min(p.y + 1.2 + tinggi, p.y + 1.75) : p.y + 1.2 + tinggi;
-		const tz = p.z + cy * datar;
+		let tx = p.x + sy * datar;
+		let ty = angkatIkan ? Math.min(p.y + 1.2 + tinggi, p.y + 1.75) : p.y + 1.2 + tinggi;
+		let tz = p.z + cy * datar;
+		// mode kamera memancing (tombol 🎥 / C): dekat di bahu, dari atas, atau sinematik
+		const modeKam = mk.jenis === "mancing" && !angkatIkan ? pancing.kamera : "standar";
+		if (modeKam !== "standar") {
+			const hx = -sy;
+			const hz = -cy; // arah hadap pemancing (kamera standar ada di belakangnya)
+			const yAir = TANAH + (pancing.kolam ? AIR_KOLAM_Y : AIR_Y);
+			const fs = pancing.fase;
+			const sasaran = fs === "tarik" || fs === "gigit" ? pancing.ikanPos : fs === "tunggu" || fs === "lempar" ? pancing.pelampung : null;
+			const sx = sasaran ? sasaran.x : p.x + hx * 6;
+			const sz = sasaran ? sasaran.z : p.z + hz * 6;
+			const kini = performance.now() / 1000;
+			if (modeKam === "dekat") {
+				// sudut pandang orang ketiga rapat: di belakang bahu kanan, setinggi kepala
+				tx = p.x - hx * 1.7 - hz * 0.55;
+				tz = p.z - hz * 1.7 + hx * 0.55;
+				ty = p.y + 1.75;
+				bantu.fokus.set(p.x + (sx - p.x) * 0.55, (p.y + 1.1 + yAir) / 2, p.z + (sz - p.z) * 0.55);
+			} else if (modeKam === "atas") {
+				// dari atas: pemancing dan pelampung/ikan tampak dalam satu bingkai
+				const mx = (p.x + sx) / 2;
+				const mz = (p.z + sz) / 2;
+				const lebar = Math.hypot(sx - p.x, sz - p.z);
+				tx = mx - hx * 2.5;
+				tz = mz - hz * 2.5;
+				ty = yAir + 9 + lebar * 0.6;
+				bantu.fokus.set(mx, yAir, mz);
+			} else {
+				// sinematik: mengitari pelan saat menunggu, menyamping rendah saat ikan melawan
+				const lawan = fs === "tarik" || fs === "gigit";
+				const mx = (p.x + sx) / 2;
+				const mz = (p.z + sz) / 2;
+				const sisi = Math.sin(kini * 0.07) > 0 ? 1 : -1;
+				if (lawan) {
+					const r = 4.5 + Math.hypot(sx - p.x, sz - p.z) * 0.35;
+					tx = mx - hz * sisi * r;
+					tz = mz + hx * sisi * r;
+					ty = yAir + 1.3 + Math.sin(kini * 0.5) * 0.25;
+					bantu.fokus.set(mx, yAir + 0.6, mz);
+				} else {
+					const a = Math.atan2(-hx, -hz) + Math.sin(kini * 0.12) * 1.15;
+					tx = p.x + Math.sin(a) * 5.2;
+					tz = p.z + Math.cos(a) * 5.2;
+					ty = p.y + 2 + Math.sin(kini * 0.2) * 0.4;
+					bantu.fokus.set(p.x + (sx - p.x) * 0.35, p.y + 1, p.z + (sz - p.z) * 0.35);
+				}
+			}
+		}
 		if (k.lompat) {
 			camera.position.set(tx, ty, tz);
 			bantu.lihat.copy(bantu.fokus);

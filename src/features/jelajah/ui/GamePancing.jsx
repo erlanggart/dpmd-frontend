@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { FiBookOpen, FiVolume2, FiVolumeX, FiX } from "react-icons/fi";
 import { kirimUcap } from "../multipemain";
-import { IKAN, KELAS, jamLapar, joranKini, ketuk, lanjutPancing, pancing, senarKini, tarikanSakti, useKoleksi, usePancing, zonaKini } from "../pancing";
+import { IKAN, KELAS, MODE_KAMERA, aturOtomatis, bolehOtomatis, gantiKamera, jamLapar, joranKini, ketuk, lanjutPancing, pancing, senarKini, tarikanSakti, useKoleksi, usePancing, zonaKini } from "../pancing";
 import PanelJoran from "./PanelJoran";
 import { aturSuara, suaraMati } from "../suaraPancing";
 import AlbumIkan from "./AlbumIkan";
@@ -166,6 +166,9 @@ export default function GamePancing({ sentuh, bersama, onSelesai }) {
 				if (!e.repeat) ketuk();
 				pancing.tahan = true;
 			}
+			// O = AUTO (joran mahal), C = ganti sudut kamera
+			if (e.code === "KeyO" && !e.repeat) aturOtomatis(!pancing.otomatis);
+			if (e.code === "KeyC" && !e.repeat) gantiKamera();
 			if (e.code === "KeyF" && pancing.fase === "tarik" && !e.repeat) {
 				e.preventDefault();
 				tarikanSakti();
@@ -347,6 +350,23 @@ export default function GamePancing({ sentuh, bersama, onSelesai }) {
 				</button>
 			</div>
 
+			{/* AUTO & sudut kamera */}
+			<div className="pointer-events-auto absolute right-3 top-[7.4rem] z-20 flex items-center gap-1.5 sm:top-[7.75rem]">
+				<button
+					onClick={() => aturOtomatis(!pancing.otomatis)}
+					className={`flex items-center gap-1 rounded-xl px-2.5 py-1.5 text-xs font-black shadow-lg ring-1 backdrop-blur transition ${
+						pancing.otomatis ? "bg-violet-500 text-white ring-violet-300 shadow-[0_0_18px_rgba(139,92,246,0.7)]" : bolehOtomatis() ? "bg-slate-950/70 text-white ring-white/10 hover:bg-slate-900" : "bg-slate-950/50 text-white/50 ring-white/10"
+					}`}
+					aria-pressed={pancing.otomatis}
+					title={bolehOtomatis() ? "Memancing otomatis (O) — koin hasil 75%" : "Butuh joran premium: Titanium Pro, Dasar Monster, atau Naga Emas"}
+				>
+					{bolehOtomatis() ? "🤖" : "🔒"} AUTO<span className="hidden sm:inline">{pancing.otomatis ? " ON" : ""}</span>
+				</button>
+				<button onClick={gantiKamera} className="flex items-center gap-1 rounded-xl bg-slate-950/70 px-2.5 py-1.5 text-xs font-bold text-white shadow-lg ring-1 ring-white/10 backdrop-blur hover:bg-slate-900" title="Ganti sudut kamera (C)">
+					{MODE_KAMERA.find((k) => k.id === pancing.kamera)?.ikon} <span className="hidden sm:inline">{MODE_KAMERA.find((k) => k.id === pancing.kamera)?.nama}</span>
+				</button>
+			</div>
+
 			{/* jam ikan lapar */}
 			{lapar.aktif && (
 				<div className="pointer-events-none absolute inset-x-0 top-[6.6rem] z-20 flex justify-center sm:top-[6rem]">
@@ -520,6 +540,13 @@ export default function GamePancing({ sentuh, bersama, onSelesai }) {
 									{hasil.perfect && <span className="rounded-full bg-sky-400 px-2 py-0.5 text-[10px] font-black text-slate-950">⚡ PERFECT</span>}
 									{hasil.combo >= 2 && <span className="rounded-full bg-gradient-to-r from-orange-500 to-rose-500 px-2 py-0.5 text-[10px] font-black">🔥 COMBO ×{hasil.combo}</span>}
 									{hasil.lapar && <span className="rounded-full bg-amber-300 px-2 py-0.5 text-[10px] font-black text-slate-950">🐟 JAM LAPAR</span>}
+									{hasil.otomatis && <span className="rounded-full bg-violet-500 px-2 py-0.5 text-[10px] font-black">🤖 AUTO</span>}
+									{hasil.lomba && (
+										<span className="rounded-full bg-gradient-to-r from-amber-400 to-orange-500 px-2 py-0.5 text-[10px] font-black text-slate-950">
+											🏆 #{hasil.lomba.peringkat}
+											{hasil.lomba.babonBaru ? " · BABON!" : ""}
+										</span>
+									)}
 								</div>
 								<motion.div initial={{ rotate: -8, scale: 0.6 }} animate={{ rotate: [0, -4, 4, 0], scale: 1 }} transition={{ delay: MUNCUL_KARTU + 0.2, duration: 0.8 }}>
 									<IkonIkan ikan={hasil.ikan} className="mx-auto mt-3 h-24 w-full drop-shadow-[0_8px_16px_rgba(0,0,0,0.5)]" />
@@ -552,7 +579,7 @@ export default function GamePancing({ sentuh, bersama, onSelesai }) {
 										<p className="text-lg font-black tabular-nums text-amber-300">
 											<AngkaNaik nilai={hasil.poin} tunda={MUNCUL_KARTU + 0.3} />
 										</p>
-										<p className="text-[10px] uppercase tracking-wider text-slate-400">koin{hasil.pengali > 1 ? ` · ×${hasil.pengali.toFixed(2).replace(/0$/, "")}` : ""}</p>
+										<p className="text-[10px] uppercase tracking-wider text-slate-400">koin{hasil.kolam ? " · harga kolam" : hasil.pengali > 1 ? ` · ×${hasil.pengali.toFixed(2).replace(/0$/, "")}` : ""}</p>
 									</div>
 								</div>
 								<p className="mt-3 text-xs leading-relaxed text-slate-300">{hasil.ikan.kisah}</p>

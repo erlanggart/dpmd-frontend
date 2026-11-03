@@ -16,6 +16,8 @@ export const xpUntukLevel = (lv) => 60 * (lv - 1) ** 2;
 export const POOL_MISI = [
 	{ id: "ikan3", teks: "Tangkap 3 ikan di Situ Pemda", jenis: "ikan", target: 3, koin: 40, xp: 40 },
 	{ id: "langka", teks: "Tangkap 1 ikan Langka atau lebih tinggi", jenis: "ikanLangka", target: 1, koin: 90, xp: 80 },
+	{ id: "kolam", teks: "Tangkap 1 ikan monster di Kolam Monster DPMD", jenis: "ikanKolam", target: 1, koin: 150, xp: 120 },
+	{ id: "lomba", teks: "Ikut lomba galatama di Kolam Monster", jenis: "lomba", target: 1, koin: 200, xp: 150 },
 	{ id: "peti2", teks: "Buka 2 peti hadiah", jenis: "peti", target: 2, koin: 50, xp: 50 },
 	{ id: "mie", teks: "Makan semangkuk mie ayam", jenis: "mie", target: 1, koin: 30, xp: 30 },
 	{ id: "belanja", teks: "Belanja di Alfamart, Koperasi, atau Supermarket CCM", jenis: "belanja", target: 1, koin: 30, xp: 30 },

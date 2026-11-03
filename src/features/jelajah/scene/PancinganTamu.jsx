@@ -5,12 +5,14 @@ import { FASE_PANCING, IKAN, IKAN_PER_ID, panjangCm } from "../pancing";
 import { TANAH } from "./layout";
 import ModelIkan from "./ModelIkan";
 import { AIR_Y } from "./situ";
+import { AIR_KOLAM_Y, diAirKolam } from "./kolamMonsterData";
 
 // Pancingan milik tamu lain (jelajah bersama): joran di tangannya, senar ke pelampung
 // atau ke ikan yang sedang melawan, dan ikan hasil tangkapan yang ia angkat tinggi.
 // Datanya `s.pc` dari server (lihat dataPancing di multipemain.js).
 
-const AIR = TANAH + AIR_Y;
+// permukaan air mengikuti tempat pelampungnya: situ atau Kolam Monster
+let AIR = TANAH + AIR_Y;
 const N = 12;
 
 export default function PancinganTamu({ sumber, tampil }) {
@@ -40,6 +42,7 @@ export default function PancinganTamu({ sumber, tampil }) {
 		const t = clock.elapsedTime;
 		const fase = FASE_PANCING[pc.f] || "siap";
 		const p = tampil.current;
+		AIR = TANAH + (diAirKolam(pc.x, pc.z, -0.2) ? AIR_KOLAM_Y : AIR_Y);
 		const duduk = s.pose === "perahu";
 
 		// joran: tegak saat menunggu, melengkung saat ikan melawan

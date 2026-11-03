@@ -2,16 +2,21 @@ import { useMemo, useRef } from "react";
 import { useFrame } from "@react-three/fiber";
 import { BufferGeometry, Float32BufferAttribute, Line, LineBasicMaterial, MeshBasicMaterial, Object3D, RingGeometry, SphereGeometry, Vector3 } from "three";
 import { posisi } from "../jelajahStore";
-import { IKAN, arahJoran, joranKini, panjangCm, pancing, senarKini, tickPancing, useKoleksi } from "../pancing";
+import { IKAN, arahJoran, bebasLempar, joranKini, panjangCm, pancing, senarKini, tickPancing, useKoleksi } from "../pancing";
 import { TANAH } from "./layout";
 import ModelIkan from "./ModelIkan";
-import { AIR_Y, perahuBebas } from "./situ";
+import { AIR_Y } from "./situ";
+import { AIR_KOLAM_Y, diAirKolam } from "./kolamMonsterData";
 
 // Tampilan 3D memancing (koordinat dunia): joran yang melengkung, senar, pelampung,
 // penanda bidikan, ikan yang melawan/melompat, ikan hasil yang diangkat, dan cipratan.
 // Logika permainannya di pancing.js; komponen ini juga yang menjalankan tick-nya.
 
-const AIR = TANAH + AIR_Y;
+const AIR_SITU = TANAH + AIR_Y;
+const AIR_KOLAM = TANAH + AIR_KOLAM_Y;
+// permukaan air tempat pemain memancing: situ, atau Kolam Monster yang lebih tinggi
+let AIR = AIR_SITU;
+const airDi = (x, z) => (diAirKolam(x, z, -0.2) ? AIR_KOLAM : AIR_SITU);
 const N_SENAR = 18;
 const N_PERCIK = 10;
 const N_TETES = 60;
@@ -25,7 +30,7 @@ const BAHAN_TETES = new MeshBasicMaterial({ color: "#e6f4ff", transparent: true,
 function Cipratan() {
 	const cincin = useRef([]);
 	const tetes = useRef();
-	const data = useMemo(() => ({ dilihat: new Set(), tetes: Array.from({ length: N_TETES }, () => ({ x: 0, y: -99, z: 0, vx: 0, vy: 0, vz: 0 })), berikut: 0 }), []);
+	const data = useMemo(() => ({ dilihat: new Set(), tetes: Array.from({ length: N_TETES }, () => ({ air: 0, x: 0, y: -99, z: 0, vx: 0, vy: 0, vz: 0 })), berikut: 0 }), []);
 	const o = useMemo(() => new Object3D(), []);
 
 	useFrame((_, dt) => {
@@ -39,7 +44,7 @@ function Cipratan() {
 			if (!c) return;
 			const umur = kini - c.t0;
 			const s = c.besar * (0.35 + umur * 2.4);
-			m.position.set(c.x, AIR + 0.012, c.z);
+			m.position.set(c.x, airDi(c.x, c.z) + 0.012, c.z);
 			m.scale.set(s, 1, s);
 			m.material.opacity = Math.max(0, 0.75 * (1 - umur / 1.1));
 		});
@@ -48,23 +53,24 @@ function Cipratan() {
 			if (data.dilihat.has(c)) continue;
 			data.dilihat.add(c);
 			const n = Math.min(14, Math.round(5 + c.besar * 6));
+			const air = airDi(c.x, c.z);
 			for (let k = 0; k < n; k++) {
 				const t = data.tetes[data.berikut++ % N_TETES];
 				const a = Math.random() * Math.PI * 2;
 				const v = (0.6 + Math.random()) * Math.min(2.2, 0.8 + c.besar);
-				Object.assign(t, { x: c.x, y: AIR + 0.05, z: c.z, vx: Math.cos(a) * v * 0.6, vy: 1.5 + Math.random() * 2 * Math.min(1.6, c.besar), vz: Math.sin(a) * v * 0.6 });
+				Object.assign(t, { air, x: c.x, y: air + 0.05, z: c.z, vx: Math.cos(a) * v * 0.6, vy: 1.5 + Math.random() * 2 * Math.min(1.6, c.besar), vz: Math.sin(a) * v * 0.6 });
 			}
 		}
 		if (data.dilihat.size > 40) data.dilihat = new Set(daftar);
 		data.tetes.forEach((t, i) => {
-			if (t.y > AIR - 0.1) {
+			if (t.y > t.air - 0.1) {
 				t.vy -= 9.8 * dt;
 				t.x += t.vx * dt;
 				t.y += t.vy * dt;
 				t.z += t.vz * dt;
 			}
 			o.position.set(t.x, t.y, t.z);
-			o.scale.setScalar(t.y > AIR - 0.05 ? 1 : 0);
+			o.scale.setScalar(t.y > t.air - 0.05 ? 1 : 0);
 			o.updateMatrix();
 			tetes.current.setMatrixAt(i, o.matrix);
 		});
@@ -228,6 +234,7 @@ export default function Pancingan() {
 		const p = pancing;
 		const t = clock.elapsedTime;
 		const aktif = p.aktif;
+		AIR = p.kolam ? AIR_KOLAM : AIR_SITU;
 		akar.current.visible = aktif;
 		senar.visible = false;
 		pelampung.current.visible = false;
@@ -358,7 +365,7 @@ export default function Pancingan() {
 			b.position.set(x, AIR + 0.02, z);
 			const sk = 0.6 + Math.sin(t * 8) * 0.05;
 			b.scale.set(sk, 1, sk);
-			b.material.color.set(!perahuBebas(x, z, 0.2) ? "#ef4444" : p.tenaga > 0.93 ? "#fbbf24" : "#4ade80");
+			b.material.color.set(!bebasLempar(x, z, 0.2) ? "#ef4444" : p.tenaga > 0.93 ? "#fbbf24" : "#4ade80");
 		}
 
 		// --- senar melendut antara ujung joran dan ujungnya ---

@@ -26,6 +26,7 @@ import { AIR, AREA, GEDUNG, JENIS_AREA, JENIS_GEDUNG, JENIS_JALAN, LABEL as LABE
 import { LABEL_SITU } from "./situ";
 import { LABEL_KHUSUS } from "./gedungKhusus";
 import SituPemda from "./SituPemda.jsx";
+import KolamMonster from "./KolamMonster.jsx";
 import { suasana } from "./suasana";
 
 // Kawasan Kompleks Perkantoran Pemda Kabupaten Bogor di sekeliling kantor DPMD, dari
@@ -612,6 +613,7 @@ export default function Kawasan({ daftarDinding }) {
 		<group name="kawasan">
 			<Permukaan />
 			<SituPemda daftarDinding={daftarDinding} />
+			<KolamMonster />
 			<Gedung />
 			<Pohon />
 			<Label />

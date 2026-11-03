@@ -1,5 +1,6 @@
 import { useSyncExternalStore } from "react";
 import { diSitu, jarakKeTepi, perahuBebas } from "./scene/situ";
+import { diAirKolam, jarakKeTepiKolam } from "./scene/kolamMonsterData";
 import { suasana } from "./scene/suasana";
 import { hentikanLaga, hentikanRiang, laguLaga, putarLaga, putarRiang } from "./musikJelajah";
 import { suara } from "./suaraPancing";
@@ -56,6 +57,11 @@ export const IKAN = [
 	{ id: "dewa", nama: "Ikan Dewa Kancra", latin: "Tor soro", kelas: 4, kg: [10, 40], k: 1.4, warna: { punggung: "#3f5a52", perut: "#d9e4dc", sirip: "#7a8a6a" }, bentuk: { tinggi: 0.3, lebar: 0.15, ekor: "garpu", kumis: true, kilau: true }, syarat: { jauh: 14 }, kisah: "Ikan keramat dari mata air Kuningan. Konon siapa yang menangkapnya akan selalu beruntung." },
 	{ id: "arwana", nama: "Arwana Naga Emas", latin: "Scleropages aureus", kelas: 4, kg: [8, 28], k: 1.05, warna: { punggung: "#b8860b", perut: "#ffe08a", sirip: "#d4380d" }, bentuk: { tinggi: 0.26, lebar: 0.12, ekor: "bulat", kumis: true, kilau: true }, sifat: { lompat: true }, syarat: { jauh: 12, sempurna: true }, kisah: "Ikan naga pembawa keberuntungan. Sisik emasnya memantulkan cahaya seperti api." },
 	{ id: "raja", nama: "Raja Situ", latin: "Rex situensis", kelas: 4, kg: [220, 480], k: 1.5, warna: { punggung: "#1f3d2b", perut: "#6f8a5b", sirip: "#7f1d1d" }, bentuk: { tinggi: 0.38, lebar: 0.22, ekor: "garpu", duri: true, kumis: true, mataNyala: "#ff3b3b" }, sifat: { lompat: true, setrum: false }, syarat: { perahu: true, jauh: 20 }, kisah: "Penguasa Situ Pemda yang hanya jadi cerita pemancing tua. Hanya mau melawan dari perahu, jauh di tengah situ." },
+	// --- penghuni eksklusif Kolam Monster DPMD (kolam: true — tidak ada di situ) ---
+	{ id: "goliath", nama: "Goliath Tigerfish", latin: "Hydrocynus goliath", kelas: 3, kolam: true, kg: [20, 70], k: 1.15, warna: { punggung: "#4b5563", perut: "#e5e7eb", sirip: "#dc2626" }, bentuk: { tinggi: 0.3, lebar: 0.14, ekor: "garpu", belang: true, kilau: true }, sifat: { lompat: true }, kisah: "Harimau air dari Sungai Kongo bergigi seperti taring. Didatangkan khusus untuk Kolam Monster DPMD." },
+	{ id: "piraiba", nama: "Piraiba Raksasa", latin: "Brachyplatystoma filamentosum", kelas: 3, kolam: true, kg: [50, 140], k: 0.85, warna: { punggung: "#57534e", perut: "#e7e5e4", sirip: "#78716c" }, bentuk: { tinggi: 0.2, lebar: 0.18, ekor: "garpu", kumis: true }, kisah: "Lele Amazon seukuran manusia. Tarikannya rendah dan berat seperti jangkar." },
+	{ id: "mekong", nama: "Lele Raksasa Mekong", latin: "Pangasianodon gigas", kelas: 4, kolam: true, kg: [120, 300], k: 1.0, warna: { punggung: "#475569", perut: "#e2e8f0", sirip: "#64748b" }, bentuk: { tinggi: 0.27, lebar: 0.19, ekor: "garpu" }, kisah: "Ikan air tawar terbesar di dunia, langka di alam. Babon idaman setiap peserta lomba kolam." },
+	{ id: "beluga", nama: "Sturgeon Beluga", latin: "Huso huso", kelas: 4, kolam: true, kg: [150, 400], k: 0.7, warna: { punggung: "#64748b", perut: "#f1f5f9", sirip: "#475569" }, bentuk: { tinggi: 0.18, lebar: 0.16, ekor: "garpu", duri: true }, sifat: { lompat: true }, kisah: "Ikan purba berzirah penghasil kaviar. Penguasa Kolam Monster DPMD." },
 ];
 export const IKAN_PER_ID = Object.fromEntries(IKAN.map((i) => [i.id, i]));
 
@@ -112,10 +118,17 @@ export const JORAN = [
 	{ id: "fiber", nama: "Joran Fiber", harga: 300, cepat: 0.9, hoki: 1.1, gulung: 1.07, lebar: 0.02, warna: "#1f2937", ujung: "#dc2626", ket: "Lentur & ringan — serba sedikit lebih baik." },
 	{ id: "karbon", nama: "Joran Karbon", harga: 900, cepat: 0.8, hoki: 1.25, gulung: 1.14, lebar: 0.035, warna: "#0f172a", ujung: "#22d3ee", ket: "Kaku & peka: gulungan cepat, ikan besar lebih sering." },
 	{ id: "kilat", nama: "Joran Casting Kilat", harga: 1200, cepat: 0.5, hoki: 1, gulung: 1.1, lebar: 0.02, warna: "#0369a1", ujung: "#fde047", ket: "Spesialis cepat: umpan disambar 2× lebih cepat — panen ikan." },
-	{ id: "titanium", nama: "Joran Titanium Pro", harga: 2200, cepat: 0.7, hoki: 1.45, gulung: 1.22, lebar: 0.05, warna: "#94a3b8", ujung: "#f97316", ket: "Joran turnamen: cepat, kuat, dan sering disambar ikan premium." },
-	{ id: "dasar", nama: "Joran Dasar Monster", harga: 3500, cepat: 1.15, hoki: 2.3, gulung: 1.18, lebar: 0.04, warna: "#3f2a1d", ujung: "#ef4444", ket: "Spesialis premium: sabar menunggu, yang datang ikan-ikan monster." },
-	{ id: "naga", nama: "Joran Naga Emas", harga: 5000, cepat: 0.6, hoki: 1.9, gulung: 1.32, lebar: 0.07, warna: "#ca8a04", ujung: "#facc15", ket: "Legenda para pemancing: cepat & ikan langka seolah datang sendiri." },
+	{ id: "titanium", nama: "Joran Titanium Pro", harga: 2200, cepat: 0.7, hoki: 1.45, gulung: 1.22, lebar: 0.05, auto: true, warna: "#94a3b8", ujung: "#f97316", ket: "Joran turnamen: cepat, kuat, sering disambar ikan premium. Bisa mode AUTO." },
+	{ id: "dasar", nama: "Joran Dasar Monster", harga: 3500, cepat: 1.15, hoki: 2.3, gulung: 1.18, lebar: 0.04, auto: true, warna: "#3f2a1d", ujung: "#ef4444", ket: "Spesialis premium: sabar menunggu, yang datang ikan-ikan monster. Bisa mode AUTO." },
+	{ id: "naga", nama: "Joran Naga Emas", harga: 5000, cepat: 0.6, hoki: 1.9, gulung: 1.32, lebar: 0.07, auto: true, warna: "#ca8a04", ujung: "#facc15", ket: "Legenda para pemancing: cepat & ikan langka seolah datang sendiri. Bisa mode AUTO." },
 ];
+// Mode AUTO (auto pilot) hanya untuk joran kelas atas. Koinnya 75% — memancing
+// sendiri tetap paling menguntungkan.
+export const PENGALI_KOIN_AUTO = 0.75;
+// Ikan Kolam Monster milik pengelola: koin per tangkapan kecil (ikannya dijamin besar);
+// hadiah besarnya ada di lomba galatama.
+export const PENGALI_KOIN_KOLAM = 0.06;
+export const bolehOtomatis = () => !!joranKini().auto;
 export const JORAN_PER_ID = Object.fromEntries(JORAN.map((j) => [j.id, j]));
 export const SENAR = [
 	{ nama: "Senar Nilon 0,25 mm", harga: 0, kuat: 1, panjang: 45, warna: "#f1f5f9" },
@@ -210,11 +223,41 @@ export const bintangUkuran = (ikan, kg) => {
 	return b >= 0.7 ? 3 : b >= 0.35 ? 2 : 1;
 };
 
+// ---------- kamera memancing ----------
+// standar = orang ketiga; dekat = seluruh badan dari belakang bahu; atas = dari atas
+// (pemancing, senar & ikan terlihat); sinematik = kamera menyamping mengikuti ikan.
+export const MODE_KAMERA = [
+	{ id: "standar", nama: "Standar", ikon: "🎥" },
+	{ id: "dekat", nama: "Dekat", ikon: "🧍" },
+	{ id: "atas", nama: "Atas", ikon: "🛰️" },
+	{ id: "sinematik", nama: "Sinematik", ikon: "🎬" },
+];
+const KUNCI_KAMERA = "jelajah-pancing-kamera";
+const bacaKamera = () => {
+	try {
+		const m = localStorage.getItem(KUNCI_KAMERA);
+		return MODE_KAMERA.some((k) => k.id === m) ? m : "standar";
+	} catch {
+		return "standar";
+	}
+};
+
+// ---------- kait Kolam Monster (diisi kolamMonster.js, supaya tidak saling impor) ----------
+// aksesKolam(): masih boleh memancing di kolam (tiket/lomba berlaku)?
+// saatDapat(ikan, kg): tangkapan di kolam — dicatat untuk lomba.
+// lombaBerjalan(): lomba sedang berlangsung (mode AUTO dilarang).
+const kaitKolam = { aksesKolam: () => false, saatDapat: () => {}, lombaBerjalan: () => false };
+export const aturKaitKolam = (k) => Object.assign(kaitKolam, k);
+
 export const pancing = {
 	combo: 0, // tangkapan beruntun tanpa gagal (pengali koin)
 	perfect: false, // sentakan sangat cepat saat ikan menyambar
 	aktif: false,
 	perahu: false,
+	kolam: false, // sedang memancing di Kolam Monster (bukan situ)
+	otomatis: false, // mode AUTO (hanya joran kelas atas)
+	arahOto: 0, // arah joran pilihan auto pilot saat adu tarik
+	kamera: bacaKamera(),
 	asal: { x: 0, z: 0, rot: 0 }, // posisi pemancing & arah hadap dasar
 	aim: 0, // putaran bidikan relatif arah hadap
 	fase: "siap",
@@ -293,6 +336,102 @@ export const usePancing = () =>
 const acak = (a, b) => a + Math.random() * (b - a);
 const malam = () => suasana.malam > 0.5;
 
+// Perairan tempat memancing sekarang: situ (luas, berperahu) atau Kolam Monster.
+const diAir = (x, z) => (pancing.kolam ? diAirKolam(x, z, 0.3) : diSitu(x, z));
+const kedalaman = (x, z) => (pancing.kolam ? jarakKeTepiKolam(x, z) : jarakKeTepi(x, z));
+export const bebasLempar = (x, z, r) => (pancing.kolam ? diAirKolam(x, z, 0.5) : perahuBebas(x, z, r));
+
+export function aturKamera(id) {
+	if (!MODE_KAMERA.some((k) => k.id === id)) return;
+	pancing.kamera = id;
+	try {
+		localStorage.setItem(KUNCI_KAMERA, id);
+	} catch {
+		/* abaikan */
+	}
+	beritahu();
+}
+export function gantiKamera() {
+	const i = MODE_KAMERA.findIndex((k) => k.id === pancing.kamera);
+	aturKamera(MODE_KAMERA[(i + 1) % MODE_KAMERA.length].id);
+	pesanSaja(`Kamera: ${MODE_KAMERA.find((k) => k.id === pancing.kamera).nama}`);
+}
+
+// Nyalakan/matikan AUTO. Mengembalikan pesan alasan bila ditolak.
+export function aturOtomatis(nyala) {
+	const tolak = nyala && !bolehOtomatis() ? "🔒 AUTO hanya untuk Joran Titanium Pro, Dasar Monster, atau Naga Emas" : nyala && pancing.kolam && kaitKolam.lombaBerjalan() ? "🏆 Selama lomba, memancing wajib manual" : null;
+	if (tolak) {
+		pesanSaja(tolak, "buruk");
+		return tolak;
+	}
+	pancing.otomatis = !!nyala;
+	pancing.tahan = false;
+	pancing.arahOto = 0;
+	oto.tunda = 0.4;
+	pesanSaja(nyala ? "🤖 AUTO menyala — joran bekerja sendiri (koin 75%)" : "AUTO mati — kendali kembali ke tanganmu", nyala ? "baik" : "info");
+	return null;
+}
+
+// ---------- auto pilot ----------
+// Meniru pemancing ahli: lempar mendekati tenaga penuh, abaikan colekan, sentak cepat,
+// gulung menjaga tegangan di zona hijau, berhenti saat ikan lari/melompat, lawan arah
+// lari ikan, pakai tarikan sakti begitu siap, lalu lanjut memancing sendiri.
+const oto = { tunda: 0, target: 0.95, faseLalu: null, reaksi: 0, jedaKetuk: 0 };
+function kendaliOtomatis(dt) {
+	const p = pancing;
+	if (p.fase !== oto.faseLalu) {
+		oto.faseLalu = p.fase;
+		oto.reaksi = acak(0.12, 0.28) * (KELAS[p.ikan?.kelas ?? 0]?.reaksi ?? 0.8);
+		if (p.fase === "siap") {
+			oto.tunda = acak(0.5, 1.1);
+			p.aim = acak(-0.45, 0.45);
+		}
+	}
+	oto.tunda -= dt;
+	if (p.fase === "siap") {
+		if (!p.tahan) {
+			if (oto.tunda <= 0) {
+				oto.target = acak(0.9, 0.99);
+				p.tahan = true;
+				p.ketukan++;
+			}
+		} else if (p.t > 0.25 && p.tenaga >= oto.target) {
+			p.tahan = false;
+			oto.tunda = acak(1.2, 2);
+			// lemparan tertolak (terlalu dekat tepi): bidik ulang ke arah lain
+			p.aim = acak(-0.6, 0.6);
+		}
+	} else if (p.fase === "tunggu") {
+		p.tahan = false;
+	} else if (p.fase === "gigit") {
+		if (p.t >= oto.reaksi && oto.tunda !== -99) {
+			p.ketukan++;
+			oto.tunda = -99;
+		}
+	} else if (p.fase === "tarik") {
+		oto.tunda = 0;
+		p.arahOto = -p.arahIkan;
+		if (p.kuasa >= 1) tarikanSakti();
+		const [zb, za] = zonaKini(p.ikan.kelas);
+		const tegangan = p.tegang + (p.geleng || 0);
+		// saat ikan lari atau melompat/menyetrum: lepaskan gulungan
+		let laju = 0;
+		if (!(p.lari > 0) && !p.peristiwa) {
+			if (tegangan < zb + (za - zb) * 0.25) laju = 9;
+			else if (tegangan < (zb + za) / 2) laju = 6;
+			else if (tegangan < za - 0.04) laju = 3;
+			if (p.habisi && tegangan < za) laju = Math.max(laju, 8);
+		}
+		oto.jedaKetuk -= dt;
+		if (laju > 0 && oto.jedaKetuk <= 0) {
+			p.ketukan++;
+			oto.jedaKetuk = 1 / laju;
+		}
+	} else if (p.fase === "dapat") {
+		if (p.t > 2.6) lanjutPancing();
+	}
+}
+
 // Satu tekan-lepas tombol (Spasi / tombol 🎣). Dihitung sendiri, bukan dari `tahan`,
 // supaya ketukan cepat yang jatuh di antara dua frame tidak hilang.
 export const ketuk = () => pancing.ketukan++;
@@ -339,17 +478,25 @@ export function ujungJoran() {
 	return { x: pancing.asal.x + Math.sin(a) * 1.4, z: pancing.asal.z + Math.cos(a) * 1.4 };
 }
 
-export function mulaiPancing({ x, z, rot, perahu }) {
-	Object.assign(pancing, { aktif: true, perahu: !!perahu, asal: { x, z, rot }, aim: 0, tahan: false, arah: 0, hasil: null, ikan: null, cipratan: [], kuasa: 0, habisi: false, kilat: 0, dorong: 0, lambat: 0, sorak: null });
-	keFase("siap", { teks: "Tahan untuk mengayun joran, lepas untuk melempar", jenis: "info" });
+export function mulaiPancing({ x, z, rot, perahu, kolam }) {
+	Object.assign(pancing, { aktif: true, perahu: !!perahu, kolam: !!kolam, asal: { x, z, rot }, aim: 0, tahan: false, arah: 0, arahOto: 0, hasil: null, ikan: null, cipratan: [], kuasa: 0, habisi: false, kilat: 0, dorong: 0, lambat: 0, sorak: null });
+	// AUTO tidak terbawa ke joran biasa atau ke lomba
+	if (pancing.otomatis && (!bolehOtomatis() || (kolam && kaitKolam.lombaBerjalan()))) pancing.otomatis = false;
+	oto.faseLalu = null;
+	keFase("siap", {
+		teks: kolam ? "🦈 Kolam Monster — isinya hanya ikan Monster & Legenda. Tahan untuk mengayun!" : "Tahan untuk mengayun joran, lepas untuk melempar",
+		jenis: kolam ? "besar" : "info",
+	});
 }
 
 export function berhentiPancing() {
 	hentikanLaga();
 	hentikanRiang();
 	pancing.aktif = false;
+	pancing.kolam = false;
 	pancing.ikan = null;
 	pancing.hasil = null;
+	pancing.tahan = false;
 	keFase("siap", null);
 }
 
@@ -374,10 +521,10 @@ function gagal(teks) {
 // Pelampung (sudah) di air: pilih ikan berikutnya lalu tunggu sambarannya.
 function mulaiTunggu(teks, jenis) {
 	const p = pancing;
-	const calon = pilihIkan(jarakKeTepi(p.pelampung.x, p.pelampung.z));
+	const calon = pilihIkan(kedalaman(p.pelampung.x, p.pelampung.z));
 	p.ikanTunggu = calon;
 	const kls = KELAS[calon.ikan.kelas];
-	const cepat = (malam() ? 0.85 : 1) * (p.sempurna ? 0.8 : 1) * (1 + calon.ikan.kelas * 0.3) * (jamLapar().aktif ? 0.5 : 1) * (suasana.hujan > 0.5 ? 0.8 : 1); // ikan lebih aktif saat hujan
+	const cepat = (malam() ? 0.85 : 1) * (p.sempurna ? 0.8 : 1) * (1 + calon.ikan.kelas * 0.3) * (jamLapar().aktif ? 0.5 : 1) * (suasana.hujan > 0.5 ? 0.8 : 1) * (p.kolam ? 0.55 : 1); // hujan: ikan lebih aktif; kolam berbayar: padat ikan
 	// ikan butuh waktu menemukan umpan; makin dalam & makin besar makin lama
 	p.tungguSampai = acak(4.5, 11) * cepat * joranKini().cepat;
 	const n = Math.floor(Math.random() * (kls.colek + 1));
@@ -401,7 +548,19 @@ function lepasTapiTunggu(teks) {
 
 // ---------- memilih ikan saat menyambar ----------
 
+// Kolam Monster: hanya kelas Monster & Legenda (situ maupun eksklusif kolam), tanpa
+// syarat malam/perahu/kedalaman; berat condong lebih besar daripada di situ.
+export function pilihIkanKolam(hoki = joranKini().hoki) {
+	const bobot = [0, 0, 0, 78, 22 * Math.sqrt(hoki)];
+	const kelas = Math.random() * (bobot[3] + bobot[4]) < bobot[3] ? 3 : 4;
+	const calon = IKAN.filter((f) => f.kelas === kelas && f.id !== "raja");
+	const ikan = calon[Math.floor(Math.random() * calon.length)];
+	const kg = ikan.kg[0] + (ikan.kg[1] - ikan.kg[0]) * Math.pow(Math.random(), 1.5);
+	return { ikan, kg: Math.round(kg * 100) / 100 };
+}
+
 function pilihIkan(jauh) {
+	if (pancing.kolam) return pilihIkanKolam();
 	const m = malam();
 	const kali = [1, 1, 1, 1, 1];
 	const kalikan = (arr) => arr.forEach((v, i) => (kali[i] *= v));
@@ -416,7 +575,7 @@ function pilihIkan(jauh) {
 	kalikan([1, 1, Math.sqrt(hoki), hoki, hoki * 1.1]);
 	const layak = (ikan) => {
 		const s = ikan.syarat || {};
-		return (!s.malam || m) && (!s.perahu || pancing.perahu) && (!s.jauh || jauh >= s.jauh) && (!s.sempurna || pancing.sempurna);
+		return !ikan.kolam && (!s.malam || m) && (!s.perahu || pancing.perahu) && (!s.jauh || jauh >= s.jauh) && (!s.sempurna || pancing.sempurna);
 	};
 	const bobot = KELAS.map((k, i) => (IKAN.some((f) => f.kelas === i && layak(f)) ? k.bobot * kali[i] : 0));
 	let r = Math.random() * bobot.reduce((a, b) => a + b, 0);
@@ -443,6 +602,17 @@ export function tickPancing(dt) {
 	const p = pancing;
 	if (!p.aktif) return;
 	p.t += dt;
+	// AUTO: masukan (tahan/ketukan/arah) disuntikkan sebelum dibaca di bawah
+	if (p.otomatis) {
+		if (!bolehOtomatis() || (p.kolam && kaitKolam.lombaBerjalan())) p.otomatis = false;
+		else kendaliOtomatis(dt);
+	}
+	// tiket kolam habis: ikan yang sedang dilawan dituntaskan dulu, baru berhenti
+	if (p.kolam && (p.fase === "siap" || p.fase === "gagal") && !kaitKolam.aksesKolam()) {
+		kaitKolam.saatHabis?.();
+		berhentiPancing();
+		return;
+	}
 	const ketukBaru = p.ketukan - ketukanLalu;
 	ketukanLalu = p.ketukan;
 	const tekan = ketukBaru > 0 || (p.tahan && !tahanLalu); // baru ditekan
@@ -453,7 +623,7 @@ export function tickPancing(dt) {
 	// adu tarik: joran diarahkan dengan mouse (atau A/D / analog) — lawan arah lari ikan
 	// Menunggu: joran digerakkan relatif dari posisi mouse awal (pelampung ikut terseret).
 	const masukan = p.fase === "tarik"
-		? (p.arah !== 0 ? p.arah : p.arahMouse)
+		? (p.otomatis ? p.arahOto : p.arah !== 0 ? p.arah : p.arahMouse)
 		: p.fase === "tunggu" ? (p.arah !== 0 ? p.arah : Math.max(-1, Math.min(1, p.arahMouse - p.mouseBasis))) : 0;
 	p.ayun += (masukan - p.ayun) * (1 - Math.exp(-6 * dt));
 	p.dorong = Math.max(0, p.dorong - dt * 2.2);
@@ -477,7 +647,7 @@ export function tickPancing(dt) {
 			const ok = (dd) => {
 				const x = o.x + Math.sin(a) * dd;
 				const z = o.z + Math.cos(a) * dd;
-				return perahuBebas(x, z, 0.2);
+				return bebasLempar(x, z, 0.2);
 			};
 			while (d > 3 && !ok(d)) d -= 0.5;
 			if (d <= 3) {
@@ -525,7 +695,7 @@ export function tickPancing(dt) {
 			let z = p.pelampung.z + ((tujuanZ - p.pelampung.z) / selisih) * langkah;
 			x -= ((x - o.x) / jarakSenar) * tarik;
 			z -= ((z - o.z) / jarakSenar) * tarik;
-			if (perahuBebas(x, z, 0.2)) {
+			if (bebasLempar(x, z, 0.2)) {
 				p.pelampung.x = x;
 				p.pelampung.z = z;
 				p.riakGeser -= dt;
@@ -547,7 +717,7 @@ export function tickPancing(dt) {
 			return keFase("siap", { teks: "Senar digulung. Lempar lagi!", jenis: "info" });
 		}
 		if (p.t >= p.tungguSampai) {
-			const { ikan, kg } = p.ikanTunggu || pilihIkan(jarakKeTepi(p.pelampung.x, p.pelampung.z));
+			const { ikan, kg } = p.ikanTunggu || pilihIkan(kedalaman(p.pelampung.x, p.pelampung.z));
 			p.ikan = ikan;
 			p.kg = kg;
 			p.jendela = KELAS[ikan.kelas].reaksi;
@@ -777,7 +947,7 @@ function tarik(dt, o, ketukBaru) {
 	p.samping += Math.sign(tujuanSamping - p.samping) * Math.min(Math.abs(tujuanSamping - p.samping), (p.lari > 0 ? 3 : 1.6) * dt);
 	const x = o.x + Math.sin(a) * p.jarak + Math.cos(a) * p.samping;
 	const z = o.z + Math.cos(a) * p.jarak - Math.sin(a) * p.samping;
-	if (diSitu(x, z)) p.ikanPos = { x, z };
+	if (diAir(x, z)) p.ikanPos = { x, z };
 	else {
 		p.arahIkan = -p.arahIkan;
 		p.jarak = Math.min(p.jarak, Math.hypot(p.ikanPos.x - o.x, p.ikanPos.z - o.z));
@@ -823,8 +993,10 @@ function dapat() {
 	// poin tumbuh dengan akar berat: ikan monster tetap jauh lebih berharga, tapi tidak meledak
 	p.combo += 1;
 	// pengali koin: combo tangkapan beruntun (maks ×1,5) & perfect strike (+15%)
-	const pengali = (1 + Math.min(p.combo - 1, 5) * 0.1) * (p.perfect ? 1.15 : 1);
+	const pengali = (1 + Math.min(p.combo - 1, 5) * 0.1) * (p.perfect ? 1.15 : 1) * (p.otomatis ? PENGALI_KOIN_AUTO : 1) * (p.kolam ? PENGALI_KOIN_KOLAM : 1);
 	const poin = Math.round(KELAS[ikan.kelas].poin * (1 + Math.sqrt(p.kg)) * (p.sempurna ? 1.2 : 1) * pengali);
+	// tangkapan di kolam ikut dihitung lomba (bila sedang berlangsung)
+	const lomba = p.kolam ? kaitKolam.saatDapat(ikan, p.kg) : null;
 	simpanan.koleksi = {
 		...simpanan.koleksi,
 		[ikan.id]: { jumlah: (lama?.jumlah || 0) + 1, terberat: Math.max(lama?.terberat || 0, p.kg), pertama: lama?.pertama || Date.now() },
@@ -834,8 +1006,9 @@ function dapat() {
 	simpan();
 	catat("ikan");
 	if (ikan.kelas >= 1) catat("ikanLangka");
+	if (p.kolam) catat("ikanKolam");
 	tambahXp(Math.round(poin * 0.6));
-	p.hasil = { ikan, kg: p.kg, cm: panjangCm(ikan, p.kg), baru, rekor, poin, total: simpanan.poin, combo: p.combo, perfect: p.perfect, pengali, bintang: bintangUkuran(ikan, p.kg), lapar: jamLapar().aktif };
+	p.hasil = { ikan, kg: p.kg, cm: panjangCm(ikan, p.kg), baru, rekor, poin, total: simpanan.poin, combo: p.combo, perfect: p.perfect, pengali, bintang: bintangUkuran(ikan, p.kg), lapar: jamLapar().aktif, otomatis: p.otomatis, kolam: p.kolam, lomba };
 	percik(p.ikanPos.x, p.ikanPos.z, 1.4 + ikan.kelas * 0.3);
 	// backsound Ajojing / Mancing Mania; fanfare sintetis bila berkasnya tak bisa diputar
 	// laga selesai: musik riang "selamat" selama kartu hasil tampil

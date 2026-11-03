@@ -29,6 +29,8 @@ import { gayaTampil, kenakanGaya, useLemari } from "./lemari";
 import PanelGaya from "./ui/PanelGaya";
 import PanelMisi from "./ui/PanelMisi";
 import PanelJoran from "./ui/PanelJoran";
+import PanelKolam from "./ui/PanelKolam";
+import HudLomba from "./ui/HudLomba";
 import PanelPeringkat from "./ui/PanelPeringkat";
 import { kendaraanDariId } from "./scene/kendaraan";
 import { kirimEmote, kirimGaya, kirimKlakson, kirimUcap, putusJelajah, sambungJelajah, sapaPemain, tutupSapaan, useMultipemain } from "./multipemain";
@@ -326,6 +328,10 @@ export default function JelajahPage() {
 			setMenu("pancing");
 			return;
 		}
+		if (id === "kolam:loket" || id === "kolam:tiket") {
+			setMenu("kolam");
+			return;
+		}
 		if (id === "distro:pilih" || id === "distro:coba") {
 			setMenu(id === "distro:coba" ? "gaya:coba" : "gaya:toko");
 			return;
@@ -491,6 +497,12 @@ export default function JelajahPage() {
 				? ["Bayar di kasir 🧾", "Bayar", "#1d4ed8"]
 			: dekat === "mancing:tepi"
 				? ["Memancing di pinggir situ 🎣", "Mancing", "#0f766e"]
+			: dekat === "kolam:loket"
+				? ["Loket Kolam Monster — tiket & lomba 🦈", "Loket", "#0f766e"]
+			: dekat === "kolam:tiket"
+				? ["Kolam Monster berbayar — beli tiket 🪙 500", "Tiket", "#b45309"]
+			: dekat === "mancing:kolam"
+				? ["Memancing ikan monster 🦈", "Mancing", "#be123c"]
 			: dekat.startsWith("mancing:")
 				? ["Mulai memancing di sini 🎣", "Mancing", "#0f766e"]
 			: dekat === "berhenti"
@@ -699,6 +711,7 @@ export default function JelajahPage() {
 					)}
 
 					{!jeda && <BarTenaga onTas={() => setMenu("tas")} onAlbum={modeMain === "mancing" ? null : () => setMenu("album")} onGaya={() => setMenu("gaya")} onMisi={() => setMenu("misi")} onPeringkat={() => setMenu("peringkat")} onPancing={modeMain === "mancing" ? null : () => setMenu("pancing")} />}
+					{!jeda && <HudLomba />}
 					{modeMain === "mancing" && !jeda && <GamePancing sentuh={sentuh} bersama={statusMp === "tersambung"} onSelesai={() => (kendali.aksi = "berhenti")} />}
 
 					{berkendara && !jeda && !sentuh && (
@@ -998,6 +1011,11 @@ export default function JelajahPage() {
 
 			{menu === "album" && <AlbumIkan onTutup={() => setMenu(null)} />}
 			{menu === "pancing" && <PanelJoran onTutup={() => setMenu(null)} />}
+			{menu === "kolam" && (
+				<Lembar judul="🦈 Kolam Monster DPMD" onTutup={() => setMenu(null)}>
+					<PanelKolam onTutup={() => setMenu(null)} />
+				</Lembar>
+			)}
 
 
 			{menu === "peringkat" && (
@@ -1081,6 +1099,8 @@ export default function JelajahPage() {
 									["Mobil berempat", "dekati mobil/motor/perahu yang dikemudikan tamu lain untuk ikut naik"],
 									["Situ Pemda", "naik perahu di dermaga; di panggung dermaga atau dari perahu tekan Mancing"],
 									["Memancing", "tahan 🎣 lalu lepas untuk melempar; saat adu tarik KETUK 🎣 berulang untuk menggulung, berhenti saat ikan lari"],
+									["AUTO & kamera", "🤖 AUTO memancing sendiri (joran Titanium Pro / Dasar Monster / Naga Emas, koin 75%); 🎥 ganti sudut: Standar, Dekat, Atas, Sinematik"],
+									["Kolam Monster", "kolam berbayar di barat kantor: tiket 🪙 500 / 10 menit, isinya ikan Monster & Legenda; daftar Lomba Galatama di loket"],
 									["Tenaga ❤", "berkurang seiring waktu, berlari, dan tertabrak; belanja di Alfamart: ambil keranjang, pilih barang di rak, bayar di kasir, lalu makan dari 🎒 Tas"],
 									["Tombol 💬 / 🙂", "ngobrol & kirim emote ke tamu lain; dekati tamu untuk menyapa"],
 								]
@@ -1095,6 +1115,8 @@ export default function JelajahPage() {
 									["Mobil berempat", "E di dekat kendaraan yang dikemudikan tamu lain = ikut naik"],
 									["Situ Pemda", "E di dermaga: naik perahu · E di panggung / perahu: memancing"],
 									["Memancing", "tahan Spasi lalu lepas = lempar; KETUK Spasi berulang = gulung (jangan ditahan), arahkan mouse (atau A/D) melawan arah ikan, F = Tarikan Sakti saat meteran ⚡ penuh"],
+									["AUTO & kamera", "O = AUTO memancing (joran Titanium Pro / Dasar Monster / Naga Emas, koin 75%) · C = ganti sudut kamera: Standar, Dekat, Atas, Sinematik"],
+									["Kolam Monster", "kolam berbayar di barat kantor: E di loket = tiket 🪙 500 / 10 menit & Lomba Galatama (juara = ikan terberat)"],
 									["Tenaga ❤", "habis = pingsan; masuk Alfamart seberang kantor: E ambil keranjang & barang di rak, bayar di kasir pakai koin, makan dari 🎒 Tas"],
 									["Enter / T", "ngobrol dengan tamu lain"],
 									["1 – 5", "emote: lambai, jempol, tepuk, tawa, hati"],
