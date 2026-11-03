@@ -31,6 +31,7 @@ import PanelMisi from "./ui/PanelMisi";
 import PanelJoran from "./ui/PanelJoran";
 import PanelKolam from "./ui/PanelKolam";
 import HudLomba from "./ui/HudLomba";
+import PanelEtalaseBumdes from "./ui/PanelEtalaseBumdes";
 import PanelPeringkat from "./ui/PanelPeringkat";
 import { kendaraanDariId } from "./scene/kendaraan";
 import { kirimEmote, kirimGaya, kirimKlakson, kirimUcap, putusJelajah, sambungJelajah, sapaPemain, tutupSapaan, useMultipemain } from "./multipemain";
@@ -328,6 +329,10 @@ export default function JelajahPage() {
 			setMenu("pancing");
 			return;
 		}
+		if (id === "pasar:etalase") {
+			setMenu("etalase");
+			return;
+		}
 		if (id === "kolam:loket" || id === "kolam:tiket") {
 			setMenu("kolam");
 			return;
@@ -497,6 +502,8 @@ export default function JelajahPage() {
 				? ["Bayar di kasir 🧾", "Bayar", "#1d4ed8"]
 			: dekat === "mancing:tepi"
 				? ["Memancing di pinggir situ 🎣", "Mancing", "#0f766e"]
+			: dekat === "pasar:etalase"
+				? ["Etalase produk asli BUM Desa 🛍️", "Lihat", "#16a34a"]
 			: dekat === "kolam:loket"
 				? ["Loket Kolam Monster — tiket & lomba 🦈", "Loket", "#0f766e"]
 			: dekat === "kolam:tiket"
@@ -1011,6 +1018,11 @@ export default function JelajahPage() {
 
 			{menu === "album" && <AlbumIkan onTutup={() => setMenu(null)} />}
 			{menu === "pancing" && <PanelJoran onTutup={() => setMenu(null)} />}
+			{menu === "etalase" && (
+				<Lembar judul="🛍️ Etalase Pasar BUMDes" lebar="sm:max-w-2xl" onTutup={() => setMenu(null)}>
+					<PanelEtalaseBumdes />
+				</Lembar>
+			)}
 			{menu === "kolam" && (
 				<Lembar judul="🦈 Kolam Monster DPMD" onTutup={() => setMenu(null)}>
 					<PanelKolam onTutup={() => setMenu(null)} />

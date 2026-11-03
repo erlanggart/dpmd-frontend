@@ -6,7 +6,9 @@ import { derauPutih, siapkan, suaraMati } from "./suaraPancing";
 // - "berkendara": "Radio Jelajah" — pop riang 116 BPM (drum, bas, akor, melodi bertema)
 //   selama naik mobil / motor;
 // - "jalan": "Jalan Santai" — petikan gitar 88 BPM & siulan pelan saat berjalan di luar;
-// - "mal": bossa lounge 104 BPM di dalam mal, McD, & toko.
+// - "mal": bossa lounge 104 BPM di dalam mal, McD, & toko;
+// - "live": band akustik 96 BPM di panggung food court Pasar BUMDes (gitar genjreng, cajon,
+//   bas, dan melodi "vokal").
 // Diam saat musik memancing (sendu / laga / riang) berbunyi, saat suara dimatikan, atau saat
 // musik latar dimatikan tamu; direndahkan saat ada orang berbicara (sintesis ucapan).
 
@@ -122,6 +124,42 @@ const ALAT = {
 		lfo.start(t + 0.12);
 		lfo.stop(t + lama + 0.05);
 	},
+	// genjrengan gitar akustik: nada akor dibunyikan berurutan sangat rapat (ke bawah / ke atas)
+	genjreng(ctx, ke, t, nada, v, naik = false) {
+		const urut = naik ? [...nada].reverse() : nada;
+		urut.forEach((n, k) => {
+			const tt = t + k * 0.012;
+			const g = amplop(ctx, ke, tt, 0.002, 0.7, v);
+			osc(ctx, "triangle", hz(n), tt, 0.7, saring(ctx, "lowpass", 2200, g));
+			osc(ctx, "sawtooth", hz(n), tt, 0.12, saring(ctx, "highpass", 2500, amplop(ctx, ke, tt, 0.001, 0.12, v * 0.12)));
+		});
+	},
+	// cajon: dentum bas kotak kayu & tepukan tepi
+	cajon(ctx, ke, t, v, tepuk = false) {
+		if (tepuk) {
+			derau(ctx, t, 0.12, v * 0.8, "bandpass", 2600, ke, 0.9);
+			osc(ctx, "triangle", 330, t, 0.06, amplop(ctx, ke, t, 0.002, 0.06, v * 0.4));
+			return;
+		}
+		const g = amplop(ctx, ke, t, 0.003, 0.22, v);
+		const o = osc(ctx, "sine", 110, t, 0.22, g);
+		o.frequency.exponentialRampToValueAtTime(58, t + 0.12);
+	},
+	// "vokal": gigi gergaji lewat dua saringan pita (forman "a"), vibrato pelan
+	vokal(ctx, ke, t, n, lama, v) {
+		const g = amplop(ctx, ke, t, 0.06, lama, v);
+		const f1 = saring(ctx, "bandpass", 800, g, 4);
+		const f2 = saring(ctx, "bandpass", 1250, g, 5);
+		const o = osc(ctx, "sawtooth", hz(n), t, lama, f1);
+		o.connect(f2);
+		const lfo = ctx.createOscillator();
+		lfo.frequency.value = 5.2;
+		const d = ctx.createGain();
+		d.gain.value = 12;
+		lfo.connect(d).connect(o.detune);
+		lfo.start(t + Math.min(0.25, lama * 0.4));
+		lfo.stop(t + lama + 0.05);
+	},
 	siul(ctx, ke, t, n, lama, v) {
 		const g = amplop(ctx, ke, t, 0.05, lama, v);
 		const o = osc(ctx, "sine", hz(n), t, lama, g);
@@ -186,6 +224,28 @@ const LAGU = {
 			if (nadaMel) ALAT.siul(ctx, ke, t, nadaMel + 12, lamaMel, 0.03);
 		},
 	},
+	live: {
+		bpm: 96,
+		vol: 0.4,
+		// I–V–vi–IV ala lagu pop akustik kafe, bait lalu reff
+		akor: ["C", "G", "Am", "F", "C", "G", "F", "G", "Am", "F", "C", "G", "Am", "F", "G", "C"],
+		melodi: [
+			[_, _, 67, 69, 72, L, 72, 74], [74, L, 72, _, 71, L, 67, _], [_, _, 69, 71, 72, L, 76, L], [74, L, 72, L, 69, L, _, _],
+			[_, _, 67, 69, 72, L, 72, 74], [74, L, 76, _, 74, L, 72, _], [_, _, 72, 74, 76, L, 77, 76], [74, L, L, L, _, _, 74, 76],
+			[77, L, 76, L, 74, L, 72, _], [72, L, 74, L, 76, L, _, _], [79, L, 76, L, 74, 72, 74, _], [76, L, L, L, 74, L, _, _],
+			[77, L, 76, L, 74, L, 72, _], [72, L, 74, 76, 77, L, 76, _], [74, L, L, 72, 74, L, 76, _], [72, L, L, L, L, L, _, _],
+		],
+		main(ctx, ke, t, b, i, d, akor, nadaMel, lamaMel) {
+			// pola genjreng D – D U – U D U
+			const nada = [akor[0] - 12, ...akor, akor[0] + 12];
+			if ([0, 2, 3, 5, 6, 7].includes(i)) ALAT.genjreng(ctx, ke, t, nada, i === 0 || i === 2 ? 0.032 : 0.02, i === 3 || i === 5 || i === 7);
+			if (i === 0 || i === 3 || i === 5) ALAT.cajon(ctx, ke, t, 0.42);
+			if (i === 2 || i === 6) ALAT.cajon(ctx, ke, t, 0.3, true);
+			if (i % 2 === 1) ALAT.ketuk(ctx, ke, t, 0.006);
+			if (i === 0 || i === 4) ALAT.bas(ctx, ke, t, akor[0] - 12 + (i === 4 ? 7 : 0), d * 3.2, 0.12, "triangle");
+			if (nadaMel) ALAT.vokal(ctx, ke, t, nadaMel, lamaMel, 0.05);
+		},
+	},
 	mal: {
 		bpm: 104,
 		vol: 0.3,
@@ -242,7 +302,7 @@ function jadwalkan() {
 	}
 }
 
-// jenis: null | "jalan" | "berkendara" | "mal"
+// jenis: null | "jalan" | "berkendara" | "mal" | "live"
 export function aturLatar(jenis) {
 	const ctx = siapkan();
 	if (!ctx) return;

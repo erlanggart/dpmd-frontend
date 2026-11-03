@@ -16,6 +16,7 @@ import { AIR_Y, DEK_Y, DERMAGA, KIOS_TOKO_PANCING, PERAHU, dermagaDi, jarakKeTep
 import { bukaPeti, petiSiap } from "../harta";
 import { aksesKolam } from "../kolamMonster";
 import { AIR_KOLAM_Y, TITIK_LOKET_KOLAM, titikTepiKolam } from "./kolamMonsterData";
+import { LAPAK_PASAR, TITIK_ETALASE_PASAR } from "./pasarBumdesData";
 import { berhentiMakan, mulaiMakan, tickMakan, warung } from "../warung";
 import { berhentiNonton, tickNonton } from "../bioskop";
 import { AULA_CCM, dalamStudio, TITIK_BUTIK, TITIK_LIFT, TITIK_LOKET, TITIK_PESAN_FC, TITIK_PESAN_KOPI, TITIK_PESAN_MCD, dalamAulaCcm, dalamGedungKhusus, dalamLahanCcm, dalamMcd, lantaiMalDariY, malAktif } from "./gedungKhusus";
@@ -934,6 +935,9 @@ export default function Pemain({ daftarDinding, penghuni, penampilan = PENAMPILA
 			if (lantai === 0) {
 				coba("pesan:mie", Math.hypot(TITIK_PESAN_MIE.x - p.x, TITIK_PESAN_MIE.z - p.z), JARAK_GEROBAK);
 				coba("pesan:pecel", Math.hypot(TITIK_PESAN_PECEL.x - p.x, TITIK_PESAN_PECEL.z - p.z), JARAK_GEROBAK);
+				// food court Pasar BUMDes: enam lapak & papan etalase produk BUM Desa
+				for (const l of LAPAK_PASAR) coba(`pesan:${l.id}`, Math.hypot(l.titik.x - p.x, l.titik.z - p.z), 1.7);
+				coba("pasar:etalase", Math.hypot(TITIK_ETALASE_PASAR.x - p.x, TITIK_ETALASE_PASAR.z - p.z), 1.8);
 				coba("pesan:mcd", Math.hypot(TITIK_PESAN_MCD.x - p.x, TITIK_PESAN_MCD.z - p.z), 1.8);
 				// Cibinong City Mall: kedai kopi (Lt 1), butik (Lt 2), food court (Lt 3), loket bioskop (Lt 4), lift
 				const diLt = (t) => t.lantaiMal === undefined || (dalamLahanCcm(p.x, p.z) && t.lantaiMal === malAktif.lantai);

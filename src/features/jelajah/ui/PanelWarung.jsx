@@ -32,6 +32,16 @@ export default function PanelWarung({ id, onSelesai }) {
 					{tertunda.ikon} {tertunda.nama} sudah dipesan di {WARUNG[warung.pesanan.warung].nama} — duduk di kursinya untuk menyantap.
 				</p>
 			)}
+			{w.pemasok && (
+				<div className="mb-3 rounded-2xl bg-emerald-50/70 p-3 ring-1 ring-emerald-100">
+					<p className="text-[11px] font-bold uppercase tracking-wider text-emerald-700">🌾 Bahan dari BUM Desa Kab. Bogor</p>
+					<ul className="mt-1 space-y-0.5 text-xs text-emerald-900/80">
+						{w.pemasok.map((p) => (
+							<li key={p}>• {p}</li>
+						))}
+					</ul>
+				</div>
+			)}
 			<ul className="space-y-2">
 				{w.menu.map((m) => {
 					const kurang = koin < m.harga;
@@ -58,7 +68,7 @@ export default function PanelWarung({ id, onSelesai }) {
 					);
 				})}
 			</ul>
-			<p className="mt-3 text-xs text-slate-500">Setelah memesan, duduk di salah satu kursi {w.nama} — pesanan diantar ke meja dan tenaga terisi saat habis disantap.</p>
+			<p className="mt-3 text-xs text-slate-500">Setelah memesan, duduk di {w.grup === "pasar" ? "meja mana pun di Pasar BUMDes" : `salah satu kursi ${w.nama}`} — pesanan diantar ke meja dan tenaga terisi saat habis disantap.</p>
 		</div>
 	);
 }

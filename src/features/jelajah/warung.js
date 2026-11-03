@@ -61,6 +61,93 @@ export const WARUNG = {
 			{ id: "croissant", nama: "Croissant Mentega", ikon: "🥐", harga: 26, tenaga: 22, bentuk: "piring", ket: "Renyah berlapis" },
 		],
 	},
+	// ---------- Food court Pasar BUMDes (grup "pasar": kursinya dipakai bersama) ----------
+	// Bahan dari produk BUM Desa se-Kabupaten Bogor yang terdaftar di Pasar BUMDes
+	// (dpmd.bogorkab.go.id/pasar-bumdes); pemasok = BUM Desa penjual produk tersebut.
+	"pasar-kopi": {
+		nama: "Kedai Kopi Desa",
+		ikon: "☕",
+		warna: "#78350f",
+		grup: "pasar",
+		pemasok: ["BUM Desa Manis Ciherang (Dramaga) — kopi", "BUM Desa Maju Bersama Pengasinan (Gunung Sindur) — air minum", "BUM Desa Bersatu Sejahtera Cibinong (Gunung Sindur) — roti"],
+		menu: [
+			{ id: "pk-tubruk", nama: "Kopi Hitam Tubruk", ikon: "☕", harga: 15, tenaga: 12, bentuk: "gelas", ket: "Diseduh kental ala warung desa" },
+			{ id: "pk-susu-aren", nama: "Es Kopi Susu Gula Aren", ikon: "🧋", harga: 25, tenaga: 20, bentuk: "gelas", ket: "Gula aren cair, susu segar" },
+			{ id: "pk-teh", nama: "Teh Manis Hangat", ikon: "🍵", harga: 10, tenaga: 9, bentuk: "gelas", ket: "Teman ngobrol sambil nonton live music" },
+			{ id: "pk-air", nama: "Air Mineral BUMDes", ikon: "💧", harga: 6, tenaga: 6, bentuk: "gelas", ket: "Air minum kemasan produksi BUM Desa" },
+			{ id: "pk-roti", nama: "Roti Bakar Srikaya", ikon: "🍞", harga: 18, tenaga: 18, bentuk: "piring", ket: "Roti buatan BUM Desa, dibakar mentega" },
+		],
+	},
+	"pasar-telur": {
+		nama: "Dapur Telur & Ayam",
+		ikon: "🍳",
+		warna: "#d97706",
+		grup: "pasar",
+		pemasok: ["Bina Mitra (Citeureup) — telur & ayam kampung", "BUM Desa Sakinah Benteng (Ciampea) — telur", "BUM Desa Tenjoleat Sukamaju (Cigudeg) — telur", "BUM Desa Cikeas Mandiri (Sukaraja) — telur"],
+		menu: [
+			{ id: "pt-balado", nama: "Nasi Telur Balado", ikon: "🍛", harga: 25, tenaga: 32, bentuk: "piring", ket: "Telur rebus, sambal balado merah" },
+			{ id: "pt-martabak", nama: "Martabak Telur", ikon: "🥟", harga: 30, tenaga: 34, bentuk: "piring", ket: "Telur bebek & ayam, daun bawang" },
+			{ id: "pt-gulung", nama: "Telur Gulung (3 tusuk)", ikon: "🍢", harga: 10, tenaga: 10, bentuk: "piring", ket: "Jajanan favorit anak sekolah" },
+			{ id: "pt-ayam", nama: "Ayam Kampung Bakar + Nasi", ikon: "🍗", harga: 45, tenaga: 52, bentuk: "piring", ket: "Ayam kampung peternak desa, bumbu kecap" },
+			{ id: "pt-uduk", nama: "Nasi Uduk Telur Dadar", ikon: "🍳", harga: 22, tenaga: 28, bentuk: "piring", ket: "Nasi uduk gurih, sambal kacang" },
+		],
+	},
+	"pasar-ikan": {
+		nama: "Saung Ikan Desa",
+		ikon: "🐟",
+		warna: "#0e7490",
+		grup: "pasar",
+		pemasok: ["BUM Desa Manis Ciherang (Dramaga) — nila marinasi", "BUM Desa Agrima Mandiri Hambaro (Nanggung) — nila merah", "BUMDesa Bojongrangkas Maju/BORJU (Ciampea) — keripik patin & peyek rebon", "Bumdes Jaya Utama Sukmajaya (Tajurhalang) — patin"],
+		menu: [
+			{ id: "pi-nila", nama: "Nila Bakar Bumbu Kuning", ikon: "🐟", harga: 42, tenaga: 48, bentuk: "piring", ket: "Nila marinasi siap bakar + nasi & lalap" },
+			{ id: "pi-patin", nama: "Pepes Patin", ikon: "🍃", harga: 35, tenaga: 40, bentuk: "piring", ket: "Dibungkus daun pisang, kemangi" },
+			{ id: "pi-pecak", nama: "Pecak Nila Merah", ikon: "🌶️", harga: 40, tenaga: 45, bentuk: "piring", ket: "Kuah pecak pedas segar" },
+			{ id: "pi-keripik", nama: "Keripik Ikan Patin", ikon: "🥨", harga: 12, tenaga: 10, bentuk: "piring", ket: "Camilan renyah produk BUM Desa" },
+			{ id: "pi-peyek", nama: "Peyek Rebon", ikon: "🦐", harga: 10, tenaga: 8, bentuk: "piring", ket: "Gurih, teman makan nasi" },
+		],
+	},
+	"pasar-kebun": {
+		nama: "Kebun Segar Hidroponik",
+		ikon: "🥬",
+		warna: "#16a34a",
+		grup: "pasar",
+		pemasok: ["BUM Desa Agrima Mandiri Hambaro (Nanggung) — kangkung, bayam, pakcoy hidroponik", "BUM Desa Cahaya Mandiri Sukatani (Sukaraja) — sayur organik hidroponik", "BUM Desa Satu Hati Kiarapandak (Sukajaya) — jambu kristal", "BUM Desa Kuntum Mekar Waringinjaya (Bojong Gede) — melon"],
+		menu: [
+			{ id: "pb-jambu", nama: "Jus Jambu Kristal", ikon: "🍐", harga: 18, tenaga: 15, bentuk: "gelas", ket: "Jambu kristal kebun desa, tanpa gula" },
+			{ id: "pb-melon", nama: "Es Melon Segar", ikon: "🍈", harga: 16, tenaga: 13, bentuk: "gelas", ket: "Melon sweet lavender dipotong dadu" },
+			{ id: "pb-kangkung", nama: "Cah Kangkung + Nasi", ikon: "🥬", harga: 25, tenaga: 30, bentuk: "piring", ket: "Kangkung hidroponik, bawang putih" },
+			{ id: "pb-pakcoy", nama: "Salad Pakcoy Wijen", ikon: "🥗", harga: 22, tenaga: 20, bentuk: "piring", ket: "Pakcoy & bayam hidroponik segar" },
+			{ id: "pb-rujak", nama: "Rujak Buah", ikon: "🍉", harga: 15, tenaga: 14, bentuk: "piring", ket: "Bumbu kacang gula merah" },
+		],
+	},
+	"pasar-tempe": {
+		nama: "Warung Tempe & Liwet",
+		ikon: "🍚",
+		warna: "#a16207",
+		grup: "pasar",
+		pemasok: ["BUM Desa Makmur Anugerah Lestari Sukamakmur (Ciomas) — tempe higienis & keripik tempe", "BUM Desa Ciptakan Arta Saluyu Gununggeulis (Sukaraja) — cabai rawit", "BUM Desa Cibar Sejahtera Cilebut Barat (Sukaraja) — beras"],
+		menu: [
+			{ id: "pm-penyet", nama: "Nasi Liwet Tempe Penyet", ikon: "🍚", harga: 28, tenaga: 36, bentuk: "piring", ket: "Sambal rawit desa, lalapan" },
+			{ id: "pm-mendoan", nama: "Tempe Mendoan", ikon: "🟫", harga: 12, tenaga: 12, bentuk: "piring", ket: "Hangat, cocol kecap cabai" },
+			{ id: "pm-keripik", nama: "Keripik Tempe", ikon: "🍘", harga: 10, tenaga: 8, bentuk: "piring", ket: "Produk BUM Desa, renyah tipis" },
+			{ id: "pm-asem", nama: "Sayur Asem + Tempe", ikon: "🥣", harga: 20, tenaga: 24, bentuk: "mangkuk", ket: "Segar asam manis" },
+			{ id: "pm-liwet", nama: "Nasi Liwet Komplit", ikon: "🍱", harga: 35, tenaga: 44, bentuk: "nampan", ket: "Ayam, tempe, ikan asin, sambal" },
+		],
+	},
+	"pasar-sate": {
+		nama: "Sate Domba & Jajanan",
+		ikon: "🍢",
+		warna: "#b91c1c",
+		grup: "pasar",
+		pemasok: ["BUM Desa Dago Sejahtera (Parung Panjang) — domba & kambing", "BUMDesa Bojongrangkas Maju/BORJU (Ciampea) — kue tradisional & keripik bayam", "BUM Desa Cahaya Mandiri Sukatani (Sukaraja) — snack box"],
+		menu: [
+			{ id: "ps-sate", nama: "Sate Domba Maranggi", ikon: "🍢", harga: 45, tenaga: 50, bentuk: "piring", ket: "10 tusuk, sambal oncom & tomat" },
+			{ id: "ps-sop", nama: "Sop Kambing", ikon: "🍲", harga: 40, tenaga: 46, bentuk: "mangkuk", ket: "Kuah rempah hangat" },
+			{ id: "ps-kue", nama: "Kue Tradisional Sepiring", ikon: "🍡", harga: 12, tenaga: 12, bentuk: "piring", ket: "Kue basah buatan ibu-ibu desa" },
+			{ id: "ps-snack", nama: "Snack Box Desa", ikon: "🍱", harga: 15, tenaga: 16, bentuk: "nampan", ket: "Isi kue & gorengan produk BUM Desa" },
+			{ id: "ps-bayam", nama: "Keripik Bayam", ikon: "🥬", harga: 10, tenaga: 8, bentuk: "piring", ket: "Renyah, produk BUM Desa" },
+		],
+	},
 };
 const LAMA = { mangkuk: 9, piring: 10, nampan: 10, gelas: 6 };
 export const lamaMakan = (item) => LAMA[item?.bentuk] || 9;
@@ -102,7 +189,8 @@ export function pesan(warungId, itemId) {
 // kursi: { x, z, rot, warung, mejaY } — hanya kursi tempat pesanan dibuat
 export function mulaiMakan(kursi) {
 	const p = warung.pesanan;
-	if (!p || warung.makan || p.warung !== kursi.warung) return;
+	// kursi bergrup (food court) menerima pesanan dari lapak mana pun di grupnya
+	if (!p || warung.makan || (p.warung !== kursi.warung && WARUNG[p.warung]?.grup !== kursi.warung)) return;
 	const item = itemMenu(p.warung, p.item);
 	warung.makan = { t: 0, x: kursi.x, z: kursi.z, rot: kursi.rot, mejaY: kursi.mejaY ?? 0.75, warung: p.warung, item };
 	ubahTenaga(0, { teks: `${item.nama} datang! Selamat makan ${item.ikon}`, jenis: "info" });
@@ -120,6 +208,7 @@ export function tickMakan(dt) {
 	const tambah = Math.min(m.item.tenaga, TENAGA_MAKS - tenaga.nilai);
 	ubahTenaga(m.item.tenaga, { teks: `${m.item.bentuk === "gelas" ? "Segar" : "Kenyang"}! Tenaga +${Math.max(0, Math.round(tambah))} 😋`, jenis: "baik" });
 	catat(m.warung);
+	if (WARUNG[m.warung]?.grup) catat(WARUNG[m.warung].grup);
 	catat("makan");
 	tambahXp(Math.max(5, Math.round(m.item.harga / 4)));
 	beritahu();

@@ -3,6 +3,7 @@ import { diKawasan, tabrakKawasan } from "./kawasanBantu";
 import { KURSI_BIOSKOP_DASAR, KURSI_FC_DASAR, KURSI_KOPI_DASAR, KURSI_MCD_DASAR, SUPERMARKET_CCM, dalamLahanCcm, malAktif, tinggiMal, yLantaiMal } from "./gedungKhusus";
 import { AIR_Y, DEK_Y, DERMAGA, KIOS_TOKO_PANCING, dermagaDi, diSitu, jarakKeTepi, keDuniaDermaga } from "./situ";
 import { PENGHALANG_KOLAM } from "./kolamMonsterData";
+import { KURSI_PASAR_DASAR, KURSI_PASAR_NPC, PENGHALANG_PASAR } from "./pasarBumdesData";
 
 // Geometri turunan dari kantorConfig: dinding per lantai, pintu, tangga, perabot,
 // penghuni kantor, penghalang tabrakan, dan pencarian jalur. Semua dalam meter.
@@ -674,7 +675,9 @@ export const KURSI_MCD = kursiDari(KURSI_MCD_DASAR, { warung: "mcd" }).map((k, i
 export const KURSI_KOPI = kursiDari(KURSI_KOPI_DASAR, { warung: "kopi" }).map((k, i) => ([2, 9].includes(i) ? { ...k, npc: true } : k));
 export const KURSI_FC = kursiDari(KURSI_FC_DASAR, { warung: "foodcourt" }, 2).map((k, i) => (i % 5 === 1 ? { ...k, npc: true } : k));
 export const KURSI_BIOSKOP = kursiDari(KURSI_BIOSKOP_DASAR, { bioskop: true }, 3);
-export const KURSI_MAKAN = [...KURSI_WARUNG, ...KURSI_PECEL, ...KURSI_MCD, ...KURSI_KOPI, ...KURSI_FC];
+// food court Pasar BUMDes: kursi bersama semua lapak (grup "pasar" di warung.js)
+export const KURSI_PASAR = kursiDari(KURSI_PASAR_DASAR, { warung: "pasar" }).map((k, i) => (KURSI_PASAR_NPC.has(i) ? { ...k, npc: true } : k));
+export const KURSI_MAKAN = [...KURSI_WARUNG, ...KURSI_PECEL, ...KURSI_MCD, ...KURSI_KOPI, ...KURSI_FC, ...KURSI_PASAR];
 // Toko aksesoris "Distro Gaya" di timur warung mie ayam: rak baju, manekin, kasir, dan dua
 // bilik ruang coba bertirai di sisi timur (coba gratis, beli di dalam bilik atau kasir).
 export const DISTRO = { x0: -32, x1: -21.6, z0: 47, z1: 55.5, tinggi: 3.8, pintu: { x0: -27.9, x1: -25.7, z: 47 } };
@@ -791,6 +794,7 @@ export const PENGHALANG = [0, 1].map((l) => [
 				...POHON.map(([x, z]) => titik(x, z, 0.5)),
 				// Kolam Monster DPMD: air, kios loket, pagar tiga sisi
 				...PENGHALANG_KOLAM,
+				...PENGHALANG_PASAR,
 			]
 		: []),
 ]);

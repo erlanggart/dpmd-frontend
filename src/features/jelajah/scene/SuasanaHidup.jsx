@@ -9,6 +9,7 @@ import { KENDARAAN_LALIN } from "./lalinKawasan";
 import { DISTRO, GEROBAK_MIE, GEROBAK_PECEL, TOKO, dalamDistro, tokoDi } from "./layout";
 import { jarakKeTepi } from "./situ";
 import { suasana } from "./suasana";
+import { LAPAK_PASAR, PASAR, dalamPasar } from "./pasarBumdesData";
 
 // Pengatur suasana suara di sekitar tamu, dicek beberapa kali per detik:
 // - musik latar: "berkendara" di mobil/motor, "mal" di dalam mal/McD/toko, "jalan" di luar;
@@ -16,6 +17,15 @@ import { suasana } from "./suasana";
 //   & tiga kendaraan lalu lintas terdekat;
 // - sapaan bersuara (bahasa Indonesia) dari penjual, kasir, kru, dan petugas saat tamu mendekat,
 //   dan obrolan pengunjung di tempat ramai.
+
+const KALIMAT_LAPAK = {
+	"pasar-kopi": ["Kopinya, Kak? Dari kopi BUM Desa, diseduh tubruk.", "Es kopi susu gula arennya segar, Kak!"],
+	"pasar-telur": ["Telurnya langsung dari peternak BUM Desa, Kak!", "Martabak telurnya baru matang, Kak."],
+	"pasar-ikan": ["Nila bakarnya, Kak? Ikannya dari kolam desa.", "Keripik patinnya renyah, Kak, oleh-oleh juga bisa."],
+	"pasar-kebun": ["Jus jambu kristal, Kak? Seger banget.", "Sayurnya hidroponik, panen tadi pagi, Kak."],
+	"pasar-tempe": ["Nasi liwetnya, Kak? Sambal rawitnya pedas!", "Mendoan hangat, Kak, baru diangkat."],
+	"pasar-sate": ["Sate dombanya, Kak! Empuk, bumbu maranggi.", "Kue tradisionalnya buatan ibu-ibu desa, Kak."],
+};
 
 // [x, z, jangkau, lantaiMal|null, kalimat[], perempuan]
 const SAPA_TEMPAT = [
@@ -31,6 +41,8 @@ const SAPA_TEMPAT = [
 	[TITIK_PESAN_FC.x, TITIK_PESAN_FC.z, 2.5, 2, ["Silakan, Kak, mau nasi goreng atau ayam geprek?", "Baksonya masih panas, Kak!"], false],
 	[LOKET.x0 - 1.2, (LOKET.z0 + LOKET.z1) / 2, 2.5, 3, ["Mau nonton film sejarah Bogor, Kak? Tiketnya tiga puluh lima koin.", "Silakan pilih filmnya, Kak. Studio satu sebentar lagi mulai."], true],
 	[(POPCORN.x0 + POPCORN.x1) / 2, POPCORN.z0 - 1, 2.5, 3, ["Popcornnya, Kak? Ada rasa karamel.", "Minumnya sekalian, Kak?"], true],
+	// lapak food court Pasar BUMDes
+	...LAPAK_PASAR.map((l, i) => [l.titik.x, l.titik.z, 2.2, null, KALIMAT_LAPAK[l.id], i % 2 === 1]),
 ];
 
 // Tempat ramai yang punya obrolan latar: [x, z, jangkau, lantaiMal|null]
@@ -42,6 +54,7 @@ const TEMPAT_OBROL = [
 	[(AULA_CCM.x0 + AULA_CCM.x1) / 2, (AULA_CCM.z0 + AULA_CCM.z1) / 2, 30, 1],
 	[-1734, -585, 20, 2],
 	[0, 0, 14, null], // lobi kantor DPMD
+	[(PASAR.x0 + PASAR.x1) / 2, (PASAR.z0 + PASAR.z1) / 2, 14, null], // food court Pasar BUMDes
 ];
 
 export default function SuasanaHidup() {
@@ -70,7 +83,9 @@ export default function SuasanaHidup() {
 
 		// --- musik latar ---
 		const berkendara = k && (k.jenis === "mobil" || k.jenis === "motor");
-		aturLatar(berkendara ? "berkendara" : pose === "perahu" || pose === "mancing" ? null : diMal || diMcd || diToko ? "mal" : "jalan");
+		// dekat panggung food court Pasar BUMDes: band akustik live
+		const diPasar = posisi.lantai === 0 && dalamPasar(posisi.x, posisi.z, 7);
+		aturLatar(berkendara ? "berkendara" : pose === "perahu" || pose === "mancing" ? null : diMal || diMcd || diToko ? "mal" : diPasar ? "live" : "jalan");
 
 		// --- suara sekitar ---
 		const laju = berkendara ? Math.abs(k.laju) : 0;
