@@ -338,7 +338,7 @@ const NewsCarousel = ({ beritaList }) => {
                       {/* Call to Action - Only on active card */}
                       {isActive && (
                         <button 
-                          className="flex items-center justify-center gap-2 w-full py-2.5 bg-gradient-to-r from-blue-600 to-purple-600 text-white font-semibold rounded-xl hover:from-blue-700 hover:to-purple-700 transition-all duration-300 shadow-lg hover:shadow-xl group text-sm"
+                          className="flex items-center justify-center gap-2 w-full py-2.5 bg-[#e3b23c] text-[#0a1220] font-bold rounded-md hover:bg-[#edc35a] transition-colors group text-sm"
                         >
                           <span>Baca Selengkapnya</span>
                           <FiExternalLink className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />
@@ -368,7 +368,7 @@ const NewsCarousel = ({ beritaList }) => {
             onClick={() => goToSlide(index)}
             className={`transition-all duration-300 rounded-full ${
               index === activeIndex
-                ? 'w-10 h-3 bg-gradient-to-r from-blue-600 to-purple-600'
+                ? 'w-10 h-3 bg-[#e3b23c]'
                 : 'w-3 h-3 bg-gray-300 hover:bg-gray-400'
             }`}
             aria-label={`Go to slide ${index + 1}`}

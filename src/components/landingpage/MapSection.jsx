@@ -7,69 +7,11 @@ import {
   FiNavigation, FiLayers, FiChevronRight, FiHome, FiGrid,
   FiImage, FiUsers, FiMinus, FiPlus, FiCompass, FiCrosshair
 } from 'react-icons/fi';
+import { KECAMATAN_DATA, BOGOR_BOUNDARY } from './dataWilayah';
+import JudulBagian from './JudulBagian';
 
 // ======================= DATA =======================
-
-const KECAMATAN_DATA = [
-  { name: 'Nanggung', lat: -6.6612, lng: 106.5371, desa: 11, kelurahan: 0 },
-  { name: 'Leuwiliang', lat: -6.6291, lng: 106.6143, desa: 11, kelurahan: 0 },
-  { name: 'Leuwisadeng', lat: -6.5719, lng: 106.5835, desa: 8, kelurahan: 0 },
-  { name: 'Pamijahan', lat: -6.6894, lng: 106.6568, desa: 15, kelurahan: 0 },
-  { name: 'Cibungbulang', lat: -6.5777, lng: 106.6631, desa: 15, kelurahan: 0 },
-  { name: 'Ciampea', lat: -6.5549, lng: 106.6972, desa: 13, kelurahan: 0 },
-  { name: 'Tenjolaya', lat: -6.6489, lng: 106.7083, desa: 7, kelurahan: 0 },
-  { name: 'Dramaga', lat: -6.5755, lng: 106.7381, desa: 10, kelurahan: 0 },
-  { name: 'Ciomas', lat: -6.6026, lng: 106.7653, desa: 10, kelurahan: 1 },
-  { name: 'Tamansari', lat: -6.6451, lng: 106.7656, desa: 8, kelurahan: 0 },
-  { name: 'Cijeruk', lat: -6.6830, lng: 106.7861, desa: 9, kelurahan: 0 },
-  { name: 'Cigombong', lat: -6.7468, lng: 106.7965, desa: 9, kelurahan: 0 },
-  { name: 'Caringin', lat: -6.7346, lng: 106.8649, desa: 12, kelurahan: 0 },
-  { name: 'Ciawi', lat: -6.6977, lng: 106.8845, desa: 13, kelurahan: 0 },
-  { name: 'Cisarua', lat: -6.6958, lng: 106.9510, desa: 9, kelurahan: 1 },
-  { name: 'Megamendung', lat: -6.6759, lng: 106.8937, desa: 12, kelurahan: 0 },
-  { name: 'Sukaraja', lat: -6.5721, lng: 106.8403, desa: 13, kelurahan: 0 },
-  { name: 'Babakan Madang', lat: -6.5794, lng: 106.8926, desa: 9, kelurahan: 0 },
-  { name: 'Sukamakmur', lat: -6.5831, lng: 107.0222, desa: 10, kelurahan: 0 },
-  { name: 'Cariu', lat: -6.5237, lng: 107.1360, desa: 10, kelurahan: 0 },
-  { name: 'Tanjungsari', lat: -6.6118, lng: 107.1382, desa: 10, kelurahan: 0 },
-  { name: 'Jonggol', lat: -6.5031, lng: 107.0452, desa: 14, kelurahan: 0 },
-  { name: 'Cileungsi', lat: -6.4070, lng: 107.0031, desa: 12, kelurahan: 0 },
-  { name: 'Klapanunggal', lat: -6.4765, lng: 106.9612, desa: 9, kelurahan: 0 },
-  { name: 'Gunung Putri', lat: -6.3925, lng: 106.9347, desa: 10, kelurahan: 0 },
-  { name: 'Citeureup', lat: -6.5196, lng: 106.8928, desa: 12, kelurahan: 2 },
-  { name: 'Cibinong', lat: -6.4806, lng: 106.8338, desa: 0, kelurahan: 13 },
-  { name: 'Bojonggede', lat: -6.4840, lng: 106.7997, desa: 8, kelurahan: 1 },
-  { name: 'Kemang', lat: -6.5031, lng: 106.7351, desa: 8, kelurahan: 1 },
-  { name: 'Rancabungur', lat: -6.5199, lng: 106.7119, desa: 7, kelurahan: 0 },
-  { name: 'Parung', lat: -6.4331, lng: 106.7099, desa: 9, kelurahan: 0 },
-  { name: 'Ciseeng', lat: -6.4630, lng: 106.6824, desa: 10, kelurahan: 0 },
-  { name: 'Gunung Sindur', lat: -6.3881, lng: 106.6919, desa: 10, kelurahan: 0 },
-  { name: 'Rumpin', lat: -6.4565, lng: 106.6294, desa: 14, kelurahan: 0 },
-  { name: 'Cigudeg', lat: -6.4997, lng: 106.5440, desa: 15, kelurahan: 0 },
-  { name: 'Sukajaya', lat: -6.6271, lng: 106.4702, desa: 11, kelurahan: 0 },
-  { name: 'Jasinga', lat: -6.4657, lng: 106.4579, desa: 16, kelurahan: 0 },
-  { name: 'Tenjo', lat: -6.3783, lng: 106.4806, desa: 9, kelurahan: 0 },
-  { name: 'Parung Panjang', lat: -6.3700, lng: 106.5546, desa: 11, kelurahan: 0 },
-  { name: 'Tajurhalang', lat: -6.4713, lng: 106.7583, desa: 7, kelurahan: 0 },
-];
-
-const BOGOR_BOUNDARY = [
-  [-6.30, 106.42], [-6.29, 106.50], [-6.30, 106.56], [-6.32, 106.62],
-  [-6.33, 106.66], [-6.34, 106.70], [-6.37, 106.73], [-6.39, 106.76],
-  [-6.42, 106.78], [-6.43, 106.82], [-6.44, 106.86], [-6.42, 106.89],
-  [-6.38, 106.90], [-6.35, 106.93], [-6.34, 106.96], [-6.35, 107.00],
-  [-6.36, 107.04], [-6.39, 107.07], [-6.42, 107.09], [-6.46, 107.11],
-  [-6.48, 107.14], [-6.49, 107.17], [-6.50, 107.20], [-6.55, 107.21],
-  [-6.60, 107.20], [-6.65, 107.19], [-6.68, 107.16], [-6.67, 107.10],
-  [-6.64, 107.04], [-6.63, 107.00], [-6.64, 106.97], [-6.68, 106.97],
-  [-6.72, 106.97], [-6.74, 106.94], [-6.76, 106.90], [-6.78, 106.87],
-  [-6.79, 106.84], [-6.80, 106.80], [-6.80, 106.77], [-6.78, 106.75],
-  [-6.74, 106.77], [-6.72, 106.75], [-6.72, 106.72], [-6.74, 106.69],
-  [-6.75, 106.65], [-6.74, 106.62], [-6.72, 106.59], [-6.71, 106.55],
-  [-6.71, 106.51], [-6.69, 106.47], [-6.66, 106.43], [-6.61, 106.40],
-  [-6.54, 106.38], [-6.48, 106.38], [-6.44, 106.39], [-6.40, 106.40],
-  [-6.36, 106.41], [-6.33, 106.42], [-6.30, 106.42],
-];
+// Data wilayah ada di dataWilayah.js (dipakai juga oleh relief 3D hero).
 
 const SVG_WIDTH = 1120;
 const SVG_HEIGHT = 740;
@@ -496,38 +438,10 @@ const MapSection = () => {
         <div className="absolute inset-0 opacity-30" style={{
           backgroundImage: 'radial-gradient(circle at 20% 50%, rgba(198,167,61,0.15) 0%, transparent 50%), radial-gradient(circle at 80% 20%, rgba(59,130,246,0.1) 0%, transparent 50%)',
         }} />
-        <div className="absolute inset-0" style={{
-          backgroundImage: 'radial-gradient(rgba(255,255,255,0.03) 1px, transparent 1px)',
-          backgroundSize: '24px 24px',
-        }} />
-
         <div className="relative z-10 max-w-[1600px] mx-auto">
-          {/* Header */}
-          <motion.div
-            initial={{ opacity: 0, y: 30 }}
-            animate={inView ? { opacity: 1, y: 0 } : {}}
-            transition={{ duration: 0.7 }}
-            className="text-center pt-20 pb-10 px-4"
-          >
-            <motion.div
-              initial={{ opacity: 0, scale: 0.9 }}
-              animate={inView ? { opacity: 1, scale: 1 } : {}}
-              transition={{ duration: 0.5, delay: 0.1 }}
-              className="inline-flex items-center space-x-2 bg-white/[0.06] border border-white/10 rounded-full px-5 py-2 mb-6 backdrop-blur-sm"
-            >
-              <span className="relative flex h-2 w-2">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[rgb(var(--color-secondary))] opacity-75" />
-                <span className="relative inline-flex rounded-full h-2 w-2 bg-[rgb(var(--color-secondary))]" />
-              </span>
-              <span className="text-white/80 text-sm font-medium tracking-wide">Peta Interaktif</span>
-            </motion.div>
-            <h2 className="text-3xl md:text-5xl font-bold text-white mb-4 tracking-tight">
-              Wilayah <span className="bg-gradient-to-r from-[rgb(var(--color-secondary))] to-amber-400 bg-clip-text text-transparent">Kabupaten Bogor</span>
-            </h2>
-            <p className="text-white/50 max-w-xl mx-auto text-base md:text-lg leading-relaxed">
-              Jelajahi 40 kecamatan, {totalDesa} desa dan {totalKelurahan} kelurahan secara interaktif
-            </p>
-          </motion.div>
+          <div className="px-5 pb-12 pt-20 lg:px-8 lg:pt-28">
+            <JudulBagian judul="Peta 40 kecamatan" keterangan={`Pilih kecamatan untuk melihat ${totalDesa} desa dan ${totalKelurahan} kelurahan di dalamnya, lengkap dengan data wilayahnya.`} />
+          </div>
 
           {/* =================== MAP + PANEL =================== */}
           <motion.div
@@ -539,7 +453,7 @@ const MapSection = () => {
             } overflow-hidden`}
             style={{ border: isExpanded ? 'none' : '1px solid rgba(255,255,255,0.08)' }}
           >
-            <div className="flex h-[620px] md:h-[680px]" style={isExpanded ? { height: '100vh' } : {}}>
+            <div data-dek-abaikan className="flex h-[620px] md:h-[680px]" style={isExpanded ? { height: '100vh' } : {}}>
 
               {/* ========= SIDE PANEL ========= */}
               <AnimatePresence mode="wait">

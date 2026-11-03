@@ -1,0 +1,90 @@
+/* ===== Landing page: dek slide (pola Simpaskor), hanya desktop =====
+ *
+ * Satu layar satu bagian. Slide berikutnya datang dari bawah sambil menajam,
+ * yang ditinggalkan naik sambil mengabur. Durasi harus sama dengan DURASI_SLIDE
+ * di useDek.js.
+ */
+.dek {
+	position: relative;
+	height: 100dvh;
+	overflow: hidden;
+	touch-action: pan-y;
+}
+
+.dek-slide {
+	position: absolute;
+	inset: 0;
+	opacity: 0;
+	visibility: hidden;
+	pointer-events: none;
+	transform: translate3d(0, 6%, 0) scale(0.965);
+	filter: blur(6px);
+	will-change: opacity, transform, filter;
+	backface-visibility: hidden;
+	transition:
+		opacity 800ms cubic-bezier(0.16, 1, 0.3, 1),
+		transform 800ms cubic-bezier(0.16, 1, 0.3, 1),
+		filter 800ms cubic-bezier(0.16, 1, 0.3, 1),
+		visibility 0s linear 800ms;
+}
+
+/* slide yang sudah dilewati menunggu di atas, jadi arah gerak benar ke dua arah */
+.dek-slide.is-before {
+	transform: translate3d(0, -6%, 0) scale(0.965);
+}
+
+.dek-slide.is-active {
+	opacity: 1;
+	visibility: visible;
+	pointer-events: auto;
+	transform: none;
+	filter: none;
+	z-index: 2;
+	transition:
+		opacity 800ms cubic-bezier(0.16, 1, 0.3, 1),
+		transform 800ms cubic-bezier(0.16, 1, 0.3, 1),
+		filter 800ms cubic-bezier(0.16, 1, 0.3, 1),
+		visibility 0s linear 0s;
+}
+
+/* Isi slide: bagian yang lebih tinggi dari layar bergulir di dalam slide-nya.
+   "safe center" menengahkan isi pendek tanpa memotong bagian atas isi panjang. */
+.dek-isi {
+	height: 100%;
+	overflow-y: auto;
+	overscroll-behavior: contain;
+	display: flex;
+	flex-direction: column;
+	justify-content: safe center;
+	scrollbar-width: thin;
+	scrollbar-color: rgba(148, 163, 184, 0.25) transparent;
+}
+.dek-isi > * { flex-shrink: 0; }
+
+/* Ponsel: bukan dek. Semua bagian kembali ke aliran normal, digulir bebas. */
+@media (max-width: 767px) {
+	.dek { height: auto; overflow: visible; touch-action: auto; }
+	.dek-slide,
+	.dek-slide.is-before,
+	.dek-slide.is-active {
+		position: static;
+		opacity: 1;
+		visibility: visible;
+		pointer-events: auto;
+		transform: none;
+		filter: none;
+		will-change: auto;
+		transition: none;
+		z-index: auto;
+	}
+	.dek-isi { height: auto; overflow: visible; display: block; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.dek-slide,
+	.dek-slide.is-active {
+		transition-duration: 0.01ms !important;
+		transform: none !important;
+		filter: none !important;
+	}
+}

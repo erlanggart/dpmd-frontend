@@ -3,6 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { useInView } from 'react-intersection-observer';
 import axios from 'axios';
+import JudulBagian from './JudulBagian';
 import NewsCarousel from './NewsCarousel';
 import { FiRss } from 'react-icons/fi';
 
@@ -55,35 +56,9 @@ const NewsSection = () => {
   };
 
   return (
-    <section ref={ref} className="relative py-24 bg-[rgb(var(--color-primary))] overflow-hidden">
-      {/* Background */}
-      <div className="absolute inset-0 opacity-[0.03]" style={{
-        backgroundImage: `radial-gradient(circle at 1px 1px, white 1px, transparent 1px)`,
-        backgroundSize: '32px 32px'
-      }} />
-      <div className="absolute top-0 left-0 w-full h-px bg-gradient-to-r from-transparent via-[rgb(var(--color-secondary))]/20 to-transparent" />
-      <div className="absolute -top-40 right-0 w-96 h-96 bg-blue-500/5 rounded-full blur-[120px]" />
-      <div className="absolute -bottom-40 left-0 w-96 h-96 bg-[rgb(var(--color-secondary))]/5 rounded-full blur-[120px]" />
-
+    <section ref={ref} className="relative overflow-hidden border-t border-[#1e293b] bg-[#0a1220] py-20 lg:py-28">
       <div className="container max-w-7xl mx-auto px-4 relative z-10">
-        {/* Header */}
-        <motion.div
-          initial={{ opacity: 0, y: 30 }}
-          animate={inView ? { opacity: 1, y: 0 } : {}}
-          transition={{ duration: 0.7 }}
-          className="text-center mb-14"
-        >
-          <div className="inline-flex items-center space-x-2 bg-white/[0.06] backdrop-blur-sm border border-white/[0.08] rounded-full px-5 py-2 mb-6">
-            <FiRss className="text-[rgb(var(--color-secondary))] w-3.5 h-3.5" />
-            <span className="text-white/70 text-sm font-medium tracking-wider uppercase">Berita Terkini</span>
-          </div>
-          <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">
-            Berita & Informasi
-          </h2>
-          <p className="text-white/50 text-lg max-w-2xl mx-auto leading-relaxed">
-            Informasi terbaru seputar kegiatan dan program Dinas Pemberdayaan Masyarakat dan Desa
-          </p>
-        </motion.div>
+        <JudulBagian className="mb-14" judul="Berita terbaru" keterangan="Kabar kegiatan dan program DPMD Kabupaten Bogor, langsung dari tim kami." />
 
         {/* Loading */}
         {loading && (

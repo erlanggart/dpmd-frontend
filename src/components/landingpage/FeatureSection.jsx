@@ -1,155 +1,51 @@
-import React from "react";
 import { Link } from "react-router-dom";
-import { motion } from "framer-motion";
-import { useInView } from "react-intersection-observer";
-import { FiUsers, FiDollarSign, FiMap, FiBriefcase, FiArrowRight, FiShoppingBag } from "react-icons/fi";
-import FeatureCard from "./FeatureCard";
+import JudulBagian from "./JudulBagian";
 
-const FeatureSection = () => {
-	const { ref, inView } = useInView({ threshold: 0.15, triggerOnce: true });
+const BIDANG = [
+	{ judul: "Pemerintahan desa", isi: "Profil desa, data aparatur, dan struktur pemerintahan desa dikelola terpusat." },
+	{ judul: "Keuangan dan aset", isi: "Alokasi dana transfer, bantuan keuangan, dan aset desa dipantau secara terbuka." },
+	{ judul: "Sarana dan prasarana", isi: "Infrastruktur desa dan program unggulan kewilayahan dicatat dan dilaporkan." },
+	{ judul: "Pemberdayaan", isi: "Kelembagaan masyarakat, BUMDes, dan kegiatan pemberdayaan didata dan dipantau." },
+];
 
-	const features = [
-		{
-			icon: <FiUsers size={28} />,
-			title: "Pemerintahan Desa",
-			description: "Manajemen terpusat untuk profil desa, data aparatur, dan struktur pemerintahan desa.",
-			gradient: "from-blue-500 to-cyan-400",
-			number: "01",
-		},
-		{
-			icon: <FiDollarSign size={28} />,
-			title: "Keuangan & Aset",
-			description: "Monitoring alokasi dana transfer, bantuan keuangan, dan pengelolaan aset desa secara transparan.",
-			gradient: "from-amber-500 to-orange-400",
-			number: "02",
-		},
-		{
-			icon: <FiMap size={28} />,
-			title: "Sarana & Prasarana",
-			description: "Pelacakan dan pelaporan infrastruktur serta program-program unggulan kewilayahan.",
-			gradient: "from-emerald-500 to-teal-400",
-			number: "03",
-		},
-		{
-			icon: <FiBriefcase size={28} />,
-			title: "Pemberdayaan",
-			description: "Pendataan dan pemantauan kelembagaan masyarakat, BUMDes, dan pemberdayaan desa.",
-			gradient: "from-purple-500 to-violet-400",
-			number: "04",
-		},
-	];
+const PINTU = [
+	{
+		to: "/bantuan-keuangan",
+		judul: "Rekap bantuan keuangan desa",
+		isi: "Realisasi dan status pengajuan bantuan keuangan infrastruktur tiap desa, terbuka untuk umum.",
+		aksi: "Buka rekap bantuan keuangan",
+	},
+	{
+		to: "/pasar-bumdes",
+		judul: "Pasar BUM Desa",
+		isi: "Produk unggulan dan paket wisata dari BUM Desa se-Kabupaten Bogor. Pesan langsung ke BUM Desa penjualnya lewat WhatsApp.",
+		aksi: "Buka Pasar BUM Desa",
+	},
+];
 
+export default function FeatureSection() {
 	return (
-		<section ref={ref} className="relative py-24 bg-gradient-to-b from-gray-50 to-white overflow-hidden">
-			{/* Background Decoration */}
-			<div className="absolute top-0 left-0 w-full h-px bg-gradient-to-r from-transparent via-gray-200 to-transparent" />
-			<div className="absolute -top-48 left-1/2 -translate-x-1/2 w-[600px] h-[600px] bg-[rgb(var(--color-primary))]/[0.02] rounded-full blur-[100px]" />
+		<div className="border-t border-[#1e293b] bg-[#0a1220] px-5 py-20 lg:px-8 lg:py-28">
+			<JudulBagian judul="Satu sistem, empat bidang" keterangan="Setiap bidang di DPMD bekerja dengan data yang sama, jadi desa cukup melapor sekali." />
 
-			<div className="container max-w-7xl mx-auto px-4 md:px-6">
-				{/* Header */}
-				<motion.div
-					initial={{ opacity: 0, y: 30 }}
-					animate={inView ? { opacity: 1, y: 0 } : {}}
-					transition={{ duration: 0.7 }}
-					className="text-center mb-16"
-				>
-					<div className="inline-flex items-center space-x-2 bg-[rgb(var(--color-primary))]/5 border border-[rgb(var(--color-primary))]/10 rounded-full px-5 py-2 mb-6">
-						<span className="w-1.5 h-1.5 bg-[rgb(var(--color-secondary))] rounded-full" />
-						<span className="text-[rgb(var(--color-primary))] text-sm font-semibold tracking-wide">Modul Utama</span>
+			<dl className="mx-auto mt-12 grid max-w-6xl gap-x-10 gap-y-8 sm:grid-cols-2 lg:grid-cols-4">
+				{BIDANG.map((b) => (
+					<div key={b.judul} className="border-t-2 border-[#e3b23c] pt-5">
+						<dt className="text-[18px] font-bold tracking-[-0.01em] text-[#eef2f7]">{b.judul}</dt>
+						<dd className="m-0 mt-2 text-[15px] leading-relaxed text-[#94a3b8]">{b.isi}</dd>
 					</div>
-					<h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
-						Layanan Terintegrasi
-					</h2>
-					<p className="text-gray-500 max-w-2xl mx-auto text-lg leading-relaxed">
-						Empat bidang utama yang dikelola secara digital untuk efisiensi dan transparansi
-					</p>
-				</motion.div>
+				))}
+			</dl>
 
-				{/* Features Grid */}
-				<div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-					{features.map((feature, index) => (
-						<motion.div
-							key={index}
-							initial={{ opacity: 0, y: 40 }}
-							animate={inView ? { opacity: 1, y: 0 } : {}}
-							transition={{ duration: 0.6, delay: index * 0.1 }}
-						>
-							<FeatureCard {...feature} />
-						</motion.div>
-					))}
-				</div>
-
-				{/* CTA Bantuan Keuangan */}
-				<motion.div
-					initial={{ opacity: 0, y: 30 }}
-					animate={inView ? { opacity: 1, y: 0 } : {}}
-					transition={{ duration: 0.7, delay: 0.5 }}
-					className="mt-14"
-				>
-					<div className="relative bg-gradient-to-r from-[rgb(var(--color-primary))] via-blue-700 to-indigo-700 rounded-3xl p-8 md:p-10 overflow-hidden shadow-xl">
-						<div className="absolute top-0 right-0 w-64 h-64 bg-white/5 rounded-full blur-[80px] -translate-y-1/3 translate-x-1/4" />
-						<div className="absolute bottom-0 left-0 w-48 h-48 bg-cyan-400/10 rounded-full blur-[60px] translate-y-1/3 -translate-x-1/4" />
-						<div className="relative z-10 flex flex-col md:flex-row items-center justify-between gap-6">
-							<div className="text-center md:text-left">
-								<div className="inline-flex items-center gap-2 bg-white/15 rounded-full px-3 py-1 mb-3">
-									<span className="w-2 h-2 bg-cyan-300 rounded-full animate-pulse" />
-									<span className="text-cyan-200 text-xs font-semibold">Transparansi Publik</span>
-								</div>
-								<h3 className="text-xl md:text-2xl font-bold text-white mb-2">
-									Rekapitulasi Bantuan Keuangan Desa
-								</h3>
-								<p className="text-blue-100/70 text-sm md:text-base max-w-lg">
-									Lihat informasi realisasi dan status pengajuan bantuan keuangan infrastruktur desa di Kabupaten Bogor secara transparan.
-								</p>
-							</div>
-							<Link
-								to="/bantuan-keuangan"
-								className="flex-shrink-0 group inline-flex items-center gap-2.5 bg-white text-[rgb(var(--color-primary))] font-bold px-7 py-3.5 rounded-xl shadow-lg hover:shadow-2xl hover:scale-105 transition-all duration-300"
-							>
-								Lihat Bantuan Keuangan
-								<FiArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
-							</Link>
-						</div>
-					</div>
-				</motion.div>
-
-				{/* CTA Pasar BUM Desa — etalase produk & wisata BUM Desa, bisa dilihat
-				    tanpa login seperti halaman Bantuan Keuangan di atas. */}
-				<motion.div
-					initial={{ opacity: 0, y: 30 }}
-					animate={inView ? { opacity: 1, y: 0 } : {}}
-					transition={{ duration: 0.7, delay: 0.6 }}
-					className="mt-6"
-				>
-					<div className="relative bg-gradient-to-r from-emerald-800 via-emerald-700 to-teal-600 rounded-3xl p-8 md:p-10 overflow-hidden shadow-xl">
-						<div className="absolute top-0 right-0 w-64 h-64 bg-white/5 rounded-full blur-[80px] -translate-y-1/3 translate-x-1/4" />
-						<div className="absolute bottom-0 left-0 w-48 h-48 bg-lime-300/10 rounded-full blur-[60px] translate-y-1/3 -translate-x-1/4" />
-						<div className="relative z-10 flex flex-col md:flex-row items-center justify-between gap-6">
-							<div className="text-center md:text-left">
-								<div className="inline-flex items-center gap-2 bg-white/15 rounded-full px-3 py-1 mb-3">
-									<FiShoppingBag className="w-3.5 h-3.5 text-lime-200" />
-									<span className="text-lime-100 text-xs font-semibold">Etalase Publik</span>
-								</div>
-								<h3 className="text-xl md:text-2xl font-bold text-white mb-2">
-									Pasar BUM Desa Kabupaten Bogor
-								</h3>
-								<p className="text-emerald-50/80 text-sm md:text-base max-w-lg">
-									Jelajahi produk unggulan dan paket wisata dari Badan Usaha Milik Desa se-Kabupaten Bogor. Pesan langsung ke BUM Desa penjualnya lewat WhatsApp.
-								</p>
-							</div>
-							<Link
-								to="/pasar-bumdes"
-								className="flex-shrink-0 group inline-flex items-center gap-2.5 bg-white text-emerald-800 font-bold px-7 py-3.5 rounded-xl shadow-lg hover:shadow-2xl hover:scale-105 transition-all duration-300"
-							>
-								Lihat Pasar BUM Desa
-								<FiArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
-							</Link>
-						</div>
-					</div>
-				</motion.div>
+			<div className="mx-auto mt-16 grid max-w-6xl gap-4 lg:grid-cols-2">
+				{PINTU.map((p) => (
+					<Link key={p.to} to={p.to} className="group flex flex-col rounded-lg border border-[#1e293b] bg-[#0f1a2c] p-7 text-inherit no-underline transition hover:border-[#475569] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#e3b23c] lg:p-9">
+						<span className="text-[clamp(1.4rem,2.4vw,1.9rem)] font-extrabold tracking-[-0.025em] text-[#eef2f7]">{p.judul}</span>
+						<span className="mt-3 max-w-lg text-[15.5px] leading-relaxed text-[#94a3b8]">{p.isi}</span>
+						<span className="mt-7 text-[15px] font-semibold text-[#e3b23c] underline decoration-[#e3b23c]/40 underline-offset-4 transition group-hover:decoration-[#e3b23c]">{p.aksi}</span>
+					</Link>
+				))}
 			</div>
-		</section>
+		</div>
 	);
-};
-
-export default FeatureSection;
+}
