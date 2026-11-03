@@ -12,7 +12,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
  */
 
 /** Harus sama dengan durasi transisi .dek-slide di dek.css. */
-export const DURASI_SLIDE = 800;
+export const DURASI_SLIDE = 900;
 const AMBANG_USAP = 55;
 const AMBANG_RODA = 8;
 

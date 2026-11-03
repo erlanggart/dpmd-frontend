@@ -366,10 +366,10 @@ const NewsCarousel = ({ beritaList }) => {
           <button
             key={index}
             onClick={() => goToSlide(index)}
-            className={`transition-all duration-300 rounded-full ${
+            className={`min-h-0 min-w-0 transition-all duration-300 rounded-full ${
               index === activeIndex
-                ? 'w-10 h-3 bg-[#e3b23c]'
-                : 'w-3 h-3 bg-gray-300 hover:bg-gray-400'
+                ? 'w-8 h-2 bg-[#e3b23c]'
+                : 'w-2 h-2 bg-[#eef2f7]/25 hover:bg-[#eef2f7]/50'
             }`}
             aria-label={`Go to slide ${index + 1}`}
           />

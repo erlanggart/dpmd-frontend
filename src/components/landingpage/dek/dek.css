@@ -17,20 +17,24 @@
 	opacity: 0;
 	visibility: hidden;
 	pointer-events: none;
-	transform: translate3d(0, 6%, 0) scale(0.965);
-	filter: blur(6px);
-	will-change: opacity, transform, filter;
+	/* menunggu di bawah, tersingkap seperti tirai dari tepi bawah */
+	transform: translate3d(0, 10%, 0);
+	clip-path: inset(22% 0 0 0 round 28px 28px 0 0);
+	will-change: opacity, transform, clip-path, filter;
 	backface-visibility: hidden;
 	transition:
-		opacity 800ms cubic-bezier(0.16, 1, 0.3, 1),
-		transform 800ms cubic-bezier(0.16, 1, 0.3, 1),
-		filter 800ms cubic-bezier(0.16, 1, 0.3, 1),
-		visibility 0s linear 800ms;
+		opacity 900ms cubic-bezier(0.7, 0, 0.2, 1),
+		transform 900ms cubic-bezier(0.7, 0, 0.2, 1),
+		clip-path 900ms cubic-bezier(0.7, 0, 0.2, 1),
+		filter 900ms cubic-bezier(0.7, 0, 0.2, 1),
+		visibility 0s linear 900ms;
 }
 
-/* slide yang sudah dilewati menunggu di atas, jadi arah gerak benar ke dua arah */
+/* yang ditinggalkan mundur ke belakang: mengecil dan meredup */
 .dek-slide.is-before {
-	transform: translate3d(0, -6%, 0) scale(0.965);
+	transform: translate3d(0, -3%, 0) scale(0.92);
+	clip-path: inset(0 0 0 0 round 28px);
+	filter: brightness(0.45);
 }
 
 .dek-slide.is-active {
@@ -38,28 +42,55 @@
 	visibility: visible;
 	pointer-events: auto;
 	transform: none;
+	clip-path: inset(0 0 0 0 round 0);
 	filter: none;
 	z-index: 2;
 	transition:
-		opacity 800ms cubic-bezier(0.16, 1, 0.3, 1),
-		transform 800ms cubic-bezier(0.16, 1, 0.3, 1),
-		filter 800ms cubic-bezier(0.16, 1, 0.3, 1),
+		opacity 900ms cubic-bezier(0.7, 0, 0.2, 1),
+		transform 900ms cubic-bezier(0.7, 0, 0.2, 1),
+		clip-path 900ms cubic-bezier(0.7, 0, 0.2, 1),
+		filter 900ms cubic-bezier(0.7, 0, 0.2, 1),
 		visibility 0s linear 0s;
 }
 
-/* Isi slide: bagian yang lebih tinggi dari layar bergulir di dalam slide-nya.
-   "safe center" menengahkan isi pendek tanpa memotong bagian atas isi panjang. */
+/* ===== Build-in isi slide =====
+ * Elemen bertanda data-masuk muncul berjenjang (urutan dari --urut) setiap
+ * kali slide-nya didatangi; di ponsel saat tergulir ke layar (.terlihat).
+ * data-masuk="kata" untuk kata judul yang naik dari balik garis (pembungkusnya
+ * overflow:hidden).
+ */
+.dek-slide [data-masuk] {
+	opacity: 0;
+	transform: translate3d(0, 28px, 0);
+	transition:
+		opacity 700ms cubic-bezier(0.16, 1, 0.3, 1),
+		transform 1000ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+.dek-slide [data-masuk="kata"] {
+	display: inline-block;
+	opacity: 1;
+	transform: translate3d(0, 108%, 0) rotate(4deg);
+	transform-origin: left bottom;
+}
+.dek-slide.is-active [data-masuk],
+.dek-slide.terlihat [data-masuk] {
+	opacity: 1;
+	transform: none;
+	transition-delay: calc(260ms + var(--urut, 0) * 85ms);
+}
+
+/* Isi slide: tepat satu layar, tidak bisa digulir. Isi yang lebih tinggi dari
+   layar diperkecil (zoom) oleh LandingPage sampai muat; isi pendek ditengahkan. */
 .dek-isi {
 	height: 100%;
-	overflow-y: auto;
-	overscroll-behavior: contain;
+	overflow: hidden;
 	display: flex;
 	flex-direction: column;
-	justify-content: safe center;
-	scrollbar-width: thin;
-	scrollbar-color: rgba(148, 163, 184, 0.25) transparent;
+	justify-content: center;
 }
-.dek-isi > * { flex-shrink: 0; }
+.dek-pas { flex-shrink: 0; }
+/* tiap slide sudah terpisah: garis batas atas antarbagian tidak diperlukan */
+@media (min-width: 768px) { .dek-pas > * { border-top-width: 0 !important; } }
 
 /* Ponsel: bukan dek. Semua bagian kembali ke aliran normal, digulir bebas. */
 @media (max-width: 767px) {
@@ -72,6 +103,7 @@
 		visibility: visible;
 		pointer-events: auto;
 		transform: none;
+		clip-path: none;
 		filter: none;
 		will-change: auto;
 		transition: none;
@@ -82,9 +114,19 @@
 
 @media (prefers-reduced-motion: reduce) {
 	.dek-slide,
-	.dek-slide.is-active {
+	.dek-slide.is-active,
+	.dek-slide [data-masuk] {
 		transition-duration: 0.01ms !important;
+		transition-delay: 0ms !important;
 		transform: none !important;
+		clip-path: none !important;
 		filter: none !important;
 	}
+	.dek-slide [data-masuk] { opacity: 1 !important; }
+}
+
+/* garis petunjuk gulir: turun lalu hilang di bawah */
+@keyframes turunGaris {
+	0% { transform: translateY(-100%); }
+	100% { transform: translateY(200%); }
 }

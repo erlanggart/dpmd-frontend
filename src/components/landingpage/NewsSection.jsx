@@ -56,9 +56,9 @@ const NewsSection = () => {
   };
 
   return (
-    <section ref={ref} className="relative overflow-hidden border-t border-[#1e293b] bg-[#0a1220] py-20 lg:py-28">
+    <section ref={ref} className="relative overflow-hidden border-t border-[#1e293b] bg-[#0a1220] py-20 md:pb-8 md:pt-24">
       <div className="container max-w-7xl mx-auto px-4 relative z-10">
-        <JudulBagian className="mb-14" judul="Berita terbaru" keterangan="Kabar kegiatan dan program DPMD Kabupaten Bogor, langsung dari tim kami." />
+        <JudulBagian className="mb-14 md:mb-4" judul="Berita terbaru" keterangan="Kabar kegiatan dan program DPMD Kabupaten Bogor, langsung dari tim kami." />
 
         {/* Loading */}
         {loading && (

@@ -1,13 +1,14 @@
 import React, { useState, useMemo, useCallback, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useInView } from 'react-intersection-observer';
-import { Delaunay } from 'd3-delaunay';
 import {
   FiMapPin, FiSearch, FiX, FiMaximize2, FiMinimize2,
   FiNavigation, FiLayers, FiChevronRight, FiHome, FiGrid,
   FiImage, FiUsers, FiMinus, FiPlus, FiCompass, FiCrosshair
 } from 'react-icons/fi';
 import { KECAMATAN_DATA, BOGOR_BOUNDARY } from './dataWilayah';
+import { bangunGeometri, useGeoWilayah } from './petaWilayah';
+import { useSlideAktif } from './dek/slideAktif';
 import JudulBagian from './JudulBagian';
 
 // ======================= DATA =======================
@@ -19,138 +20,6 @@ const MIN_SCALE = 1;
 const MAX_SCALE = 7;
 
 // ======================= GEOMETRY UTILS =======================
-
-function computeSignedArea(poly) {
-  let area = 0;
-  for (let i = 0; i < poly.length; i++) {
-    const j = (i + 1) % poly.length;
-    area += poly[i][0] * poly[j][1] - poly[j][0] * poly[i][1];
-  }
-  return area / 2;
-}
-
-function cross2d(a, b, p) {
-  return (b[0] - a[0]) * (p[1] - a[1]) - (b[1] - a[1]) * (p[0] - a[0]);
-}
-
-function lineIntersect(p1, p2, p3, p4) {
-  const d = (p1[0] - p2[0]) * (p3[1] - p4[1]) - (p1[1] - p2[1]) * (p3[0] - p4[0]);
-  if (Math.abs(d) < 1e-12) return null;
-  const t = ((p1[0] - p3[0]) * (p3[1] - p4[1]) - (p1[1] - p3[1]) * (p3[0] - p4[0])) / d;
-  return [p1[0] + t * (p2[0] - p1[0]), p1[1] + t * (p2[1] - p1[1])];
-}
-
-// Sutherland-Hodgman polygon clipping (clip polygon must be CCW)
-function clipPolygon(subject, clip) {
-  let output = [...subject];
-  for (let i = 0; i < clip.length; i++) {
-    if (output.length === 0) return [];
-    const input = output;
-    output = [];
-    const a = clip[i];
-    const b = clip[(i + 1) % clip.length];
-    for (let j = 0; j < input.length; j++) {
-      const p = input[j];
-      const q = input[(j + 1) % input.length];
-      const pIn = cross2d(a, b, p) >= 0;
-      const qIn = cross2d(a, b, q) >= 0;
-      if (qIn) {
-        if (!pIn) {
-          const ix = lineIntersect(p, q, a, b);
-          if (ix) output.push(ix);
-        }
-        output.push(q);
-      } else if (pIn) {
-        const ix = lineIntersect(p, q, a, b);
-        if (ix) output.push(ix);
-      }
-    }
-  }
-  return output;
-}
-
-function pointInPolygon(point, polygon) {
-  let inside = false;
-  for (let i = 0, j = polygon.length - 1; i < polygon.length; j = i++) {
-    const xi = polygon[i][0], yi = polygon[i][1];
-    const xj = polygon[j][0], yj = polygon[j][1];
-    const intersects = ((yi > point[1]) !== (yj > point[1]))
-      && (point[0] < ((xj - xi) * (point[1] - yi)) / ((yj - yi) || 1e-12) + xi);
-    if (intersects) inside = !inside;
-  }
-  return inside;
-}
-
-function seededRandom(seed) {
-  let value = seed || 1;
-  return () => {
-    value = (value * 1664525 + 1013904223) % 4294967296;
-    return value / 4294967296;
-  };
-}
-
-function generateSubRegions(regionLatLng, count, seed) {
-  if (!regionLatLng?.length || count <= 1) return [];
-
-  const poly = regionLatLng.map(([lat, lng]) => [lng, lat]);
-  if (computeSignedArea(poly) < 0) poly.reverse();
-
-  const xs = poly.map((p) => p[0]);
-  const ys = poly.map((p) => p[1]);
-  const minX = Math.min(...xs);
-  const maxX = Math.max(...xs);
-  const minY = Math.min(...ys);
-  const maxY = Math.max(...ys);
-  const rng = seededRandom(seed + 17);
-  const points = [];
-
-  let attempts = 0;
-  while (points.length < count && attempts < count * 700) {
-    attempts += 1;
-    const x = minX + (maxX - minX) * rng();
-    const y = minY + (maxY - minY) * rng();
-    if (pointInPolygon([x, y], poly)) points.push([x, y]);
-  }
-
-  if (points.length < 2) return [];
-
-  const padX = Math.max(0.01, (maxX - minX) * 0.15);
-  const padY = Math.max(0.01, (maxY - minY) * 0.15);
-  const voronoi = Delaunay.from(points).voronoi([minX - padX, minY - padY, maxX + padX, maxY + padY]);
-
-  return points
-    .map((_, i) => {
-      const cell = voronoi.cellPolygon(i);
-      if (!cell) return [];
-      const clipped = clipPolygon(cell.slice(0, -1), poly);
-      return clipped.map(([lng, lat]) => [lat, lng]);
-    })
-    .filter((cell) => cell.length >= 3);
-}
-
-// ======================= VORONOI COMPUTATION =======================
-
-function computeKecamatanRegions() {
-  const clipBdy = BOGOR_BOUNDARY.map(([lat, lng]) => [lng, lat]);
-  if (computeSignedArea(clipBdy) < 0) clipBdy.reverse();
-
-  const centers = KECAMATAN_DATA.map(k => [k.lng, k.lat]);
-  const delaunay = Delaunay.from(centers);
-  const voronoi = delaunay.voronoi([106.25, -6.90, 107.35, -6.15]);
-
-  return KECAMATAN_DATA.map((_, i) => {
-    const cell = voronoi.cellPolygon(i);
-    if (!cell) return [];
-    const openCell = cell.slice(0, -1);
-    const clipped = clipPolygon(openCell, clipBdy);
-    return clipped.map(([lng, lat]) => [lat, lng]);
-  });
-}
-
-const KECAMATAN_REGIONS = computeKecamatanRegions();
-const KECAMATAN_SUB_REGIONS = KECAMATAN_DATA.map((kec, i) =>
-  generateSubRegions(KECAMATAN_REGIONS[i], kec.desa + kec.kelurahan, i + 1)
-);
 
 const SVG_BOUNDS = (() => {
   const lats = BOGOR_BOUNDARY.map(([lat]) => lat);
@@ -171,100 +40,26 @@ function projectLatLng([lat, lng]) {
   return [x, y];
 }
 
-function polygonPath(points) {
-  if (!points?.length) return '';
-  return points.map((point, i) => {
-    const [x, y] = projectLatLng(point);
-    return `${i === 0 ? 'M' : 'L'}${x.toFixed(2)} ${y.toFixed(2)}`;
-  }).join(' ') + ' Z';
-}
-
-function projectedCentroid(points) {
-  let x = 0, y = 0;
-  for (const p of points) {
-    const [px, py] = projectLatLng(p);
-    x += px; y += py;
-  }
-  return [x / points.length, y / points.length];
-}
-
-function projectedBBox(points) {
-  let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
-  for (const p of points) {
-    const [x, y] = projectLatLng(p);
-    if (x < minX) minX = x;
-    if (y < minY) minY = y;
-    if (x > maxX) maxX = x;
-    if (y > maxY) maxY = y;
-  }
-  return { minX, minY, maxX, maxY };
-}
-
-// ======================= PRECOMPUTED GEOMETRY =======================
-
-const BOGOR_PATH = polygonPath(BOGOR_BOUNDARY);
-
-const KEC_GEOM = KECAMATAN_DATA.map((kec, i) => {
-  const region = KECAMATAN_REGIONS[i];
-  const valid = region && region.length >= 3;
-  return {
-    path: valid ? polygonPath(region) : '',
-    center: projectLatLng([kec.lat, kec.lng]),
-    bbox: valid ? projectedBBox(region) : null,
-    desa: (KECAMATAN_SUB_REGIONS[i] || []).map((cell) => ({
-      path: polygonPath(cell),
-      centroid: projectedCentroid(cell),
-    })),
-  };
-});
-
 // ======================= STYLING UTILS =======================
 
-function getRegionHue(total) {
-  const min = 7, max = 16;
-  const t = Math.min(1, Math.max(0, (total - min) / (max - min)));
-  return 158 - t * 118; // teal-green(158) -> amber(40)
+// Navy-slate: makin banyak desa/kelurahan, makin terang (serasi dengan tema landing)
+function kepadatan(total) {
+  return Math.min(1, Math.max(0, (total - 7) / (16 - 7)));
 }
 
-function getRegionColor(total, isDark) {
-  const h = getRegionHue(total);
-  return isDark ? `hsl(${h}, 68%, 46%)` : `hsl(${h}, 55%, 42%)`;
+function getRegionColor(total) {
+  return `hsl(${216 - kepadatan(total) * 8}, ${34 + kepadatan(total) * 14}%, ${30 + kepadatan(total) * 22}%)`;
 }
 
-function getRegionBorder(total, isDark) {
-  const h = getRegionHue(total);
-  return isDark ? `hsl(${h}, 82%, 62%)` : `hsl(${h}, 65%, 30%)`;
+function getRegionBorder() {
+  return '#e3b23c';
 }
 
-function getPlaceholderGradient(index) {
-  const h = (index * 137.5) % 360;
-  return `linear-gradient(135deg, hsl(${h}, 50%, 28%) 0%, hsl(${h + 40}, 55%, 16%) 100%)`;
-}
 
 const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
 
 // ======================= SUB-COMPONENTS =======================
 
-const KecamatanPhoto = ({ kec, index }) => (
-  <div
-    className="relative w-full aspect-[16/10] rounded-xl overflow-hidden"
-    style={{ background: getPlaceholderGradient(index) }}
-  >
-    <div className="absolute inset-0 opacity-[0.06]" style={{
-      backgroundImage: 'repeating-linear-gradient(45deg, transparent, transparent 8px, rgba(255,255,255,0.15) 8px, rgba(255,255,255,0.15) 9px)',
-    }} />
-    <div className="absolute inset-0 flex flex-col items-center justify-center text-white/40">
-      <svg className="w-11 h-11 mb-2" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.2">
-        <path d="M3 21h18M5 21V7l8-4v18M13 21V3l6 3v15M9 7v.01M9 11v.01M9 15v.01M17 8v.01M17 12v.01M17 16v.01" />
-      </svg>
-      <p className="text-[10px] font-medium uppercase tracking-[0.15em]">Kantor Kecamatan</p>
-      <p className="text-base font-bold mt-0.5 text-white/60">{kec.name}</p>
-    </div>
-    <div className="absolute top-2 right-2 bg-white/10 backdrop-blur-sm rounded-lg px-2 py-1">
-      <FiImage className="w-3 h-3 text-white/30" />
-    </div>
-  </div>
-);
 
 // ======================= MAIN COMPONENT =======================
 
@@ -273,11 +68,27 @@ const MapSection = () => {
   const [selectedKec, setSelectedKec] = useState(null);
   const [hoveredKec, setHoveredKec] = useState(null);
   const [hoveredDesa, setHoveredDesa] = useState(null); // { kec, idx }
+  // Batas asli kecamatan & desa (ASTA DESA), dimuat terpisah; kosong selama memuat.
+  const geo = useGeoWilayah();
+  const KEC_GEOM = useMemo(() => bangunGeometri(geo, projectLatLng), [geo]);
+  // Kecamatan muncul menyebar dari Cibinong (pusat pemerintahan) saat bagian ini tampil.
+  const slideAktif = useSlideAktif();
+  const TUNDA_KEC = useMemo(() => {
+    const pusat = KEC_GEOM[KECAMATAN_DATA.findIndex((k) => k.name === 'Cibinong')]?.center || [SVG_WIDTH / 2, SVG_HEIGHT / 2];
+    return KEC_GEOM.map((g) => Math.round(Math.hypot(g.center[0] - pusat[0], g.center[1] - pusat[1]) * 1.4));
+  }, [KEC_GEOM]);
   const [isExpanded, setIsExpanded] = useState(false);
   const [showPanel, setShowPanel] = useState(true);
   const [view, setView] = useState({ s: 1, x: 0, y: 0 });
   const [isDragging, setIsDragging] = useState(false);
   const { ref, inView } = useInView({ threshold: 0.1, triggerOnce: true });
+  const tampilPeta = inView && slideAktif && Boolean(geo);
+  const [selesaiMuncul, setSelesaiMuncul] = useState(false);
+  useEffect(() => {
+    if (!tampilPeta) { setSelesaiMuncul(false); return undefined; }
+    const t = setTimeout(() => setSelesaiMuncul(true), 1900);
+    return () => clearTimeout(t);
+  }, [tampilPeta]);
 
   const svgRef = useRef(null);
   const viewRef = useRef(view);
@@ -351,7 +162,7 @@ const MapSection = () => {
     const cx = (bbox.minX + bbox.maxX) / 2;
     const cy = (bbox.minY + bbox.maxY) / 2;
     animateView(clampView({ s, x: SVG_WIDTH / 2 - cx * s, y: SVG_HEIGHT / 2 - cy * s }));
-  }, [animateView, clampView]);
+  }, [animateView, clampView, KEC_GEOM]);
 
   const handleKecSelect = useCallback((kec) => {
     const idx = KECAMATAN_DATA.findIndex(k => k.name === kec.name);
@@ -399,7 +210,8 @@ const MapSection = () => {
     dragState.current = { startX: p[0], startY: p[1], view: { ...viewRef.current } };
     draggedRef.current = false;
     setIsDragging(true);
-    e.currentTarget.setPointerCapture?.(e.pointerId);
+    // Pointer baru ditangkap saat benar-benar digeser (lihat handlePointerMove): menangkap
+    // sejak ditekan membuat klik jatuh ke latar SVG, bukan ke kecamatan yang diklik.
   }, [clientToSvg]);
 
   const handlePointerMove = useCallback((e) => {
@@ -408,7 +220,10 @@ const MapSection = () => {
     if (!p) return;
     const dx = p[0] - dragState.current.startX;
     const dy = p[1] - dragState.current.startY;
-    if (Math.abs(dx) > 4 || Math.abs(dy) > 4) draggedRef.current = true;
+    if (!draggedRef.current && (Math.abs(dx) > 4 || Math.abs(dy) > 4)) {
+      draggedRef.current = true;
+      e.currentTarget.setPointerCapture?.(e.pointerId);
+    }
     setView(clampView({
       s: dragState.current.view.s,
       x: dragState.current.view.x + dx,
@@ -423,8 +238,10 @@ const MapSection = () => {
     setTimeout(() => { draggedRef.current = false; }, 0);
   }, []);
 
-  const guardClick = useCallback((fn) => (e) => {
-    if (draggedRef.current) { e.stopPropagation(); return; }
+  // henti: klik pada kecamatan tidak diteruskan ke latar (yang mereset pilihan)
+  const guardClick = useCallback((fn, henti = false) => (e) => {
+    if (draggedRef.current || henti) e.stopPropagation();
+    if (draggedRef.current) return;
     fn();
   }, []);
 
@@ -439,7 +256,7 @@ const MapSection = () => {
           backgroundImage: 'radial-gradient(circle at 20% 50%, rgba(198,167,61,0.15) 0%, transparent 50%), radial-gradient(circle at 80% 20%, rgba(59,130,246,0.1) 0%, transparent 50%)',
         }} />
         <div className="relative z-10 max-w-[1600px] mx-auto">
-          <div className="px-5 pb-12 pt-20 lg:px-8 lg:pt-28">
+          <div className="px-5 pb-12 pt-20 md:pb-5 md:pt-24 lg:px-8">
             <JudulBagian judul="Peta 40 kecamatan" keterangan={`Pilih kecamatan untuk melihat ${totalDesa} desa dan ${totalKelurahan} kelurahan di dalamnya, lengkap dengan data wilayahnya.`} />
           </div>
 
@@ -453,7 +270,7 @@ const MapSection = () => {
             } overflow-hidden`}
             style={{ border: isExpanded ? 'none' : '1px solid rgba(255,255,255,0.08)' }}
           >
-            <div data-dek-abaikan className="flex h-[620px] md:h-[680px]" style={isExpanded ? { height: '100vh' } : {}}>
+            <div data-dek-abaikan className="flex h-[620px] md:h-[max(22rem,calc(100dvh-18rem))]" style={isExpanded ? { height: '100vh' } : {}}>
 
               {/* ========= SIDE PANEL ========= */}
               <AnimatePresence mode="wait">
@@ -502,7 +319,6 @@ const MapSection = () => {
                         >
                           <div className="p-4">
                             {/* Kantor Photo */}
-                            <KecamatanPhoto kec={selectedKec} index={selectedIndex} />
 
                             {/* Info */}
                             <div className="mt-4">
@@ -539,11 +355,9 @@ const MapSection = () => {
                                   Batas wilayah ({KEC_GEOM[selectedIndex].desa.length})
                                 </p>
                                 <div className="flex flex-wrap gap-1.5">
-                                  {KEC_GEOM[selectedIndex].desa.map((_, idx) => {
-                                    const isKel = idx >= selectedKec.desa;
-                                    const label = isKel
-                                      ? `Kel. ${idx - selectedKec.desa + 1}`
-                                      : `Desa ${idx + 1}`;
+                                  {KEC_GEOM[selectedIndex].desa.map((d, idx) => {
+                                    const isKel = d.jenis === 'kelurahan';
+                                    const label = isKel ? `Kel. ${d.nama}` : d.nama;
                                     const isHov = hoveredDesa?.kec === selectedKec.name && hoveredDesa?.idx === idx;
                                     return (
                                       <button
@@ -810,7 +624,7 @@ const MapSection = () => {
                       <rect width={SVG_WIDTH} height={SVG_HEIGHT} fill="url(#bogorMapBg)" />
 
                       {/* Everything below pans/zooms together */}
-                      <g style={{ transform, transformOrigin: '0px 0px' }}>
+                      <g transform={transform}>
                         {/* graticule */}
                         <g opacity="0.14">
                           {Array.from({ length: 18 }).map((_, i) => (
@@ -822,15 +636,17 @@ const MapSection = () => {
                         </g>
 
                         <g filter="url(#mapGlow)">
-                          {/* kabupaten outline */}
-                          <path
-                            d={BOGOR_PATH}
-                            fill="rgba(8, 22, 41, 0.72)"
-                            stroke="#d6b44a"
-                            strokeWidth="4"
-                            strokeLinejoin="round"
-                            vectorEffect="non-scaling-stroke"
-                          />
+                          {/* garis luar kabupaten dari gabungan poligon kecamatan: garis tebal di
+                              bawah, lalu isi menutup separuh garis di sisi dalam, jadi yang
+                              tersisa hanya tepi luar */}
+                          <g pointerEvents="none">
+                            {KEC_GEOM.map((g, i) => g.path && (
+                              <path key={`luar-${i}`} d={g.path} fill="none" stroke="#d6b44a" strokeWidth="8" strokeLinejoin="round" vectorEffect="non-scaling-stroke" />
+                            ))}
+                            {KEC_GEOM.map((g, i) => g.path && (
+                              <path key={`isi-${i}`} d={g.path} fillRule="evenodd" fill="#0b1a2e" stroke="#0b1a2e" strokeWidth="1.5" strokeLinejoin="round" vectorEffect="non-scaling-stroke" />
+                            ))}
+                          </g>
 
                           {KECAMATAN_DATA.map((kec, i) => {
                             const geom = KEC_GEOM[i];
@@ -849,16 +665,23 @@ const MapSection = () => {
                             return (
                               <g
                                 key={kec.name}
-                                onClick={guardClick(() => handleKecSelect(kec))}
+                                onClick={guardClick(() => handleKecSelect(kec), true)}
                                 onMouseEnter={() => !isDragging && setHoveredKec(kec)}
                                 onMouseLeave={() => setHoveredKec(null)}
                                 className="cursor-pointer"
-                                style={{ transition: 'opacity 0.4s' }}
-                                opacity={isDim ? 0.4 : 1}
+                                style={{
+                                  transition: 'opacity 0.5s ease, transform 0.9s cubic-bezier(0.16, 1, 0.3, 1)',
+                                  transitionDelay: tampilPeta && !selesaiMuncul ? `${TUNDA_KEC[i]}ms` : '0ms',
+                                  transformBox: 'fill-box',
+                                  transformOrigin: 'center',
+                                  transform: tampilPeta ? 'none' : 'scale(0.55)',
+                                }}
+                                opacity={!tampilPeta ? 0 : isDim ? 0.4 : 1}
                                 filter={isActive ? 'url(#regionLift)' : undefined}
                               >
                                 <path
                                   d={geom.path}
+                                  fillRule="evenodd"
                                   fill={fillColor}
                                   fillOpacity={isActive ? 0.68 : isHover ? 0.58 : 0.4}
                                   stroke={borderColor}
@@ -870,12 +693,13 @@ const MapSection = () => {
 
                                 {/* desa / kelurahan cells */}
                                 {geom.desa.map((desa, di) => {
-                                  const isKel = di >= kec.desa;
+                                  const isKel = desa.jenis === 'kelurahan';
                                   const desaHover = hoveredDesa?.kec === kec.name && hoveredDesa?.idx === di;
                                   return (
                                     <path
                                       key={di}
                                       d={desa.path}
+                                      fillRule="evenodd"
                                       fill={desaHover ? '#fbbf24' : isActive ? (isKel ? 'rgba(96,165,250,0.30)' : 'rgba(255,255,255,0.06)') : 'none'}
                                       fillOpacity={desaHover ? 0.55 : 1}
                                       stroke={desaHover ? '#fde68a' : isActive ? 'rgba(255,255,255,0.6)' : 'rgba(255,255,255,0.3)'}
@@ -891,9 +715,9 @@ const MapSection = () => {
 
                                 {/* desa hover label */}
                                 {isActive && hoveredDesa?.kec === kec.name && geom.desa[hoveredDesa.idx] && (() => {
-                                  const [dx, dy] = geom.desa[hoveredDesa.idx].centroid;
-                                  const isKel = hoveredDesa.idx >= kec.desa;
-                                  const label = isKel ? `Kel. ${hoveredDesa.idx - kec.desa + 1}` : `Desa ${hoveredDesa.idx + 1}`;
+                                  const d = geom.desa[hoveredDesa.idx];
+                                  const [dx, dy] = d.centroid;
+                                  const label = `${d.jenis === 'kelurahan' ? 'Kel.' : 'Desa'} ${d.nama}`;
                                   return (
                                     <g pointerEvents="none" transform={`translate(${dx} ${dy}) scale(${strokeK})`}>
                                       <rect x={-label.length * 3.4 - 6} y={-9} width={label.length * 6.8 + 12} height="18" rx="5" fill="rgba(5,12,24,0.9)" stroke="rgba(214,180,74,0.5)" />

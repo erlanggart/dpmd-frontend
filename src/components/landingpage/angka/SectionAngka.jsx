@@ -45,10 +45,10 @@ export default function SectionAngka() {
 	}, [diLayar, slideAktif]);
 
 	return (
-		<div className="border-t border-[#1e293b] bg-[#0a1220] px-4 py-20 lg:px-8 lg:py-28">
+		<div className="border-t border-[#1e293b] bg-[#0a1220] px-4 py-20 md:pb-10 md:pt-24 lg:px-8">
 			<div className="mx-auto max-w-6xl">
-				<JudulBagian judul="Bogor dalam angka" keterangan="Wilayah kerja DPMD adalah desa. Angka berikut dibaca langsung dari basis data sistem setiap kali halaman ini dibuka, bukan ditulis tangan." />
-				<div ref={wadah} className="mt-10 overflow-hidden rounded-xl border border-[#1e293b] bg-[#101b2e]">
+				<JudulBagian judul="Bogor dalam angka" />
+				<div ref={wadah} data-masuk style={{ "--urut": 3 }} className="mx-auto mt-10 w-full max-w-[min(72rem,calc((100dvh-15rem)*16/9))] overflow-hidden rounded-xl border border-[#1e293b] bg-[#101b2e]">
 					<Player
 						ref={pemutar}
 						component={BogorDalamAngka}
