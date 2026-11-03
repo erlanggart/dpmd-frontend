@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef } from "react";
 import { useFrame } from "@react-three/fiber";
 import { MeshStandardMaterial } from "three";
 import { posisi } from "../jelajahStore";
+import AreaTampak from "./AreaTampak";
 import Gabung from "./Gabung";
 import Papan from "./Papan";
 import Tokoh from "./Tokoh";
@@ -211,10 +212,13 @@ export default function Showroom({ daftarDinding }) {
 			</Gabung>
 			<Gedung s={SHOWROOM_MOBIL} pintu={PINTU_MOBIL} nama="SHOWROOM MOBIL" sub="Hatchback · MPV · SUV · Pikap · Angkot · Listrik · Jip" aksen="#1d4ed8" daftarDinding={daftarDinding} />
 			<Gedung s={SHOWROOM_MOTOR} pintu={PINTU_MOTOR} nama="SHOWROOM MOTOR" sub="Matik · Bebek · Sport · Trail · Retro · Listrik" aksen="#dc2626" daftarDinding={daftarDinding} />
-			{PAJANGAN_MOBIL.map((p) => MODEL_MOBIL[p.i] && <Pajangan key={`m${p.i}`} p={p} model={MODEL_MOBIL[p.i]} jenis="mobil" />)}
-			{PAJANGAN_MOTOR.map((p) => MODEL_MOTOR[p.i] && <Pajangan key={`r${p.i}`} p={p} model={MODEL_MOTOR[p.i]} jenis="motor" />)}
-			<Meja m={MEJA_SALES_MOBIL} penampilan={SALES} />
-			<Meja m={MEJA_SALES_MOTOR} penampilan={SALES_MOTOR} />
+			{/* isi detail (kendaraan pajangan, papan harga, sales) hanya saat dekat */}
+			<AreaTampak x={67} z={-5} jarak={58}>
+				{PAJANGAN_MOBIL.map((p) => MODEL_MOBIL[p.i] && <Pajangan key={`m${p.i}`} p={p} model={MODEL_MOBIL[p.i]} jenis="mobil" />)}
+				{PAJANGAN_MOTOR.map((p) => MODEL_MOTOR[p.i] && <Pajangan key={`r${p.i}`} p={p} model={MODEL_MOTOR[p.i]} jenis="motor" />)}
+				<Meja m={MEJA_SALES_MOBIL} penampilan={SALES} />
+				<Meja m={MEJA_SALES_MOTOR} penampilan={SALES_MOTOR} />
+			</AreaTampak>
 		</group>
 	);
 }

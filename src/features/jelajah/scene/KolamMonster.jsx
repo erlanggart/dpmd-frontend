@@ -4,6 +4,7 @@ import { CircleGeometry, MeshBasicMaterial, MeshStandardMaterial, Object3D } fro
 import { IKAN, pancing } from "../pancing";
 import { posisi } from "../jelajahStore";
 import { useKolam } from "../kolamMonster";
+import AreaTampak from "./AreaTampak";
 import Gabung from "./Gabung";
 import ModelIkan from "./ModelIkan";
 import Papan from "./Papan";
@@ -337,8 +338,11 @@ export default function KolamMonster() {
 			<mesh position={[CX, AIR_KOLAM_Y, CZ]} rotation-x={-Math.PI / 2} material={BAHAN_AIR} renderOrder={1}>
 				<planeGeometry args={[LX, LZ]} />
 			</mesh>
-			<IkanKolam />
-			<Pemancing />
+			{/* ikan & pemancing tetap hanya saat dekat */}
+			<AreaTampak x={CX} z={CZ} jarak={65}>
+				<IkanKolam />
+				<Pemancing />
+			</AreaTampak>
 			{/* penjaga loket menghadap halaman kantor */}
 			<group position={[L.x - 0.15, 0.05, L.z]} rotation-y={Math.PI / 2}>
 				<Tokoh penampilan={PENJAGA} pose="diam" asal={{ x: L.x - 0.15, z: L.z, rot: Math.PI / 2, lantai: 0 }} />

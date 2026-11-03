@@ -31,6 +31,7 @@ import PasarBumdes from "./PasarBumdes.jsx";
 import { LABEL_PASAR } from "./pasarBumdesData";
 import { LABEL_SHOWROOM } from "./showroomData";
 import Showroom from "./Showroom.jsx";
+import AreaTampak from "./AreaTampak.jsx";
 import { suasana } from "./suasana";
 
 // Kawasan Kompleks Perkantoran Pemda Kabupaten Bogor di sekeliling kantor DPMD, dari
@@ -617,9 +618,14 @@ export default function Kawasan({ daftarDinding }) {
 		<group name="kawasan">
 			<Permukaan />
 			<SituPemda daftarDinding={daftarDinding} />
-			<KolamMonster />
-			<PasarBumdes />
-			<Showroom daftarDinding={daftarDinding} />
+			{/* area besar baru hanya digambar saat kamera cukup dekat (hemat untuk HP) */}
+			<AreaTampak x={-41} z={-12} jarak={160}>
+				<KolamMonster />
+				<PasarBumdes />
+			</AreaTampak>
+			<AreaTampak x={67} z={-5} jarak={150}>
+				<Showroom daftarDinding={daftarDinding} />
+			</AreaTampak>
 			<Gedung />
 			<Pohon />
 			<Label />

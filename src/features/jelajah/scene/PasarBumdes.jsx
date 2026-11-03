@@ -3,6 +3,7 @@ import { useFrame } from "@react-three/fiber";
 import { AdditiveBlending, BufferGeometry, DoubleSide, Float32BufferAttribute, Line, LineBasicMaterial, MeshBasicMaterial, MeshStandardMaterial, Object3D, SphereGeometry } from "three";
 import { WARUNG } from "../warung";
 import { posisi } from "../jelajahStore";
+import AreaTampak from "./AreaTampak";
 import Gabung from "./Gabung";
 import Papan from "./Papan";
 import Tokoh from "./Tokoh";
@@ -145,15 +146,17 @@ function Lapak({ l }) {
 					</mesh>
 				))}
 			</Gabung>
-			<group position={[0, 1.06, l.lz / 2 - 0.22]}>
-				{DAGANGAN[l.id].map(([warna, bentuk], i) => (
-					<Barang key={i} warna={warna} bentuk={bentuk} x={(i - 1) * 0.85} />
-				))}
-			</group>
-			{/* penjual */}
-			<group position={[0.3, 0.02, -0.15]}>
-				<Tokoh penampilan={l.penjual} pose="diam" asal={{ x: l.x + 0.3, z: l.z - 0.15, rot: 0, lantai: 0 }} />
-			</group>
+			{/* dagangan & penjual hanya saat dekat */}
+			<AreaTampak x={l.x} z={l.z} jarak={50}>
+				<group position={[0, 1.06, l.lz / 2 - 0.22]}>
+					{DAGANGAN[l.id].map(([warna, bentuk], i) => (
+						<Barang key={i} warna={warna} bentuk={bentuk} x={(i - 1) * 0.85} />
+					))}
+				</group>
+				<group position={[0.3, 0.02, -0.15]}>
+					<Tokoh penampilan={l.penjual} pose="diam" asal={{ x: l.x + 0.3, z: l.z - 0.15, rot: 0, lantai: 0 }} />
+				</group>
+			</AreaTampak>
 			<Papan
 				posisi={[0, 2.95, l.lz / 2 + 0.2]}
 				lebar={2.5}
@@ -511,7 +514,10 @@ export default function PasarBumdes() {
 			))}
 			<LampuGantung />
 			<Panggung />
-			<Pengunjung />
+			{/* pengunjung (tokoh + piring) hanya saat dekat */}
+			<AreaTampak x={(A.x0 + A.x1) / 2} z={(A.z0 + A.z1) / 2} jarak={55}>
+				<Pengunjung />
+			</AreaTampak>
 			<Papan
 				posisi={[G.x + 0.18, 2.75, (G.z0 + G.z1) / 2]}
 				rotasi={Math.PI / 2}
