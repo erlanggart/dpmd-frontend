@@ -17,6 +17,8 @@ import { bukaPeti, petiSiap } from "../harta";
 import { aksesKolam } from "../kolamMonster";
 import { AIR_KOLAM_Y, TITIK_LOKET_KOLAM, titikTepiKolam } from "./kolamMonsterData";
 import { LAPAK_PASAR, TITIK_ETALASE_PASAR } from "./pasarBumdesData";
+import { cariModel } from "./modelKendaraan";
+import { TITIK_SALES_MOBIL, TITIK_SALES_MOTOR } from "./showroomData";
 import { berhentiMakan, mulaiMakan, tickMakan, warung } from "../warung";
 import { berhentiNonton, tickNonton } from "../bioskop";
 import { AULA_CCM, dalamStudio, TITIK_BUTIK, TITIK_LIFT, TITIK_LOKET, TITIK_PESAN_FC, TITIK_PESAN_KOPI, TITIK_PESAN_MCD, dalamAulaCcm, dalamGedungKhusus, dalamLahanCcm, dalamMcd, lantaiMalDariY, malAktif } from "./gedungKhusus";
@@ -70,6 +72,12 @@ const KEMUDI = {
 	mobil: { maju: 10, turbo: 15, mundur: 4, gas: 6, rem: 12, sumbu: 2.6, belok: 0.55, redam: 0.05, setirCepat: 8 },
 	motor: { maju: 12, turbo: 18, mundur: 2.5, gas: 8, rem: 14, sumbu: 1.3, belok: 0.45, redam: 0.22, setirCepat: 3.5 },
 	perahu: { maju: 3.2, turbo: 5, mundur: 1.4, gas: 1.6, rem: 2.6, belok: 0.75 },
+};
+// Kendaraan milik (showroom): laju puncak & gas dikali sifat modelnya.
+const kemudiUntuk = (kend) => {
+	const dasar = KEMUDI[kend.jenis];
+	const m = kend.model && cariModel(kend.jenis, kend.model);
+	return m ? { ...dasar, maju: dasar.maju * m.laju, turbo: dasar.turbo * m.laju, gas: dasar.gas * m.gas } : dasar;
 };
 // Dasar tokoh yang duduk di perahu, relatif tanah halaman.
 const DUDUK_PERAHU = AIR_Y - 0.32;
@@ -654,7 +662,7 @@ export default function Pemain({ daftarDinding, penghuni, penampilan = PENAMPILA
 			}
 		} else if (jenisMode === "kemudi") {
 			const kend = mode.current.k;
-			const c = KEMUDI[kend.jenis];
+			const c = kemudiUntuk(kend);
 			// motor bisa meloncat (Spasi / tombol loncat); di udara roda tak bisa membelok
 			if (kend.jenis === "motor" && kendali.loncat && !kend.h) {
 				kend.vy = LONCAT_MOTOR;
@@ -946,6 +954,9 @@ export default function Pemain({ daftarDinding, penghuni, penampilan = PENAMPILA
 				// food court Pasar BUMDes: enam lapak & papan etalase produk BUM Desa
 				for (const l of LAPAK_PASAR) coba(`pesan:${l.id}`, Math.hypot(l.titik.x - p.x, l.titik.z - p.z), 1.7);
 				coba("pasar:etalase", Math.hypot(TITIK_ETALASE_PASAR.x - p.x, TITIK_ETALASE_PASAR.z - p.z), 1.8);
+				// showroom: bicara dengan sales di meja
+				coba("showroom:mobil", Math.hypot(TITIK_SALES_MOBIL.x - p.x, TITIK_SALES_MOBIL.z - p.z), 1.9);
+				coba("showroom:motor", Math.hypot(TITIK_SALES_MOTOR.x - p.x, TITIK_SALES_MOTOR.z - p.z), 1.9);
 				coba("pesan:mcd", Math.hypot(TITIK_PESAN_MCD.x - p.x, TITIK_PESAN_MCD.z - p.z), 1.8);
 				// Cibinong City Mall: kedai kopi (Lt 1), butik (Lt 2), food court (Lt 3), loket bioskop (Lt 4), lift
 				const diLt = (t) => t.lantaiMal === undefined || (dalamLahanCcm(p.x, p.z) && t.lantaiMal === malAktif.lantai);

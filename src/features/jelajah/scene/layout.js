@@ -4,6 +4,7 @@ import { KURSI_BIOSKOP_DASAR, KURSI_FC_DASAR, KURSI_KOPI_DASAR, KURSI_MCD_DASAR,
 import { AIR_Y, DEK_Y, DERMAGA, KIOS_TOKO_PANCING, dermagaDi, diSitu, jarakKeTepi, keDuniaDermaga } from "./situ";
 import { BANGKU_TAMU_KOLAM, PENGHALANG_KOLAM } from "./kolamMonsterData";
 import { KURSI_PASAR_DASAR, KURSI_PASAR_NPC, PENGHALANG_PASAR } from "./pasarBumdesData";
+import { PENGHALANG_SHOWROOM } from "./showroomData";
 
 // Geometri turunan dari kantorConfig: dinding per lantai, pintu, tangga, perabot,
 // penghuni kantor, penghalang tabrakan, dan pencarian jalur. Semua dalam meter.
@@ -797,6 +798,7 @@ export const PENGHALANG = [0, 1].map((l) => [
 				// Kolam Monster DPMD: air, kios loket, pagar tiga sisi
 				...PENGHALANG_KOLAM,
 				...PENGHALANG_PASAR,
+				...PENGHALANG_SHOWROOM,
 			]
 		: []),
 ]);

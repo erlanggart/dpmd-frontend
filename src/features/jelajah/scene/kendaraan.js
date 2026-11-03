@@ -1,6 +1,7 @@
 import { useSyncExternalStore } from "react";
 import { MOBIL, MOTOR } from "./layout";
 import { PERAHU } from "./situ";
+import { modelDariId } from "./modelKendaraan";
 
 // Status mobil & motor di parkiran, dan perahu dayung di dermaga Situ Pemda, yang bisa
 // dikemudikan pengunjung. Objek ini
@@ -88,9 +89,29 @@ export function resetKendaraan() {
 	kabarArmada();
 }
 
-// pos: bila diberikan & kendaraannya perahu tambahan yang belum ada di perangkat ini
-// (dipanggil tamu lain), perahu itu dibuat di posisi tersebut.
-export const kendaraanDariId = (id, pos) => KENDARAAN.find((k) => k.id === id) || (pos && /^perahu:\d{1,2}$/.test(id) ? tambahPerahu(pos.x, pos.z, pos.rot ?? 0, id) : undefined);
+// Kendaraan milik tamu (dibeli di showroom): dibuat / dipindahkan ke (x, z). Modelnya
+// tersandi di nomor id (lihat modelKendaraan.js).
+export function tambahMilik(id, warna, x, z, rot) {
+	const info = modelDariId(id);
+	if (!info) return null;
+	let k = KENDARAAN.find((v) => v.id === id);
+	if (!k) {
+		k = { id, jenis: info.jenis, model: info.model.id, milik: true, warna, x, z, rot, laju: 0, setir: 0, pintu: 0, roda: 0, miring: info.jenis === "motor" ? 0.12 : 0, h: 0, vy: 0 };
+		KENDARAAN.push(k);
+	} else Object.assign(k, { x, z, rot, laju: 0, setir: 0, warna: warna || k.warna });
+	kabarArmada();
+	return k;
+}
+
+// pos: bila diberikan & kendaraannya perahu tambahan / kendaraan milik yang belum ada di
+// perangkat ini (dipanggil tamu lain), kendaraan itu dibuat di posisi tersebut.
+export const kendaraanDariId = (id, pos) => {
+	const ada = KENDARAAN.find((k) => k.id === id);
+	if (ada || !pos) return ada;
+	if (/^perahu:\d{1,2}$/.test(id)) return tambahPerahu(pos.x, pos.z, pos.rot ?? 0, id);
+	const milik = modelDariId(id);
+	return milik ? tambahMilik(id, milik.model.warna[0], pos.x, pos.z, pos.rot ?? 0) : undefined;
+};
 
 // Titik lokal → dunia untuk kendaraan k.
 export function keDunia(k, lx, lz) {

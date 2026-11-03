@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef } from "react";
 import { useFrame } from "@react-three/fiber";
-import { KENDARAAN } from "./kendaraan";
+import { KENDARAAN, useArmada } from "./kendaraan";
+import { cariModel } from "./modelKendaraan";
 import { MOBIL, PAGAR_BATA, PARKIRAN } from "./layout";
 import { BoxGeometry, CylinderGeometry, MeshStandardMaterial } from "three";
 import Gabung from "./Gabung";
@@ -23,6 +24,13 @@ const geomRoda = (r, lebar) =>
 	]);
 const RODA_MOBIL = geomRoda(0.33, 0.24);
 const RODA_MOTOR = geomRoda(0.3, 0.12);
+// roda berukuran khusus untuk model showroom (dipakai bersama per ukuran)
+const cacheRoda = new Map();
+const rodaUkuran = (r, lebar) => {
+	const kunci = `${r}|${lebar}`;
+	if (!cacheRoda.has(kunci)) cacheRoda.set(kunci, geomRoda(r, lebar));
+	return cacheRoda.get(kunci);
+};
 
 function Roda({ geom, akar }) {
 	return <mesh ref={akar} geometry={geom} material={BAHAN_KENDARAAN} />;
@@ -30,13 +38,16 @@ function Roda({ geom, akar }) {
 
 // Mobil setir kanan: pintu sopir (sisi -x lokal) berengsel di tepi depannya dan
 // terbuka saat pengunjung masuk/keluar; roda berputar, roda depan ikut membelok.
-function Mobil({ k }) {
+export function Mobil({ k }) {
 	const grup = useRef();
 	const pintu = useRef();
 	const roda = useRef([]);
+	const model = k.model ? cariModel("mobil", k.model) : null;
+	// ukuran: model showroom, atau sedan parkir bawaan
+	const u = model ? { L: model.L, W: model.W, roda: model.roda, pintu: model.pintu } : { L: 4, W: 1.8, roda: { r: 0.33, x: 0.86, z: 1.3 }, pintu: { z: 0.95, p: 1.1 } };
 	const geom = useMemo(
 		() => ({
-			badan: gabung([
+			badan: model ? gabung(model.bangun(k.warna)) : gabung([
 				kotak([1.8, 0.62, 4], k.warna, [0, 0.62, 0]),
 				// kabin kaca + atap
 				kotak([1.6, 0.55, 2.2], "#1e262c", [0, 1.2, -0.25]),
@@ -45,14 +56,15 @@ function Mobil({ k }) {
 				...[-0.6, 0.6].map((lx) => kotak([0.38, 0.14, 0.03], "#fff8e0", [lx, 0.72, 2.01])),
 				...[-0.65, 0.65].map((lx) => kotak([0.32, 0.12, 0.03], "#c81e1e", [lx, 0.75, -2.01])),
 			]),
-			// pintu sopir: engsel di tepi depan (z = 0.95), daun mengarah ke belakang
+			// pintu sopir: engsel di tepi depan, daun mengarah ke belakang
 			pintu: gabung([
-				kotak([0.06, 0.6, 1.1], k.warna, [-0.02, 0.62, -0.55]),
-				kotak([0.05, 0.5, 1.0], "#26313a", [-0.02, 1.18, -0.55]),
-				kotak([0.03, 0.04, 0.16], "#c9ccce", [-0.07, 0.8, -0.9]),
+				kotak([0.06, 0.6, u.pintu.p], k.warna, [-0.02, 0.62, -u.pintu.p / 2]),
+				kotak([0.05, 0.5, u.pintu.p - 0.1], "#26313a", [-0.02, 1.18, -u.pintu.p / 2]),
+				kotak([0.03, 0.04, 0.16], "#c9ccce", [-0.07, 0.8, -u.pintu.p + 0.2]),
 			]),
 		}),
-		[k.warna],
+		// eslint-disable-next-line react-hooks/exhaustive-deps
+		[k.warna, k.model],
 	);
 	useEffect(() => () => Object.values(geom).forEach((g) => g.dispose()), [geom]);
 	useFrame(() => {
@@ -69,19 +81,19 @@ function Mobil({ k }) {
 	return (
 		<group ref={grup}>
 			<mesh geometry={geom.badan} material={BAHAN_KENDARAAN} />
-			<Plat id={k.id} posisi={[0, 0.46, 2.012]} />
-			<Plat id={k.id} posisi={[0, 0.5, -2.012]} rotasi={Math.PI} />
-			<group ref={pintu} position={[-0.92, 0, 0.95]}>
+			<Plat id={k.id} posisi={[0, 0.46, u.L / 2 + 0.035]} />
+			<Plat id={k.id} posisi={[0, 0.5, -u.L / 2 - 0.035]} rotasi={Math.PI} />
+			<group ref={pintu} position={[-u.W / 2 - 0.02, model?.id === "suv" ? 0.2 : 0, u.pintu.z]}>
 				<mesh geometry={geom.pintu} material={BAHAN_KENDARAAN} />
 			</group>
 			{[
-				[-0.86, 1.3],
-				[0.86, 1.3],
-				[-0.86, -1.3],
-				[0.86, -1.3],
+				[-u.roda.x, u.roda.z],
+				[u.roda.x, u.roda.z],
+				[-u.roda.x, -u.roda.z],
+				[u.roda.x, -u.roda.z],
 			].map(([rx, rz], i) => (
-				<group key={i} position={[rx, 0.33, rz]}>
-					<Roda geom={RODA_MOBIL} akar={(w) => (roda.current[i] = w)} />
+				<group key={i} position={[rx, u.roda.r, rz]}>
+					<Roda geom={model ? rodaUkuran(u.roda.r, 0.24) : RODA_MOBIL} akar={(w) => (roda.current[i] = w)} />
 				</group>
 			))}
 		</group>
@@ -89,21 +101,24 @@ function Mobil({ k }) {
 }
 
 // Motor: miring dengan standar samping saat diparkir, tegak & menikung saat dikendarai.
-function Motor({ k }) {
+export function Motor({ k }) {
 	const grup = useRef();
 	const badan = useRef();
 	const stang = useRef();
 	const roda = useRef([]);
+	const model = k.model ? cariModel("motor", k.model) : null;
+	const rd = model ? model.roda : { r: 0.3, depan: 0.62, belakang: -0.62 };
 	const geom = useMemo(
 		() => ({
-			badan: gabung([kotak([0.3, 0.42, 1.3], k.warna, [0, 0.62, 0]), kotak([0.28, 0.1, 0.65], "#1b1b1b", [0, 0.88, -0.15])]),
+			badan: model ? gabung(model.bangun(k.warna)) : gabung([kotak([0.3, 0.42, 1.3], k.warna, [0, 0.62, 0]), kotak([0.28, 0.1, 0.65], "#1b1b1b", [0, 0.88, -0.15])]),
 			stang: gabung([
 				kotak([0.62, 0.05, 0.05], "#2a2a2a", [0, 1.05, 0]),
 				warnai(new BoxGeometry(0.06, 0.45, 0.06), "#9aa0a6", { p: [0, 0.85, 0.05], r: [-0.3, 0, 0] }),
 				kotak([0.16, 0.1, 0.04], "#fff8e0", [0, 0.98, 0.14]),
 			]),
 		}),
-		[k.warna],
+		// eslint-disable-next-line react-hooks/exhaustive-deps
+		[k.warna, k.model],
 	);
 	useEffect(() => () => Object.values(geom).forEach((g) => g.dispose()), [geom]);
 	useFrame(() => {
@@ -124,9 +139,9 @@ function Motor({ k }) {
 					<mesh geometry={geom.stang} material={BAHAN_KENDARAAN} />
 					<Plat id={k.id} posisi={[0, 0.72, 0.2]} lebar={0.24} tinggi={0.075} />
 				</group>
-				{[0.62, -0.62].map((rz, i) => (
-					<group key={rz} position={[0, 0.3, rz]}>
-						<Roda geom={RODA_MOTOR} akar={(w) => (roda.current[i] = w)} />
+				{[rd.depan, rd.belakang].map((rz, i) => (
+					<group key={rz} position={[0, rd.r, rz]}>
+						<Roda geom={model ? rodaUkuran(rd.r, 0.12) : RODA_MOTOR} akar={(w) => (roda.current[i] = w)} />
 					</group>
 				))}
 			</group>
@@ -159,6 +174,7 @@ function PagarBata() {
 }
 
 export default function Parkiran() {
+	useArmada(); // kendaraan milik yang dibeli / dipanggil ikut tergambar
 	// Garis putih pembatas petak parkir, di antara mobil-mobil.
 	const garis = useMemo(() => {
 		const xs = MOBIL.map((m) => m.x).sort((a, b) => a - b);

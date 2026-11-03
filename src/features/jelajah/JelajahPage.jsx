@@ -22,6 +22,7 @@ import {
 	FiSend,
 	FiSmile,
 	FiUsers,
+	FiTruck,
 } from "react-icons/fi";
 import api from "../../api";
 import { penampilanAvatar } from "./avatar";
@@ -32,6 +33,7 @@ import PanelJoran from "./ui/PanelJoran";
 import PanelKolam from "./ui/PanelKolam";
 import HudLomba from "./ui/HudLomba";
 import PanelEtalaseBumdes from "./ui/PanelEtalaseBumdes";
+import PanelShowroom from "./ui/PanelShowroom";
 import PanelPeringkat from "./ui/PanelPeringkat";
 import { kendaraanDariId } from "./scene/kendaraan";
 import { kirimEmote, kirimGaya, kirimKlakson, kirimUcap, putusJelajah, sambungJelajah, sapaPemain, tutupSapaan, useMultipemain } from "./multipemain";
@@ -329,6 +331,10 @@ export default function JelajahPage() {
 			setMenu("pancing");
 			return;
 		}
+		if (id === "showroom:mobil" || id === "showroom:motor") {
+			setMenu(id);
+			return;
+		}
 		if (id === "pasar:etalase") {
 			setMenu("etalase");
 			return;
@@ -502,6 +508,10 @@ export default function JelajahPage() {
 				? ["Bayar di kasir 🧾", "Bayar", "#1d4ed8"]
 			: dekat === "mancing:tepi"
 				? ["Memancing di pinggir situ 🎣", "Mancing", "#0f766e"]
+			: dekat === "showroom:mobil"
+				? ["Sales showroom — beli mobil 🚗", "Lihat", "#1d4ed8"]
+			: dekat === "showroom:motor"
+				? ["Sales showroom — beli motor 🏍️", "Lihat", "#dc2626"]
 			: dekat === "pasar:etalase"
 				? ["Etalase produk asli BUM Desa 🛍️", "Lihat", "#16a34a"]
 			: dekat === "kolam:loket"
@@ -632,6 +642,9 @@ export default function JelajahPage() {
 							<div className="hidden items-center gap-2 sm:flex">
 								<TombolIkon label="Pindah cepat" aktif={menu === "pindah"} onClick={() => setMenu("pindah")}>
 									<FiNavigation />
+								</TombolIkon>
+								<TombolIkon label="Garasi saya" aktif={menu === "garasi"} onClick={() => setMenu("garasi")}>
+									<FiTruck />
 								</TombolIkon>
 								<TombolIkon label={peta ? "Sembunyikan peta (M)" : "Tampilkan peta (M)"} aktif={peta} onClick={() => setPeta((v) => !v)}>
 									<FiMap />
@@ -938,6 +951,7 @@ export default function JelajahPage() {
 					<div className="grid grid-cols-2 gap-3">
 						{[
 							[FiNavigation, "Pindah cepat", "Langsung ke ruang bidang", () => setMenu("pindah")],
+							[FiTruck, "Garasi saya", "Panggil mobil & motor milikmu", () => setMenu("garasi")],
 							[
 								FiMap,
 								peta ? "Sembunyikan peta" : "Tampilkan peta",
@@ -1018,6 +1032,11 @@ export default function JelajahPage() {
 
 			{menu === "album" && <AlbumIkan onTutup={() => setMenu(null)} />}
 			{menu === "pancing" && <PanelJoran onTutup={() => setMenu(null)} />}
+			{(menu === "showroom:mobil" || menu === "showroom:motor" || menu === "garasi") && (
+				<Lembar judul={menu === "garasi" ? "🚗 Garasi saya" : menu === "showroom:mobil" ? "🚗 Showroom Mobil" : "🏍️ Showroom Motor"} lebar="sm:max-w-3xl" onTutup={() => setMenu(null)}>
+					<PanelShowroom jenis={menu === "garasi" ? "garasi" : menu.slice(9)} onTutup={() => setMenu(null)} />
+				</Lembar>
+			)}
 			{menu === "etalase" && (
 				<Lembar judul="🛍️ Etalase Pasar BUMDes" lebar="sm:max-w-2xl" onTutup={() => setMenu(null)}>
 					<PanelEtalaseBumdes />
@@ -1113,6 +1132,8 @@ export default function JelajahPage() {
 									["Memancing", "tahan 🎣 lalu lepas untuk melempar; saat adu tarik KETUK 🎣 berulang untuk menggulung, berhenti saat ikan lari"],
 									["AUTO & kamera", "🤖 AUTO memancing sendiri (joran Titanium Pro / Dasar Monster / Naga Emas, koin 75%); 🎥 ganti sudut: Standar, Dekat, Atas, Sinematik"],
 									["Kolam Monster", "kolam berbayar di barat kantor: tiket 🪙 2.000 / 10 menit, isinya ikan Monster & Legenda; daftar Lomba Galatama di loket"],
+									["Pasar BUMDes", "food court di utara Kolam Monster: pesan di lapak, duduk di meja mana pun; ada live music"],
+									["Showroom", "timur kantor: beli mobil & motor di meja sales; panggil dari menu ☰ → Garasi saya"],
 									["Tenaga ❤", "berkurang seiring waktu, berlari, dan tertabrak; belanja di Alfamart: ambil keranjang, pilih barang di rak, bayar di kasir, lalu makan dari 🎒 Tas"],
 									["Tombol 💬 / 🙂", "ngobrol & kirim emote ke tamu lain; dekati tamu untuk menyapa"],
 								]
@@ -1129,6 +1150,8 @@ export default function JelajahPage() {
 									["Memancing", "tahan Spasi lalu lepas = lempar; KETUK Spasi berulang = gulung (jangan ditahan), arahkan mouse (atau A/D) melawan arah ikan, F = Tarikan Sakti saat meteran ⚡ penuh"],
 									["AUTO & kamera", "O = AUTO memancing (joran Titanium Pro / Dasar Monster / Naga Emas, koin 75%) · C = ganti sudut kamera: Standar, Dekat, Atas, Sinematik"],
 									["Kolam Monster", "kolam berbayar di barat kantor: E di loket = tiket 🪙 2.000 / 10 menit & Lomba Galatama (juara = ikan terberat)"],
+									["Pasar BUMDes", "food court produk BUM Desa di utara Kolam Monster: E di lapak = pesan menu, duduk di meja mana pun; ada live music"],
+									["Showroom", "timur kantor: E di meja sales = beli mobil / motor; panggil kendaraanmu dari tombol 🚚 Garasi"],
 									["Tenaga ❤", "habis = pingsan; masuk Alfamart seberang kantor: E ambil keranjang & barang di rak, bayar di kasir pakai koin, makan dari 🎒 Tas"],
 									["Enter / T", "ngobrol dengan tamu lain"],
 									["1 – 5", "emote: lambai, jempol, tepuk, tawa, hati"],
