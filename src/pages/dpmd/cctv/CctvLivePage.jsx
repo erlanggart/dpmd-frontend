@@ -1,17 +1,20 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
-import { RefreshCw, Radio, Waves, AlertTriangle, Plus, MonitorPlay, CameraOff } from "lucide-react";
+import {
+	RefreshCw, Radio, Waves, AlertTriangle, Plus, MonitorPlay, CameraOff, Maximize2, Minimize2, X, ChevronLeft, ChevronRight,
+	LayoutGrid, Expand,
+} from "lucide-react";
 import toast from "react-hot-toast";
 import { getKamera, getStreamUrl, urlMjpegAI } from "../../../api/smartCctvApi";
 import { useCctvAlerts } from "../../../hooks/useCctvAlerts";
 
 /**
- * Grid kamera langsung.
+ * Grid kamera langsung + pemutar besar.
  *
- * Aliran gambar: MJPEG dari mesin AI (/ai/cameras/:id/stream) bila terpasang,
- * selain itu dari go2rtc lewat URL bertoken (stream-url) — tetap satu <img>
- * tanpa JavaScript video. Pilihan WebRTC (go2rtc) tersedia per tile untuk
- * kualitas lebih baik dengan codec H.264 asli; peer ditutup saat tile unmount.
+ * Sumber gambar dicoba berurutan per tile: MJPEG mesin AI (bila terpasang) →
+ * video langsung go2rtc lewat MSE/WebSocket (H.264 asli, tanpa transkode) →
+ * MJPEG go2rtc → potret go2rtc berkala. URL go2rtc diambil dari stream-url
+ * yang membawa token media (nginx menolak tanpa token).
  */
 
 const WARNA_STATUS = {
@@ -64,19 +67,135 @@ const sambungWebRtc = async (url, videoEl, onGagal) => {
 	};
 };
 
-// Sumber gambar dicoba berurutan; yang gagal digeser ke berikutnya:
-// MJPEG mesin AI (bila terpasang) → MJPEG go2rtc → bingkai go2rtc berkala
-// (bila go2rtc tidak bisa membuat MJPEG dari H.264) → menyerah dengan pesan.
-const URUTAN_SUMBER = ["ai", "go2rtc", "bingkai"];
-const JEDA_BINGKAI_MS = 3000;
+// ---------------------------------------------------------------------------
+// MSE lewat WebSocket go2rtc: klien mengirim daftar kodek yang didukung,
+// go2rtc menjawab tipe MIME lalu mengalirkan potongan fMP4.
+// ---------------------------------------------------------------------------
+const KODEK_MSE = ["avc1.640029", "avc1.64002A", "avc1.640033", "hvc1.1.6.L153.B0", "mp4a.40.2", "mp4a.40.5", "flac", "opus"];
+const kodekDidukung = () =>
+	KODEK_MSE.filter((k) => window.MediaSource?.isTypeSupported(`video/mp4; codecs="${k}"`)).join(",");
 
-const KartuKamera = ({ kamera, peristiwaTerbaru, dasar }) => {
-	const [mode, setMode] = useState("ai"); // ai | go2rtc | bingkai | webrtc | mati
+/** URL WebSocket bertoken, diturunkan dari URL potret go2rtc dari stream-url. */
+const urlWs = (u) => {
+	if (!u?.go2rtc_frame_url) return null;
+	const alamat = new URL(u.go2rtc_frame_url.replace("/api/frame.jpeg", "/api/ws"), window.location.origin);
+	alamat.protocol = alamat.protocol === "https:" ? "wss:" : "ws:";
+	return alamat.toString();
+};
+
+/** Sambungkan <video> ke go2rtc lewat MSE. Mengembalikan fungsi pembersih. */
+const sambungMse = (wsUrl, video, onGagal) => {
+	if (!window.MediaSource || !wsUrl || !video) {
+		onGagal?.(new Error("MSE tidak didukung"));
+		return () => {};
+	}
+	let ws = null;
+	let sb = null;
+	let selesai = false;
+	const antre = [];
+	const gagal = (err) => {
+		if (!selesai) onGagal?.(err);
+	};
+	const ms = new MediaSource();
+	video.src = URL.createObjectURL(ms);
+
+	ms.addEventListener(
+		"sourceopen",
+		() => {
+			URL.revokeObjectURL(video.src);
+			ws = new WebSocket(wsUrl);
+			ws.binaryType = "arraybuffer";
+			ws.onopen = () => ws.send(JSON.stringify({ type: "mse", value: kodekDidukung() }));
+			ws.onmessage = (ev) => {
+				if (typeof ev.data === "string") {
+					let pesan = null;
+					try {
+						pesan = JSON.parse(ev.data);
+					} catch {
+						return;
+					}
+					if (pesan.type === "mse" && !sb) {
+						try {
+							sb = ms.addSourceBuffer(pesan.value);
+						} catch (err) {
+							gagal(err);
+							return;
+						}
+						sb.mode = "segments";
+						sb.addEventListener("updateend", () => {
+							if (sb.updating) return;
+							try {
+								if (antre.length) {
+									sb.appendBuffer(antre.shift());
+									return;
+								}
+								// Buang buffer lama dan tetap di ujung siaran langsung.
+								const b = sb.buffered;
+								if (b.length) {
+									const akhir = b.end(b.length - 1);
+									if (akhir - b.start(0) > 30) sb.remove(b.start(0), akhir - 10);
+									if (akhir - video.currentTime > 2.5) video.currentTime = akhir - 0.5;
+								}
+							} catch {
+								/* buffer sedang dibongkar — abaikan */
+							}
+						});
+					} else if (pesan.type === "error") {
+						gagal(new Error(pesan.value));
+					}
+					return;
+				}
+				if (!sb) return;
+				if (sb.updating || antre.length) {
+					if (antre.length < 60) antre.push(ev.data);
+				} else {
+					try {
+						sb.appendBuffer(ev.data);
+					} catch (err) {
+						gagal(err);
+					}
+				}
+			};
+			ws.onerror = () => gagal(new Error("WebSocket gagal"));
+			ws.onclose = () => gagal(new Error("Sambungan terputus"));
+		},
+		{ once: true }
+	);
+	video.play?.().catch(() => {});
+
+	return () => {
+		selesai = true;
+		try {
+			ws?.close();
+		} catch {
+			/* sudah tertutup */
+		}
+		video.removeAttribute("src");
+		video.load?.();
+	};
+};
+
+// Sumber yang dicoba berurutan; yang gagal digeser ke berikutnya.
+const URUTAN_SUMBER = ["ai", "mse", "go2rtc", "bingkai"];
+const BUTUH_GO2RTC = new Set(["mse", "go2rtc", "bingkai"]);
+const BATAS_MSE_MS = 8000;
+const JEDA_BINGKAI_MS = 3000;
+const LABEL_SUMBER = { mse: "live", go2rtc: "go2rtc", bingkai: "potret" };
+
+/** Tile kamera. `ringkas` = mode dinding (nama di atas gambar, tanpa kaki). */
+const KartuKamera = ({ kamera, peristiwaTerbaru, dasar, ringkas = false, onPerbesar }) => {
+	const [mode, setMode] = useState("ai"); // ai | mse | go2rtc | bingkai | webrtc | mati
 	const [selesaiMuat, setSelesaiMuat] = useState(false);
 	const [url, setUrl] = useState(null); // balasan stream-url (bertoken)
 	const [detak, setDetak] = useState(0); // pemicu bingkai berikutnya
 	const videoRef = useRef(null);
+	const mseRef = useRef(null);
 	const bersihRef = useRef(null);
+	const selesaiRef = useRef(false);
+
+	useEffect(() => {
+		selesaiRef.current = selesaiMuat;
+	}, [selesaiMuat]);
 
 	const muatUrl = useCallback(async () => {
 		try {
@@ -93,10 +212,38 @@ const KartuKamera = ({ kamera, peristiwaTerbaru, dasar }) => {
 		muatUrl();
 	}, [muatUrl, kamera.go2rtc_src]);
 
+	const sumberBerikut = useCallback(
+		(dari) => {
+			setSelesaiMuat(false);
+			let i = URUTAN_SUMBER.indexOf(dari) + 1;
+			// Sumber go2rtc butuh URL bertoken; tanpa itu langsung lewati.
+			while (URUTAN_SUMBER[i] && BUTUH_GO2RTC.has(URUTAN_SUMBER[i]) && !url?.go2rtc_frame_url) i += 1;
+			setMode(URUTAN_SUMBER[i] || "mati");
+		},
+		[url]
+	);
+
 	// AI gagal sebelum URL bertoken tiba → begitu tiba, lanjut ke go2rtc.
 	useEffect(() => {
-		if (url?.go2rtc_frame_url) setMode((m) => (m === "mati" ? "go2rtc" : m));
+		if (url?.go2rtc_frame_url) setMode((m) => (m === "mati" ? "mse" : m));
 	}, [url]);
+
+	// Mode MSE: sambungkan <video>; tidak tampil dalam batas waktu → sumber berikutnya.
+	useEffect(() => {
+		if (mode !== "mse" || !url?.go2rtc_frame_url) return undefined;
+		let hidup = true;
+		const pengawas = setTimeout(() => {
+			if (hidup && !selesaiRef.current) sumberBerikut("mse");
+		}, BATAS_MSE_MS);
+		const putus = sambungMse(urlWs(url), mseRef.current, () => {
+			if (hidup) sumberBerikut("mse");
+		});
+		return () => {
+			hidup = false;
+			clearTimeout(pengawas);
+			putus();
+		};
+	}, [mode, url, sumberBerikut]);
 
 	// Mode bingkai: ambil potret baru tiap beberapa detik.
 	useEffect(() => {
@@ -111,14 +258,6 @@ const KartuKamera = ({ kamera, peristiwaTerbaru, dasar }) => {
 	}, []);
 
 	useEffect(() => () => matikanWebRtc(), [matikanWebRtc]);
-
-	const sumberBerikut = (dari) => {
-		setSelesaiMuat(false);
-		let i = URUTAN_SUMBER.indexOf(dari) + 1;
-		// Sumber go2rtc butuh URL bertoken; tanpa itu langsung lewati.
-		while (URUTAN_SUMBER[i] && URUTAN_SUMBER[i] !== "ai" && !url?.go2rtc_frame_url) i += 1;
-		setMode(URUTAN_SUMBER[i] || "mati");
-	};
 
 	const cobaLagi = async () => {
 		matikanWebRtc();
@@ -136,8 +275,8 @@ const KartuKamera = ({ kamera, peristiwaTerbaru, dasar }) => {
 		setMode("webrtc");
 		setSelesaiMuat(false);
 		bersihRef.current = await sambungWebRtc(url.webrtc_url, videoRef.current, (err) => {
-			toast.error(`WebRTC gagal: ${err.message}. Kembali ke aliran gambar.`);
-			setMode("go2rtc");
+			toast.error(`WebRTC gagal: ${err.message}. Kembali ke aliran biasa.`);
+			setMode("mse");
 		});
 	};
 
@@ -158,7 +297,7 @@ const KartuKamera = ({ kamera, peristiwaTerbaru, dasar }) => {
 					: null;
 
 	return (
-		<div className="group overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
+		<div className={`group overflow-hidden rounded-xl ${ringkas ? "bg-slate-900 ring-1 ring-white/10" : "border border-slate-200 bg-white shadow-sm"}`}>
 			<div className="relative aspect-video bg-slate-900">
 				{srcGambar && !nonaktif && (
 					<img
@@ -168,11 +307,21 @@ const KartuKamera = ({ kamera, peristiwaTerbaru, dasar }) => {
 						className="h-full w-full object-cover"
 						onLoad={() => setSelesaiMuat(true)}
 						onError={() => {
-							// Bingkai yang sudah pernah tampil boleh gagal sesekali —
+							// Potret yang sudah pernah tampil boleh gagal sesekali —
 							// gambar terakhir tetap dipertahankan.
 							if (mode === "bingkai" && selesaiMuat) return;
 							sumberBerikut(mode);
 						}}
+					/>
+				)}
+				{mode === "mse" && !nonaktif && (
+					<video
+						ref={mseRef}
+						autoPlay
+						muted
+						playsInline
+						className="h-full w-full bg-slate-900 object-cover"
+						onLoadedData={() => setSelesaiMuat(true)}
 					/>
 				)}
 				{mode === "webrtc" && (
@@ -203,20 +352,37 @@ const KartuKamera = ({ kamera, peristiwaTerbaru, dasar }) => {
 					</div>
 				)}
 				{!selesaiMuat && !nonaktif && mode !== "mati" && (
-					<div className="absolute inset-0 flex items-center justify-center">
+					<div className="pointer-events-none absolute inset-0 flex items-center justify-center">
 						<span className="flex items-center gap-2 rounded-lg bg-black/50 px-3 py-1.5 text-xs font-medium text-white">
 							<RefreshCw className="h-3.5 w-3.5 animate-spin" />
 							{mode === "webrtc" ? "Menyambung WebRTC…" : "Memuat aliran…"}
 						</span>
 					</div>
 				)}
-				<div className="absolute left-2 top-2 flex items-center gap-1.5">
+
+				{/* Klik gambar = pemutar besar */}
+				{onPerbesar && mode !== "mati" && (
+					<button
+						type="button"
+						onClick={onPerbesar}
+						aria-label={`Perbesar kamera ${kamera.name}`}
+						className="absolute inset-0 flex items-center justify-center bg-black/0 opacity-0 transition hover:bg-black/30 hover:opacity-100 focus-visible:opacity-100"
+					>
+						<span className="flex items-center gap-1.5 rounded-lg bg-black/60 px-3 py-1.5 text-xs font-semibold text-white">
+							<Maximize2 className="h-3.5 w-3.5" />
+							Perbesar
+						</span>
+					</button>
+				)}
+
+				<div className="pointer-events-none absolute left-2 top-2 flex items-center gap-1.5">
 					<span className="rounded bg-black/60 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-white">
 						{kamera.lokasi || "Tanpa lokasi"}
 					</span>
-					{selesaiMuat && mode !== "ai" && mode !== "webrtc" && (
-						<span className="rounded bg-black/60 px-1.5 py-0.5 text-[10px] font-semibold text-slate-300" title="Sumber gambar">
-							{mode === "bingkai" ? "go2rtc · potret" : "go2rtc"}
+					{selesaiMuat && LABEL_SUMBER[mode] && (
+						<span className="flex items-center gap-1 rounded bg-black/60 px-1.5 py-0.5 text-[10px] font-semibold text-slate-200" title="Sumber gambar">
+							{mode === "mse" && <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-red-500" />}
+							{LABEL_SUMBER[mode]}
 						</span>
 					)}
 					{peristiwaTerbaru && (
@@ -226,50 +392,250 @@ const KartuKamera = ({ kamera, peristiwaTerbaru, dasar }) => {
 						</span>
 					)}
 				</div>
+				{ringkas && (
+					<div className="pointer-events-none absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/70 to-transparent px-2.5 pb-1.5 pt-6">
+						<p className="truncate text-xs font-semibold text-white">{kamera.name}</p>
+					</div>
+				)}
 			</div>
-			<div className="flex items-center justify-between gap-2 px-3 py-2.5">
-				<div className="min-w-0">
-					<p className="truncate text-sm font-semibold text-slate-900">{kamera.name}</p>
-					<LabelStatus status={kamera.status} />
-				</div>
-				<div className="flex flex-shrink-0 items-center gap-1">
-					{mode !== "webrtc" && !nonaktif && url?.webrtc_url && (
-						<button
-							onClick={nyalakanWebRtc}
-							title="Aliran WebRTC (go2rtc)"
+			{!ringkas && (
+				<div className="flex items-center justify-between gap-2 px-3 py-2.5">
+					<div className="min-w-0">
+						<p className="truncate text-sm font-semibold text-slate-900">{kamera.name}</p>
+						<LabelStatus status={kamera.status} />
+					</div>
+					<div className="flex flex-shrink-0 items-center gap-1">
+						{onPerbesar && (
+							<button
+								onClick={onPerbesar}
+								title="Perbesar"
+								className="rounded-lg p-1.5 text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-900"
+							>
+								<Maximize2 className="h-4 w-4" />
+							</button>
+						)}
+						{mode !== "webrtc" && !nonaktif && url?.webrtc_url && (
+							<button
+								onClick={nyalakanWebRtc}
+								title="Aliran WebRTC (go2rtc)"
+								className="rounded-lg p-1.5 text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-900"
+							>
+								<Waves className="h-4 w-4" />
+							</button>
+						)}
+						{mode === "webrtc" && (
+							<button onClick={kembaliGambar} title="Kembali ke aliran biasa" className="rounded-lg bg-slate-900 p-1.5 text-white">
+								<Radio className="h-4 w-4" />
+							</button>
+						)}
+						<Link
+							to={`${dasar}/cctv/riwayat`}
+							state={{ camera_id: String(kamera.id) }}
+							title="Riwayat deteksi kamera ini"
 							className="rounded-lg p-1.5 text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-900"
 						>
-							<Waves className="h-4 w-4" />
-						</button>
-					)}
-					{mode === "webrtc" && (
-						<button
-							onClick={kembaliGambar}
-							title="Kembali ke aliran gambar"
-							className="rounded-lg bg-slate-900 p-1.5 text-white"
-						>
-							<Radio className="h-4 w-4" />
-						</button>
-					)}
-					<Link
-						to={`${dasar}/cctv/riwayat`}
-						state={{ camera_id: String(kamera.id) }}
-						title="Riwayat deteksi kamera ini"
-						className="rounded-lg p-1.5 text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-900"
-					>
-						<MonitorPlay className="h-4 w-4" />
-					</Link>
+							<MonitorPlay className="h-4 w-4" />
+						</Link>
+					</div>
 				</div>
+			)}
+		</div>
+	);
+};
+
+/**
+ * Pemutar besar satu kamera: video langsung (MSE), bila gagal potret tiap
+ * detik. ←/→ pindah kamera, F layar penuh, Esc tutup.
+ */
+const PemutarBesar = ({ daftar, indeks, onGanti, onTutup }) => {
+	const kamera = daftar[indeks];
+	const [url, setUrl] = useState(null);
+	const [mode, setMode] = useState("mse"); // mse | potret | mati
+	const [tampil, setTampil] = useState(false);
+	const [detak, setDetak] = useState(0);
+	const [penuh, setPenuh] = useState(false);
+	const wadahRef = useRef(null);
+	const videoRef = useRef(null);
+	const tampilRef = useRef(false);
+
+	useEffect(() => {
+		tampilRef.current = tampil;
+	}, [tampil]);
+
+	useEffect(() => {
+		let batal = false;
+		setUrl(null);
+		setMode("mse");
+		setTampil(false);
+		getStreamUrl(kamera.id)
+			.then((r) => {
+				if (!batal) setUrl(r.data.data || null);
+			})
+			.catch(() => {
+				if (!batal) setMode("mati");
+			});
+		return () => {
+			batal = true;
+		};
+	}, [kamera.id]);
+
+	useEffect(() => {
+		if (mode !== "mse" || !url) return undefined;
+		if (!url.go2rtc_frame_url) {
+			setMode("mati");
+			return undefined;
+		}
+		let hidup = true;
+		const pengawas = setTimeout(() => {
+			if (hidup && !tampilRef.current) setMode("potret");
+		}, BATAS_MSE_MS);
+		const putus = sambungMse(urlWs(url), videoRef.current, () => {
+			if (hidup) setMode("potret");
+		});
+		return () => {
+			hidup = false;
+			clearTimeout(pengawas);
+			putus();
+		};
+	}, [mode, url]);
+
+	useEffect(() => {
+		if (mode !== "potret") return undefined;
+		const jeda = setInterval(() => setDetak((d) => d + 1), 1000);
+		return () => clearInterval(jeda);
+	}, [mode]);
+
+	const alihPenuh = useCallback(() => {
+		if (document.fullscreenElement) document.exitFullscreen?.();
+		else wadahRef.current?.requestFullscreen?.();
+	}, []);
+
+	useEffect(() => {
+		const ubah = () => setPenuh(Boolean(document.fullscreenElement));
+		document.addEventListener("fullscreenchange", ubah);
+		return () => document.removeEventListener("fullscreenchange", ubah);
+	}, []);
+
+	useEffect(() => {
+		const dengar = (e) => {
+			if (e.key === "Escape" && !document.fullscreenElement) onTutup();
+			else if (e.key === "ArrowRight") onGanti((indeks + 1) % daftar.length);
+			else if (e.key === "ArrowLeft") onGanti((indeks - 1 + daftar.length) % daftar.length);
+			else if (e.key === "f" || e.key === "F") alihPenuh();
+		};
+		window.addEventListener("keydown", dengar);
+		const semula = document.body.style.overflow;
+		document.body.style.overflow = "hidden";
+		return () => {
+			window.removeEventListener("keydown", dengar);
+			document.body.style.overflow = semula;
+		};
+	}, [indeks, daftar.length, onGanti, onTutup, alihPenuh]);
+
+	return (
+		<div className="fixed inset-0 z-[90] flex flex-col bg-slate-950/95 backdrop-blur-sm">
+			<div className="flex shrink-0 items-center justify-between gap-3 px-4 py-3 text-white sm:px-6">
+				<div className="min-w-0">
+					<p className="truncate text-sm font-semibold">{kamera.name}</p>
+					<p className="text-[11px] text-slate-400">
+						{kamera.lokasi || "Tanpa lokasi"} · Kamera {indeks + 1} dari {daftar.length}
+						{tampil && mode === "mse" && " · siaran langsung"}
+						{tampil && mode === "potret" && " · potret tiap detik"}
+					</p>
+				</div>
+				<div className="flex shrink-0 items-center gap-1.5">
+					<button type="button" onClick={alihPenuh} title="Layar penuh (F)" className="rounded-lg bg-white/10 p-2 ring-1 ring-white/15 hover:bg-white/20">
+						{penuh ? <Minimize2 className="h-4 w-4" /> : <Expand className="h-4 w-4" />}
+					</button>
+					<button type="button" onClick={onTutup} title="Tutup (Esc)" className="rounded-lg bg-white/10 p-2 ring-1 ring-white/15 hover:bg-white/20">
+						<X className="h-4 w-4" />
+					</button>
+				</div>
+			</div>
+
+			<div ref={wadahRef} className="relative flex min-h-0 flex-1 items-center justify-center bg-black px-2 pb-2 sm:px-6 sm:pb-6">
+				{mode === "mse" && (
+					<video
+						key={kamera.id}
+						ref={videoRef}
+						autoPlay
+						muted
+						playsInline
+						onLoadedData={() => setTampil(true)}
+						className="max-h-full max-w-full rounded-lg bg-black object-contain"
+					/>
+				)}
+				{mode === "potret" && url?.go2rtc_frame_url && (
+					<img
+						src={`${url.go2rtc_frame_url}&_=${detak}`}
+						alt={`Kamera ${kamera.name}`}
+						onLoad={() => setTampil(true)}
+						className="max-h-full max-w-full rounded-lg object-contain"
+					/>
+				)}
+				{mode === "mati" && (
+					<div className="flex flex-col items-center gap-2 text-center text-slate-400">
+						<CameraOff className="h-8 w-8" />
+						<p className="text-sm">Aliran kamera ini belum tersedia.</p>
+					</div>
+				)}
+				{!tampil && mode !== "mati" && (
+					<span className="pointer-events-none absolute flex items-center gap-2 rounded-lg bg-white/10 px-3 py-1.5 text-xs font-medium text-white">
+						<RefreshCw className="h-3.5 w-3.5 animate-spin" />
+						Menyambung…
+					</span>
+				)}
+				{daftar.length > 1 && (
+					<>
+						<button
+							type="button"
+							onClick={() => onGanti((indeks - 1 + daftar.length) % daftar.length)}
+							title="Kamera sebelumnya (←)"
+							className="absolute left-3 top-1/2 -translate-y-1/2 rounded-full bg-white/10 p-2.5 text-white ring-1 ring-white/15 hover:bg-white/25 sm:left-8"
+						>
+							<ChevronLeft className="h-5 w-5" />
+						</button>
+						<button
+							type="button"
+							onClick={() => onGanti((indeks + 1) % daftar.length)}
+							title="Kamera berikutnya (→)"
+							className="absolute right-3 top-1/2 -translate-y-1/2 rounded-full bg-white/10 p-2.5 text-white ring-1 ring-white/15 hover:bg-white/25 sm:right-8"
+						>
+							<ChevronRight className="h-5 w-5" />
+						</button>
+					</>
+				)}
 			</div>
 		</div>
 	);
 };
+
+// Tata letak grid. "auto" = mengikuti lebar layar.
+const TATA_LETAK = {
+	auto: "grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4",
+	1: "grid-cols-1",
+	2: "grid-cols-1 sm:grid-cols-2",
+	3: "grid-cols-2 lg:grid-cols-3",
+	4: "grid-cols-2 lg:grid-cols-4",
+};
+const KUNCI_TATA_LETAK = "cctv-tata-letak";
 
 const CctvLivePage = () => {
 	const location = useLocation();
 	const dasar = location.pathname.startsWith("/superadmin") ? "/superadmin" : "/dpmd";
 	const [kamera, setKamera] = useState([]);
 	const [memuat, setMemuat] = useState(true);
+	const [besar, setBesar] = useState(null); // indeks kamera di pemutar besar
+	const [tataLetak, setTataLetak] = useState(() => {
+		try {
+			const simpan = localStorage.getItem(KUNCI_TATA_LETAK);
+			return TATA_LETAK[simpan] ? simpan : "auto";
+		} catch {
+			return "auto";
+		}
+	});
+	const [dinding, setDinding] = useState(false);
+	const dindingRef = useRef(null);
 	const { peristiwa: alertTerbaru } = useCctvAlerts();
 
 	const muat = useCallback(async () => {
@@ -288,6 +654,26 @@ const CctvLivePage = () => {
 		muat();
 	}, [muat]);
 
+	const pilihTataLetak = (nilai) => {
+		setTataLetak(nilai);
+		try {
+			localStorage.setItem(KUNCI_TATA_LETAK, nilai);
+		} catch {
+			/* penyimpanan tidak tersedia */
+		}
+	};
+
+	// Mode dinding = grid memenuhi layar (Fullscreen API) dengan latar gelap.
+	const alihDinding = () => {
+		if (document.fullscreenElement) document.exitFullscreen?.();
+		else dindingRef.current?.requestFullscreen?.();
+	};
+	useEffect(() => {
+		const ubah = () => setDinding(Boolean(dindingRef.current) && document.fullscreenElement === dindingRef.current);
+		document.addEventListener("fullscreenchange", ubah);
+		return () => document.removeEventListener("fullscreenchange", ubah);
+	}, []);
+
 	// Peringatan 15 detik terakhir per kamera disematkan di tile-nya.
 	const alertPerKamera = useMemo(() => {
 		const peta = new Map();
@@ -301,6 +687,7 @@ const CctvLivePage = () => {
 	}, [alertTerbaru]);
 
 	const aktif = kamera.filter((k) => k.status === "active").length;
+	const tutupBesar = useCallback(() => setBesar(null), []);
 
 	return (
 		<div className="rounded-xl border border-slate-200 bg-white p-5">
@@ -311,7 +698,32 @@ const CctvLivePage = () => {
 						{kamera.length} kamera terdaftar · {aktif} aktif
 					</p>
 				</div>
-				<div className="flex items-center gap-2">
+				<div className="flex flex-wrap items-center gap-2">
+					<div className="inline-flex items-center gap-0.5 rounded-lg border border-slate-200 p-0.5" role="group" aria-label="Tata letak grid">
+						<LayoutGrid className="mx-1.5 h-4 w-4 text-slate-400" />
+						{Object.keys(TATA_LETAK).map((k) => (
+							<button
+								key={k}
+								type="button"
+								onClick={() => pilihTataLetak(k)}
+								title={k === "auto" ? "Otomatis mengikuti lebar layar" : `${k} kolom`}
+								className={`rounded-md px-2 py-1 text-xs font-semibold transition-colors ${
+									tataLetak === k ? "bg-slate-900 text-white" : "text-slate-500 hover:bg-slate-100 hover:text-slate-900"
+								}`}
+							>
+								{k === "auto" ? "Auto" : k}
+							</button>
+						))}
+					</div>
+					<button
+						onClick={alihDinding}
+						disabled={!kamera.length}
+						title="Tampilkan semua kamera memenuhi layar"
+						className="inline-flex items-center gap-2 rounded-lg border border-slate-200 px-3 py-2 text-sm font-medium text-slate-600 transition-colors hover:bg-slate-50 disabled:opacity-50"
+					>
+						<Expand className="h-4 w-4" />
+						Mode dinding
+					</button>
 					<button
 						onClick={muat}
 						className="inline-flex items-center gap-2 rounded-lg border border-slate-200 px-3 py-2 text-sm font-medium text-slate-600 transition-colors hover:bg-slate-50"
@@ -342,11 +754,37 @@ const CctvLivePage = () => {
 					<p className="mt-1 text-sm text-slate-400">Tambahkan kamera di tab Kamera untuk mulai memantau.</p>
 				</div>
 			) : (
-				<div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
-					{kamera.map((k) => (
-						<KartuKamera key={k.id} kamera={k} peristiwaTerbaru={alertPerKamera.get(String(k.id))} dasar={dasar} />
-					))}
+				<div ref={dindingRef} className={dinding ? "h-full overflow-auto bg-slate-950 p-3" : ""}>
+					{dinding && (
+						<div className="mb-2 flex items-center justify-between px-1 text-white">
+							<p className="text-sm font-semibold">Smart CCTV · {aktif} kamera aktif</p>
+							<button
+								type="button"
+								onClick={alihDinding}
+								className="inline-flex items-center gap-1.5 rounded-lg bg-white/10 px-2.5 py-1.5 text-xs font-semibold ring-1 ring-white/15 hover:bg-white/20"
+							>
+								<Minimize2 className="h-3.5 w-3.5" />
+								Keluar (Esc)
+							</button>
+						</div>
+					)}
+					<div className={`grid ${dinding ? "gap-2" : "gap-4"} ${TATA_LETAK[tataLetak]}`}>
+						{kamera.map((k, i) => (
+							<KartuKamera
+								key={k.id}
+								kamera={k}
+								peristiwaTerbaru={alertPerKamera.get(String(k.id))}
+								dasar={dasar}
+								ringkas={dinding}
+								onPerbesar={dinding ? undefined : () => setBesar(i)}
+							/>
+						))}
+					</div>
 				</div>
+			)}
+
+			{besar !== null && kamera[besar] && (
+				<PemutarBesar daftar={kamera} indeks={besar} onGanti={setBesar} onTutup={tutupBesar} />
 			)}
 		</div>
 	);
