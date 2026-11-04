@@ -94,6 +94,15 @@ const emptyToUndef = (schema) =>
 const emptyToNull = (schema) =>
 	z.preprocess((v) => (v === "" ? null : v), schema);
 
+const digitSaja = (v) => String(v ?? "").replace(/\D/g, "");
+
+// Selaras dengan utils/nomorWhatsapp.js di backend: tersimpan 62xxxxxxxxxx.
+const keNomorWhatsapp = (v) => {
+	const d = digitSaja(v);
+	if (d.startsWith("0")) return `62${d.slice(1)}`;
+	return d.startsWith("8") ? `62${d}` : d;
+};
+
 /**
  * API mengirim nilai apa adanya dari database: enum Prisma memakai garis bawah
  * ("Laki_laki", "Tidak_Aktif") dan tanggal berupa ISO lengkap
@@ -118,6 +127,8 @@ const dariServer = (data) => {
 	if (!data) return data;
 	return {
 		...data,
+		// Operator mengenal nomor berawalan 0, bukan bentuk simpanan 62.
+		whatsapp: data.whatsapp ? String(data.whatsapp).replace(/^62/, "0") : "",
 		jenis_kelamin: data.jenis_kelamin ? String(data.jenis_kelamin).replace(/_/g, "-") : "",
 		status: data.status ? String(data.status).replace(/_/g, " ") : "",
 		tanggal_lahir: keTanggalInput(data.tanggal_lahir),
@@ -183,6 +194,18 @@ const OpsiTersimpan = ({ nilai, dikenal }) =>
 const aparaturSchema = z.object({
 	// Biodata
 	nama_lengkap: z.string().min(1, "Nama lengkap wajib diisi"),
+	nik: z.preprocess(
+		digitSaja,
+		z
+			.string()
+			.min(1, "NIK wajib diisi")
+			.regex(/^\d{16}$/, "NIK harus 16 digit sesuai KTP")
+			.refine((nik) => !/^(\d)\1{15}$/.test(nik), "NIK harus 16 digit sesuai KTP")
+	),
+	whatsapp: z.preprocess(
+		keNomorWhatsapp,
+		z.string().min(1, "Nomor WhatsApp wajib diisi").regex(/^62\d{8,13}$/, "Nomor WhatsApp tidak valid. Contoh: 081234567890")
+	),
 	jabatan: z.string().min(1, "Jabatan wajib diisi"),
 	// NIPD tidak diisi di sini: diterbitkan sistem setelah DPMD menyatakan data
 	// valid. NIAP & pangkat/golongan dihapus dari isian (kolom lama dibiarkan).
@@ -249,7 +272,7 @@ const SEKSI = [
 		judul: "Biodata",
 		keterangan: "Identitas diri dan jabatan",
 		icon: User,
-		wajib: ["nama_lengkap", "jabatan", "tempat_lahir", "tanggal_lahir", "jenis_kelamin", "pendidikan_terakhir", "agama", "status"],
+		wajib: ["nama_lengkap", "nik", "whatsapp", "jabatan", "tempat_lahir", "tanggal_lahir", "jenis_kelamin", "pendidikan_terakhir", "agama", "status"],
 	},
 	{
 		id: "seksi-kepegawaian",
@@ -283,6 +306,8 @@ const terisi = (nilai) =>
 
 const LABEL_KOLOM = {
 	nama_lengkap: "Nama lengkap",
+	nik: "NIK",
+	whatsapp: "Nomor WhatsApp",
 	jabatan: "Jabatan",
 	tempat_lahir: "Tempat lahir",
 	tanggal_lahir: "Tanggal lahir",
@@ -679,6 +704,8 @@ const AparaturDesaForm = ({
 		// Coerce required string fields from null to "" so Zod string().min works and RHF controls are happy
 		const requiredStringFields = [
 			"nama_lengkap",
+			"nik",
+			"whatsapp",
 			"jabatan",
 			"tempat_lahir",
 			"tanggal_lahir",
@@ -826,6 +853,12 @@ const AparaturDesaForm = ({
 					<div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
 						<Field label="Nama Lengkap" required error={errors.nama_lengkap?.message} className="sm:col-span-2">
 							<input {...register("nama_lengkap")} className={`${inputCls} text-[15px] font-medium${galatCls("nama_lengkap")}`} placeholder="Nama sesuai KTP" />
+						</Field>
+						<Field label="NIK" required error={errors.nik?.message} hint={`${digitSaja(nilai.nik).length}/16 digit`}>
+							<input {...register("nik")} inputMode="numeric" autoComplete="off" className={`${inputCls} tabular-nums${galatCls("nik")}`} placeholder="16 digit sesuai KTP" />
+						</Field>
+						<Field label="Nomor WhatsApp" required error={errors.whatsapp?.message}>
+							<input {...register("whatsapp")} type="tel" inputMode="tel" autoComplete="off" className={`${inputCls} tabular-nums${galatCls("whatsapp")}`} placeholder="081234567890" />
 						</Field>
 						<Field label="Jabatan" required error={errors.jabatan?.message} className="sm:col-span-2">
 							<KotakPilih daftar={register("jabatan")} galat={Boolean(errors.jabatan)}>

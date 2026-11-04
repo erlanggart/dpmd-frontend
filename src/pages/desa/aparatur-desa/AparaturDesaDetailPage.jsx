@@ -23,7 +23,8 @@ import {
 	FaFilePdf,
 	FaFileImage,
 	FaExternalLinkAlt,
-	FaLink
+	FaLink,
+	FaWhatsapp
 } from "react-icons/fa";
 import Swal from "sweetalert2";
 
@@ -336,6 +337,18 @@ const AparaturDesaDetailPage = () => {
 					</h3>
 					<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
 						<InfoCard 
+							icon={FaIdCard}
+							label="NIK"
+							value={data.nik || "Belum diisi"}
+							color="text-slate-500"
+						/>
+						<InfoCard
+							icon={FaWhatsapp}
+							label="Nomor WhatsApp"
+							value={data.whatsapp ? data.whatsapp.replace(/^62/, "0") : "Belum diisi"}
+							color="text-emerald-600"
+						/>
+						<InfoCard
 							icon={FaMapMarkerAlt}
 							label="Tempat, Tanggal Lahir"
 							value={`${data.tempat_lahir ?? "-"}, ${formatDate(data.tanggal_lahir)}`}

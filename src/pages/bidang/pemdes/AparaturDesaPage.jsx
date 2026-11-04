@@ -791,6 +791,8 @@ const Avatar = ({ person, className = 'h-10 w-10 text-sm' }) => {
 // jadi menghitungnya akan membuat aparatur aktif selamanya tidak pernah 100%.
 const KOLOM_KELENGKAPAN = [
 	{ key: 'nama_lengkap', label: 'Nama lengkap' },
+	{ key: 'nik', label: 'NIK' },
+	{ key: 'whatsapp', label: 'Nomor WhatsApp' },
 	{ key: 'jabatan', label: 'Jabatan' },
 	{ key: 'tempat_lahir', label: 'Tempat lahir' },
 	{ key: 'tanggal_lahir', label: 'Tanggal lahir' },
@@ -1646,6 +1648,9 @@ const VerifikasiItem = ({ itemKey, aparatur, bolehKelola, onSimpan, ringkas = fa
 // ============================================================
 // Modal detail
 // ============================================================
+/** Tersimpan 62xxxxxxxxxx; dibaca sebagai nomor berawalan 0. */
+const tampilWhatsapp = (nomor) => (nomor ? String(nomor).replace(/^62/, '0') : null);
+
 const DetailField = ({ label, value }) => (
 	<div>
 		<p className="text-xs text-slate-500">{label}</p>
@@ -2016,6 +2021,8 @@ export const AparaturDesaDetailPage = ({ backPath }) => {
 					<div className="grid gap-4 md:grid-cols-2">
 						<DetailSection title="Data Pribadi" icon={UserCircle}>
 							<div className="grid grid-cols-2 gap-3">
+								<DetailField label="NIK" value={a.nik} />
+								<DetailField label="Nomor WhatsApp" value={tampilWhatsapp(a.whatsapp)} />
 								<DetailField
 									label="Jenis Kelamin"
 									value={
@@ -3691,13 +3698,13 @@ const BERKAS_PEMBANDING = {
 // Alasan yang paling sering ditulis, supaya desa membaca kalimat yang seragam.
 // Mengisi kolom alasan saja — tetap bisa disunting sebelum disimpan.
 const ALASAN_CEPAT = {
-	biodata: ['Tidak sama dengan KTP', 'Tanggal lahir berbeda dengan KTP', 'Ejaan nama berbeda dengan KTP', 'Pendidikan tidak sesuai ijazah'],
+	biodata: ['NIK atau nomor WhatsApp belum diisi', 'NIK tidak sama dengan KTP', 'Tidak sama dengan KTP', 'Tanggal lahir berbeda dengan KTP', 'Ejaan nama berbeda dengan KTP', 'Pendidikan tidak sesuai ijazah'],
 	jabatan_sk: ['Nomor SK tidak sesuai berkas SK', 'Tanggal pengangkatan berbeda dengan SK', 'Jabatan tidak sesuai SK'],
 	bpjs: ['Nomor BPJS tidak sesuai kartu', 'Nomor BPJS tidak lengkap'],
 	berkas: ['Berkas buram / tidak terbaca', 'Bukan dokumen yang diminta', 'Berkas terpotong', 'Dokumen milik orang lain'],
 };
 
-const KOLOM_WAJIB_MEJA = ['nama_lengkap', 'jabatan', 'tempat_lahir', 'tanggal_lahir', 'jenis_kelamin', 'agama', 'pendidikan_terakhir', 'tanggal_pengangkatan', 'nomor_sk_pengangkatan'];
+const KOLOM_WAJIB_MEJA = ['nama_lengkap', 'nik', 'whatsapp', 'jabatan', 'tempat_lahir', 'tanggal_lahir', 'jenis_kelamin', 'agama', 'pendidikan_terakhir', 'tanggal_pengangkatan', 'nomor_sk_pengangkatan'];
 
 const labelKelamin = (jk) => (jk === 'Laki_laki' ? 'Laki-laki' : jk === 'Perempuan' ? 'Perempuan' : null);
 
@@ -3706,6 +3713,8 @@ const ISI_ITEM = {
 	biodata: (a) => {
 		const usia = usiaTahun(a.tanggal_lahir);
 		return [
+			['NIK', a.nik],
+			['WhatsApp', tampilWhatsapp(a.whatsapp)],
 			['Nama lengkap', a.nama_lengkap],
 			['Tempat lahir', a.tempat_lahir],
 			['Tanggal lahir', a.tanggal_lahir ? `${formatDate(a.tanggal_lahir)}${usia !== null ? ` · ${usia} th` : ''}` : null],
