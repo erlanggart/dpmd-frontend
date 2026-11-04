@@ -1,76 +1,64 @@
 import React, { useEffect } from 'react';
-import { RefreshCw, ShieldCheck } from 'lucide-react';
+import { useLocation } from 'react-router-dom';
+import { RefreshCw } from 'lucide-react';
 
-const UpdateNotificationModal = ({ isOpen, onUpdate }) => {
-  // Inject animation keyframes on mount
+// Halaman yang sedang dipakai penuh (game dengan joystick, rapat video): banner
+// ditahan sampai pengguna keluar dari sana, karena memuat ulang akan memutus kegiatannya.
+const HALAMAN_TANPA_BANNER = /^\/jelajah|meeting/i;
+
+const UpdateNotificationModal = ({ isOpen, onUpdate, onDismiss }) => {
+  const { pathname } = useLocation();
+
   useEffect(() => {
-    const styleId = 'update-modal-styles';
+    const styleId = 'update-banner-styles';
     if (!document.getElementById(styleId)) {
       const style = document.createElement('style');
       style.id = styleId;
       style.textContent = `
-        @keyframes update-scale-in {
-          from { opacity: 0; transform: scale(0.9) translateY(20px); }
-          to { opacity: 1; transform: scale(1) translateY(0); }
+        @keyframes update-banner-in {
+          from { opacity: 0; transform: translateY(16px); }
+          to { opacity: 1; transform: translateY(0); }
         }
-        .animate-update-scale-in {
-          animation: update-scale-in 0.3s ease-out;
-        }
+        .animate-update-banner-in { animation: update-banner-in 0.25s ease-out; }
       `;
       document.head.appendChild(style);
     }
   }, []);
 
-  if (!isOpen) return null;
+  if (!isOpen || HALAMAN_TANPA_BANNER.test(pathname)) return null;
 
+  // Di bawah lg, naik di atas navigasi bawah (setinggi kira-kira 5 rem) tiap layout.
+  // Pembungkus tidak menangkap klik; hanya kartunya yang bisa diklik.
   return (
     <div
-      className="fixed inset-0 flex items-center justify-center p-4"
+      className="pointer-events-none fixed inset-x-3 bottom-[calc(5.5rem+env(safe-area-inset-bottom))] flex justify-center lg:bottom-6"
       style={{ zIndex: 99999 }}
     >
-      {/* Backdrop — sengaja tidak bisa diklik untuk menutup: update wajib. */}
-      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
-
-      {/* Modal */}
       <div
-        role="alertdialog"
-        aria-modal="true"
-        className="animate-update-scale-in relative mx-4 w-full max-w-sm overflow-hidden rounded-3xl bg-white shadow-2xl"
+        role="status"
+        aria-live="polite"
+        className="animate-update-banner-in pointer-events-auto flex w-full max-w-md flex-wrap items-center gap-x-3 gap-y-2 rounded-2xl bg-slate-900 px-4 py-3 text-white shadow-2xl ring-1 ring-white/10"
       >
-        {/* Ikon statis: lebih ringan daripada Lottie saat aplikasi baru dibuka */}
-        <div className="flex justify-center bg-gradient-to-b from-blue-50 to-white pt-7">
-          <div className="flex h-28 w-28 items-center justify-center rounded-[2rem] bg-gradient-to-br from-blue-500 to-cyan-400 text-white shadow-xl shadow-blue-500/20">
-            <RefreshCw className="h-12 w-12" />
-          </div>
+        <RefreshCw className="h-5 w-5 shrink-0 text-sky-300" aria-hidden="true" />
+        <div className="min-w-0 flex-1 basis-44">
+          <p className="m-0 text-sm font-bold leading-snug">Versi baru tersedia</p>
+          <p className="m-0 text-xs leading-snug text-slate-300">Halaman dimuat ulang saat Anda menekan Update.</p>
         </div>
-
-        {/* Isi */}
-        <div className="px-6 pb-6 pt-2 text-center">
-          <h3 className="text-xl font-extrabold text-gray-900">
-            Ada Update Baru! 🎉
-          </h3>
-          <p className="mx-auto mt-2 max-w-[19rem] text-sm leading-relaxed text-gray-500">
-            Aplikasi <strong className="text-gray-700">DPMD Kabupaten Bogor</strong> makin
-            kece nih — ada fitur baru &amp; perbaikan. Yuk update biar makin lancar!
-          </p>
-
-          <span className="mt-4 inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-3 py-1.5 text-[11px] font-semibold text-emerald-600">
-            <ShieldCheck className="h-3.5 w-3.5" />
-            Tenang, data login kamu tetap aman
-          </span>
-
-          {/* Tombol — hanya satu. "Nanti Aja" dihapus: versi lama yang ditunda
-              berjam-jam membuat perbaikan yang sudah dirilis tidak sampai. */}
-          <div className="mt-6 flex">
-            <button
-              onClick={onUpdate}
-              autoFocus
-              className="flex flex-1 items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-blue-500 to-blue-600 px-4 py-3.5 text-sm font-bold text-white shadow-lg shadow-blue-500/30 transition-all hover:from-blue-600 hover:to-blue-700 active:scale-[0.98]"
-            >
-              <RefreshCw className="h-4 w-4" />
-              Update Sekarang
-            </button>
-          </div>
+        <div className="ml-auto flex shrink-0 items-center gap-1.5">
+          <button
+            type="button"
+            onClick={onDismiss}
+            className="rounded-xl px-3 py-2 text-sm font-semibold text-slate-200 transition-colors hover:bg-white/10"
+          >
+            Nanti saja
+          </button>
+          <button
+            type="button"
+            onClick={onUpdate}
+            className="rounded-xl bg-sky-500 px-3.5 py-2 text-sm font-bold text-white transition-colors hover:bg-sky-400"
+          >
+            Update
+          </button>
         </div>
       </div>
     </div>

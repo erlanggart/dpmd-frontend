@@ -35,6 +35,7 @@ import {
 import {
   setupPeriodicVersionCheck,
   forceUpdate,
+  dismissUpdate,
 } from "./utils/versionCheck";
 import UpdateNotificationModal from "./components/UpdateNotificationModal";
 import { NetworkProvider } from "./context/NetworkContext";
@@ -1044,6 +1045,11 @@ function App() {
     // User initiated update
     setShowUpdateModal(false);
     await forceUpdate();
+  };
+
+  const handleDismissUpdate = () => {
+    setShowUpdateModal(false);
+    dismissUpdate();
   };
 
   return (
@@ -2109,10 +2115,11 @@ function App() {
             {/* Network Status Indicator */}
             <NetworkStatusIndicator />
 
-            {/* Update Notification Modal */}
+            {/* Update Notification Banner */}
             <UpdateNotificationModal
               isOpen={showUpdateModal}
               onUpdate={handleUpdate}
+              onDismiss={handleDismissUpdate}
             />
             </NetworkProvider>
           </ThemeColorWrapper>

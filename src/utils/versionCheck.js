@@ -5,15 +5,14 @@
 // 1. Each build generates a unique buildHash in version.json + <meta name="build-hash"> in index.html
 // 2. The app reads its own build hash from the <meta> tag (baked at build time)
 // 3. Periodically fetches /version.json (with cache-busting) from the server
-// 4. If server's buildHash differs from the local one → new deployment detected → show modal
+// 4. If server's buildHash differs from the local one → new deployment detected → show banner
 
 const BUILD_HASH_KEY = 'app_build_hash';
 const LAST_UPDATE_KEY = 'app_last_update';
-// Sisa dari masa ketika update boleh ditunda ("Nanti Aja"). Update kini wajib:
-// versi lama yang bertahan berjam-jam berarti perbaikan yang sudah dirilis
-// tidak sampai ke perangkat yang paling membutuhkannya. Kuncinya hanya
-// dibersihkan, tidak lagi dibaca.
+// "Nanti saja" menunda banner untuk versi tertentu selama DISMISS_DURATION.
+// Rilis yang lebih baru memunculkannya lagi, supaya perbaikan tetap sampai.
 const DISMISS_KEY = 'app_update_dismissed';
+const DISMISS_DURATION = 4 * 60 * 60 * 1000; // 4 jam
 const VERSION_CHECK_INTERVAL = 5 * 60 * 1000; // Check every 5 minutes
 
 /**
@@ -38,6 +37,25 @@ export const storeBuildHash = (hash) => {
   localStorage.setItem(BUILD_HASH_KEY, hash);
   localStorage.setItem(LAST_UPDATE_KEY, Date.now().toString());
   console.log(`[Version] Stored build hash: ${hash}`);
+};
+
+/**
+ * Tunda banner untuk versi server yang sedang ditawarkan
+ */
+export const dismissUpdate = () => {
+  localStorage.setItem(DISMISS_KEY, JSON.stringify({
+    hash: sessionStorage.getItem('_pending_server_hash'),
+    waktu: Date.now()
+  }));
+};
+
+const isDismissed = (serverHash) => {
+  try {
+    const d = JSON.parse(localStorage.getItem(DISMISS_KEY));
+    return d?.hash === serverHash && Date.now() - d.waktu < DISMISS_DURATION;
+  } catch {
+    return false;
+  }
 };
 
 /**
@@ -99,9 +117,6 @@ export const forceUpdate = async () => {
  */
 export const checkForServerUpdate = async () => {
   try {
-    // Penundaan yang tersimpan dari versi lama tidak berlaku lagi.
-    localStorage.removeItem(DISMISS_KEY);
-
     // Don't check if just updated (within 30s grace period)
     const lastUpdate = localStorage.getItem(LAST_UPDATE_KEY);
     if (lastUpdate) {
@@ -163,8 +178,8 @@ export const checkForServerUpdate = async () => {
 /**
  * Process version data from server
  * Compare against STORED hash (localStorage) instead of local meta tag hash.
- * This ensures the modal shows even after VitePWA autoUpdate reloads the page
- * on mobile/tablet (where localHash already matches serverHash after reload).
+ * Jika halaman ini sendiri sudah memuat versi server (localHash sama), tidak ada
+ * yang perlu ditawarkan. Penundaan "Nanti saja" untuk versi yang sama dihormati.
  */
 function processVersionData(data, localHash) {
   const serverHash = data.buildHash;
@@ -194,11 +209,22 @@ function processVersionData(data, localHash) {
     return false;
   }
   
+  // Halaman ini sudah memuat versi terbaru (mis. dimuat ulang biasa): catat, jangan menawarkan update.
+  if (localHash && localHash === serverHash) {
+    storeBuildHash(serverHash);
+    localStorage.removeItem(DISMISS_KEY);
+    return false;
+  }
+
   // Server has a DIFFERENT hash from what we stored → new version deployed!
   console.log('[Version] 🆕 New version detected! Server has different build.');
   
   // Store the pending server hash so forceUpdate can save it
   sessionStorage.setItem('_pending_server_hash', serverHash);
+
+  if (isDismissed(serverHash)) {
+    return false;
+  }
   
   return true;
 }
