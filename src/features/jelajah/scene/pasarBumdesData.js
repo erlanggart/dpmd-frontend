@@ -36,12 +36,6 @@ export const GERBANG_PASAR = { x: -28, z0: -30.5, z1: -25.5 };
 export const ETALASE_PASAR = { x: -27.0, z: -23.2 };
 export const TITIK_ETALASE_PASAR = { x: -26.1, z: -23.2 };
 
-// label melayang di atas food court & Kolam Monster (format LABEL kawasan)
-export const LABEL_PASAR = [
-	["🧺 Pasar BUMDes · Food Court & Live Music", (PASAR.x0 + PASAR.x1) / 2, (PASAR.z0 + PASAR.z1) / 2, 4.6, 1],
-	["🦈 Kolam Monster DPMD", -41, -5, 3.4, 1],
-];
-
 export const dalamPasar = (x, z, tepi = 0) => x > PASAR.x0 - tepi && x < PASAR.x1 + tepi && z > PASAR.z0 - tepi && z < PASAR.z1 + tepi;
 
 const kotak = (x, z, lx, lz) => ({ x0: x - lx / 2, x1: x + lx / 2, z0: z - lz / 2, z1: z + lz / 2 });

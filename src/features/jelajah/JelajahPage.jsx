@@ -61,6 +61,10 @@ import { klakson } from "./suaraPancing";
 import Joystick from "./ui/Joystick";
 import LayarAwal from "./ui/LayarAwal";
 import Denah2D from "./ui/Denah2D";
+import PetaKecamatan from "./ui/PetaKecamatan";
+import { jumlahPerhatian } from "./bangunWilayah";
+// dunia wilayah (kecamatan) dimuat terpisah dari dunia kantor
+const DuniaWilayah = lazy(() => import("./wilayah/DuniaWilayah"));
 import ModalSelesai from "./ui/ModalSelesai";
 
 const muatScene = () => import("./scene/KantorScene");
@@ -181,7 +185,13 @@ export default function JelajahPage() {
 
 	const [mode, setMode] = useState("awal");
 	const [panel, setPanel] = useState(null);
+	// dunia kecamatan yang sedang dikunjungi (dunia terpisah dari kantor DPMD)
+	const [dunia, setDunia] = useState(null);
+	const posisiKantor = useRef(null);
 	const [menu, setMenu] = useState(null);
+	// kas BUMDes & hasil panen yang menunggu, dihitung ulang tiap menu/dunia berganti
+	// eslint-disable-next-line react-hooks/exhaustive-deps
+	const perhatian = useMemo(() => jumlahPerhatian(), [menu, dunia]);
 	const [peta, setPeta] = useState(!sentuh);
 	const [dikunjungi, setDikunjungi] = useState(bacaDikunjungi);
 	const [selesai, setSelesai] = useState(false);
@@ -250,7 +260,7 @@ export default function JelajahPage() {
 
 	// Hook untuk uji otomatis di browser — hanya ada di mode dev, tidak ikut ke build produksi.
 	useEffect(() => {
-		if (import.meta.env.DEV) window.__jelajah = { kendali, posisi: () => ({ ...posisiPemain, kend: posisiPemain.kend?.id ?? null }), kendaraan: (id) => kendaraanDariId(id) };
+		if (import.meta.env.DEV) window.__jelajah = { kendali, suasana, posisi: () => ({ ...posisiPemain, kend: posisiPemain.kend?.id ?? null }), kendaraan: (id) => kendaraanDariId(id) };
 	}, []);
 
 	useEffect(() => {
@@ -280,11 +290,13 @@ export default function JelajahPage() {
 	}, []);
 
 	// Tersambung ke tamu lain hanya selama menjelajah 3D.
+	// Selama di dunia kecamatan sambungan dilepas: tokoh tidak tertinggal di kantor.
+	const diDunia = !!dunia;
 	useEffect(() => {
-		if (mode !== "3d" || profil?.mode !== "bersama") return;
+		if (mode !== "3d" || profil?.mode !== "bersama" || diDunia) return;
 		sambungJelajah(profil);
 		return putusJelajah;
-	}, [mode, profil]);
+	}, [mode, profil, diDunia]);
 
 	// Pesan obrolan memudar setelah beberapa detik.
 	useEffect(() => {
@@ -580,7 +592,24 @@ export default function JelajahPage() {
 				/>
 			)}
 
-			{mode === "3d" && (
+			{mode === "3d" && dunia && (
+				<Suspense fallback={<Memuat />}>
+					<DuniaWilayah
+						key={dunia.kecamatan}
+						wilayah={dunia}
+						penampilan={penampilan}
+						sentuh={sentuh}
+						onPindah={setDunia}
+						onKeluar={() => {
+							const k = posisiKantor.current;
+							if (k) kendali.teleport = { x: k.x, y: k.y, z: k.z, lantai: k.lantai, rot: k.rot, yaw: k.rot + Math.PI };
+							setDunia(null);
+						}}
+					/>
+				</Suspense>
+			)}
+
+			{mode === "3d" && !dunia && (
 				<div className="fixed inset-0 select-none overflow-hidden bg-[#cfe6f1]">
 					<PenjagaScene
 						onGagal={(galat) => {
@@ -670,15 +699,15 @@ export default function JelajahPage() {
 						</div>
 					</div>
 
-					{peta && (
-						<Minimap
-							area={area}
-							lantai={lantai}
-							dikunjungi={dikunjungi}
-							onPilih={pindahCepat}
-							className="absolute right-3 top-[6.5rem] w-28 sm:bottom-4 sm:right-4 sm:top-auto sm:w-44"
-						/>
-					)}
+					{/* peta 40 kecamatan (potensi tiap wilayah & game-nya) selalu bisa dibuka, juga di HP saat minimap disembunyikan */}
+					<div className="absolute right-3 top-[6.5rem] w-28 sm:bottom-4 sm:right-4 sm:top-auto sm:w-44">
+						<button type="button" onClick={() => setMenu("kecamatan")}
+							className="mb-1.5 flex w-full items-center justify-center gap-1.5 rounded-xl bg-slate-900/85 px-2 py-1.5 text-[11px] font-bold text-white shadow-lg backdrop-blur hover:bg-slate-900 sm:text-[12px]">
+							🗺️ Peta kecamatan
+							{perhatian > 0 && <span className="flex h-4 min-w-4 items-center justify-center rounded-full bg-rose-500 px-1 text-[10px] font-extrabold leading-none text-white">{perhatian}</span>}
+						</button>
+						{peta && <Minimap area={area} lantai={lantai} dikunjungi={dikunjungi} onPilih={pindahCepat} />}
+					</div>
 
 					{/* kartu nama area */}
 					<AnimatePresence>
@@ -1031,6 +1060,16 @@ export default function JelajahPage() {
 			)}
 
 			{menu === "album" && <AlbumIkan onTutup={() => setMenu(null)} />}
+			{menu === "kecamatan" && (
+				<Lembar judul="🗺️ Bangun Kabupaten" lebar="sm:max-w-3xl" onTutup={() => setMenu(null)}>
+					<PetaKecamatan onMain={(p) => {
+						// berangkat ke dunia kecamatan; posisi di kantor disimpan untuk kembali nanti
+						posisiKantor.current = { x: posisiPemain.x, y: posisiPemain.y, z: posisiPemain.z, rot: posisiPemain.rot, lantai: posisiPemain.lantai };
+						setMenu(null);
+						setDunia(p);
+					}} />
+				</Lembar>
+			)}
 			{menu === "pancing" && <PanelJoran onTutup={() => setMenu(null)} />}
 			{(menu === "showroom:mobil" || menu === "showroom:motor" || menu === "garasi") && (
 				<Lembar judul={menu === "garasi" ? "🚗 Garasi saya" : menu === "showroom:mobil" ? "🚗 Showroom Mobil" : "🏍️ Showroom Motor"} lebar="sm:max-w-3xl" onTutup={() => setMenu(null)}>

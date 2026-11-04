@@ -159,9 +159,3 @@ export function perahuBebas(x, z, r) {
 export const PERAHU = DERMAGA.flatMap((d) =>
 	d.perahu.map((w) => ({ ...keDuniaDermaga(d, 6.5, w), rot: w > 0 ? Math.atan2(d.nz, -d.nx) : Math.atan2(-d.nz, d.nx) })),
 );
-
-// Papan nama melayang (digambar bersama label kawasan).
-export const LABEL_SITU = DERMAGA.map((d) => {
-	const p = keDuniaDermaga(d, 0, 0);
-	return [`🎣 Spot Mancing · ${d.nama}`, p.x, p.z, 3.6, 1];
-});

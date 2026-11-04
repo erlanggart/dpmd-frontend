@@ -1,11 +1,13 @@
 import { useEffect, useState } from "react";
 import { mintaPeringkat, useMultipemain } from "../multipemain";
 import { IKAN_PER_ID } from "../pancing";
+import { gelarDari } from "../bangunWilayah";
 
 const TAB = [
 	{ id: "level", judul: "⭐ Level", nilai: (c) => `Lv ${c.level}` },
 	{ id: "ikan", judul: "🐟 Terberat", nilai: (c) => `${c.kg.toLocaleString("id-ID")} kg${c.ikan ? ` · ${IKAN_PER_ID[c.ikan]?.nama ?? ""}` : ""}` },
 	{ id: "jenis", judul: "📖 Koleksi", nilai: (c) => `${c.jenis} jenis` },
+	{ id: "pembangun", judul: "🏛️ Pembangun", nilai: (c) => `${gelarDari(c.pembangun).nama} · ${c.pembangun} poin · ★${c.bintangW || 0}` },
 ];
 const MEDALI = ["🥇", "🥈", "🥉"];
 
@@ -38,7 +40,7 @@ export default function PanelPeringkat({ namaSaya }) {
 	const daftar = data?.[tab] || [];
 	return (
 		<div>
-			<div className="mb-3 grid grid-cols-5 gap-1.5">
+			<div className="mb-3 grid grid-cols-4 gap-1.5">
 				{TAB.map((x) => (
 					<button key={x.id} onClick={() => setTab(x.id)} className={`rounded-xl px-1 py-2 text-xs font-bold ${tab === x.id ? "bg-slate-900 text-white" : "bg-slate-100 text-slate-700 hover:bg-slate-200"}`}>
 						{x.judul}

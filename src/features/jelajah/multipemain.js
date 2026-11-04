@@ -9,6 +9,7 @@ import { belanja } from "./belanja";
 import { ambilKoleksi, bayarKoin, dengarKoleksi, tambahKoin } from "./pancing";
 import { ubahTenaga } from "./tenaga";
 import { dengarProgres, levelDari, progres } from "./progres";
+import { dengarBangun, skorBangun } from "./bangunWilayah";
 
 // Jelajah bersama: setiap tamu yang membuka /jelajah tersambung ke namespace
 // socket.io "/jelajah" (lihat dpmd-fahri-express/src/socket/jelajah.socket.js).
@@ -161,7 +162,8 @@ export async function sambungJelajah(profil) {
 		if (!lepasSkor) {
 			const a = dengarProgres(kirimSkor);
 			const b = dengarKoleksi(kirimSkor);
-			lepasSkor = () => (a(), b());
+			const c = dengarBangun(kirimSkor);
+			lepasSkor = () => (a(), b(), c());
 		}
 	});
 	s.on("lomba", terimaLomba);
@@ -272,7 +274,7 @@ function dataSkor() {
 	let ikan = null;
 	let kg = 0;
 	for (const [id, c] of Object.entries(koleksi)) if (c.terberat > kg) [ikan, kg] = [id, c.terberat];
-	return { level: levelDari(progres.xp), xp: progres.xp, ikan, kg, jenis: Object.keys(koleksi).length };
+	return { level: levelDari(progres.xp), xp: progres.xp, ikan, kg, jenis: Object.keys(koleksi).length, ...skorBangun() };
 }
 let tundaSkor = null;
 const kirimSkor = () => {

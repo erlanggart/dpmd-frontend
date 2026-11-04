@@ -22,14 +22,10 @@ import {
 import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils.js";
 import { warnai } from "./geometri";
 import { JALAN_TAMPIL, POHON_TAMPIL as POHON_KAWASAN, pasangan, tinggiGedung } from "./kawasanBantu";
-import { AIR, AREA, GEDUNG, JENIS_AREA, JENIS_GEDUNG, JENIS_JALAN, LABEL as LABEL_DATA, SUNGAI } from "./kawasanData";
-import { LABEL_SITU } from "./situ";
-import { LABEL_KHUSUS } from "./gedungKhusus";
+import { AIR, AREA, GEDUNG, JENIS_AREA, JENIS_GEDUNG, JENIS_JALAN, SUNGAI } from "./kawasanData";
 import SituPemda from "./SituPemda.jsx";
 import KolamMonster from "./KolamMonster.jsx";
 import PasarBumdes from "./PasarBumdes.jsx";
-import { LABEL_PASAR } from "./pasarBumdesData";
-import { LABEL_SHOWROOM } from "./showroomData";
 import Showroom from "./Showroom.jsx";
 import AreaTampak from "./AreaTampak.jsx";
 import { suasana } from "./suasana";
@@ -43,8 +39,6 @@ import { suasana } from "./suasana";
 
 const PETAK = 200;
 const JARAK_GAMBAR = 380;
-const JARAK_LABEL = [170, 300]; // gedung, area
-const LABEL = [...LABEL_DATA, ...LABEL_SITU, ...LABEL_KHUSUS, ...LABEL_PASAR, ...LABEL_SHOWROOM];
 
 const IDX = Object.fromEntries(JENIS_GEDUNG.map((j, i) => [j, i]));
 const WARNA_RUMAH = ["#efe6d2", "#f2e3c6", "#e8d8c3", "#f4efe6", "#dfe7e0", "#f0dcd0", "#e6e0cf", "#f6e7b8"];
@@ -541,78 +535,6 @@ function Pohon() {
 
 // ---------- papan nama melayang ----------
 
-const kotakBulat = (g, x, y, w, h, r) => {
-	g.beginPath();
-	if (g.roundRect) g.roundRect(x, y, w, h, r);
-	else g.rect(x, y, w, h);
-	g.fill();
-};
-
-function teksturLabel(teks, area) {
-	const c = document.createElement("canvas");
-	const g = c.getContext("2d");
-	const font = `700 46px "Segoe UI", system-ui, -apple-system, Roboto, Arial, sans-serif`;
-	g.font = font;
-	const lebar = Math.ceil(g.measureText(teks).width) + 64;
-	c.width = lebar;
-	c.height = 84;
-	g.font = font;
-	g.fillStyle = "rgba(255,255,255,0.93)";
-	kotakBulat(g, 2, 2, lebar - 4, 70, 16);
-	g.fillStyle = area ? "#2563eb" : "#0f766e";
-	kotakBulat(g, 2, 2, 14, 70, [16, 0, 0, 16]);
-	// ekor penunjuk ke bawah
-	g.fillStyle = "rgba(255,255,255,0.93)";
-	g.beginPath();
-	g.moveTo(lebar / 2 - 10, 71);
-	g.lineTo(lebar / 2 + 10, 71);
-	g.lineTo(lebar / 2, 83);
-	g.fill();
-	g.fillStyle = "#1f2937";
-	g.textBaseline = "middle";
-	g.fillText(teks, 34, 38);
-	const t = new CanvasTexture(c);
-	t.colorSpace = SRGBColorSpace;
-	t.anisotropy = 4;
-	return { t, rasio: c.width / c.height };
-}
-
-function Label() {
-	const daftar = useMemo(
-		() =>
-			LABEL.map(([teks, x, z, y, jenis]) => {
-				const { t, rasio } = teksturLabel(teks, jenis === 1);
-				return { teks, x, z, y, jenis, t, rasio };
-			}),
-		[],
-	);
-	useEffect(() => () => daftar.forEach((d) => d.t.dispose()), [daftar]);
-	const sprite = useRef([]);
-	const waktu = useRef(1);
-
-	useFrame(({ camera }, dt) => {
-		waktu.current += dt;
-		if (waktu.current < 0.25) return;
-		waktu.current = 0;
-		daftar.forEach((d, i) => {
-			const s = sprite.current[i];
-			if (!s) return;
-			const jarak = Math.hypot(camera.position.x - d.x, camera.position.z - d.z);
-			// papan hanya untuk penunjuk arah dari kejauhan; dari dekat malah menutupi layar
-			s.visible = jarak > 14 && jarak < JARAK_LABEL[d.jenis];
-			// yang jauh sedikit diperbesar supaya tetap terbaca
-			const tinggi = 1.5 * Math.min(2.6, Math.max(1, jarak / 35));
-			s.scale.set(tinggi * d.rasio, tinggi, 1);
-		});
-	});
-
-	return daftar.map((d, i) => (
-		<sprite key={i} ref={(el) => (sprite.current[i] = el)} position={[d.x, d.y, d.z]} center={[0.5, 0]} visible={false}>
-			<spriteMaterial map={d.t} depthWrite={false} transparent toneMapped={false} />
-		</sprite>
-	));
-}
-
 export default function Kawasan({ daftarDinding }) {
 	return (
 		<group name="kawasan">
@@ -628,7 +550,6 @@ export default function Kawasan({ daftarDinding }) {
 			</AreaTampak>
 			<Gedung />
 			<Pohon />
-			<Label />
 		</group>
 	);
 }

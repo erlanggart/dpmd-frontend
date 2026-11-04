@@ -54,8 +54,3 @@ export const PENGHALANG_SHOWROOM = [
 	kotak(MEJA_SALES_MOBIL),
 	kotak(MEJA_SALES_MOTOR),
 ];
-
-export const LABEL_SHOWROOM = [
-	["🚗 Showroom Mobil", (SHOWROOM_MOBIL.x0 + SHOWROOM_MOBIL.x1) / 2, (SHOWROOM_MOBIL.z0 + SHOWROOM_MOBIL.z1) / 2, SHOWROOM_MOBIL.tinggi + 2.5, 1],
-	["🏍️ Showroom Motor", (SHOWROOM_MOTOR.x0 + SHOWROOM_MOTOR.x1) / 2, (SHOWROOM_MOTOR.z0 + SHOWROOM_MOTOR.z1) / 2, SHOWROOM_MOTOR.tinggi + 2.5, 1],
-];

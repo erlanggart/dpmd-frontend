@@ -240,12 +240,6 @@ export const PADAT_KHUSUS = [
 	...PENGUNJUNG_CCM.map(([x, z, , n]) => ({ ...kotak(x - 0.3, x + 0.3, z - 0.3, z + 0.3), lantaiMal: n })),
 ];
 
-// Papan nama melayang (penunjuk arah dari kejauhan): [teks, x, z, tinggi, jenis]
-export const LABEL_KHUSUS = [
-	["McD Tegar Beriman", (MCD.x0 + MCD.x1) / 2, (MCD.z0 + MCD.z1) / 2, MCD.tinggi + 3.5, 0],
-	["Cibinong City Mall", (A.x0 + A.x1) / 2, (A.z0 + A.z1) / 2, TINGGI_CCM + 3, 0],
-];
-
 // Titik tiba "pindah cepat" (di depan pintu, menghadap gedung).
 export const TIBA_KHUSUS = {
 	mcd: { x: (MCD.pintu.x0 + MCD.pintu.x1) / 2, z: MCD.z1 + 5, lantai: 0, rot: Math.PI, yaw: 0 },

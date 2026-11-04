@@ -30,11 +30,13 @@ export const POOL_MISI = [
 	{ id: "ruang", teks: "Kunjungi 3 ruang bidang", jenis: "ruang", target: 3, koin: 40, xp: 40 },
 	{ id: "sapa", teks: "Sapa petugas atau tamu lain", jenis: "sapa", target: 1, koin: 20, xp: 20 },
 	{ id: "gaya", teks: "Pakai gaya baru dari Distro Gaya", jenis: "gaya", target: 1, koin: 30, xp: 30 },
+	{ id: "kunjungKec", teks: "Kunjungi sebuah kecamatan lewat Peta kecamatan", jenis: "wilayah", target: 1, koin: 30, xp: 30 },
+	{ id: "pesananKab", teks: "Penuhi 1 pesanan kabupaten", jenis: "pesananKab", target: 1, koin: 100, xp: 90 },
 	{ id: "motor", teks: "Kendarai motor sejauh 500 meter", jenis: "motor", target: 500, koin: 35, xp: 35 },
 ];
 export const MISI_PER_ID = Object.fromEntries(POOL_MISI.map((m) => [m.id, m]));
 
-const hariIni = () => {
+export const hariIni = () => {
 	const d = new Date();
 	return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 };

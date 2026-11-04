@@ -242,6 +242,21 @@ export function suara(nama) {
 	}
 }
 
+// Nada kombo: makin panjang kombo makin tinggi, supaya rantai terasa memuncak.
+const TANGGA_KOMBO = [523, 587, 659, 784, 880, 1047, 1175, 1319, 1568, 1760];
+export function nadaKombo(n) {
+	if (suaraMati.nilai) return;
+	try {
+		if (!siapkan()) return;
+		const t = ctx.currentTime + 0.01;
+		const f = TANGGA_KOMBO[Math.min(n, TANGGA_KOMBO.length) - 1];
+		nada(f, t, 0.16, { vol: 0.09 });
+		nada(f * 1.5, t + 0.05, 0.14, { vol: 0.06 });
+	} catch {
+		/* audio tidak tersedia */
+	}
+}
+
 // Klakson kendaraan: mobil = dua nada "tiiin" yang tebal, motor = "tin" tipis & pendek.
 // `vol` 0..1 untuk klakson tamu lain yang makin pelan bila makin jauh.
 export function klakson(jenis = "mobil", vol = 1) {
