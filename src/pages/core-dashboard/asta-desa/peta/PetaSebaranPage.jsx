@@ -440,9 +440,12 @@ const PetaSebaranPage = ({ basePath = '/core-dashboard/asta-desa' }) => {
             namaLayer: k.namaLayer,
             id: k.data.id,
             atribut: atributTitik(k.data, null),
-            // Foto sudah ikut bersama titiknya (lihat fotoRumahPertama di
-            // backend), jadi ia tampil seketika — tidak menunggu detail.
-            foto: k.data.foto || null,
+            // Foto menunggu detail. Dulu URL-nya ikut di setiap titik supaya
+            // tampil seketika, tetapi untuk 191 ribu titik itu ±5 MB
+            // terkompresi yang diunduh setiap pembukaan halaman demi satu foto
+            // — sekarang ikut pada /asta-desa/sensus/:id di bawah, yang memang
+            // sudah dipanggil pada klik yang sama.
+            foto: null,
             memuat: true
           }
         : { namaLayer: k.namaLayer, atribut: k.atribut, foto: null, memuat: false }
@@ -461,10 +464,11 @@ const PetaSebaranPage = ({ basePath = '/core-dashboard/asta-desa' }) => {
                   ? {
                       ...f,
                       atribut: atributTitik(k.data, sensus),
-                      // Foto dari titik dipertahankan bila detail tidak punya:
-                      // endpoint detail (/admin/sensuses/{id}) memang tidak
-                      // pernah membawa URL media, jadi `|| f.foto` di sini yang
-                      // mencegah foto yang sudah tampil hilang lagi.
+                      // DI SINILAH foto datang. `/admin/sensuses/{id}` sendiri
+                      // tidak pernah membawa URL media; backend DPMD yang
+                      // melampirkannya dari penyusuran yang sudah tersimpan
+                      // (lihat denganFotoTersimpan). `|| f.foto` tetap ada
+                      // untuk menjaga foto yang sudah tampil pada klik ulang.
                       foto: fotoRumah(sensus) || f.foto,
                       memuat: false
                     }

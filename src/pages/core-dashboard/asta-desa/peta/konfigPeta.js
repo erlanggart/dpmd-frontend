@@ -302,14 +302,15 @@ export const atributTitik = (titik, detail) => {
 };
 
 /**
- * Foto rumah dari objek detail sensus — CADANGAN, dan biasanya null.
+ * Foto rumah dari objek detail sensus — jalur UTAMA foto di panel info.
  *
- * Sumber foto yang sebenarnya adalah `titik.foto`, yang sudah diikutkan backend
- * pada `/sebaran-peta`. Fungsi ini tetap ada untuk berjaga-jaga, tetapi endpoint
- * detail yang dipakai panel info (`/admin/sensuses/{id}`) membalas
- * `$sensus->toArray()` TANPA memuat relasi media dan tanpa `foto_rumah_urls` —
- * sehingga URL foto memang tidak pernah ada di sana. Itulah sebabnya foto pernah
- * kosong di DPMD padahal ada di ASTA DESA.
+ * `/admin/sensuses/{id}` di ASTA DESA membalas `$sensus->toArray()` TANPA memuat
+ * relasi media dan tanpa `foto_rumah_urls`, sehingga URL fotonya tidak pernah
+ * ada di balasan aslinya — itulah sebabnya foto pernah kosong di DPMD padahal
+ * ada di ASTA DESA. Yang mengisinya sekarang backend DPMD: `denganFotoTersimpan`
+ * melampirkan `foto_rumah_urls` dari penyusuran `/v1/sensuses` yang sudah
+ * tersimpan. Dulu URL itu diikutkan pada setiap titik `/sebaran-peta`; ±5 MB
+ * terkompresi untuk 191 ribu titik, demi satu foto per klik.
  *
  * Kolom `foto_rumah` yang ikut di `toArray()` adalah kolom JSON, bukan tempat
  * berkasnya; isinya bisa berupa nama berkas, bukan URL. Karena itu apa pun yang
