@@ -34,6 +34,7 @@ import BirthdayPopup from '../../components/BirthdayPopup';
 import WeeklyAttendanceAwardPopup from '../../components/WeeklyAttendanceAwardPopup';
 import { hasPageCache, getPageCache, setPageCache } from '../../utils/pageCache';
 import { bisaPresensi } from "../../utils/presensi";
+import { useAuth } from "../../context/AuthContext";
 
 const API_CONFIG = {
   BASE_URL: import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:3001/api'
@@ -702,7 +703,9 @@ const DPMDDashboard = () => {
   }, [showStatusViewer, activeStatusGroup, activeStatusIndex, statusPaused]);
 
   // ==================== QUICK ACTIONS ====================
-  const isAbsensiEligible = bisaPresensi(user.status_kepegawaian);
+  // Sesi di memori didahulukan: salinan di localStorage bisa tertinggal atau dibuang browser.
+  const { user: authUser } = useAuth();
+  const isAbsensiEligible = bisaPresensi(authUser?.status_kepegawaian) || bisaPresensi(user.status_kepegawaian);
 
   const quickActions = useMemo(() => {
     const basePath = getBidangPath();
