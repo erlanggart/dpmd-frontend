@@ -133,9 +133,13 @@ const PegawaiFormModal = ({ isOpen, onClose, onSaved, pegawai, bidangList }) => 
 									<option value="">Pilih Status</option>
 									<option value="PNS">PNS</option>
 									<option value="PPPK">PPPK</option>
+									<option value="PPPK_Paruh_Waktu">PPPK Paruh Waktu</option>
 									<option value="Honorer">Honorer</option>
 									<option value="THL">THL</option>
 									<option value="Kontrak">Kontrak</option>
+									<option value="Tenaga_Alih_Daya">Tenaga Alih Daya</option>
+									<option value="Tenaga_Keamanan">Tenaga Keamanan</option>
+									<option value="Tenaga_Kebersihan">Tenaga Kebersihan</option>
 								</select>
 								<LuChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
 							</div>
