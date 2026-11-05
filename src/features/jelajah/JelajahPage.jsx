@@ -10,6 +10,7 @@ import {
 	FiMap,
 	FiMoon,
 	FiSun,
+	FiSunset,
 	FiCloud,
 	FiCloudRain,
 	FiMusic,
@@ -290,10 +291,10 @@ export default function JelajahPage() {
 	const [pilihEmote, setPilihEmote] = useState(false);
 	const [kini, setKini] = useState(() => Date.now());
 	// Di HP petunjuk awal hanya tampil sebentar supaya layar tetap lega.
-	// Suasana: ikuti jam WIB (null), atau dipaksa "siang"/"malam".
+	// Suasana: ikuti jam WIB (null), atau dipaksa "siang"/"senja"/"malam".
 	const [modeSuasana, setModeSuasana] = useState(suasana.paksa);
 	const gantiSuasana = () => {
-		const urutan = [null, "siang", "malam"];
+		const urutan = [null, "siang", "senja", "malam"];
 		const baru = urutan[(urutan.indexOf(modeSuasana) + 1) % urutan.length];
 		suasana.paksa = baru;
 		setModeSuasana(baru);
@@ -307,7 +308,7 @@ export default function JelajahPage() {
 		setModeCuaca(baru);
 	};
 	const labelCuaca = { otomatis: "Otomatis", cerah: "Cerah", hujan: "Hujan" }[modeCuaca];
-	const [IkonSuasana, labelSuasana] = modeSuasana === "siang" ? [FiSun, "Siang"] : modeSuasana === "malam" ? [FiMoon, "Malam"] : [FiClock, "Ikuti jam"];
+	const [IkonSuasana, labelSuasana] = modeSuasana === "siang" ? [FiSun, "Siang"] : modeSuasana === "senja" ? [FiSunset, "Senja"] : modeSuasana === "malam" ? [FiMoon, "Malam"] : [FiClock, "Ikuti jam"];
 
 	// Hook untuk uji otomatis di browser — hanya ada di mode dev, tidak ikut ke build produksi.
 	useEffect(() => {
@@ -1159,7 +1160,7 @@ export default function JelajahPage() {
 								},
 							],
 							[FiGrid, "Denah 2D", "Versi tanpa 3D", () => setMode("2d")],
-							[IkonSuasana, `Suasana: ${labelSuasana}`, "Ketuk untuk ganti siang/malam", gantiSuasana],
+							[IkonSuasana, `Suasana: ${labelSuasana}`, "Ketuk untuk ganti siang/senja/malam", gantiSuasana],
 							[modeCuaca === "hujan" ? FiCloudRain : FiCloud, `Cuaca: ${labelCuaca}`, "Ketuk untuk ganti otomatis/cerah/hujan", gantiCuaca],
 							[FiMusic, `Musik latar: ${musikMati ? "Mati" : "Nyala"}`, "Lagu saat berjalan, berkendara & di mal", () => aturMusikLatar(!musikMati)],
 							[FiHelpCircle, "Cara bermain", "Kontrol & tips", () => setMenu("bantuan")],
