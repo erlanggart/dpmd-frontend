@@ -200,6 +200,22 @@ const RESEP = {
 		[523, 659, 784].forEach((f) => nada(f, t + 0.7, 1.1, { tipe: "sine", vol: 0.1 }));
 		derau(t, 0.8, { frek: 700, ke: 150, vol: 0.35, tipe: "lowpass" });
 	},
+	pantul: (t) => {
+		nada(150, t, 0.09, { tipe: "sine", vol: 0.28, ke: 70 });
+		derau(t, 0.04, { frek: 500, vol: 0.08, tipe: "lowpass" });
+	},
+	ring: (t) => {
+		nada(880, t, 0.22, { tipe: "triangle", vol: 0.12 });
+		nada(1320, t, 0.14, { tipe: "square", vol: 0.04 });
+		derau(t, 0.05, { frek: 2500, vol: 0.1 });
+	},
+	swish: (t) => {
+		derau(t, 0.28, { frek: 3200, ke: 1400, vol: 0.22, q: 0.6 });
+	},
+	peluit: (t) => {
+		nada(2100, t, 0.5, { tipe: "square", vol: 0.05 });
+		nada(2200, t, 0.5, { tipe: "square", vol: 0.04 });
+	},
 };
 
 // Desau hujan: derau putih berulang lewat penyaring pita, volume 0..1 mengikuti lebatnya.

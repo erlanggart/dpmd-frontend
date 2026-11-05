@@ -42,6 +42,7 @@ import { acaraKini, kantor, stempelSudah } from "../kantorHidup";
 import { TENDA_BAZAR, TITIK_PANITIA } from "./acaraData";
 import KeranjangTangan from "./KeranjangTangan";
 import Tokoh from "./Tokoh";
+import { basket, dalamLapangan, faktorLaju, kecohBasket } from "../basket";
 
 const H = TINGGI_LANTAI;
 const PETUGAS = [LOBI, ...RUANGAN];
@@ -277,7 +278,7 @@ export default function Pemain({ daftarDinding, penghuni, penampilan = PENAMPILA
 		const samping = kendali.arah.x + (tb.has("KeyD") || tb.has("ArrowRight") ? 1 : 0) - (tb.has("KeyA") || tb.has("ArrowLeft") ? 1 : 0);
 		const lariMau = kendali.lari || kendali.lariAnalog || tb.has("ShiftLeft") || tb.has("ShiftRight");
 		// jongkok hanya saat berjalan di darat (C saat memancing tetap milik kamera pancing)
-		if (m.jenis !== "jalan" || p.y < TANAH - 0.2) kendali.jongkok = false;
+		if (m.jenis !== "jalan" || p.y < TANAH - 0.2 || basket.aktif) kendali.jongkok = false;
 		const jongkok = kendali.jongkok;
 		const lari = lariMau && tenaga.nilai >= TENAGA_LARI && !jongkok;
 
@@ -494,10 +495,11 @@ export default function Pemain({ daftarDinding, penghuni, penampilan = PENAMPILA
 			// mobil & motor juga menghalangi.
 			if (besar > 0.05) {
 				const diAir = p.y < TANAH - 0.2;
-				const v = (diAir ? (lari ? KECEPATAN.renangCepat : KECEPATAN.renang) : jongkok ? KECEPATAN.jongkok : lari ? KECEPATAN.lari : KECEPATAN.jalan) * besar * dt;
+				const v = (diAir ? (lari ? KECEPATAN.renangCepat : KECEPATAN.renang) : jongkok ? KECEPATAN.jongkok : lari ? KECEPATAN.lari : KECEPATAN.jalan) * besar * dt * (basket.aktif ? faktorLaju() : 1);
 				const ax = p.x;
 				const az = p.z;
 				const bisa = (x, z) => {
+						if (basket.aktif && !dalamLapangan(x, z) && dalamLapangan(p.x, p.z)) return null;
 					// di halaman dekat / di dalam situ: boleh turun berenang & naik lagi ke tepi
 					const y = p.y < 0.5 && (diAir || diAirSitu(x, z) || jarakKeTepi(x, z) < 1.2) ? langkahRenang(x, z) : langkah(p.y, x, z);
 					if (y === null) return null;
@@ -539,6 +541,7 @@ export default function Pemain({ daftarDinding, penghuni, penampilan = PENAMPILA
 
 			// loncat
 			const l = loncat.current;
+			if (kendali.loncat && basket.aktif && kecohBasket()) kendali.loncat = false; // Spasi saat memegang bola = kecoh
 			if (kendali.loncat && l.h === 0 && p.y > TANAH - 0.2 && mode.current.jenis === "jalan") {
 				const pagar = !jongkok && p.y < 0.5 && cariPagar(PAGAR_PANJAT, p.x, p.y, p.z, g.rotation.y, (x, z) => (tabrakKendaraan(x, z, 0.38) ? null : langkah(p.y, x, z)));
 				if (jongkok) kendali.jongkok = false; // Spasi saat jongkok = berdiri dulu
@@ -875,6 +878,7 @@ export default function Pemain({ daftarDinding, penghuni, penampilan = PENAMPILA
 			gr.ambil = u < 0.5 ? u * 2 : Math.max(0, 2 - u * 2);
 			if (ab.t >= LAMA_AMBIL) selesaiAmbil();
 		}
+		if (basket.aktif && basket.hadap != null) g.rotation.y += (sudutDekat(g.rotation.y, basket.hadap) - g.rotation.y) * (1 - Math.exp(-14 * dt));
 		// keranjang dikembalikan begitu keluar toko
 		if (belanja.bawaKeranjang && !tokoDi(p.x, p.z) && (p.z < (TOKO_PER_ID[belanja.toko]?.z0 ?? 47) - 0.6 || mk.jenis !== "jalan")) kembalikanKeranjang();
 		gr.aktivitas = warung.makan && mk.jenis === "duduk" ? "makan" : null;
@@ -883,8 +887,12 @@ export default function Pemain({ daftarDinding, penghuni, penampilan = PENAMPILA
 		if (lemari.coba && bilikDi(p.x, p.z) < 0) selesaiCoba();
 		// gaya tubuh saat memancing (dihitung Pancingan.jsx): condong, ayunan lengan, engkol gulungan
 		gr.gayaPancing = mk.jenis === "mancing" ? pancing.gaya : null;
+		gr.dribbleU = basket.dribbleU;
+		gr.dribbleSisi = basket.sisi;
 		gr.isyarat =
-			mk.jenis === "mancing"
+			basket.aktif && mk.jenis === "jalan"
+				? basket.isyaratPemain
+				: mk.jenis === "mancing"
 				? pancing.fase === "dapat"
 					? "angkat"
 					: "mancing"
@@ -1026,6 +1034,7 @@ export default function Pemain({ daftarDinding, penghuni, penampilan = PENAMPILA
 				else if (dermagaDi(p.x, p.z)) dekat = "perahu:panggil";
 				else if (titikTepi(p.x, p.z)) dekat = "mancing:tepi";
 			}
+			if (!dekat && lantai === 0 && !basket.aktif && dalamLapangan(p.x, p.z, 0)) dekat = "basket:main";
 			if (!dekat) {
 				for (const a of PETUGAS) {
 					if (a.lantai !== lantai || a.id !== area) continue;
@@ -1034,7 +1043,7 @@ export default function Pemain({ daftarDinding, penghuni, penampilan = PENAMPILA
 			}
 		}
 		const modeUi = mk.jenis === "mancing" ? "mancing" : mk.jenis === "kemudi" ? (mk.no ? "penumpang" : mk.k.jenis) : mk.jenis === "duduk" ? "duduk" : "jalan";
-		setKeadaan({ area, lantai, dekat, mode: modeUi, lantaiMal: dalamLahanCcm(p.x, p.z) ? malAktif.lantai : null });
+		setKeadaan({ area, lantai, dekat: basket.aktif ? null : dekat, mode: modeUi, lantaiMal: dalamLahanCcm(p.x, p.z) ? malAktif.lantai : null });
 
 		// Bidang klik mengikuti lantai & posisi pemain (kawasan jauh lebih luas dari bidangnya).
 		bidangKlik.current.position.set(p.x, (lantai ? lantai * H : dalamLahanCcm(p.x, p.z) ? p.y : tinggiTanah(p.x, p.z)) + 0.02, p.z);

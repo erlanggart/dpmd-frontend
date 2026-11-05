@@ -33,7 +33,7 @@ const seragam = (p) => SERAGAM[p.seragam] || { baju: p.baju, gelap: gelapkan(p.b
 
 const warna = new Color();
 
-function bentuk(geom, w, pos = [0, 0, 0], rot = [0, 0, 0], skala = [1, 1, 1]) {
+export function bentuk(geom, w, pos = [0, 0, 0], rot = [0, 0, 0], skala = [1, 1, 1]) {
 	let g = geom.index ? geom.toNonIndexed() : geom;
 	g.deleteAttribute("uv");
 	g.scale(...skala);
@@ -49,11 +49,11 @@ function bentuk(geom, w, pos = [0, 0, 0], rot = [0, 0, 0], skala = [1, 1, 1]) {
 	return g;
 }
 
-const gabung = (daftar) => mergeGeometries(daftar.filter(Boolean));
+export const gabung = (daftar) => mergeGeometries(daftar.filter(Boolean));
 const gelapkan = (w, k) => "#" + new Color(w).multiplyScalar(k).getHexString();
 
 // profil badan dari pinggang (y 0) sampai pangkal leher (y 0.63): [jari-jari, tinggi]
-const PROFIL_BADAN = [[0.176, 0], [0.184, 0.08], [0.194, 0.2], [0.205, 0.32], [0.208, 0.42], [0.2, 0.5], [0.172, 0.56], [0.12, 0.6], [0.05, 0.63], [0.001, 0.635]].map(([r, y]) => new Vector2(r, y));
+export const PROFIL_BADAN = [[0.176, 0], [0.184, 0.08], [0.194, 0.2], [0.205, 0.32], [0.208, 0.42], [0.2, 0.5], [0.172, 0.56], [0.12, 0.6], [0.05, 0.63], [0.001, 0.635]].map(([r, y]) => new Vector2(r, y));
 
 // Model kerudung: dari lemari (p.modelJilbab); NPC & avatar bawaan diturunkan dari warnanya
 // supaya tidak semua berkerudung sama (warna sama → model sama, jadi stabil antar render).

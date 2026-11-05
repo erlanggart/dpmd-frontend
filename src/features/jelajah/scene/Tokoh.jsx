@@ -259,6 +259,42 @@ export default function Tokoh({ penampilan, pose = "jalan", gerak, aktivitas, as
 				lkn.current.rotation.z = -0.35 - buka;
 				sbka.current.rotation.x = -0.3;
 				sbkn.current.rotation.x = -0.3;
+			} else if (isyarat === "dribble") {
+				// tangan penggiring menekan bola: u 0,5 = bola di tangan, u 0/1 = bola di lantai
+				const u = gerak.current.dribbleU ?? 0;
+				const kiri = (gerak.current.dribbleSisi ?? 1) < 0;
+				const tekan = -Math.cos(u * Math.PI * 2);
+				const atas = kiri ? lka : lkn;
+				const bawah = kiri ? sbka : sbkn;
+				atas.current.rotation.x = -0.5 + (1 - tekan) * 0.12;
+				atas.current.rotation.z = kiri ? -0.14 : 0.14;
+				bawah.current.rotation.x = -0.95 + (1 - tekan) * 0.3;
+				badan.current.rotation.x = 0.1;
+				miring.current = true;
+			} else if (isyarat === "bidik") {
+				// bola dibawa dua tangan di atas dahi, lutut sedikit menekuk
+				lka.current.rotation.x = -2.35;
+				lkn.current.rotation.x = -2.35;
+				sbka.current.rotation.x = -1.25;
+				sbkn.current.rotation.x = -1.25;
+				lka.current.rotation.z = 0.12;
+				lkn.current.rotation.z = -0.12;
+				kki.current.rotation.x = -0.28;
+				kka.current.rotation.x = -0.28;
+				lutut(0.5, 0.5);
+			} else if (isyarat === "tembak") {
+				// lengan terjulur ke ring setelah bola lepas
+				lkn.current.rotation.x = -2.75;
+				sbkn.current.rotation.x = -0.2;
+				lka.current.rotation.x = -2.35;
+				sbka.current.rotation.x = -0.75;
+			} else if (isyarat === "rebut") {
+				// menjulur merebut bola
+				lkn.current.rotation.x = -1.55;
+				sbkn.current.rotation.x = -0.1;
+				lka.current.rotation.x = -0.6;
+				badan.current.rotation.x = 0.25;
+				miring.current = true;
 			}
 
 			// --- memanjat & jalan jongkok menimpa pose di atas; j = seberapa penuh posenya ---

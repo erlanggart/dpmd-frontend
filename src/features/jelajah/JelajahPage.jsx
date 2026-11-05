@@ -37,6 +37,8 @@ import PanelAtm from "./ui/PanelAtm";
 import { bayarKoin, useSedangTarik } from "./pancing";
 import { ubahTenaga } from "./tenaga";
 import HudLomba from "./ui/HudLomba";
+import HudBasket, { TombolBasket } from "./ui/HudBasket";
+import { basket, mulaiBasket, useBasket } from "./basket";
 import { KartuKantor, PerayaanKantor } from "./ui/HudKantor";
 import PanelAcara from "./ui/PanelAcara";
 import { catatKantor, mulaiLomba, stempelBazar } from "./kantorHidup";
@@ -247,6 +249,7 @@ export default function JelajahPage() {
 	const penghuni = useMemo(() => susunPenghuni(dataPegawai), [dataPegawai]);
 	const baruLengkap = useRef(false);
 	const { area, lantai, dekat, minta, mode: modeMain, lantaiMal } = useKeadaan();
+	const mainBasket = useBasket().aktif;
 	const sedangTarik = useSedangTarik();
 	const musikMati = useMusikMati();
 	const diKawasan = useDiKawasan(lantai);
@@ -447,6 +450,7 @@ export default function JelajahPage() {
 			setMenu("kasir");
 			return;
 		}
+		if (id === "basket:main") return void mulaiBasket();
 		if (/^(kursi|mobil|motor|perahu|mancing|peti):|^(berdiri|keluar|berhenti)$/.test(id)) {
 			kendali.aksi = id;
 			return;
@@ -510,6 +514,9 @@ export default function JelajahPage() {
 	}, [area, mode]);
 
 	const jeda = !!panel || selesai || !!menu || !!pesan;
+	useEffect(() => {
+		basket.jeda = jeda;
+	}, [jeda]);
 	useEffect(() => {
 		if (!jeda) return;
 		kendali.arah.x = 0;
@@ -582,6 +589,8 @@ export default function JelajahPage() {
 					: dekat.startsWith("perahu:")
 						? ["Ikut naik perahu", "Ikut", "#0e7490"]
 						: ["Ikut naik sebagai penumpang", "Ikut", "#0369a1"]
+			: dekat === "basket:main"
+				? ["Main basket lawan warga 🏀", "Main", "#ea580c"]
 			: dekat === "perahu:panggil"
 				? ["Panggil perahu ke dermaga 🚣", "Panggil", "#0e7490"]
 			: modelDariId(dekat.split("#")[0])
@@ -895,7 +904,8 @@ export default function JelajahPage() {
 
 					{!jeda && !fokusTarik && <BarTenaga onTas={() => setMenu("tas")} onAlbum={modeMain === "mancing" ? null : () => setMenu("album")} onGaya={() => setMenu("gaya")} onMisi={() => setMenu("misi")} onPeringkat={() => setMenu("peringkat")} onPancing={modeMain === "mancing" ? null : () => setMenu("pancing")} ringkas={modeMain === "mancing"} sentuh={sentuh} />}
 					{!jeda && <HudLomba mancing={modeMain === "mancing"} />}
-					{!jeda && !mancingHp && (
+					{!jeda && mainBasket && <HudBasket sentuh={sentuh} />}
+					{!jeda && !mancingHp && !mainBasket && (
 						<div className={sentuh ? "absolute right-3 top-[11.25rem] [@media(max-height:520px)]:right-[9rem] [@media(max-height:520px)]:top-[3.75rem]" : "absolute right-4 top-[4.5rem]"}>
 							<KartuKantor onAntar={pindahCepat} />
 						</div>
@@ -1023,6 +1033,7 @@ export default function JelajahPage() {
 								<Joystick />
 							</div>
 							<div className="pointer-events-auto flex flex-col items-end gap-2.5">
+								{mainBasket && <TombolBasket />}
 								{sasaran && (
 									<button
 										onClick={() => bukaPanel(sasaran.id)}
@@ -1052,7 +1063,7 @@ export default function JelajahPage() {
 										📯
 									</button>
 								)}
-								{modeMain === "jalan" && (
+								{modeMain === "jalan" && !mainBasket && (
 									<button
 										onClick={() => (kendali.jongkok = !kendali.jongkok)}
 										aria-label="Jongkok"
@@ -1061,7 +1072,7 @@ export default function JelajahPage() {
 										🧎
 									</button>
 								)}
-								{(modeMain === "jalan" || modeMain === "motor") && (
+								{(modeMain === "jalan" || modeMain === "motor") && !mainBasket && (
 									<button
 										onClick={() => (kendali.loncat = true)}
 										aria-label="Loncat"

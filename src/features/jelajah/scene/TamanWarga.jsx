@@ -3,7 +3,9 @@ import { useFrame } from "@react-three/fiber";
 import { Matrix4, MeshStandardMaterial } from "three";
 import AreaTampak from "./AreaTampak";
 import Gabung from "./Gabung";
+import MainBasket from "./MainBasket";
 import OrangInstans from "./OrangInstans";
+import { basket } from "../basket";
 import Papan from "./Papan";
 import Tokoh from "./Tokoh";
 import { penampilanWarga } from "./layout";
@@ -195,6 +197,15 @@ function Lapangan() {
 				<ringGeometry args={[1.7, 1.78, 28]} />
 				<meshStandardMaterial color="#f8fafc" roughness={0.6} />
 			</mesh>
+			{/* busur garis tiga angka */}
+			<mesh position={[cx, 0.074, L.z0 + 0.95]} rotation-x={-Math.PI / 2}>
+				<ringGeometry args={[5.92, 6, 28, 1, Math.PI + 0.35, Math.PI - 0.7]} />
+				<meshStandardMaterial color="#f8fafc" roughness={0.6} />
+			</mesh>
+			<mesh position={[cx, 0.074, L.z1 - 0.95]} rotation-x={-Math.PI / 2}>
+				<ringGeometry args={[5.92, 6, 28, 1, 0.35, Math.PI - 0.7]} />
+				<meshStandardMaterial color="#f8fafc" roughness={0.6} />
+			</mesh>
 			{RING_BASKET.map((r, i) => (
 				<Ring key={i} {...r} />
 			))}
@@ -365,6 +376,7 @@ function Keramaian() {
 		if (Math.hypot(camera.position.x + 50, camera.position.z - 10) > 130) return;
 		const dt = Math.min(dt0, 0.1);
 		for (const a of agen) {
+			if (a.jenis === "basket") a.tampak = !basket.aktif;
 			let tx;
 			let tz;
 			if (a.jenis === "basket") {
@@ -442,6 +454,7 @@ export default function TamanWarga() {
 		<group name="taman-warga">
 			<TamanAir />
 			<Lapangan />
+			<MainBasket />
 			<AreaTampak x={-51} z={19} jarak={45}>
 				<Penonton />
 			</AreaTampak>
