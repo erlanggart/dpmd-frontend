@@ -189,7 +189,7 @@ const AparaturDesaList = ({ aparatur = [] }) => {
 												<span className={`w-1.5 h-1.5 rounded-full ${
 													(item.status || "").toLowerCase() === "aktif" ? "bg-emerald-500" : "bg-rose-500"
 												}`} />
-												{item.status || "-"}
+												{item.status?.replace(/_/g, " ") || "-"}
 											</span>
 										</td>
 										<td className="px-5 py-3 text-right">
@@ -257,7 +257,7 @@ const AparaturDesaList = ({ aparatur = [] }) => {
 												(item.status || "").toLowerCase() === "aktif" ? "bg-emerald-100 text-emerald-700" : "bg-rose-100 text-rose-700"
 											}`}>
 												<span className={`w-1.5 h-1.5 rounded-full ${(item.status || "").toLowerCase() === "aktif" ? "bg-emerald-500" : "bg-rose-500"}`} />
-												{item.status}
+												{item.status?.replace(/_/g, " ")}
 											</span>
 										</div>
 									</div>

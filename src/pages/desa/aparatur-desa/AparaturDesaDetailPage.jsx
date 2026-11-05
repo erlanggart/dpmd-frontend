@@ -42,15 +42,35 @@ const fotoUrl = (person) => {
 const fileUrl = (filename) =>
 	filename ? `${getBaseHost()}/uploads/aparatur_desa_files/${filename}` : null;
 
-const TombolLengkapi = ({ onClick }) => (
+const TombolLengkapi = ({ onClick, label = "Lengkapi" }) => (
 	<button
 		type="button"
 		onClick={onClick}
 		className="mt-2 inline-flex items-center gap-1 rounded-md bg-slate-900 px-2.5 py-1 text-xs font-semibold text-white hover:bg-slate-800"
 	>
-		Lengkapi
+		{label}
 	</button>
 );
+
+const CHIP = "inline-flex rounded-full px-2 py-0.5 text-xs font-semibold";
+
+// Keputusan Bidang Pemdes per item, supaya desa tahu mana yang perlu direvisi.
+const PenandaVerifikasi = ({ keputusan, onPerbaiki }) => {
+	if (keputusan === false) return null;
+	if (keputusan?.status === "sesuai") return <span className={`${CHIP} bg-emerald-100 text-emerald-700`}>Terverifikasi</span>;
+	if (keputusan?.status === "tidak_sesuai") {
+		return (
+			<div>
+				<span className={`${CHIP} bg-rose-100 text-rose-700`}>Perlu diperbaiki</span>
+				{keputusan.catatan && <p className="mt-1 text-xs text-rose-700">{keputusan.catatan}</p>}
+				<div>
+					<TombolLengkapi label="Perbaiki" onClick={onPerbaiki} />
+				</div>
+			</div>
+		);
+	}
+	return <span className={`${CHIP} bg-slate-200 text-slate-600`}>Menunggu diperiksa</span>;
+};
 
 const InfoCard = ({ icon, label, value, color = "text-slate-600", onLengkapi }) => {
 	const IconComp = icon;
@@ -122,6 +142,14 @@ const AparaturDesaDetailPage = () => {
 	};
 
 	const lengkapi = (kolom) => nav(`/desa/aparatur-desa/${id}/edit?lengkapi=${kolom}`);
+
+	// Keputusan lama hanya menyimpan status ringkas, tanpa rincian per item.
+	const keputusanItem = (kunci) => {
+		const item = data.verifikasi_item?.[kunci];
+		if (item) return item;
+		if (data.status_verifikasi === "terverifikasi") return { status: "sesuai" };
+		return data.status_verifikasi === "ditolak" && !Object.keys(data.verifikasi_item || {}).length ? false : null;
+	};
 
 	return (
 		<div className="space-y-5">
@@ -243,6 +271,9 @@ const AparaturDesaDetailPage = () => {
 						<FaUser className="text-brand-600" />
 						Informasi Pribadi
 					</h3>
+					<div className="-mt-2 mb-4">
+						<PenandaVerifikasi keputusan={keputusanItem("biodata")} onPerbaiki={() => lengkapi("nama_lengkap")} />
+					</div>
 					<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
 						<InfoCard 
 							icon={FaIdCard}
@@ -267,7 +298,7 @@ const AparaturDesaDetailPage = () => {
 						<InfoCard 
 							icon={FaVenusMars}
 							label="Jenis Kelamin"
-							value={data.jenis_kelamin}
+							value={data.jenis_kelamin?.replace(/_/g, "-")}
 							color="text-slate-500"
 						/>
 						<InfoCard 
@@ -287,7 +318,7 @@ const AparaturDesaDetailPage = () => {
 						<InfoCard
 							icon={FaIdCard}
 							label="NIPD"
-							value={data.nipd || "Terbit setelah diverifikasi DPMD"}
+							value={data.nipd || "Terbit setelah semua persyaratan lengkap dan diverifikasi DPMD"}
 							color="text-slate-500"
 						/>
 					</div>
@@ -299,6 +330,9 @@ const AparaturDesaDetailPage = () => {
 						<FaBriefcase className="text-brand-600" />
 						Informasi Kepegawaian
 					</h3>
+					<div className="-mt-2 mb-4">
+						<PenandaVerifikasi keputusan={keputusanItem("jabatan_sk")} onPerbaiki={() => lengkapi("jabatan")} />
+					</div>
 					<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
 						<InfoCard 
 							icon={FaCalendarAlt}
@@ -347,6 +381,11 @@ const AparaturDesaDetailPage = () => {
 						<FaShieldAlt className="text-brand-600" />
 						BPJS & Jaminan Sosial
 					</h3>
+					{(data.bpjs_kesehatan_nomor || data.bpjs_ketenagakerjaan_nomor) && (
+						<div className="-mt-2 mb-4">
+							<PenandaVerifikasi keputusan={keputusanItem("bpjs")} onPerbaiki={() => lengkapi("bpjs_kesehatan_nomor")} />
+						</div>
+					)}
 					<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
 						<InfoCard 
 							icon={FaShieldAlt}
@@ -455,6 +494,7 @@ const AparaturDesaDetailPage = () => {
 												{label}
 											</p>
 											{url ? (
+												<>
 												<a
 													href={url}
 													target="_blank"
@@ -465,6 +505,10 @@ const AparaturDesaDetailPage = () => {
 													<span>Lihat Dokumen</span>
 													<FaExternalLinkAlt className="w-3 h-3 group-hover:translate-x-0.5 transition-transform" />
 												</a>
+												<div className="mt-2">
+													<PenandaVerifikasi keputusan={keputusanItem(key)} onPerbaiki={() => lengkapi(key)} />
+												</div>
+												</>
 											) : (
 												<>
 												<p className="text-xs text-slate-400 flex items-center gap-1">

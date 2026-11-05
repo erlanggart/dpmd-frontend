@@ -960,7 +960,7 @@ const AparaturDesaForm = ({
 							{initialData?.nipd ? (
 								<span className="font-mono tracking-wider text-sky-700">{initialData.nipd}</span>
 							) : (
-								<span className="font-normal text-slate-500">— terbit otomatis setelah diverifikasi DPMD</span>
+								<span className="font-normal text-slate-500">— terbit otomatis setelah semua persyaratan lengkap dan diverifikasi DPMD</span>
 							)}
 						</p>
 						<p className="mt-0.5 text-xs text-slate-500">
@@ -1056,8 +1056,8 @@ const AparaturDesaForm = ({
 					))}
 				</div>
 				<p className="mt-3 text-[11px] text-slate-400">
-					PDF atau gambar, maks. 2 MB per berkas. Berkas lama tetap tersimpan bila tidak diganti. SK Terakhir dan KTP
-					wajib ada agar data bisa dinyatakan valid dan NIPD diterbitkan.
+					PDF atau gambar, maks. 2 MB per berkas. Berkas lama tetap tersimpan bila tidak diganti. SK Terakhir dan KTP wajib untuk semua aparatur.
+					Untuk Sekdes, Kasi, Kaur, dan Kadus, NIPD baru terbit setelah semua berkas dan nomor BPJS lengkap dan terverifikasi.
 				</p>
 			</KartuSeksi>
 

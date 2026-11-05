@@ -738,7 +738,7 @@ const ProgresVerifikasi = ({ aparatur, ringkas = false }) => {
 				</div>
 			)}
 			{p?.wajib_kosong?.length > 0 && !ringkas && (
-				<p className="mt-0.5 text-[10px] text-amber-700" title={`Berkas wajib belum diunggah: ${p.wajib_kosong.join(', ')}`}>
+				<p className="mt-0.5 text-[10px] text-amber-700" title={`Persyaratan wajib belum lengkap: ${p.wajib_kosong.join(', ')}`}>
 					{p.wajib_kosong.length} berkas wajib kosong
 				</p>
 			)}
@@ -1335,7 +1335,7 @@ const PanelVerifikasi = ({ aparatur }) => {
 						<p className="font-mono text-sm font-semibold tracking-wide text-slate-900">{nipd}</p>
 					) : (
 						<p className="text-xs text-slate-500">
-							{aparatur.nipd_info?.berhak === false ? 'Jabatan ini tidak mendapat NIPD' : 'Terbit setelah data valid'}
+							{aparatur.nipd_info?.berhak === false ? 'Jabatan ini tidak mendapat NIPD' : 'Terbit setelah semua persyaratan lengkap dan valid'}
 						</p>
 					)}
 				</div>
@@ -2105,7 +2105,7 @@ export const AparaturDesaDetailPage = ({ backPath }) => {
 								label="NIPD"
 								value={
 									formatNipd(a.nipd) ||
-									(a.nipd_info?.berhak === false ? 'Tidak mendapat NIPD' : 'Terbit setelah data valid')
+									(a.nipd_info?.berhak === false ? 'Tidak mendapat NIPD' : 'Terbit setelah semua persyaratan lengkap dan valid')
 								}
 							/>
 							<DetailField label="Kode Jabatan" value={a.nipd_info?.kode_jabatan || (a.nipd_info?.berhak === false ? '—' : null)} />
@@ -3797,8 +3797,8 @@ const temuanOtomatis = (a) => {
 		if (item.wajib && !item.ada) {
 			temuan.push({
 				nada: 'rose',
-				judul: `${item.label} belum diunggah`,
-				teks: 'Berkas wajib. Setelah item lain diperiksa, data ini otomatis dikembalikan ke desa.',
+				judul: `${item.label} belum dilengkapi`,
+				teks: 'Persyaratan wajib. Setelah item lain diperiksa, data ini otomatis dikembalikan ke desa.',
 			});
 		}
 	}
