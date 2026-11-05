@@ -41,7 +41,7 @@ export default function PanelPelindung() {
 								{p.tidak && <span className="block text-xs text-slate-500">✕ {p.tidak}</span>}
 							</span>
 							<button
-								disabled={punya || koin < p.harga}
+								disabled={punya}
 								onClick={() => setGagal(beliPelindung(p.id).pesan || "")}
 								className="shrink-0 rounded-xl bg-sky-700 px-3 py-2 text-sm font-bold text-white shadow-sm disabled:opacity-40"
 							>

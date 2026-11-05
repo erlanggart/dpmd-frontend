@@ -70,6 +70,8 @@ export const SAUNG = { x: -62.5, z: -13.6, sisi: 3.4 };
 
 // peneduh di sela taman: [x, z]
 export const POHON_TAMAN = [[-44, 11.8], [-36, 11.2], [-28, 11.8], [-19.5, 19], [-66.5, 19], [-66, 26.5], [-48, 28]];
+// pohon sedekat ini dari lapangan masuk jangkauan kamera basket (jarak bawaan 10 m) dan menutupi laga
+export const pohonGanggu = (x, z) => Math.hypot(Math.max(LAPANGAN.x0 - x, 0, x - LAPANGAN.x1), Math.max(LAPANGAN.z0 - z, 0, z - LAPANGAN.z1)) < 12;
 
 // ---------- penghalang tabrakan ----------
 const kotakBangku = (b) => (Math.abs(Math.sin(b.rot)) > 0.5 ? kotak(b.x, b.z, 0.55, 1.5) : kotak(b.x, b.z, 1.5, 0.55));

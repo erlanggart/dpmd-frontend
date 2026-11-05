@@ -5,14 +5,14 @@ import AreaTampak from "./AreaTampak";
 import Gabung from "./Gabung";
 import MainBasket from "./MainBasket";
 import OrangInstans from "./OrangInstans";
-import { lapanganBebas } from "../basket";
+import { basket, lapanganBebas } from "../basket";
 import Papan from "./Papan";
 import Tokoh from "./Tokoh";
 import { penampilanWarga } from "./layout";
 import { suasana } from "./suasana";
 import {
 	AIR_MANCUR, AYUNAN, BANGKU_TAMAN, JALUR_ANTAR_TAMAN, JALUR_JOGGING, JUNGKAT, LAMPU_TAMAN, LAPANGAN, PAPAN_TAMAN, PENONTON_TRIBUN, PEROSOTAN,
-	PETAK_BUNGA, POHON_TAMAN, RING_BASKET, RUMPUT_TAMAN, SAUNG, TAMAN_BERMAIN, TRIBUN,
+	PETAK_BUNGA, POHON_TAMAN, RING_BASKET, pohonGanggu, RUMPUT_TAMAN, SAUNG, TAMAN_BERMAIN, TRIBUN,
 } from "./tamanWargaData";
 
 // Taman Warga: taman air mancur, lapangan basket, dan taman bermain di lahan kosong barat
@@ -41,6 +41,20 @@ function PohonTaman({ x, z, i }) {
 				<icosahedronGeometry args={[1.7 + (i % 2) * 0.4, 0]} />
 				<meshStandardMaterial color={i % 2 ? "#2f7d3b" : "#3f8f45"} roughness={0.95} flatShading />
 			</mesh>
+		</group>
+	);
+}
+
+// pohon di sekitar lapangan hilang selama pemain ini main basket: kamera bisa diputar ke segala
+// arah, jadi memudarkan yang tepat di garis pandang ke pemain saja tidak cukup
+function PohonLapangan() {
+	const grup = useRef();
+	useFrame(() => {
+		grup.current.visible = !basket.aktif;
+	});
+	return (
+		<group ref={grup}>
+			<Gabung>{POHON_TAMAN.map(([x, z], i) => pohonGanggu(x, z) && <PohonTaman key={i} x={x} z={z} i={i} />)}</Gabung>
 		</group>
 	);
 }
@@ -101,9 +115,7 @@ function TamanAir() {
 				{LAMPU_TAMAN.map((l, i) => (
 					<Tiang key={i} p={[l.x, 0, l.z]} r={0.06} t={2.6} w="#1f2937" />
 				))}
-				{POHON_TAMAN.map(([x, z], i) => (
-					<PohonTaman key={i} x={x} z={z} i={i} />
-				))}
+				{POHON_TAMAN.map(([x, z], i) => !pohonGanggu(x, z) && <PohonTaman key={i} x={x} z={z} i={i} />)}
 			</Gabung>
 			<LampuTaman />
 			<Semburan />
@@ -457,6 +469,7 @@ export default function TamanWarga() {
 	return (
 		<group name="taman-warga">
 			<TamanAir />
+			<PohonLapangan />
 			<Lapangan />
 			<MainBasket />
 			<AreaTampak x={-51} z={19} jarak={45}>

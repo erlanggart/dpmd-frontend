@@ -1022,7 +1022,7 @@ export default function Pemain({ daftarDinding, penghuni, penampilan = PENAMPILA
 			if (lantai === 0) for (const kp of KIOS_TOKO_PERAHU) coba("kapal:toko", Math.hypot(kp.x - p.x, kp.z - p.z), 2.1);
 			// tempat makan: gerobak mie ayam & pecel ayam, konter McD & kedai kopi CCM
 			if (lantai === 0) {
-				if (suasana.hujan > 0.15) for (const a of ABANG_HUJAN) coba("abang:hujan", Math.hypot(a.x - p.x, a.z - p.z), 2.2);
+				for (const a of ABANG_HUJAN) if (a.tiba) coba("abang:hujan", Math.hypot(a.x - p.x, a.z - p.z), 2.2);
 				coba("pesan:mie", Math.hypot(TITIK_PESAN_MIE.x - p.x, TITIK_PESAN_MIE.z - p.z), JARAK_GEROBAK);
 				coba("pesan:pecel", Math.hypot(TITIK_PESAN_PECEL.x - p.x, TITIK_PESAN_PECEL.z - p.z), JARAK_GEROBAK);
 				// halaman toko: mesin capit di teras Alfamart & gerobak es cendol

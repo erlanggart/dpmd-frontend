@@ -26,5 +26,6 @@ export const ANGKAT_JORAN = 0.2;
 export const CONDONG_JORAN = 0.53;
 // kenop engkol dari pangkal joran; r = jari-jari putarannya (lihat ModelJoran)
 export const KENOP_JORAN = { x: -0.05, y: 0.115, z: 0.092, r: 0.074 };
-// kemiringan joran bila tidak ada gaya.sudut (tokoh tamu lain, fase menunggu)
-export const SUDUT_JORAN_TAMU = 0.95;
+// kemiringan joran saat menunggu; tamu lain menghitungnya dari fase kiriman, untuk joran & tangannya
+export const SUDUT_JORAN = 0.95;
+export const sudutJoranTamu = (fase, t, tegang) => (fase === "tarik" ? 0.3 + Math.sin(t * 17) * 0.02 * tegang : fase === "dapat" ? 0.15 : SUDUT_JORAN);

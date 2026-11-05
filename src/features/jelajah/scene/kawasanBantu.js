@@ -4,6 +4,7 @@ import { DERMAGA, dermagaDi } from "./situ";
 import { LOKET_KOLAM, PAGAR_KOLAM } from "./kolamMonsterData";
 import { dalamPasar } from "./pasarBumdesData";
 import { lahanShowroom } from "./showroomData";
+import { pohonGanggu } from "./tamanWargaData";
 
 // Bantuan kawasan Pemda di sekitar kantor (lihat kawasanData.js): tinggi gedung dan
 // tabrakan gedung, situ, dan pohon. Penghalang diindeks per sel grid supaya tiap
@@ -77,7 +78,7 @@ export const diJalan = (x, z) => {
 const diKolamSaja = (x, z) => x > PAGAR_KOLAM.x0 - 1 && x < LOKET_KOLAM.x + 2 && z > PAGAR_KOLAM.z0 - 1 && z < PAGAR_KOLAM.z1 + 1;
 // ... juga lahan food court Pasar BUMDes di utaranya
 const diKolam = (x, z) => diKolamSaja(x, z) || dalamPasar(x, z, 1.5) || lahanShowroom(x, z, 1.5);
-export const POHON_TAMPIL = POHON_KAWASAN.filter(([x, z]) => DERMAGA.every((d) => Math.hypot(x - d.x, z - d.z) > 6.5) && !(x > -36 && x < 35 && z > 40 && z < 60) && !diJalan(x, z) && !diKolam(x, z)).filter(([x, z], i) => i % (Math.hypot(x, z) < 300 ? 6 : 3) === 0);
+export const POHON_TAMPIL = POHON_KAWASAN.filter(([x, z]) => !pohonGanggu(x, z) && DERMAGA.every((d) => Math.hypot(x - d.x, z - d.z) > 6.5) && !(x > -36 && x < 35 && z > 40 && z < 60) && !diJalan(x, z) && !diKolam(x, z)).filter(([x, z], i) => i % (Math.hypot(x, z) < 300 ? 6 : 3) === 0);
 
 export const TINGGI_PER_LANTAI = { rumah: 3.2, kantor: 3.6 };
 const ATAP = JENIS_GEDUNG.indexOf("atap");

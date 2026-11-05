@@ -314,7 +314,7 @@ export default function PemainWilayah({ penampilan }) {
 			else if (bolehTidur() && Math.hypot(TITIK_SIUMAN.x - p.x, TITIK_SIUMAN.z - p.z) < 3) dekat = "tidur";
 			else if (Math.hypot(SUMUR_KEBUN.x - p.x, SUMUR_KEBUN.z - p.z) < 2.4) dekat = "tani:sumur";
 			else if (Math.hypot(TITIK_PENGEPUL.x - p.x, TITIK_PENGEPUL.z - p.z) < 1.9) dekat = "tani:jual";
-			else if (kebun.cuaca.jenis !== "cerah" && Math.hypot(titikAbangDesa().x - p.x, titikAbangDesa().z - p.z) < 2.2) dekat = "abang";
+			else if (titikAbangDesa().tiba && Math.hypot(titikAbangDesa().x - p.x, titikAbangDesa().z - p.z) < 2.2) dekat = "abang";
 			else if (Math.hypot(TITIK_WARUNG.x - p.x, TITIK_WARUNG.z - p.z) < 2) dekat = "warung";
 			else {
 				const pk = petakDepan(p.x, p.z, g.rotation.y, jumlahPetakAktif());

@@ -3,7 +3,8 @@ import { useFrame } from "@react-three/fiber";
 import { posisi } from "../jelajahStore";
 import { BAHAN_ORANG, PANJANG_PAHA, buangOrang, rakitOrang } from "./orang";
 import { sudutJongkok, sudutPanjat } from "./gerakPanjat";
-import { ANGKAT_JORAN, CONDONG_JORAN, KENOP_JORAN, PANGKAL_JORAN, SUDUT_JORAN_TAMU } from "./joranLentur";
+import { ikLengan } from "./ikLengan";
+import { ANGKAT_JORAN, CONDONG_JORAN, KENOP_JORAN, PANGKAL_JORAN, SUDUT_JORAN } from "./joranLentur";
 import { SUDUT_BAHU_PAYUNG, SUDUT_SIKU_PAYUNG } from "./ModelPayung";
 
 const sudutDekat = (dari, ke) => dari + Math.atan2(Math.sin(ke - dari), Math.cos(ke - dari));
@@ -12,22 +13,6 @@ const tampak = (o) => {
 	for (let p = o; p; p = p.parent) if (!p.visible) return false;
 	return true;
 };
-
-// IK dua ruas: telapak mencapai titik (tx, ty, tz) rangka tokoh, dengan badan condong sebesar c.
-const PANJANG_ATAS = 0.29;
-const PANJANG_BAWAH = 0.29;
-const BAHU_Y = 1.43;
-function ikLengan(atas, bawah, bahuX, tx, ty, tz, c = 0) {
-	const yb = ty * Math.cos(c) + tz * Math.sin(c) - BAHU_Y;
-	const zb = -ty * Math.sin(c) + tz * Math.cos(c);
-	const dx = tx - bahuX;
-	const d = Math.max(0.12, Math.min(PANJANG_ATAS + PANJANG_BAWAH - 0.005, Math.hypot(dx, yb, zb)));
-	const asli = Math.hypot(dx, yb, zb) || 1;
-	const siku = Math.acos((PANJANG_ATAS ** 2 + d * d - PANJANG_BAWAH ** 2) / (2 * PANJANG_ATAS * d));
-	atas.rotation.z = Math.asin(Math.max(-1, Math.min(1, dx / asli)));
-	atas.rotation.x = Math.atan2(-zb, -yb) + siku;
-	bawah.rotation.x = -(Math.PI - Math.acos((PANJANG_ATAS ** 2 + PANJANG_BAWAH ** 2 - d * d) / (2 * PANJANG_ATAS * PANJANG_BAWAH)));
-}
 
 // Satu tokoh manusia, menghadap +z.
 // - pose "jalan": kaki & lengan berayun mengikuti `gerak.current` = { laju 0..1, fase }.
@@ -150,6 +135,7 @@ export default function Tokoh({ penampilan, pose = "jalan", gerak, aktivitas, as
 			lkn.current.rotation.z = 0;
 			sbkn.current.rotation.z = 0;
 			lka.current.rotation.z = 0;
+			lka.current.rotation.y = lkn.current.rotation.y = 0; // hanya ikLengan yang memakainya
 			if (miring.current && !(gp && (isyarat === "mancing" || isyarat === "angkat"))) {
 				badan.current.rotation.x = 0;
 				badan.current.position.z = 0;
@@ -161,8 +147,6 @@ export default function Tokoh({ penampilan, pose = "jalan", gerak, aktivitas, as
 				sbkn.current.rotation.x = 0;
 				sbkn.current.rotation.z = 0.25;
 			} else if (isyarat === "mancing") {
-				// dua tangan menggenggam joran di depan perut; pemain sendiri ikut bergaya sesuai
-				// fase: ancang-ancang, menyabet, condong menahan tarikan, mengengkol gulungan
 				// satu tangan menggenggam gagang, tangan kanan memegang kenop engkol dan ikut berputar;
 				// 0,9 = geseran pinggul di bawah, supaya telapak tetap di joran saat badan condong
 				const cJoran = gp?.condong ?? 0;
@@ -170,8 +154,7 @@ export default function Tokoh({ penampilan, pose = "jalan", gerak, aktivitas, as
 				const zJoran = PANGKAL_JORAN.z + (CONDONG_JORAN + 0.9) * Math.sin(cJoran);
 				const e = gp?.engkol ?? 0;
 				// kenop di rangka joran, lalu diputar mengikuti kemiringan joran
-				// shortcut: tokoh tamu memakai kemiringan tetap, cukup untuk fase menunggu; kirim sudutnya bila tangan tamu dikeluhkan
-				const sJoran = gp?.sudut ?? SUDUT_JORAN_TAMU;
+				const sJoran = gp?.sudut ?? gerak.current.sudutJoran ?? SUDUT_JORAN;
 				const yKenop = KENOP_JORAN.y + Math.cos(e) * KENOP_JORAN.r;
 				const zKenop = KENOP_JORAN.z + Math.sin(e) * KENOP_JORAN.r;
 				ikLengan(lkn.current, sbkn.current, 0.245, PANGKAL_JORAN.x, yJoran, zJoran, cJoran);

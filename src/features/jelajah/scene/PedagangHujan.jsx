@@ -152,6 +152,7 @@ function Abang({ titik, hadir }) {
 		const g = gerak.current;
 		u.current = Math.max(0, Math.min(1, u.current + (ada ? 1 : -1) * (KECEPATAN / JARAK_JALAN) * dt));
 		const k = u.current;
+		titik.tiba = k >= 1; // tombol beli baru muncul setelah abang sampai
 		akar.current.visible = k > 0;
 		if (k <= 0) return;
 		const [dx, dz] = titik.datang ?? [1, 0];

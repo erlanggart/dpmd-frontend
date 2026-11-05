@@ -36,6 +36,8 @@ export * as Situ from ${impor("scene/situ.js")};
 export * as Desa from ${impor("scene/kebunDesaData.js")};
 export { ABANG_HUJAN } from ${impor("scene/abangHujanData.js")};
 export { PENGHALANG } from ${impor("scene/layout.js")};
+export { ikLengan } from ${impor("scene/ikLengan.js")};
+export { KENOP_JORAN, PANGKAL_JORAN, ANGKAT_JORAN, CONDONG_JORAN } from ${impor("scene/joranLentur.js")};
 export { POTENSI } from ${impor("potensiWilayah.js")};`,
 );
 // pelaporan pemakaian tidak relevan di uji: api diganti rintisan
@@ -57,7 +59,7 @@ await build({
 	define: { "import.meta.env.DEV": "true", "import.meta.env": "{}" },
 	logLevel: "error",
 });
-const { B, P, R, K, S, H, Situ, Desa, ABANG_HUJAN, PENGHALANG, POTENSI } = await import(pathToFileURL(keluar).href);
+const { B, P, R, K, S, H, Situ, Desa, ABANG_HUJAN, PENGHALANG, ikLengan, KENOP_JORAN, PANGKAL_JORAN, ANGKAT_JORAN, CONDONG_JORAN, POTENSI } = await import(pathToFileURL(keluar).href);
 
 const nama = Object.keys(POTENSI)[0];
 const kosongkanKoin = () => P.bayarKoin(P.ambilKoleksi().poin);
@@ -273,6 +275,35 @@ for (const kec of Object.keys(POTENSI)) {
 		assert.ok(!tembus(p, Desa.PENGHALANG_KEBUN), `abang di ${kec} menembus penghalang`);
 		assert.ok(p.z >= Desa.BATAS_DUNIA.z0, `abang di ${kec} keluar batas dunia`);
 	}
+}
+
+// --- tangan pemancing: IK harus sampai ke kenop di semua fase (dihitung maju lewat rantai sendi) ---
+{
+	const sumbu = { x: (v, a) => [v[0], v[1] * Math.cos(a) - v[2] * Math.sin(a), v[1] * Math.sin(a) + v[2] * Math.cos(a)], y: (v, a) => [v[0] * Math.cos(a) + v[2] * Math.sin(a), v[1], -v[0] * Math.sin(a) + v[2] * Math.cos(a)], z: (v, a) => [v[0] * Math.cos(a) - v[1] * Math.sin(a), v[0] * Math.sin(a) + v[1] * Math.cos(a), v[2]] };
+	const sendi = () => ({ rotation: { x: 0, y: 0, z: 0, set(x, y, z) { Object.assign(this, { x, y, z }); } } });
+	const atas = sendi();
+	const bawah = sendi();
+	const telapak = (bahuX, c) => {
+		const lengan = sumbu.x(sumbu.y(sumbu.z(sumbu.x([0, -0.29, 0], bawah.rotation.x).map((n, i) => n + [0, -0.29, 0][i]), atas.rotation.z), atas.rotation.y), atas.rotation.x);
+		const v = [lengan[0] + bahuX, lengan[1] + 1.43, lengan[2]];
+		return sumbu.x(v, c);
+	};
+	let terburuk = 0;
+	for (let e = 0; e < 6.3; e += 0.4) for (let sudut = -1; sudut <= 1.25; sudut += 0.25) for (let ln = -0.4; ln <= 1.3; ln += 0.3) for (let c = -0.5; c <= 0.25; c += 0.15) {
+		const y = PANGKAL_JORAN.y + ln * ANGKAT_JORAN;
+		const z = PANGKAL_JORAN.z + (CONDONG_JORAN + 0.9) * Math.sin(c);
+		const ky = KENOP_JORAN.y + Math.cos(e) * KENOP_JORAN.r;
+		const kz = KENOP_JORAN.z + Math.sin(e) * KENOP_JORAN.r;
+		const t = [PANGKAL_JORAN.x + KENOP_JORAN.x, y + ky * Math.cos(sudut) - kz * Math.sin(sudut), z + ky * Math.sin(sudut) + kz * Math.cos(sudut)];
+		ikLengan(atas, bawah, -0.245, t[0], t[1], t[2], c);
+		const h = telapak(-0.245, c);
+		const j = Math.hypot(h[0] - t[0], h[1] - t[1], h[2] - t[2]);
+		// sasaran di luar jangkauan lengan tidak dihitung
+		const b = sumbu.x([-0.245, 1.43, 0], c);
+		if (Math.hypot(t[0] - b[0], t[1] - b[1], t[2] - b[2]) < 0.57) terburuk = Math.max(terburuk, j);
+	}
+	console.log(`ik lengan: meleset terburuk ${(terburuk * 100).toFixed(2)} cm`);
+	assert.ok(terburuk < 0.01, "telapak harus sampai ke kenop");
 }
 
 fs.rmSync(tmp, { recursive: true, force: true });

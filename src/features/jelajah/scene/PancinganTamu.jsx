@@ -4,7 +4,7 @@ import { BufferGeometry, Float32BufferAttribute, Line, LineBasicMaterial, Vector
 import { FASE_PANCING, IKAN, IKAN_PER_ID, pancing, panjangCm } from "../pancing";
 import { TANAH } from "./layout";
 import ModelIkan from "./ModelIkan";
-import { SUDUT_JORAN_TAMU, PANGKAL_JORAN, lenturkanJoran } from "./joranLentur";
+import { sudutJoranTamu, PANGKAL_JORAN, lenturkanJoran } from "./joranLentur";
 import ModelJoran from "./ModelJoran";
 import { AIR_Y } from "./situ";
 import { AIR_KOLAM_Y, diAirKolam } from "./kolamMonsterData";
@@ -53,7 +53,7 @@ export default function PancinganTamu({ sumber, tampil }) {
 		const a = akar.current;
 		a.position.set(p.x + Math.cos(pc.a) * PANGKAL_JORAN.x + Math.sin(pc.a) * PANGKAL_JORAN.z, p.y + (duduk ? 0.78 : 1.12), p.z - Math.sin(pc.a) * PANGKAL_JORAN.x + Math.cos(pc.a) * PANGKAL_JORAN.z);
 		const lentur = fase === "tarik" ? 0.12 + Math.min(1.15, pc.t) * 1.15 : fase === "gigit" ? 0.75 : 0.06;
-		a.rotation.set(fase === "tarik" ? 0.3 + Math.sin(t * 17) * 0.02 * pc.t : fase === "dapat" ? 0.15 : SUDUT_JORAN_TAMU, pc.a, 0, "YXZ");
+		a.rotation.set(sudutJoranTamu(fase, t, pc.t), pc.a, 0, "YXZ");
 		lenturkanJoran(ruas.current, 0, lentur);
 		a.updateMatrixWorld(true);
 		ujung.current.getWorldPosition(v.u);

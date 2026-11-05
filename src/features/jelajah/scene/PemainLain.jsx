@@ -10,6 +10,8 @@ import { kendaraanDariId } from "./kendaraan";
 import { dalamLahanCcm } from "./gedungKhusus";
 import { aturBadanRenang } from "./layout";
 import PancinganTamu from "./PancinganTamu";
+import { sudutJoranTamu } from "./joranLentur";
+import { FASE_PANCING } from "../pancing";
 import { pemainWilayah } from "../wilayah/uiWilayah";
 import { KeranjangTamu } from "./KeranjangTangan";
 import Tokoh from "./Tokoh";
@@ -242,6 +244,7 @@ function Tamu({ id, nama, jk, avatar, kulit, gaya, diWilayah }) {
 		const kini = performance.now();
 		// sedang memancing: tangan menggenggam joran, atau mengangkat ikan hasil tangkapan
 		gr.isyarat = s.pc && s.pose === "mancing" ? (s.pc.f === 5 ? "angkat" : "mancing") : s.pose === "renang" ? "renang" : p.emote && kini < p.emote.sampai ? p.emote.jenis : s.kr ? "keranjang" : null;
+		gr.sudutJoran = s.pc ? sudutJoranTamu(FASE_PANCING[s.pc.f], 0, 0) : null;
 		animasiTamu(id, gr, t, dt);
 		// berenang: badan mendatar saat bergerak, tegak mengapung saat diam
 		gr.renang = s.pose === "renang" ? (gr.renang ?? 0) + ((bergerak ? 1 : 0) - (gr.renang ?? 0)) * (1 - Math.exp(-4 * dt)) : 0;
