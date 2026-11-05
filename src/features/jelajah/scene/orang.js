@@ -156,6 +156,14 @@ function badanAtas(p, u) {
 			bentuk(new BoxGeometry(0.05, 0.035, 0.01), "#c9b26a", [0, 0.93 + u, 0.12]),
 		);
 	}
+	// jas hujan: rok jas lebar sampai paha & garis kancing di depan
+	if (p.jasHujan && !u) {
+		daftar.push(
+			bentuk(new CylinderGeometry(0.2, 0.3, 0.42, 16, 1, true), p.baju, [0, 0.7, 0], [0, 0, 0], [1, 1, 0.8]),
+			bentuk(new BoxGeometry(0.012, 0.42, 0.012), gelapkan(p.baju, 0.6), [0, 1.18, 0.129]),
+			bentuk(new BoxGeometry(0.012, 0.42, 0.012), gelapkan(p.baju, 0.6), [0, 0.7, 0.205], [-0.19, 0, 0]),
+		);
+	}
 	if (p.jilbab) daftar.push(...kerudungBahu(p, u));
 	daftar.push(...motifBaju(p, u));
 	return daftar;
@@ -642,6 +650,8 @@ function lenganStatis(p, sisi, u, sudutAtas, sudutBawah, map = false) {
 // pose: "jalan" (lengan & kaki terpisah untuk animasi), "diam" (berdiri, satu
 // badan), "duduk" (kaki tertekuk, tangan di atas meja dipisah untuk animasi).
 export function rakitOrang(p, pose) {
+	// jas hujan kuning dengan tudung (kerudung dipakai ulang), mengganti baju dari lemari
+	if (p.jasHujan) p = { ...p, seragam: "warga", baju: "#f5c518", jilbab: "#f5c518", modelJilbab: "bawaan", topiGaya: null, motif: null, motifWarna: null, modelRok: null };
 	const celana = celanaDari(p);	if (pose === "duduk") {
 		const u = -0.4;
 		const kaki = [];

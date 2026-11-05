@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { BARANG_PER_ID, bayar, belanja, keluarkanSatu, makan, rekapKeranjang, totalKeranjang, useBelanja } from "../belanja";
 import { useKoleksi } from "../pancing";
+import { PELINDUNG, useMilikHujan, useStatusHujan } from "../pelindungHujan";
 import { TENAGA_MAKS, useTenaga } from "../tenaga";
 
 const angka = (n) => n.toLocaleString("id-ID");
@@ -91,16 +92,33 @@ export function PanelKasir({ onSelesai }) {
 	);
 }
 
-// Tas: belanjaan yang sudah dibayar, dimakan/diminum kapan saja untuk mengisi tenaga.
+// Tas: belanjaan yang sudah dibayar, dimakan/diminum kapan saja untuk mengisi tenaga,
+// serta payung & jas hujan yang sudah dibeli (dipakai otomatis, tidak habis).
 export function PanelTas() {
 	useBelanja();
 	const [kabar, setKabar] = useState(null);
 	const isi = Object.entries(belanja.tas).filter(([id, n]) => n > 0 && BARANG_PER_ID[id]);
+	const milikHujan = useMilikHujan();
+	const dipakai = useStatusHujan();
+	const pelindung = Object.values(PELINDUNG).filter((p) => milikHujan[p.id]);
 
 	return (
 		<div>
 			<Saldo />
 			<Kabar kabar={kabar} />
+			{pelindung.length > 0 && (
+				<ul className="mb-2 space-y-2">
+					{pelindung.map((p) => (
+						<li key={p.id} className="flex items-center gap-3 rounded-2xl bg-sky-50 p-3 ring-1 ring-sky-100">
+							<span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-white text-2xl shadow-sm">{p.ikon}</span>
+							<div className="min-w-0 flex-1">
+								<p className="font-bold text-slate-900">{p.nama}</p>
+								<p className="text-xs text-slate-500">{dipakai === p.id ? <b className="text-sky-700">Sedang dipakai</b> : "Dipakai otomatis saat hujan"}</p>
+							</div>
+						</li>
+					))}
+				</ul>
+			)}
 			{isi.length ? (
 				<ul className="space-y-2">
 					{isi.map(([id, n]) => {
@@ -130,7 +148,7 @@ export function PanelTas() {
 					})}
 				</ul>
 			) : (
-				<p className="rounded-2xl bg-slate-50 p-4 text-center text-sm text-slate-500">Tas masih kosong. Belanja di Alfamart atau Koperasi Desa Merah Putih seberang kantor pakai koin hasil memancing.</p>
+				<p className="rounded-2xl bg-slate-50 p-4 text-center text-sm text-slate-500">{pelindung.length ? "Belum ada makanan di tas." : "Tas masih kosong."} Belanja di Alfamart atau Koperasi Desa Merah Putih seberang kantor pakai koin hasil memancing.</p>
 			)}
 		</div>
 	);

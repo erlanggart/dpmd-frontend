@@ -31,6 +31,11 @@ export * as P from ${impor("pancing.js")};
 export * as R from ${impor("rekorWilayah.js")};
 export * as K from ${impor("basket.js")};
 export * as S from ${impor("jelajahStore.js")};
+export * as H from ${impor("pelindungHujan.js")};
+export * as Situ from ${impor("scene/situ.js")};
+export * as Desa from ${impor("scene/kebunDesaData.js")};
+export { ABANG_HUJAN } from ${impor("scene/abangHujanData.js")};
+export { PENGHALANG } from ${impor("scene/layout.js")};
 export { POTENSI } from ${impor("potensiWilayah.js")};`,
 );
 // pelaporan pemakaian tidak relevan di uji: api diganti rintisan
@@ -52,7 +57,7 @@ await build({
 	define: { "import.meta.env.DEV": "true" },
 	logLevel: "error",
 });
-const { B, P, R, K, S, POTENSI } = await import(pathToFileURL(keluar).href);
+const { B, P, R, K, S, H, Situ, Desa, ABANG_HUJAN, PENGHALANG, POTENSI } = await import(pathToFileURL(keluar).href);
 
 const nama = Object.keys(POTENSI)[0];
 const kosongkanKoin = () => P.bayarKoin(P.ambilKoleksi().poin);
@@ -207,6 +212,48 @@ assert.ok(menangBiasa >= 3 && menangBiasa <= 27, `pemain biasa harus bisa menang
 const hasilDiam = lagaBot(() => {});
 assert.ok(!hasilDiam.menang && hasilDiam.koin === 0, "diam saja = kalah tanpa koin");
 console.log(`basket: bot rajin menang ${menangRajin}/30, contoh skor ${hasilRajin[0].pemain}:${hasilRajin[0].lawan}, koin ${hasilRajin[0].koin}; diam ${hasilDiam.pemain}:${hasilDiam.lawan}`);
+
+// --- payung & jas hujan: kuras tenaga dan pembelian ---
+const grHujan = {};
+const kurasHujan = (lebat, teduh, sibuk) => H.langkahHujan(lebat, teduh, sibuk, grHujan, 0.016, () => "teguran");
+assert.equal(kurasHujan(0, false, false), 0, "cerah tidak menguras");
+assert.ok(kurasHujan(1, false, false) > 0, "tanpa pelindung kehujanan");
+assert.equal(kurasHujan(1, true, false), 0, "berteduh tidak menguras");
+kosongkanKoin();
+assert.equal(H.beliPelindung("payung").ok, false, "koin kurang tidak boleh beli");
+P.tambahKoin(H.PELINDUNG.payung.harga);
+assert.equal(H.beliPelindung("payung").ok, true);
+assert.equal(P.ambilKoleksi().poin, 0, "harga payung terpotong");
+P.tambahKoin(H.PELINDUNG.payung.harga);
+assert.equal(H.beliPelindung("payung").ok, false, "payung tidak dibeli dua kali");
+assert.equal(P.ambilKoleksi().poin, H.PELINDUNG.payung.harga, "koin utuh saat sudah punya");
+assert.equal(kurasHujan(1, false, false), 0, "payung melindungi saat tangan bebas");
+assert.ok(kurasHujan(1, false, true) > 0, "payung dilipat saat tangan sibuk");
+P.tambahKoin(H.PELINDUNG.jas.harga);
+assert.equal(H.beliPelindung("jas").ok, true);
+assert.equal(kurasHujan(1, false, true), 0, "jas melindungi saat tangan sibuk");
+
+// --- jalur masuk abang payung tidak melewati air / menembus penghalang ---
+const LANGKAH_ABANG = 14;
+const titikJalur = (t) => Array.from({ length: LANGKAH_ABANG * 4 + 1 }, (_, i) => {
+	const [dx, dz] = t.datang ?? [1, 0];
+	return { x: t.x + (dx * i) / 4, z: t.z + (dz * i) / 4 };
+});
+const tembus = (p, kotak) => kotak.some((k) => k.x0 !== undefined && p.x > k.x0 - 0.8 && p.x < k.x1 + 0.8 && p.z > k.z0 - 0.8 && p.z < k.z1 + 0.8);
+for (const t of ABANG_HUJAN) {
+	for (const p of titikJalur(t)) {
+		assert.ok(!Situ.diSitu(p.x, p.z), `abang ${t.tempat} melewati air`);
+		assert.ok(!tembus(p, PENGHALANG[0]), `abang ${t.tempat} menembus penghalang`);
+	}
+}
+for (const kec of Object.keys(POTENSI)) {
+	Desa.terapkanTata(kec);
+	const t = Desa.titikAbangDesa();
+	for (const p of titikJalur(t)) {
+		assert.ok(!tembus(p, Desa.PENGHALANG_KEBUN), `abang di ${kec} menembus penghalang`);
+		assert.ok(p.z >= Desa.BATAS_DUNIA.z0, `abang di ${kec} keluar batas dunia`);
+	}
+}
 
 fs.rmSync(tmp, { recursive: true, force: true });
 console.log("uji-jelajah: semua lulus");

@@ -4,6 +4,7 @@ import { infoGame } from "../rekorWilayah";
 import { pesananHariIni, useBangun } from "../bangunWilayah";
 import { usahaKini } from "../usahaWilayah";
 import { TENAGA_LARI, useTenaga } from "../tenaga";
+import { useStatusHujan } from "../pelindungHujan";
 import { uiWilayah, useUiWilayah } from "../wilayah/uiWilayah";
 
 /*
@@ -16,6 +17,7 @@ export default function HudKebun() {
 	useBangun();
 	useUiWilayah();
 	const tenaga = useTenaga();
+	const kehujanan = useStatusHujan() === "kehujanan";
 	const koin = useKoleksi().poin;
 	const depan = uiWilayah.depan;
 
@@ -47,15 +49,17 @@ export default function HudKebun() {
 				<span className="flex h-6 items-center rounded-full bg-slate-950/60 px-2 tabular-nums backdrop-blur" title={u.panen.hasil}>🧺 {bawa.reduce((a, [, n]) => a + n, 0)}</span>
 			</div>
 			{tenaga < TENAGA_LARI && tenaga > 0 && <p className="m-0 text-[10.5px] font-semibold text-rose-200 [text-shadow:0_1px_2px_#000] sm:hidden">Lemas! Makan di Warung Bu Imas</p>}
+			{kehujanan && <p className="m-0 text-[10.5px] font-semibold text-sky-200 [text-shadow:0_1px_2px_#000] sm:hidden">🌧️ Kehujanan — tenaga cepat habis</p>}
 			<div className="hidden rounded-2xl bg-slate-950/75 px-3 py-2 text-white shadow-lg ring-1 ring-white/10 backdrop-blur sm:block">
 				<div className="mb-1 flex items-center justify-between text-[10.5px] font-bold uppercase tracking-wider">
 					<span>❤ Tenaga</span>
 					<span className="tabular-nums">{tenaga}</span>
 				</div>
 				<div className="h-2 overflow-hidden rounded-full bg-black/40">
-					<div className={`h-full rounded-full transition-all duration-300 ${tenaga < TENAGA_LARI ? "animate-pulse" : ""}`} style={{ width: `${tenaga}%`, background: warnaTenaga }} />
+					<div className={`h-full rounded-full transition-all duration-300 ${tenaga < TENAGA_LARI || kehujanan ? "animate-pulse" : ""}`} style={{ width: `${tenaga}%`, background: warnaTenaga }} />
 				</div>
 				{tenaga < TENAGA_LARI && tenaga > 0 && <p className="m-0 mt-1 text-[10.5px] font-semibold text-rose-200">Lemas! Makan di Warung Bu Imas</p>}
+				{kehujanan && <p className="m-0 mt-1 text-[10.5px] font-semibold text-sky-200">🌧️ Kehujanan — tenaga cepat habis</p>}
 			</div>
 			<div className="hidden rounded-2xl bg-slate-950/75 p-3 text-white shadow-lg ring-1 ring-white/10 backdrop-blur sm:block">
 				<p className="m-0 hidden text-[11px] font-semibold text-emerald-300 sm:block">{u.tempat} · Kec. {kebun.kecamatan}{info.bintang ? ` · ${"★".repeat(info.bintang)}` : ""}</p>

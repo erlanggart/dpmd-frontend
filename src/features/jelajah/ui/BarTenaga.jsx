@@ -3,6 +3,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import { TENAGA_LARI, TENAGA_MAKS, useKabarTenaga, useTenaga } from "../tenaga";
 import { MAKS_KERANJANG, belanja, totalKeranjang, useBelanja } from "../belanja";
 import { IKAN, useKoleksi } from "../pancing";
+import { useStatusHujan } from "../pelindungHujan";
 import { levelDari, misiSiapKlaim, useProgres, xpUntukLevel } from "../progres";
 
 // Bar tenaga (nyawa) di pojok kiri atas, kabar singkat (tertabrak, makan, siuman), dan
@@ -46,6 +47,7 @@ export default function BarTenaga({ onTas, onAlbum, onGaya, onMisi, onPeringkat,
 	const { koleksi, poin } = useKoleksi();
 	const isiTas = Object.values(belanja.tas).reduce((s, n) => s + n, 0);
 	const nilai = useTenaga();
+	const kehujanan = useStatusHujan() === "kehujanan";
 	const kabar = useKabarTenaga();
 	const [tampilKabar, setTampilKabar] = useState(null);
 
@@ -67,7 +69,7 @@ export default function BarTenaga({ onTas, onAlbum, onGaya, onMisi, onPeringkat,
 					<span className="flex h-6 items-center gap-1.5 rounded-full bg-slate-950/55 px-2 backdrop-blur" title="Tenaga">
 						❤
 						<span className="h-1.5 w-12 overflow-hidden rounded-full bg-black/40">
-							<span className={`block h-full rounded-full transition-all duration-300 ${nilai < TENAGA_LARI ? "animate-pulse" : ""}`} style={{ width: `${persen}%`, background: warna }} />
+							<span className={`block h-full rounded-full transition-all duration-300 ${nilai < TENAGA_LARI || kehujanan ? "animate-pulse" : ""}`} style={{ width: `${persen}%`, background: warna }} />
 						</span>
 						<span className="tabular-nums">{nilai}</span>
 					</span>
@@ -78,6 +80,7 @@ export default function BarTenaga({ onTas, onAlbum, onGaya, onMisi, onPeringkat,
 						</span>
 					)}
 					{nilai < TENAGA_LARI && !pingsan && <span className="w-full text-[10px] font-semibold text-rose-200 [text-shadow:0_1px_2px_#000]">Lemas — makan di Alfamart!</span>}
+					{kehujanan && <span className="w-full text-[10px] font-semibold text-sky-200 [text-shadow:0_1px_2px_#000]">🌧️ Kehujanan — tenaga cepat habis</span>}
 				</div>
 			)}
 
@@ -87,9 +90,10 @@ export default function BarTenaga({ onTas, onAlbum, onGaya, onMisi, onPeringkat,
 					<span className="tabular-nums">{nilai}</span>
 				</div>
 				<div className="h-2 overflow-hidden rounded-full bg-black/40">
-					<div className={`h-full rounded-full transition-all duration-300 ${nilai < TENAGA_LARI ? "animate-pulse" : ""}`} style={{ width: `${persen}%`, background: warna }} />
+					<div className={`h-full rounded-full transition-all duration-300 ${nilai < TENAGA_LARI || kehujanan ? "animate-pulse" : ""}`} style={{ width: `${persen}%`, background: warna }} />
 				</div>
 				{nilai < TENAGA_LARI && !pingsan && <p className="mt-1 text-[10px] font-semibold text-rose-200">Lemas — tak bisa berlari. Makan di Alfamart!</p>}
+				{kehujanan && <p className="mt-1 text-[10px] font-semibold text-sky-200">🌧️ Kehujanan!</p>}
 			</div>
 
 			<div className={`absolute left-3 top-[8rem] z-20 flex flex-wrap items-center gap-1.5 sm:left-4 sm:top-[8.25rem] ${ringkas || sentuh ? "hidden" : ""}`}>

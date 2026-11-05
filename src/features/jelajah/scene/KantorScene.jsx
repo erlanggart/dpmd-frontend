@@ -14,6 +14,12 @@ import Cuaca from "./Cuaca";
 import Langit from "./Langit";
 import Petugas from "./Petugas";
 import AcaraKawasan, { PapanAntrean } from "./AcaraKawasan";
+import PedagangHujan from "./PedagangHujan";
+import { ABANG_HUJAN } from "./abangHujanData";
+import { suasana } from "./suasana";
+
+// abang payung hanya ada selama hujan
+const adaHujan = () => suasana.hujan > 0.15;
 
 const DPR_MAKS = Math.min(typeof window === "undefined" ? 1 : window.devicePixelRatio || 1, 1.5);
 
@@ -104,6 +110,7 @@ export default function KantorScene({ statistik, dikunjungi, jeda, penghuni, pen
 			<PemainLain />
 			<Pancingan />
 			<AcaraKawasan />
+			<PedagangHujan daftar={ABANG_HUJAN} hadir={adaHujan} />
 			<PapanAntrean />
 		</Canvas>
 	);

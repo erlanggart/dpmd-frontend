@@ -8,8 +8,10 @@ import { langkahKaki } from "../suasanaSuara";
 import Tokoh from "../scene/Tokoh";
 import { LAMA_PANJAT, akarPanjat, cariPagar } from "../scene/gerakPanjat";
 import { AlatTangan } from "../scene/AlatTani";
+import { PayungTangan } from "../scene/ModelPayung";
+import { langkahHujan, useStatusHujan } from "../pelindungHujan";
 import {
-	BATAS_DUNIA, PAGAR_KEBUN, PENGHALANG_KAMERA, PENGHALANG_KEBUN, PETAK_KEBUN, SUMUR_KEBUN, TIBA_KEBUN, TITIK_PENGEPUL, TITIK_SIUMAN, TITIK_WARUNG, permukaanWilayah, petakDepan,
+	BATAS_DUNIA, PAGAR_KEBUN, PENGHALANG_KAMERA, PENGHALANG_KEBUN, PETAK_KEBUN, SAUNG_KEBUN, SUMUR_KEBUN, TIBA_KEBUN, TITIK_PENGEPUL, TITIK_SIUMAN, TITIK_WARUNG, WARUNG, permukaanWilayah, petakDepan, titikAbangDesa,
 } from "../scene/kebunDesaData";
 import { posWarga, wargaAktif } from "./wargaDesa";
 import { aturDekat, pemainWilayah } from "./uiWilayah";
@@ -27,6 +29,10 @@ const JARI = 0.35;
 const GRAVITASI = 13;
 const LONCAT = 4.8;
 const KURAS = { dasar: 1 / 30, lari: 1 / 5 };
+// berteduh di dunia kecamatan: di bawah atap saung kebun / warung, atau di depan warung
+const dalamKotak = (x, z, k) => x > k.x0 && x < k.x1 && z > k.z0 && z < k.z1;
+const teduhDesa = (x, z) => dalamKotak(x, z, SAUNG_KEBUN) || dalamKotak(x, z, WARUNG) || Math.hypot(TITIK_WARUNG.x - x, TITIK_WARUNG.z - z) < 2;
+const petunjukDesa = () => "🌧️ Kehujanan! Tenaga cepat habis. Abang payung ada di jalan dekat warung, atau berteduh di saung";
 const tabrak = (x, z, kotak) => kotak.some((k) => x > k.x0 - JARI && x < k.x1 + JARI && z > k.z0 - JARI && z < k.z1 + JARI);
 
 export default function PemainWilayah({ penampilan }) {
@@ -41,7 +47,11 @@ export default function PemainWilayah({ penampilan }) {
 	const kamera = useRef({ yaw: TIBA_KEBUN.rot + Math.PI, pitch: 0.36, jarak: typeof window !== "undefined" && window.innerWidth < 640 ? 11.5 : 9 });
 	const { gl } = useThree();
 	// caping dari warung dipakai di kepala
-	const rupa = useMemo(() => (punyaAlat("caping") ? { ...penampilan, topiGaya: { id: "caping", warna: "#d6b56a" } } : penampilan), [penampilan, kebun.alat.length]); // eslint-disable-line react-hooks/exhaustive-deps
+	const pakaiJas = useStatusHujan() === "jas";
+	const rupa = useMemo(() => {
+		if (pakaiJas) return { ...penampilan, jasHujan: true };
+		return punyaAlat("caping") ? { ...penampilan, topiGaya: { id: "caping", warna: "#d6b56a" } } : penampilan;
+	}, [penampilan, kebun.alat.length, pakaiJas]); // eslint-disable-line react-hooks/exhaustive-deps
 
 	useEffect(() => {
 		const isian = (e) => /^(INPUT|TEXTAREA|SELECT)$/.test(e.target?.tagName);
@@ -121,7 +131,7 @@ export default function PemainWilayah({ penampilan }) {
 		const lari = lariMau && tenaga.nilai >= TENAGA_LARI && !kendali.jongkok;
 		if (!pingsan.current) {
 			const bergerak = Math.hypot(kendali.arah.x, kendali.arah.y) > 0.05 || ["KeyW", "KeyA", "KeyS", "KeyD", "ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"].some((c) => tb.has(c));
-			ubahTenaga(-(KURAS.dasar * (punyaAlat("caping") ? 0.65 : 1) + (lari && bergerak && !demam ? KURAS.lari : 0)) * dt);
+			ubahTenaga(-(KURAS.dasar * (punyaAlat("caping") ? 0.65 : 1) + (lari && bergerak && !demam ? KURAS.lari : 0) + langkahHujan(kebun.cuaca.hujan, teduhDesa(p.x, p.z), !!an || !!panjat.current, gr, dt, petunjukDesa)) * dt);
 			if (tenaga.nilai <= 0) {
 				pingsan.current = kini;
 				tenaga.pingsan = kini;
@@ -304,6 +314,7 @@ export default function PemainWilayah({ penampilan }) {
 			else if (bolehTidur() && Math.hypot(TITIK_SIUMAN.x - p.x, TITIK_SIUMAN.z - p.z) < 3) dekat = "tidur";
 			else if (Math.hypot(SUMUR_KEBUN.x - p.x, SUMUR_KEBUN.z - p.z) < 2.4) dekat = "tani:sumur";
 			else if (Math.hypot(TITIK_PENGEPUL.x - p.x, TITIK_PENGEPUL.z - p.z) < 1.9) dekat = "tani:jual";
+			else if (kebun.cuaca.jenis !== "cerah" && Math.hypot(titikAbangDesa().x - p.x, titikAbangDesa().z - p.z) < 2.2) dekat = "abang";
 			else if (Math.hypot(TITIK_WARUNG.x - p.x, TITIK_WARUNG.z - p.z) < 2) dekat = "warung";
 			else {
 				const pk = petakDepan(p.x, p.z, g.rotation.y, jumlahPetakAktif());
@@ -326,7 +337,7 @@ export default function PemainWilayah({ penampilan }) {
 	return (
 		<group ref={grup} position={[TIBA_KEBUN.x, 0, TIBA_KEBUN.z]} rotation-y={TIBA_KEBUN.rot}>
 			<group ref={badan}>
-				<Tokoh penampilan={rupa} pose="jalan" gerak={gerak} alat={<AlatTangan />} />
+				<Tokoh penampilan={rupa} pose="jalan" gerak={gerak} alat={<><AlatTangan /><PayungTangan gerak={gerak} /></>} />
 			</group>
 		</group>
 	);

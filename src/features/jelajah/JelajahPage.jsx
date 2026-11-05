@@ -32,6 +32,7 @@ import PanelGaya from "./ui/PanelGaya";
 import PanelMisi from "./ui/PanelMisi";
 import PanelJoran from "./ui/PanelJoran";
 import PanelKolam from "./ui/PanelKolam";
+import PanelPelindung from "./ui/PanelPelindung";
 import PanelCapit from "./ui/PanelCapit";
 import PanelAtm from "./ui/PanelAtm";
 import { bayarKoin, useSedangTarik } from "./pancing";
@@ -457,6 +458,7 @@ export default function JelajahPage() {
 		}
 		if (id.startsWith("bazar:")) return void stempelBazar(id.slice(6));
 		if (id === "lomba:panitia") return void setMenu("acara");
+		if (id === "abang:hujan") return void setMenu("abang");
 		const benda = BENDA_PER_ID[id];
 		if (benda) {
 			if (benda.aksi.jenis === "pindah") setMenu("pindah");
@@ -637,6 +639,8 @@ export default function JelajahPage() {
 				? [`Minta stempel ${TENDA_BAZAR.find((x) => x.id === dekat.slice(6))?.nama} 🎟️`, "Stempel", "#b45309"]
 			: dekat === "lomba:panitia"
 				? ["Daftar Lomba Jetski 🏁", "Daftar", "#e11d48"]
+			: dekat === "abang:hujan"
+				? ["Beli payung / jas hujan dari abang ☂️", "Beli", "#0369a1"]
 			: dekat === "capit"
 				? ["Main mesin capit", "Capit", "#db2777"]
 			: dekat === "cendol"
@@ -911,7 +915,7 @@ export default function JelajahPage() {
 						</div>
 					)}
 					<PerayaanKantor />
-					{modeMain === "mancing" && !jeda && <GamePancing sentuh={sentuh} bersama={statusMp === "tersambung"} onSelesai={() => (kendali.aksi = "berhenti")} />}
+					{modeMain === "mancing" && !jeda && <GamePancing sentuh={sentuh} bersama={statusMp === "tersambung"} onTas={() => setMenu("tas")} onSelesai={() => (kendali.aksi = "berhenti")} />}
 
 					{tipKendara && !sentuh && (
 						<p className="pointer-events-none absolute left-1/2 top-28 -translate-x-1/2 rounded-full bg-slate-900/65 px-4 py-2 text-center text-xs text-white backdrop-blur sm:top-24 sm:text-sm">
@@ -1253,6 +1257,11 @@ export default function JelajahPage() {
 							kendali.aksi = mulaiLomba();
 						}}
 					/>
+				</Lembar>
+			)}
+			{menu === "abang" && (
+				<Lembar judul="☂️ Abang Payung" onTutup={() => setMenu(null)}>
+					<PanelPelindung />
 				</Lembar>
 			)}
 			{menu === "capit" && (

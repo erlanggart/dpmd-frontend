@@ -346,6 +346,8 @@ function TamanBermain() {
 // ---------- keramaian ----------
 
 const BAJU = ["#ef4444", "#2563eb", "#16a34a", "#f59e0b", "#7c3aed", "#0ea5e9", "#db2777", "#475569"];
+const BAJU_OLAHRAGA = ["#22d3ee", "#f43f5e", "#a3e635", "#f97316", "#facc15"];
+const CELANA_OLAHRAGA = ["#111827", "#1e3a8a", "#0f172a"];
 const KULIT = ["#e2b48c", "#d3a378", "#c08d63", "#b07a50"];
 const RAMBUT = ["#15100c", "#21180f", "#2e2116", "#3a2a1c"];
 const biji = (s) => () => ((s = (s * 16807) % 2147483647) - 1) / 2147483646;
@@ -360,7 +362,9 @@ function Keramaian() {
 		// 5 pelari mengelilingi jalan melingkar (dua arah), tersebar sepanjang jalur
 		for (let i = 0; i < 5; i++) {
 			const awal = JALUR_JOGGING[(i * 2) % JALUR_JOGGING.length];
-			hasil.push(dasar({ jenis: "jogging", rute: JALUR_JOGGING, i: (i * 2) % JALUR_JOGGING.length, arah: i % 2 ? -1 : 1, laju: 2.2 + r() * 0.8, x: awal[0], z: awal[1] }));
+			// baju olahraga: kaos cerah lengan pendek & celana pendek (lengan bawah dan betis warna kulit)
+			const kulit = pilih(KULIT);
+			hasil.push(dasar({ jenis: "jogging", rute: JALUR_JOGGING, i: (i * 2) % JALUR_JOGGING.length, arah: i % 2 ? -1 : 1, laju: 2.2 + r() * 0.8, x: awal[0], z: awal[1], baju: BAJU_OLAHRAGA[i], celana: pilih(CELANA_OLAHRAGA), kulit, betisWarna: kulit, lenganWarna: kulit }));
 		}
 		// 3 pemain basket berkeliaran di lapangan
 		for (let i = 0; i < 3; i++) hasil.push(dasar({ jenis: "basket", x: LAPANGAN.x0 + 2 + r() * 8, z: LAPANGAN.z0 + 2 + r() * 13, tx: 0, tz: 0, jeda: r() * 2, laju: 1.5 + r() * 0.8 }));

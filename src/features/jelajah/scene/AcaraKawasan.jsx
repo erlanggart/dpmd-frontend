@@ -103,10 +103,11 @@ function Jetski() {
 		<>
 			{/* stand panitia menghadap +x (ke arah titik tiba), dekat dermaga */}
 			<Tenda cx={TITIK_PANITIA.x - 2.4} cz={TITIK_PANITIA.z} lx={3} rot={-Math.PI / 2} warna="#e11d48" judul="LOMBA JETSKI" orang={petugas} barang={["#fbbf24", "#e2e8f0", "#fbbf24"]} />
+			{/* gerbang hanya ada selama lomba berlangsung; di luar itu situ bersih, tinggal stand panitia */}
 			<group position-y={AIR_Y}>
 				{GERBANG_JETSKI.map(
 					(g, i) =>
-						(lomba ? i >= aktif : i === 0) && (
+						lomba && i >= aktif && (
 							<mesh key={i} position={[g.x, 5, g.z]} rotation-y={SUDUT_GERBANG[i]}>
 								<torusGeometry args={[6, 0.28, 10, 36]} />
 								<meshStandardMaterial ref={(m) => { bahan.current[i] = m; }} color={i === aktif ? "#f59e0b" : "#94a3b8"} emissive={i === aktif ? "#f59e0b" : "#94a3b8"} emissiveIntensity={0.1} />

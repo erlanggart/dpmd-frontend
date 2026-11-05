@@ -13,6 +13,10 @@ import { arahJoran, berhentiPancing, geserAsal, mulaiPancing, pancing, percik } 
 import { laporTabrak } from "../tenaga";
 import { LAMA_AMBIL, belanja, kembalikanKeranjang, selesaiAmbil } from "../belanja";
 import { TENAGA_LARI, setTenaga, tenaga, ubahTenaga } from "../tenaga";
+import { langkahHujan, useStatusHujan } from "../pelindungHujan";
+import { PayungTancap, PayungTangan } from "./ModelPayung";
+import { ABANG_HUJAN } from "./abangHujanData";
+import { suasana } from "./suasana";
 import { AIR_Y, DEK_Y, DERMAGA, KIOS_TOKO_PANCING, KIOS_TOKO_PERAHU, PERAHU, dermagaDi, jarakKeTepi, diPanggung, perahuBebas, titikPancing, titikTepi, titikTurun } from "./situ";
 import { bukaPeti, petiSiap } from "../harta";
 import { aksesKolam } from "../kolamMonster";
@@ -62,6 +66,16 @@ const SUDUT_LIHAT_JORAN = 0.75;
 const JARAK_ATAP_SAUNG = 14;
 // tenaga berkurang per detik: diam/jalan, tambahan saat berlari, tambahan saat adu tarik ikan
 const KURAS = { dasar: 1 / 25, lari: 1 / 4, tarik: 1 / 6, renang: 1 / 7 };
+// teguran saat mulai kehujanan: tunjuk abang payung terdekat
+function petunjukAbang() {
+	let dekat = ABANG_HUJAN[0];
+	let jarak = Infinity;
+	for (const a of ABANG_HUJAN) {
+		const d = Math.hypot(a.x - posisi.x, a.z - posisi.z);
+		if (d < jarak) [dekat, jarak] = [a, d];
+	}
+	return `🌧️ Kehujanan! Tenaga cepat habis. Abang payung di ${dekat.tempat} ±${Math.round(jarak)} m, atau berteduh`;
+}
 const KECEPATAN = { jalan: 3.8, lari: 6.8, renang: 1.9, renangCepat: 3.0, jongkok: 1.8 };
 const GRAVITASI = 13;
 const LONCAT = 4.6;
@@ -153,6 +167,9 @@ export default function Pemain({ daftarDinding, penghuni, penampilan = PENAMPILA
 	// mode: jalan | duduk | masuk | kemudi | turun
 	const mode = useRef({ jenis: "jalan", t: 0, k: null, kursi: null, dari: null });
 	const kamera = useRef({ yaw: TITIK_MULAI.yaw, pitch: 0.55, jarak: 10, luar: 1, lompat: true });
+	// jas hujan dipakai otomatis: tokoh berganti rupa
+	const pakaiJas = useStatusHujan() === "jas";
+	const rupa = useMemo(() => (pakaiJas ? { ...penampilan, jasHujan: true } : penampilan), [penampilan, pakaiJas]);
 	const bantu = useMemo(() => ({ ray: new Raycaster(), arah: new Vector3(), kepala: new Vector3(), lihat: new Vector3(), fokus: new Vector3() }), []);
 	const { camera, gl } = useThree();
 
@@ -292,7 +309,11 @@ export default function Pemain({ daftarDinding, penghuni, penampilan = PENAMPILA
 				(lari && md0.jenis === "jalan" ? KURAS.lari : 0) +
 				(md0.jenis === "mancing" && pancing.fase === "tarik" ? KURAS.tarik : 0) +
 				(md0.jenis === "jalan" && p.y < TANAH - 0.2 ? KURAS.renang : 0);
-			ubahTenaga(-kuras * dt);
+			// hujan: terkuras kecuali berteduh / di dalam mobil / berpayung (tangan bebas) / berjas
+			const tanganSibuk = (md0.jenis !== "jalan" && md0.jenis !== "mancing") || p.y < TANAH - 0.2;
+			const atap = (md0.jenis === "kemudi" || md0.jenis === "masuk" || md0.jenis === "turun") && md0.k?.jenis === "mobil";
+			const hujan = md0.jenis === "pingsan" ? 0 : langkahHujan(suasana.hujan, suasana.teduh || atap, tanganSibuk, gerak.current, dt, petunjukAbang);
+			ubahTenaga(-(kuras + hujan) * dt);
 			if (tenaga.nilai <= 0 && !tenaga.pingsan) {
 				tenaga.pingsan = performance.now();
 				if (md0.jenis === "mancing") berhentiPancing();
@@ -1000,6 +1021,7 @@ export default function Pemain({ daftarDinding, penghuni, penampilan = PENAMPILA
 			if (lantai === 0) for (const kp of KIOS_TOKO_PERAHU) coba("kapal:toko", Math.hypot(kp.x - p.x, kp.z - p.z), 2.1);
 			// tempat makan: gerobak mie ayam & pecel ayam, konter McD & kedai kopi CCM
 			if (lantai === 0) {
+				if (suasana.hujan > 0.15) for (const a of ABANG_HUJAN) coba("abang:hujan", Math.hypot(a.x - p.x, a.z - p.z), 2.2);
 				coba("pesan:mie", Math.hypot(TITIK_PESAN_MIE.x - p.x, TITIK_PESAN_MIE.z - p.z), JARAK_GEROBAK);
 				coba("pesan:pecel", Math.hypot(TITIK_PESAN_PECEL.x - p.x, TITIK_PESAN_PECEL.z - p.z), JARAK_GEROBAK);
 				// halaman toko: mesin capit di teras Alfamart & gerobak es cendol
@@ -1219,14 +1241,15 @@ export default function Pemain({ daftarDinding, penghuni, penampilan = PENAMPILA
 
 	return (
 		<>
+			<PayungTancap gerak={gerak} />
 			<group ref={grup} position={[TITIK_MULAI.x, tinggiTanah(TITIK_MULAI.x, TITIK_MULAI.z), TITIK_MULAI.z]} rotation-y={TITIK_MULAI.rot}>
 				<group ref={badanLoncat}>
 					<group ref={tokohJalan}>
-						<Tokoh penampilan={penampilan} pose="jalan" gerak={gerak} />
+						<Tokoh penampilan={rupa} pose="jalan" gerak={gerak} alat={<PayungTangan gerak={gerak} />} />
 						<KeranjangTangan />
 					</group>
 					<group ref={tokohDuduk} visible={false}>
-						<Tokoh penampilan={penampilan} pose="duduk" gerak={gerak} />
+						<Tokoh penampilan={rupa} pose="duduk" gerak={gerak} />
 					</group>
 				</group>
 			</group>

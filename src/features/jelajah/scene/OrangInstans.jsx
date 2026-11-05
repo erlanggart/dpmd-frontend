@@ -7,7 +7,8 @@ import { BAHAN_ORANG, PANJANG_PAHA, PROFIL_BADAN, bentuk, gabung } from "./orang
 // tiap bagian badan satu InstancedMesh. Ukuran, sendi, dan rumus ayunannya sama dengan Tokoh
 // (versi rendah poligon), jadi orang keramaian sekonsep dengan tokoh utama.
 // `agen`: larik objek yang digerakkan pemiliknya — { x, y, z, rot, fase, gerak (0..1), tampak,
-// baju, celana, kulit, rambut }. Warna dibaca sekali saat dipasang.
+// baju, celana, kulit, rambut, betisWarna?, lenganWarna? }. Warna dibaca sekali saat dipasang.
+// betisWarna/lenganWarna = warna kulit memberi celana pendek & kaos lengan pendek (mis. pelari).
 
 // Warna titik putih = warna instans penuh; titik gelap = warna instans digelapkan (sepatu, sabuk).
 const PUTIH = "#ffffff";
@@ -58,7 +59,8 @@ const GEO = {
 
 // bagian tunggal per orang, bagian berpasangan (kiri & kanan), dan warna instansnya
 const TUNGGAL = [["badan", "baju"], ["panggul", "celana"], ["kepala", "kulit"], ["wajah", null], ["rambut", "rambut"]];
-const GANDA = [["paha", "celana"], ["betis", "celana"], ["lenganAtas", "baju"], ["lenganBawah", "baju"], ["tangan", "kulit"]];
+const GANDA = [["paha", "celana"], ["betis", "betisWarna"], ["lenganAtas", "baju"], ["lenganBawah", "lenganWarna"], ["tangan", "kulit"]];
+const WARNA_CADANG = { betisWarna: "celana", lenganWarna: "baju" };
 
 export default function OrangInstans({ agen }) {
 	const n = agen.length;
@@ -69,7 +71,7 @@ export default function OrangInstans({ agen }) {
 		const c = new Color();
 		agen.forEach((a, i) => {
 			for (const [nama, warna] of TUNGGAL) if (warna) ref.current[nama].setColorAt(i, c.set(a[warna]));
-			for (const [nama, warna] of GANDA) for (const s of [0, 1]) ref.current[nama].setColorAt(i * 2 + s, c.set(a[warna]));
+			for (const [nama, warna] of GANDA) for (const s of [0, 1]) ref.current[nama].setColorAt(i * 2 + s, c.set(a[warna] ?? a[WARNA_CADANG[warna]]));
 		});
 		for (const [nama, warna] of [...TUNGGAL, ...GANDA]) if (warna) ref.current[nama].instanceColor.needsUpdate = true;
 	}, [agen]);

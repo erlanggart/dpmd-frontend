@@ -79,7 +79,7 @@ function Batang({ label, kanan, refIsi, refJarum, latar, children }) {
 	);
 }
 
-export default function GamePancing({ sentuh, bersama, onSelesai }) {
+export default function GamePancing({ sentuh, bersama, onSelesai, onTas }) {
 	usePancing();
 	const { poin, koleksi } = useKoleksi();
 	const [album, setAlbum] = useState(false);
@@ -289,6 +289,9 @@ export default function GamePancing({ sentuh, bersama, onSelesai }) {
 				)}
 				<button onClick={() => setJoran(true)} className="rounded-xl bg-amber-400/90 px-2 py-1 text-xs font-black text-slate-950 hover:bg-amber-300" aria-label="Toko pancing: joran & senar" title={`${joranKini().nama} · ${senarKini().nama}`}>
 					🎣<span className="hidden sm:inline"> {joranKini().nama.replace("Joran ", "")}</span>
+				</button>
+				<button onClick={onTas} className="rounded-xl bg-white/10 px-2 py-1 text-xs font-bold hover:bg-white/20" aria-label="Buka tas" title="Tas: makan & minum dulu, permainan berhenti sebentar">
+					🎒<span className="hidden sm:inline"> Tas</span>
 				</button>
 				<button onClick={() => setAlbum(true)} className="flex items-center gap-1 rounded-xl bg-white/10 px-2 py-1 text-xs font-bold hover:bg-white/20" aria-label="Buka album ikan">
 					<FiBookOpen />

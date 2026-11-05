@@ -402,5 +402,13 @@ export function permukaanWilayah(x, z) {
 	return "rumput";
 }
 
+// Titik abang payung (saat hujan): di bahu jalan kampung, seberang warung, menghadap jalan.
+// Datang menyusuri bahu jalan dari −z; dari +z terhalang bangunan di sebagian kecamatan.
+// Dibaca saat dipanggil karena tata letak berubah menurut kecamatan (terapkanTata).
+export function titikAbangDesa() {
+	const sisi = Math.sign(TITIK_WARUNG.x - JALAN_NS.x) || 1;
+	return { x: JALAN_NS.x - sisi * (JALAN_NS.lebar / 2 + 1), z: TITIK_WARUNG.z + 1.5, rot: (Math.PI / 2) * sisi, y: 0, datang: [0, -1], tempat: "jalan dekat warung" };
+}
+
 // isi awal supaya modul lain selalu mendapat data yang lengkap
 terapkanTata("Jasinga");

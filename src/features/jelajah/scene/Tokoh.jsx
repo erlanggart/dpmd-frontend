@@ -3,6 +3,7 @@ import { useFrame } from "@react-three/fiber";
 import { posisi } from "../jelajahStore";
 import { BAHAN_ORANG, PANJANG_PAHA, buangOrang, rakitOrang } from "./orang";
 import { sudutJongkok, sudutPanjat } from "./gerakPanjat";
+import { SUDUT_BAHU_PAYUNG, SUDUT_SIKU_PAYUNG } from "./ModelPayung";
 
 const sudutDekat = (dari, ke) => dari + Math.atan2(Math.sin(ke - dari), Math.cos(ke - dari));
 // Tampak bila dirinya dan semua induknya tampak (lantai lain / di balik dinding = tidak).
@@ -321,6 +322,15 @@ export default function Tokoh({ penampilan, pose = "jalan", gerak, aktivitas, as
 				}
 				if (manjat) lkn.current.rotation.z = lka.current.rotation.z = 0;
 				kepala.current.rotation.x = -c * 0.7; // pandangan tetap ke depan
+			}
+
+			// --- memegang payung terbuka: lengan kanan diangkat (gerak.payung hanya ada pada pemain) ---
+			const pg = gk?.payung ?? 0;
+			if (pg > 0.01 && !isyarat && !manjat) {
+				lkn.current.rotation.x = SUDUT_BAHU_PAYUNG;
+				lkn.current.rotation.z = 0;
+				sbkn.current.rotation.x = SUDUT_SIKU_PAYUNG;
+				sbkn.current.rotation.z = 0;
 			}
 		}
 	});

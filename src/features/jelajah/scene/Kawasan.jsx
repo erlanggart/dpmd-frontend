@@ -7,6 +7,7 @@ import {
 	ConeGeometry,
 	CylinderGeometry,
 	DoubleSide,
+	EquirectangularReflectionMapping,
 	Float32BufferAttribute,
 	MeshStandardMaterial,
 	Object3D,
@@ -25,6 +26,7 @@ import { JALAN_TAMPIL, POHON_TAMPIL as POHON_KAWASAN, pasangan, tinggiGedung } f
 import { teksturPaving } from "./tekstur";
 import { AIR, AREA, GEDUNG, JENIS_AREA, JENIS_GEDUNG, JENIS_JALAN, SUNGAI } from "./kawasanData";
 import SituPemda from "./SituPemda.jsx";
+import SuasanaSitu from "./SuasanaSitu.jsx";
 import KolamMonster from "./KolamMonster.jsx";
 import PasarBumdes from "./PasarBumdes.jsx";
 import Showroom from "./Showroom.jsx";
@@ -445,6 +447,26 @@ function teksturRiak() {
 	return t;
 }
 
+// Langit sederhana untuk pantulan air: dari atas lembut ke cakrawala terang. Pantulan menguat di
+// sudut landai (Fresnel bawaan bahan standar), jadi air gelap saat dilihat ke bawah, seperti aslinya.
+function teksturLangitAir() {
+	const c = document.createElement("canvas");
+	c.width = 16;
+	c.height = 64;
+	const g = c.getContext("2d");
+	const l = g.createLinearGradient(0, 0, 0, 64);
+	l.addColorStop(0, "#7fb2dc");
+	l.addColorStop(0.46, "#dcebf3");
+	l.addColorStop(0.54, "#6f8a78");
+	l.addColorStop(1, "#2f4a40");
+	g.fillStyle = l;
+	g.fillRect(0, 0, 16, 64);
+	const t = new CanvasTexture(c);
+	t.mapping = EquirectangularReflectionMapping;
+	t.colorSpace = SRGBColorSpace;
+	return t;
+}
+
 const BAHAN = {
 	area: lapis(1),
 	atas: lapis(2),
@@ -458,6 +480,7 @@ function Permukaan() {
 	const tanah = useMemo(geometriTanah, []);
 	const air = useMemo(geometriAir, []);
 	const riak = useMemo(teksturRiak, []);
+	const langitAir = useMemo(teksturLangitAir, []);
 	// UV tanah dalam meter (ShapeGeometry); satu ubin paving = 1,6 m
 	const paving = useMemo(() => teksturPaving([1 / 1.6, 1 / 1.6]), []);
 	const bahanAir = useRef();
@@ -467,14 +490,16 @@ function Permukaan() {
 			tanah.dispose();
 			air.dispose();
 			riak.dispose();
+			langitAir.dispose();
 			paving.dispose();
 		},
-		[geo, tanah, air, riak, paving],
+		[geo, tanah, air, riak, langitAir, paving],
 	);
 	// riak halus: warna air bergeser pelan, lebih gelap saat malam
 	useFrame(({ clock }) => {
 		const t = clock.elapsedTime;
-		bahanAir.current.color.setRGB(0.24 + Math.sin(t * 0.7) * 0.015, 0.5 + Math.sin(t * 0.5) * 0.02, 0.62).multiplyScalar((1 - suasana.malam * 0.6) * (1 - suasana.hujan * 0.25));
+		bahanAir.current.color.setRGB(0.1 + Math.sin(t * 0.7) * 0.008, 0.25 + Math.sin(t * 0.5) * 0.012, 0.27).multiplyScalar((1 - suasana.malam * 0.6) * (1 - suasana.hujan * 0.25));
+		bahanAir.current.envMapIntensity = (1 - suasana.malam * 0.88) * (1 - suasana.hujan * 0.45);
 		// riak bergeser pelan; saat hujan permukaan lebih bergolak
 		riak.offset.set(t * 0.011, t * 0.0075);
 		const kasar = 0.45 + suasana.hujan * 0.6;
@@ -487,7 +512,7 @@ function Permukaan() {
 				<meshStandardMaterial map={paving} roughness={1} />
 			</mesh>
 			<mesh geometry={air} position-y={-0.45}>
-				<meshStandardMaterial ref={bahanAir} color="#3d7f9e" roughness={0.1} metalness={0.35} normalMap={riak} />
+				<meshStandardMaterial ref={bahanAir} color="#1a4045" roughness={0.14} metalness={0} normalMap={riak} envMap={langitAir} />
 			</mesh>
 			{Object.entries(geo).map(([k, g]) => g && <mesh key={k} geometry={g} material={BAHAN[k]} />)}
 		</group>
@@ -545,6 +570,7 @@ export default function Kawasan({ daftarDinding }) {
 		<group name="kawasan">
 			<Permukaan />
 			<SituPemda daftarDinding={daftarDinding} />
+			<SuasanaSitu />
 			{/* area besar baru hanya digambar saat kamera cukup dekat (hemat untuk HP) */}
 			<AreaTampak x={-41} z={-12} jarak={160}>
 				<KolamMonster />

@@ -3,7 +3,7 @@ import { useFrame } from "@react-three/fiber";
 import { BufferGeometry, Float32BufferAttribute, LineBasicMaterial, LineSegments } from "three";
 import { diLuarGedung, posisi } from "../jelajahStore";
 import { aturHujan, suara } from "../suaraPancing";
-import { dalamDistro, tokoDi } from "./layout";
+import { WARUNG_MIE, WARUNG_PECEL, dalamDistro, tokoDi } from "./layout";
 import { dalamGedungKhusus } from "./gedungKhusus";
 import { suasana } from "./suasana";
 
@@ -31,6 +31,8 @@ function hujanTerjadwal(waktu = Date.now()) {
 	return waktu >= mulai && waktu < mulai + lama;
 }
 const KOTAK = { lebar: 46, tinggi: 26 };
+// atap tenda warung tenda tidak membuat tetes hujan hilang, tapi pemain tidak kehujanan di bawahnya
+const bawahTenda = (x, z) => [WARUNG_MIE, WARUNG_PECEL].some((w) => x > w.x0 && x < w.x1 && z > w.z0 && z < w.z1);
 
 export default function Cuaca() {
 	const kilat = useRef();
@@ -74,6 +76,7 @@ export default function Cuaca() {
 
 		// tetes hujan: kotak partikel mengikuti kamera, tidak tampak di dalam gedung/toko/McD/mal
 		const diDalam = !diLuarGedung() || tokoDi(posisi.x, posisi.z) || dalamDistro(posisi.x, posisi.z) || dalamGedungKhusus(posisi.x, posisi.z);
+		suasana.teduh = diDalam || bawahTenda(posisi.x, posisi.z);
 		garis.visible = h > 0.02 && !diDalam;
 		garis.material.opacity = 0.55 * h;
 		aturHujan(h * (diDalam ? 0.35 : 1));

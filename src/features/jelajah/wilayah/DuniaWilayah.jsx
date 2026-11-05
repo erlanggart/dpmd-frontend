@@ -10,7 +10,9 @@ import { aturHujan } from "../suaraPancing";
 import { aturSuasanaSuara, senyapkanSuasana } from "../suasanaSuara";
 import { ubahTenaga, useKabarTenaga, useTenaga } from "../tenaga";
 import { KOMODITAS, aksiPetak, animasiKebun, aturKebun, benihDipegang, catat, daftarBenih, hadiahWarga, kebun, pilihBenih, tinggalkanKebun, useKebun } from "../kebun";
-import { terapkanTata } from "../scene/kebunDesaData";
+import { terapkanTata, titikAbangDesa } from "../scene/kebunDesaData";
+import PedagangHujan from "../scene/PedagangHujan";
+import PanelPelindung from "../ui/PanelPelindung";
 import { catatKunjungan, pendengarRayakan } from "../bangunWilayah";
 import { usahaKini } from "../usahaWilayah";
 import * as desaHidup from "./desaHidup";
@@ -43,11 +45,15 @@ import { pemainWilayah, uiWilayah, useUiWilayah } from "./uiWilayah";
  * tenaga (pingsan = siuman di saung, tetap di desa).
  */
 
+// abang payung ada selama cuaca tidak cerah
+const adaMendung = () => kebun.cuaca.jenis !== "cerah";
+
 function labelAksi(dekat) {
 	if (!dekat) return null;
 	const u = usahaKini();
 	if (dekat === "tani:sumur") return { teks: u.sumber.teks, tombol: u.sumber.tombol, warna: "#0284c7" };
 	if (dekat === "tani:jual") return { teks: u.pembeli.ajak, tombol: "Jual", warna: "#b45309" };
+	if (dekat === "abang") return { teks: "Beli payung / jas hujan dari abang ☂️", tombol: "Beli", warna: "#0369a1" };
 	if (dekat === "warung") return { teks: "Belanja di Warung Bu Imas 🏪", tombol: "Belanja", warna: "#be123c" };
 	if (dekat === "tidur") return { teks: "Tidur di saung sampai pagi 😴 (tenaga penuh)", tombol: "Tidur", warna: "#4338ca" };
 	if (dekat.startsWith("ayam:")) return { teks: "Tangkap ayam! 🐔", tombol: "Tangkap", warna: "#ea580c", darurat: true };
@@ -120,6 +126,8 @@ export default function DuniaWilayah({ wilayah, penampilan, sentuh, onKeluar, on
 		tempatkanWarga();
 		masukDesa();
 	}, [wilayah]);
+	// titik abang payung ikut tata kecamatan (dihitung setelah terapkanTata)
+	const abangDesa = useMemo(() => [titikAbangDesa()], [wilayah]); // eslint-disable-line react-hooks/exhaustive-deps
 
 	useEffect(() => {
 		kendali.aksi = null;
@@ -185,6 +193,7 @@ export default function DuniaWilayah({ wilayah, penampilan, sentuh, onKeluar, on
 		if (!d) return;
 		if (d === "tani:jual") setPanel("pengepul");
 		else if (d === "warung") setPanel("warung");
+		else if (d === "abang") setPanel("abang");
 		else if (d === "tidur") tidurSampaiPagi();
 		else if (d.startsWith("ayam:")) tangkapAyam(+d.slice(5));
 		else {
@@ -243,6 +252,7 @@ export default function DuniaWilayah({ wilayah, penampilan, sentuh, onKeluar, on
 					<BumdesDesa kecamatan={wilayah.kecamatan} />
 					<WargaDesa model={k?.model} />
 					<PemainWilayah penampilan={penampilan} />
+					<PedagangHujan daftar={abangDesa} hadir={adaMendung} />
 					<PemainLain diWilayah />
 					<BalonSuasana pemain={pemainWilayah} />
 					<Proyektor />
@@ -401,13 +411,13 @@ export default function DuniaWilayah({ wilayah, penampilan, sentuh, onKeluar, on
 
 			{panel && (
 				<div className="fixed inset-0 z-[70] flex items-end justify-center bg-slate-900/40 sm:items-center sm:p-4" onClick={() => setPanel(null)}>
-					<section role="dialog" aria-modal="true" aria-label={panel === "warung" ? "Warung Bu Imas" : panel === "peta" ? "Bangun Kabupaten" : usahaKini().pembeli.peran} onClick={(e) => e.stopPropagation()}
+					<section role="dialog" aria-modal="true" aria-label={panel === "warung" ? "Warung Bu Imas" : panel === "abang" ? "Abang Payung" : panel === "peta" ? "Bangun Kabupaten" : usahaKini().pembeli.peran} onClick={(e) => e.stopPropagation()}
 						className={`max-h-[88vh] w-full overflow-y-auto rounded-t-3xl bg-white p-5 shadow-2xl sm:rounded-3xl ${panel === "peta" ? "sm:max-w-3xl" : "sm:max-w-md"}`}>
 						<div className="mb-4 flex items-center justify-between">
-							<h2 className="m-0 text-lg font-bold text-slate-900">{panel === "warung" ? "🏪 Warung Bu Imas" : panel === "peta" ? "🗺️ Bangun Kabupaten" : usahaKini().pembeli.judul}</h2>
+							<h2 className="m-0 text-lg font-bold text-slate-900">{panel === "warung" ? "🏪 Warung Bu Imas" : panel === "abang" ? "☂️ Abang Payung" : panel === "peta" ? "🗺️ Bangun Kabupaten" : usahaKini().pembeli.judul}</h2>
 							<button type="button" onClick={() => setPanel(null)} aria-label="Tutup" className="flex h-9 w-9 items-center justify-center rounded-full bg-slate-100 text-slate-600 hover:bg-slate-200"><FiX /></button>
 						</div>
-						{panel === "warung" ? <PanelWarungDesa /> : panel === "peta"
+						{panel === "warung" ? <PanelWarungDesa /> : panel === "abang" ? <PanelPelindung /> : panel === "peta"
 							? <PetaKecamatan kiniDi={wilayah.kecamatan} onMain={(p) => { setPanel(null); onPindah(p); }} />
 							: <PanelPengepul onTutup={() => setPanel(null)} />}
 					</section>
