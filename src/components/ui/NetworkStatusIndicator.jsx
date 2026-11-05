@@ -1,3 +1,4 @@
+import { useLocation } from 'react-router-dom';
 import { useNetwork } from '../../context/NetworkContext';
 
 /**
@@ -44,6 +45,9 @@ const formatKecepatan = ({ speed, downlink, latency }) => {
 
 const NetworkStatusIndicator = () => {
   const network = useNetwork();
+  const { pathname } = useLocation();
+  // game Jelajah di HP: layar untuk pemain, lencana ini menutupi baris HUD
+  if (pathname.startsWith('/jelajah') && window.matchMedia?.('(pointer: coarse)').matches) return null;
   const memeriksa = network.speed === 'checking';
   const batang = hitungBatang(network);
   const warna = memeriksa

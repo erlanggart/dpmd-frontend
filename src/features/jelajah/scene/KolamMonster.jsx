@@ -115,7 +115,8 @@ function Bangunan() {
 					</mesh>
 				))}
 				<mesh position={[L.lx / 2 - 0.12, 0.52, 0]}>
-					<boxGeometry args={[0.24, 1.04, L.lz - 0.12]} />
+					{/* pas di antara dinding samping: tumpang tindih di muka depan membuat berkedip */}
+					<boxGeometry args={[0.24, 1.04, L.lz - 0.24]} />
 					<meshStandardMaterial color="#1f6b50" />
 				</mesh>
 				<mesh position={[L.lx / 2 - 0.05, 1.07, 0]}>

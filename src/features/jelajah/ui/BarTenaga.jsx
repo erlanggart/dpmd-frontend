@@ -9,7 +9,35 @@ import { levelDari, misiSiapKlaim, useProgres, xpUntukLevel } from "../progres";
 // layar gelap saat pingsan.
 const TOMBOL = "rounded-xl bg-slate-950/60 px-2.5 py-1 text-xs font-bold text-white shadow-lg ring-1 ring-white/10 backdrop-blur hover:bg-slate-900/80";
 
-export default function BarTenaga({ onTas, onAlbum, onGaya, onMisi, onPeringkat, onPancing, ringkas = false }) {
+// Di HP badge pindah ke sini (lembar Menu) supaya layar tetap lapang.
+export function MenuPemain({ onPilih, perhatian = 0 }) {
+	const progres = useProgres();
+	const siapKlaim = misiSiapKlaim(progres);
+	useBelanja();
+	const { koleksi } = useKoleksi();
+	const isiTas = Object.values(belanja.tas).reduce((s, n) => s + n, 0);
+	return (
+		<div className="mb-3 grid grid-cols-3 gap-2">
+			{[
+				["misi", "⭐", `Level ${levelDari(progres.xp)}`, siapKlaim],
+				["peringkat", "🏆", "Peringkat"],
+				["tas", "🎒", isiTas ? `Tas · ${isiTas}` : "Tas"],
+				["album", "📖", `Album ${Object.keys(koleksi).length}/${IKAN.length}`],
+				["pancing", "🎣", "Joran"],
+				["gaya", "👕", "Gaya"],
+				["kecamatan", "🗺️", "Kecamatan", perhatian],
+			].map(([id, ikon, teks, tanda]) => (
+				<button key={id} onClick={() => onPilih(id)} className="relative flex flex-col items-center gap-1 rounded-2xl border border-slate-200 px-1 py-2.5 text-xs font-semibold text-slate-800 active:bg-slate-100">
+					<span className="text-xl leading-none">{ikon}</span>
+					{teks}
+					{tanda > 0 && <span className="absolute right-1 top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-rose-500 px-1 text-[10px] font-black text-white">{tanda}</span>}
+				</button>
+			))}
+		</div>
+	);
+}
+
+export default function BarTenaga({ onTas, onAlbum, onGaya, onMisi, onPeringkat, onPancing, ringkas = false, sentuh = false }) {
 	const progres = useProgres();
 	const lv = levelDari(progres.xp);
 	const persenXp = ((progres.xp - xpUntukLevel(lv)) / (xpUntukLevel(lv + 1) - xpUntukLevel(lv))) * 100;
@@ -34,7 +62,26 @@ export default function BarTenaga({ onTas, onAlbum, onGaya, onMisi, onPeringkat,
 
 	return (
 		<>
-			<div className="pointer-events-none absolute left-3 top-[4.25rem] z-20 w-40 rounded-xl bg-slate-950/60 px-2.5 py-1.5 text-white shadow-lg ring-1 ring-white/10 backdrop-blur sm:left-4 sm:top-[4.5rem] sm:w-48">
+			{sentuh && (
+				<div className="pointer-events-none absolute left-3 top-[3.5rem] z-20 flex max-w-[calc(100%-4.5rem)] flex-wrap items-center gap-1.5 text-[11px] font-bold text-white">
+					<span className="flex h-6 items-center gap-1.5 rounded-full bg-slate-950/55 px-2 backdrop-blur" title="Tenaga">
+						❤
+						<span className="h-1.5 w-12 overflow-hidden rounded-full bg-black/40">
+							<span className={`block h-full rounded-full transition-all duration-300 ${nilai < TENAGA_LARI ? "animate-pulse" : ""}`} style={{ width: `${persen}%`, background: warna }} />
+						</span>
+						<span className="tabular-nums">{nilai}</span>
+					</span>
+					{!ringkas && <span className="flex h-6 items-center rounded-full bg-slate-950/55 px-2 backdrop-blur">🪙 {poin.toLocaleString("id-ID")}</span>}
+					{belanja.bawaKeranjang && (
+						<span className="flex h-6 items-center rounded-full bg-red-600/90 px-2">
+							🧺 {belanja.keranjang.length}/{MAKS_KERANJANG} · 🪙 {totalKeranjang()}
+						</span>
+					)}
+					{nilai < TENAGA_LARI && !pingsan && <span className="w-full text-[10px] font-semibold text-rose-200 [text-shadow:0_1px_2px_#000]">Lemas — makan di Alfamart!</span>}
+				</div>
+			)}
+
+			<div className={`pointer-events-none absolute left-3 top-[4.25rem] z-20 w-40 rounded-xl bg-slate-950/60 px-2.5 py-1.5 text-white shadow-lg ring-1 ring-white/10 backdrop-blur sm:left-4 sm:top-[4.5rem] sm:w-48 ${sentuh ? "hidden" : ""}`}>
 				<div className="mb-1 flex items-center justify-between text-[10px] font-bold uppercase tracking-wider">
 					<span>❤ Tenaga</span>
 					<span className="tabular-nums">{nilai}</span>
@@ -45,7 +92,7 @@ export default function BarTenaga({ onTas, onAlbum, onGaya, onMisi, onPeringkat,
 				{nilai < TENAGA_LARI && !pingsan && <p className="mt-1 text-[10px] font-semibold text-rose-200">Lemas — tak bisa berlari. Makan di Alfamart!</p>}
 			</div>
 
-			<div className={`absolute left-3 top-[8rem] z-20 flex flex-wrap items-center gap-1.5 sm:left-4 sm:top-[8.25rem] ${ringkas ? "hidden" : ""}`}>
+			<div className={`absolute left-3 top-[8rem] z-20 flex flex-wrap items-center gap-1.5 sm:left-4 sm:top-[8.25rem] ${ringkas || sentuh ? "hidden" : ""}`}>
 				{onMisi && (
 					<button onClick={onMisi} className={`relative ${TOMBOL}`} title="Level & misi harian">
 						⭐ Lv {lv}

@@ -24,7 +24,9 @@ export function putarLaga(kelas) {
 		laga = a;
 		a.volume = 0.7;
 		a.loop = true;
-		const putar = () => a.play()?.catch?.(() => laga === a && (laga = null));
+		// a.paused: mengganti src ke lagu cadangan ikut menolak play() lama padahal lagu baru
+		// sudah berbunyi; bila pegangan dilepas, lagu itu tak bisa dihentikan dan menumpuk.
+		const putar = () => a.play()?.catch?.(() => laga === a && a.paused && (laga = null));
 		a.addEventListener(
 			"error",
 			() => {

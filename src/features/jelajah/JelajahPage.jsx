@@ -1,4 +1,4 @@
-import { Component, Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Component, Suspense, lazy, memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { AnimatePresence, motion } from "framer-motion";
 import {
@@ -31,9 +31,14 @@ import PanelGaya from "./ui/PanelGaya";
 import PanelMisi from "./ui/PanelMisi";
 import PanelJoran from "./ui/PanelJoran";
 import PanelKolam from "./ui/PanelKolam";
+import PanelCapit from "./ui/PanelCapit";
+import PanelAtm from "./ui/PanelAtm";
+import { bayarKoin } from "./pancing";
+import { ubahTenaga } from "./tenaga";
 import HudLomba from "./ui/HudLomba";
 import PanelEtalaseBumdes from "./ui/PanelEtalaseBumdes";
 import PanelShowroom from "./ui/PanelShowroom";
+import { modelDariId } from "./scene/modelKendaraan";
 import PanelPeringkat from "./ui/PanelPeringkat";
 import { kendaraanDariId } from "./scene/kendaraan";
 import { kirimEmote, kirimGaya, kirimKlakson, kirimUcap, putusJelajah, sambungJelajah, sapaPemain, tutupSapaan, useMultipemain } from "./multipemain";
@@ -44,7 +49,9 @@ import { susunPenghuni } from "./penghuni";
 import InfoPanel from "./ui/InfoPanel";
 import Minimap from "./ui/Minimap";
 import GamePancing from "./ui/GamePancing";
-import BarTenaga from "./ui/BarTenaga";
+import BarTenaga, { MenuPemain } from "./ui/BarTenaga";
+import TombolSuara from "./ui/TombolSuara";
+import { useTutorial } from "./tutorial";
 import AlbumIkan from "./ui/AlbumIkan";
 import { PanelKasir, PanelTas } from "./ui/PanelKasir";
 import { BARANG_PER_ID, ambilKeranjang, belanja, mulaiAmbil } from "./belanja";
@@ -54,10 +61,11 @@ import { TIBA_KHUSUS, TITIK_LIFT, yLantaiMal } from "./scene/gedungKhusus";
 import PanelBioskop from "./ui/PanelBioskop";
 import { aturMusikLatar, useMusikMati } from "./musikLatar";
 import PanelWarung from "./ui/PanelWarung";
-import { catat } from "./progres";
+import { catat, misiSiapKlaim, tambahXp, useProgres } from "./progres";
 import DaftarRoom from "./ui/DaftarRoom";
 import { aturSendu } from "./musikJelajah";
-import { klakson } from "./suaraPancing";
+import { klakson, suara } from "./suaraPancing";
+import { FASILITAS_TOKO } from "./scene/layout";
 import Joystick from "./ui/Joystick";
 import LayarAwal from "./ui/LayarAwal";
 import Denah2D from "./ui/Denah2D";
@@ -68,10 +76,15 @@ const DuniaWilayah = lazy(() => import("./wilayah/DuniaWilayah"));
 import ModalSelesai from "./ui/ModalSelesai";
 
 const muatScene = () => import("./scene/KantorScene");
-const KantorScene = lazy(muatScene);
+// memo: halaman ini render ulang tiap 2 detik (timer obrolan) & tiap HUD berubah; tanpa memo
+// seluruh pohon 3D ikut direkonsiliasi dan layar menyentak.
+const KantorScene = memo(lazy(muatScene));
 
 const KUNCI_SIMPAN = "jelajah-dpmd-dikunjungi";
 const BENDA_PER_ID = Object.fromEntries(BENDA.map((b) => [b.id, b]));
+const FASILITAS_PER_ID = Object.fromEntries(FASILITAS_TOKO.map((f) => [f.id, f]));
+// kapan (ms) tiap fasilitas boleh dipakai lagi, mis. tong sampah
+const jedaFasilitas = {};
 const NAMA_LANTAI = ["Lt. 1", "Lt. 2"];
 const EMOTE = [
 	["lambai", "👋", "Lambai"],
@@ -192,7 +205,9 @@ export default function JelajahPage() {
 	// kas BUMDes & hasil panen yang menunggu, dihitung ulang tiap menu/dunia berganti
 	// eslint-disable-next-line react-hooks/exhaustive-deps
 	const perhatian = useMemo(() => jumlahPerhatian(), [menu, dunia]);
-	const [peta, setPeta] = useState(!sentuh);
+	const misiSiap = misiSiapKlaim(useProgres());
+	// peta juga pintu ke popup peta kecamatan, jadi tampil sejak awal di semua perangkat
+	const [peta, setPeta] = useState(true);
 	const [dikunjungi, setDikunjungi] = useState(bacaDikunjungi);
 	const [selesai, setSelesai] = useState(false);
 	const [statistik, setStatistik] = useState(null);
@@ -209,9 +224,9 @@ export default function JelajahPage() {
 	const musikMati = useMusikMati();
 	const diKawasan = useDiKawasan(lantai);
 	const [lihatRoom, setLihatRoom] = useState(false);
-	// musik sendu selama naik perahu & memancing
+	// musik sendu selama naik perahu & memancing; jetski memakai musik berkendara
 	useEffect(() => {
-		aturSendu(mode === "3d" && (modeMain === "perahu" || modeMain === "mancing"));
+		aturSendu(mode === "3d" && ((modeMain === "perahu" && !posisiPemain.kend?.bermesin) || modeMain === "mancing"));
 	}, [mode, modeMain]);
 
 	// Klakson hanya untuk pengemudi mobil/motor; ikut terdengar oleh tamu lain di dekatnya.
@@ -238,7 +253,6 @@ export default function JelajahPage() {
 	const [pilihEmote, setPilihEmote] = useState(false);
 	const [kini, setKini] = useState(() => Date.now());
 	// Di HP petunjuk awal hanya tampil sebentar supaya layar tetap lega.
-	const [mulaiPada, setMulaiPada] = useState(0);
 	// Suasana: ikuti jam WIB (null), atau dipaksa "siang"/"malam".
 	const [modeSuasana, setModeSuasana] = useState(suasana.paksa);
 	const gantiSuasana = () => {
@@ -289,14 +303,13 @@ export default function JelajahPage() {
 			.catch(() => setDataPegawai(null));
 	}, []);
 
-	// Tersambung ke tamu lain hanya selama menjelajah 3D.
-	// Selama di dunia kecamatan sambungan dilepas: tokoh tidak tertinggal di kantor.
-	const diDunia = !!dunia;
+	// Tersambung ke tamu lain selama menjelajah 3D. Di dunia kecamatan sambungannya tetap,
+	// hanya pindah ke ruang kecamatan itu (DuniaWilayah → pindahDunia).
 	useEffect(() => {
-		if (mode !== "3d" || profil?.mode !== "bersama" || diDunia) return;
+		if (mode !== "3d" || profil?.mode !== "bersama") return;
 		sambungJelajah(profil);
 		return putusJelajah;
-	}, [mode, profil, diDunia]);
+	}, [mode, profil]);
 
 	// Pesan obrolan memudar setelah beberapa detik.
 	useEffect(() => {
@@ -343,12 +356,48 @@ export default function JelajahPage() {
 			setMenu("pancing");
 			return;
 		}
+		if (id === "kapal:toko") {
+			setMenu("showroom:perahu");
+			return;
+		}
 		if (id === "showroom:mobil" || id === "showroom:motor") {
 			setMenu(id);
 			return;
 		}
 		if (id === "pasar:etalase") {
 			setMenu("etalase");
+			return;
+		}
+		if (id === "capit") {
+			setMenu("capit");
+			return;
+		}
+		if (id === "cendol") {
+			// langsung dibeli: tanpa koin, tenaga tidak berubah dan pemain diberi tahu
+			if (bayarKoin(15)) ubahTenaga(20, { teks: "Seger! Tenaga +20 🧊", jenis: "baik" });
+			else ubahTenaga(0, { teks: "Koin kurang — mancing dulu yuk 🎣", jenis: "buruk" });
+			return;
+		}
+		if (id.startsWith("fasilitas:")) {
+			const f = FASILITAS_PER_ID[id.slice(10)];
+			if (!f) return;
+			if (f.buka) {
+				setMenu(f.buka);
+				return;
+			}
+			const kini = Date.now();
+			if (kini < (jedaFasilitas[f.id] || 0)) {
+				ubahTenaga(0, { teks: "Sudah bersih kok 🙂", jenis: "baik" });
+				return;
+			}
+			if (f.koin && !bayarKoin(f.koin)) {
+				ubahTenaga(0, { teks: "Koin kurang — mancing dulu yuk 🎣", jenis: "buruk" });
+				return;
+			}
+			if (f.jeda) jedaFasilitas[f.id] = kini + f.jeda * 1000;
+			if (f.koin) suara("koin");
+			if (f.xp) tambahXp(f.xp);
+			ubahTenaga(f.tenaga || 0, { teks: f.teks, jenis: "baik" });
 			return;
 		}
 		if (id === "kolam:loket" || id === "kolam:tiket") {
@@ -465,7 +514,6 @@ export default function JelajahPage() {
 	const mulai3D = (profilBaru) => {
 		if (profilBaru?.nama) setProfil(profilBaru);
 		resetJelajah();
-		setMulaiPada(Date.now());
 		setKini(Date.now());
 		setMode("3d");
 	};
@@ -474,12 +522,15 @@ export default function JelajahPage() {
 	// Yang bisa diajak berinteraksi: petugas (punya npc) atau benda.
 	const petugasDekat = dekat && AREA_PER_ID[dekat]?.npc ? AREA_PER_ID[dekat] : null;
 	const bendaDekat = dekat ? BENDA_PER_ID[dekat] : null;
+	const fasilitasDekat = dekat?.startsWith("fasilitas:") ? FASILITAS_PER_ID[dekat.slice(10)] : null;
 	// Aksi gerak pengunjung: duduk/berdiri, naik/turun mobil & motor.
 	const tamuDekat = dekat?.startsWith("tamu:") ? tamuLain.find((t) => t.id === dekat.slice(5)) : null;
 	const aksiGerak = !dekat
 		? null
 		: tamuDekat
 			? [`Sapa ${tamuDekat.nama} 👋`, "Sapa", "#0284c7"]
+			: fasilitasDekat
+				? [fasilitasDekat.label, fasilitasDekat.tombol, fasilitasDekat.warna]
 		: dekat.startsWith("kursi:")
 			? ["Duduk di sini", "Duduk", "#475569"]
 			: dekat.includes("#")
@@ -490,6 +541,8 @@ export default function JelajahPage() {
 						: ["Ikut naik sebagai penumpang", "Ikut", "#0369a1"]
 			: dekat === "perahu:panggil"
 				? ["Panggil perahu ke dermaga 🚣", "Panggil", "#0e7490"]
+			: modelDariId(dekat.split("#")[0])
+				? [`Naik ${modelDariId(dekat.split("#")[0]).model.nama} 🌊`, "Naik", modelDariId(dekat.split("#")[0]).model.jetski ? "#e11d48" : "#0e7490"]
 			: dekat.startsWith("perahu:")
 				? ["Naik perahu dayung 🚣", "Naik", "#0e7490"]
 			: dekat === "mancing:perahu"
@@ -502,6 +555,8 @@ export default function JelajahPage() {
 				? ["Belanja aksesoris & pakaian 👕", "Belanja", "#7c3aed"]
 			: dekat === "pancing:toko"
 				? ["Toko Pancing — joran & senar 🎣", "Buka", "#0f766e"]
+			: dekat === "kapal:toko"
+				? ["Toko Perahu ⚓", "Buka", "#0e7490"]
 			: dekat === "pesan:mie"
 				? [`Pesan mie ayam 🍜 · 🪙 ${WARUNG.mie.menu[0].harga}`, "Pesan", WARUNG.mie.warna]
 			: dekat.startsWith("pesan:")
@@ -526,6 +581,10 @@ export default function JelajahPage() {
 				? ["Sales showroom — beli motor 🏍️", "Lihat", "#dc2626"]
 			: dekat === "pasar:etalase"
 				? ["Etalase produk asli BUM Desa 🛍️", "Lihat", "#16a34a"]
+			: dekat === "capit"
+				? ["Main mesin capit", "Capit", "#db2777"]
+			: dekat === "cendol"
+				? ["Beli es cendol 🪙 15 (+20 tenaga)", "Beli", "#0f766e"]
 			: dekat === "kolam:loket"
 				? ["Loket Kolam Monster — tiket & lomba 🦈", "Loket", "#0f766e"]
 			: dekat === "kolam:tiket"
@@ -562,10 +621,12 @@ export default function JelajahPage() {
 				? { id: dekat, label: aksiGerak[0], tombol: aksiGerak[1], warna: aksiGerak[2] }
 				: null;
 	const berkendara = ["mobil", "motor", "perahu", "penumpang"].includes(modeMain);
+	const tipJalan = useTutorial("jalan", mode === "3d" && !dunia && !jeda && area === "luar" && !berkendara && modeMain !== "mancing" && !sasaran);
+	const tipKendara = useTutorial(`kendara:${modeMain}`, mode === "3d" && !dunia && !jeda && berkendara);
 	const petunjukKendara = {
 		mobil: "W/S gas & mundur · A/D belok · Shift turbo · H klakson · E keluar",
 		motor: "W/S gas & mundur · A/D belok · Shift turbo · Spasi lompat · H klakson · E turun",
-		perahu: "W/S dayung · A/D belok · Shift dayung cepat · E mancing / naik ke dermaga · R terjun berenang",
+		perahu: posisiPemain.kend?.bermesin ? "W/S gas · A/D belok · Shift turbo · berhenti lalu E mancing · R terjun berenang" : "W/S dayung · A/D belok · Shift dayung cepat · E mancing / naik ke dermaga · R terjun berenang",
 		penumpang: "Anda penumpang — duduk manis · E turun",
 	}[modeMain];
 	const ambilAntrean = () => setAntrean((n) => (n ?? 23) + 1);
@@ -623,7 +684,7 @@ export default function JelajahPage() {
 					</PenjagaScene>
 
 					{/* --- HUD atas: di HP ringkas (kembali, lokasi, progres, menu) --- */}
-					<div className="pointer-events-none absolute inset-x-0 top-0 flex items-start justify-between gap-2 px-3 pb-3 pt-[max(2rem,env(safe-area-inset-top))] sm:px-4">
+					<div className={`pointer-events-none absolute inset-x-0 top-0 flex items-start justify-between gap-2 px-3 pb-3 sm:px-4 ${sentuh ? "pt-[max(0.75rem,env(safe-area-inset-top))]" : "pt-[max(2rem,env(safe-area-inset-top))]"}`}>
 						<div className="pointer-events-auto flex min-w-0 items-center gap-2">
 							<Link
 								to="/"
@@ -659,7 +720,7 @@ export default function JelajahPage() {
 								</div>
 							)}
 							<div
-								className="flex h-10 items-center gap-1.5 rounded-xl bg-white/90 px-2.5 text-sm font-semibold text-slate-800 shadow-md ring-1 ring-black/5 backdrop-blur sm:px-3"
+								className={`h-10 items-center gap-1.5 rounded-xl bg-white/90 px-2.5 text-sm font-semibold text-slate-800 shadow-md ring-1 ring-black/5 backdrop-blur sm:px-3 ${sentuh ? "hidden" : "flex"}`}
 								title="Ruang bidang yang sudah dikunjungi"
 							>
 								<FiCheckCircle className="text-emerald-600" />
@@ -668,6 +729,7 @@ export default function JelajahPage() {
 								</span>
 								<span className="sr-only">ruang dikunjungi</span>
 							</div>
+							<TombolSuara />
 							<div className="hidden items-center gap-2 sm:flex">
 								<TombolIkon label="Pindah cepat" aktif={menu === "pindah"} onClick={() => setMenu("pindah")}>
 									<FiNavigation />
@@ -691,22 +753,18 @@ export default function JelajahPage() {
 									<FiHelpCircle />
 								</TombolIkon>
 							</div>
-							<div className="sm:hidden">
+							<div className="relative sm:hidden">
 								<TombolIkon label="Menu" aktif={menu === "aksi"} onClick={() => setMenu("aksi")}>
 									<FiMenu />
 								</TombolIkon>
+								{misiSiap + (peta ? 0 : perhatian) > 0 && <span className="pointer-events-none absolute -right-1 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-rose-500 px-1 text-[10px] font-black text-white">{misiSiap + (peta ? 0 : perhatian)}</span>}
 							</div>
 						</div>
 					</div>
 
 					{/* peta 40 kecamatan (potensi tiap wilayah & game-nya) selalu bisa dibuka, juga di HP saat minimap disembunyikan */}
-					<div className="absolute right-3 top-[6.5rem] w-28 sm:bottom-4 sm:right-4 sm:top-auto sm:w-44">
-						<button type="button" onClick={() => setMenu("kecamatan")}
-							className="mb-1.5 flex w-full items-center justify-center gap-1.5 rounded-xl bg-slate-900/85 px-2 py-1.5 text-[11px] font-bold text-white shadow-lg backdrop-blur hover:bg-slate-900 sm:text-[12px]">
-							🗺️ Peta kecamatan
-							{perhatian > 0 && <span className="flex h-4 min-w-4 items-center justify-center rounded-full bg-rose-500 px-1 text-[10px] font-extrabold leading-none text-white">{perhatian}</span>}
-						</button>
-						{peta && <Minimap area={area} lantai={lantai} dikunjungi={dikunjungi} onPilih={pindahCepat} />}
+					<div className={sentuh ? "absolute right-3 top-[3.5rem] w-32" : "absolute bottom-4 right-4 w-44"}>
+						{peta && <Minimap area={area} lantai={lantai} dikunjungi={dikunjungi} onPilih={pindahCepat} onPeta={() => setMenu("kecamatan")} perhatian={perhatian} />}
 					</div>
 
 					{/* kartu nama area */}
@@ -750,7 +808,7 @@ export default function JelajahPage() {
 								area === "luar" &&
 								!berkendara &&
 								modeMain !== "mancing" &&
-								(!sentuh || kini - mulaiPada < 12000) && (
+								tipJalan && (
 									<p className="rounded-full bg-slate-900/55 px-3.5 py-1.5 text-center text-[11px] text-white backdrop-blur sm:px-4 sm:py-2 sm:text-sm">
 										{sentuh ? "Geser analog atau ketuk lantai" : "Jalan dengan WASD, atau klik lantai"} untuk menuju pintu masuk
 									</p>
@@ -759,11 +817,11 @@ export default function JelajahPage() {
 						</div>
 					)}
 
-					{!jeda && <BarTenaga onTas={() => setMenu("tas")} onAlbum={modeMain === "mancing" ? null : () => setMenu("album")} onGaya={() => setMenu("gaya")} onMisi={() => setMenu("misi")} onPeringkat={() => setMenu("peringkat")} onPancing={modeMain === "mancing" ? null : () => setMenu("pancing")} ringkas={modeMain === "mancing"} />}
+					{!jeda && <BarTenaga onTas={() => setMenu("tas")} onAlbum={modeMain === "mancing" ? null : () => setMenu("album")} onGaya={() => setMenu("gaya")} onMisi={() => setMenu("misi")} onPeringkat={() => setMenu("peringkat")} onPancing={modeMain === "mancing" ? null : () => setMenu("pancing")} ringkas={modeMain === "mancing"} sentuh={sentuh} />}
 					{!jeda && <HudLomba mancing={modeMain === "mancing"} />}
 					{modeMain === "mancing" && !jeda && <GamePancing sentuh={sentuh} bersama={statusMp === "tersambung"} onSelesai={() => (kendali.aksi = "berhenti")} />}
 
-					{berkendara && !jeda && !sentuh && (
+					{tipKendara && !sentuh && (
 						<p className="pointer-events-none absolute left-1/2 top-28 -translate-x-1/2 rounded-full bg-slate-900/65 px-4 py-2 text-center text-xs text-white backdrop-blur sm:top-24 sm:text-sm">
 							{petunjukKendara}
 						</p>
@@ -912,6 +970,15 @@ export default function JelajahPage() {
 										📯
 									</button>
 								)}
+								{modeMain === "jalan" && (
+									<button
+										onClick={() => (kendali.jongkok = !kendali.jongkok)}
+										aria-label="Jongkok"
+										className="flex h-12 w-12 items-center justify-center rounded-full bg-slate-900/40 text-xl text-white shadow-lg ring-1 ring-white/30 backdrop-blur active:bg-slate-900/70"
+									>
+										🧎
+									</button>
+								)}
 								{(modeMain === "jalan" || modeMain === "motor") && (
 									<button
 										onClick={() => (kendali.loncat = true)}
@@ -977,14 +1044,15 @@ export default function JelajahPage() {
 
 			{menu === "aksi" && (
 				<Lembar judul="Menu" onTutup={() => setMenu(null)}>
+					{modeMain !== "mancing" && <MenuPemain onPilih={setMenu} perhatian={perhatian} />}
 					<div className="grid grid-cols-2 gap-3">
 						{[
-							[FiNavigation, "Pindah cepat", "Langsung ke ruang bidang", () => setMenu("pindah")],
+							[FiNavigation, "Pindah cepat", `${dikunjungi.size}/${RUANGAN.length} ruang bidang dikunjungi`, () => setMenu("pindah")],
 							[FiTruck, "Garasi saya", "Panggil mobil & motor milikmu", () => setMenu("garasi")],
 							[
 								FiMap,
 								peta ? "Sembunyikan peta" : "Tampilkan peta",
-								"Denah mini lantai ini",
+								"Denah lantai, atau Kabupaten Bogor saat di luar",
 								() => {
 									setPeta((v) => !v);
 									setMenu(null);
@@ -1071,14 +1139,24 @@ export default function JelajahPage() {
 				</Lembar>
 			)}
 			{menu === "pancing" && <PanelJoran onTutup={() => setMenu(null)} />}
-			{(menu === "showroom:mobil" || menu === "showroom:motor" || menu === "garasi") && (
-				<Lembar judul={menu === "garasi" ? "🚗 Garasi saya" : menu === "showroom:mobil" ? "🚗 Showroom Mobil" : "🏍️ Showroom Motor"} lebar="sm:max-w-3xl" onTutup={() => setMenu(null)}>
+			{(menu === "showroom:mobil" || menu === "showroom:motor" || menu === "showroom:perahu" || menu === "garasi") && (
+				<Lembar judul={menu === "garasi" ? "🚗 Garasi saya" : menu === "showroom:mobil" ? "🚗 Showroom Mobil" : menu === "showroom:perahu" ? "⚓ Toko Perahu" : "🏍️ Showroom Motor"} lebar="sm:max-w-3xl" onTutup={() => setMenu(null)}>
 					<PanelShowroom jenis={menu === "garasi" ? "garasi" : menu.slice(9)} onTutup={() => setMenu(null)} />
 				</Lembar>
 			)}
 			{menu === "etalase" && (
 				<Lembar judul="🛍️ Etalase Pasar BUMDes" lebar="sm:max-w-2xl" onTutup={() => setMenu(null)}>
 					<PanelEtalaseBumdes />
+				</Lembar>
+			)}
+			{menu === "capit" && (
+				<Lembar judul="🕹️ Mesin Capit" onTutup={() => setMenu(null)}>
+					<PanelCapit />
+				</Lembar>
+			)}
+			{menu === "atm" && (
+				<Lembar judul="🏧 ATM Desa" onTutup={() => setMenu(null)}>
+					<PanelAtm />
 				</Lembar>
 			)}
 			{menu === "kolam" && (
@@ -1164,10 +1242,12 @@ export default function JelajahPage() {
 									["Seret layar", "memutar kamera"],
 									["Ketuk lantai / petugas", "berjalan otomatis ke sana"],
 									["Tombol aksi (kanan)", "bicara, pakai benda, duduk, masuk mobil, naik motor"],
-									["Tombol Loncat", "meloncat"],
+									["Tombol Loncat", "meloncat; saat menghadap pagar: memanjatnya"],
+									["Tombol 🧎", "jongkok / berdiri; jalan jongkok pelan dan tanpa suara langkah"],
 									["Di mobil/motor", "analog = gas & setir, tombol Turbo untuk ngebut, 📯 klakson"],
 									["Mobil berempat", "dekati mobil/motor/perahu yang dikemudikan tamu lain untuk ikut naik"],
 									["Situ Pemda", "naik perahu di dermaga; di panggung dermaga atau dari perahu tekan Mancing"],
+									["Toko Perahu", "kios biru di tiap dermaga, seberang Toko Pancing: beli kano, sampan, speedboat, jetski; panggil dari ☰ → Garasi saya"],
 									["Memancing", "tahan 🎣 lalu lepas untuk melempar; saat adu tarik KETUK 🎣 berulang untuk menggulung, berhenti saat ikan lari"],
 									["AUTO & kamera", "🤖 AUTO memancing sendiri (joran Titanium Pro / Dasar Monster / Naga Emas, koin 75%); 🎥 ganti sudut: Standar, Dekat, Atas, Sinematik"],
 									["Kolam Monster", "kolam berbayar di barat kantor: tiket 🪙 2.000 / 10 menit, isinya ikan Monster & Legenda; daftar Lomba Galatama di loket"],
@@ -1182,10 +1262,12 @@ export default function JelajahPage() {
 									["Seret mouse · roda", "memutar kamera · zoom"],
 									["Klik lantai / petugas", "berjalan otomatis ke sana"],
 									["E", "bicara · pakai benda · duduk · naik/turun kendaraan"],
-									["Spasi", "loncat"],
+									["Spasi", "loncat; saat menghadap pagar: memanjatnya"],
+									["C", "jongkok / berdiri; jalan jongkok pelan dan tanpa suara langkah"],
 									["Di mobil/motor", "W/S gas & mundur, A/D belok, Shift turbo, H klakson"],
 									["Mobil berempat", "E di dekat kendaraan yang dikemudikan tamu lain = ikut naik"],
 									["Situ Pemda", "E di dermaga: naik perahu · E di panggung / perahu: memancing"],
+									["Toko Perahu", "E di kios biru dermaga (seberang Toko Pancing): beli perahu bermesin & jetski; panggil dari ☰ → Garasi saya"],
 									["Memancing", "tahan Spasi lalu lepas = lempar; KETUK Spasi berulang = gulung (jangan ditahan), arahkan mouse (atau A/D) melawan arah ikan, F = Tarikan Sakti saat meteran ⚡ penuh"],
 									["AUTO & kamera", "O = AUTO memancing (joran Titanium Pro / Dasar Monster / Naga Emas, koin 75%) · C = ganti sudut kamera: Standar, Dekat, Atas, Sinematik"],
 									["Kolam Monster", "kolam berbayar di barat kantor: E di loket = tiket 🪙 2.000 / 10 menit & Lomba Galatama (juara = ikan terberat)"],

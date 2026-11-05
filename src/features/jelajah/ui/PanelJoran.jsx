@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { FiCheck, FiX } from "react-icons/fi";
 import { AnimatePresence, motion } from "framer-motion";
-import { JORAN, SENAR, joranKini, pakaiJoran, punyaJoran, senarKini, tingkatSenar, upgradeSenar, useKoleksi } from "../pancing";
+import { JORAN, PELAMPUNG, SENAR, joranKini, pakaiJoran, pakaiPelampung, pakaiSenar, pelampungKini, punyaJoran, punyaPelampung, punyaSenar, senarKini, tingkatSenar, useKoleksi } from "../pancing";
 import JoranGambar from "./JoranGambar";
 
 const angka = (n) => n.toLocaleString("id-ID");
@@ -39,28 +39,145 @@ function Statistik({ joran, banding }) {
 	);
 }
 
-// Gulungan senar kecil (warna & ketebalan sesuai jenisnya).
+// Gulungan senar kecil: pola lilitan mengikuti jenisnya (polos, anyaman silang, bening, emas).
 function Gulungan({ senar, tingkat }) {
+	const w = senar.warna === "#f1f5f9" ? "#cbd5e1" : senar.warna;
+	const tebal = 0.8 + tingkat * 0.25;
 	return (
 		<svg viewBox="0 0 48 48" className="h-12 w-12 shrink-0">
 			<circle cx="24" cy="24" r="21" fill="#f1f5f9" stroke="#cbd5e1" />
-			{Array.from({ length: 6 }, (_, i) => (
-				<circle key={i} cx="24" cy="24" r={9 + i * 1.8} fill="none" stroke={senar.warna === "#f1f5f9" ? "#cbd5e1" : senar.warna} strokeWidth={0.8 + tingkat * 0.25} />
-			))}
+			{Array.from({ length: 6 }, (_, i) => {
+				const r = 9 + i * 1.8;
+				return (
+					<g key={i} fill="none">
+						{senar.pola === "fluoro" ? (
+							<circle cx="24" cy="24" r={r} stroke={w} strokeOpacity="0.5" strokeWidth={tebal} strokeDasharray="1 1.5" />
+						) : (
+							<circle cx="24" cy="24" r={r} stroke={senar.pola === "pusaka" && i % 2 ? "#f59e0b" : w} strokeWidth={tebal} />
+						)}
+						{senar.pola === "anyam" && <circle cx="24" cy="24" r={r} stroke={senar.warna2} strokeWidth={tebal} strokeDasharray="2.2 3.4" strokeDashoffset={i % 2 ? 2.8 : 0} />}
+					</g>
+				);
+			})}
+			{senar.pola === "pusaka" && <circle cx="24" cy="24" r="21" fill="none" stroke="#f59e0b" strokeWidth="1.2" />}
 			<circle cx="24" cy="24" r="6.5" fill="#334155" />
 			<circle cx="24" cy="24" r="2.2" fill="#e2e8f0" />
 		</svg>
 	);
 }
 
+// Ikon pelampung: siluet sesuai bentuknya di air (garis air di y 28, bagian bawahnya tenggelam).
+function IkonPelampung({ p }) {
+	const { warna: w, warna2: w2 } = p;
+	const emas = "#facc15";
+	let bentuk;
+	switch (p.id) {
+		case "pena":
+			bentuk = (
+				<>
+					<rect x="23.4" y="3" width="1.2" height="12" rx="0.6" fill={w2} stroke="#64748b" strokeWidth="0.5" />
+					<rect x="21" y="14" width="6" height="28" rx="3" fill={w} />
+					<rect x="21" y="20" width="6" height="4" fill={w2} />
+				</>
+			);
+			break;
+		case "peluru":
+			bentuk = (
+				<>
+					<rect x="22.8" y="7" width="2.4" height="7" rx="1.2" fill={w2} />
+					<path d="M24 13 C32 15 35 24 31 34 L24 43 L17 34 C13 24 16 15 24 13 Z" fill={w} />
+				</>
+			);
+			break;
+		case "tembaga":
+			bentuk = (
+				<>
+					<circle cx="24" cy="26" r="14" fill={w2} opacity="0.25" />
+					<rect x="22.8" y="6" width="2.4" height="9" rx="1.2" fill={w2} />
+					<rect x="18" y="14" width="12" height="28" rx="6" fill={w} />
+					<rect x="20" y="16" width="2.5" height="24" rx="1.2" fill="#fff" opacity="0.35" />
+					<rect x="17.5" y="24" width="13" height="3" fill={w2} />
+				</>
+			);
+			break;
+		case "neon":
+			bentuk = (
+				<>
+					<circle cx="24" cy="6" r="5" fill={w} opacity="0.35" />
+					<circle cx="24" cy="6" r="2.8" fill={w} />
+					<rect x="23" y="7" width="2" height="22" fill={w} />
+					<rect x="20.5" y="26" width="7" height="14" rx="3.5" fill={w2} />
+					<rect x="20" y="29" width="8" height="2" fill={w} />
+				</>
+			);
+			break;
+		case "kristal":
+			bentuk = (
+				<>
+					<rect x="23" y="5" width="2" height="9" fill={w2} />
+					<polygon points="24,12 32,19 32,33 24,43 16,33 16,19" fill={w} fillOpacity="0.55" stroke={w2} strokeWidth="1" />
+					<path d="M24 12 V43 M16 19 L32 33 M32 19 L16 33" stroke="#fff" strokeOpacity="0.6" strokeWidth="0.7" fill="none" />
+				</>
+			);
+			break;
+		case "giok":
+			bentuk = (
+				<>
+					<rect x="22.8" y="6" width="2.4" height="9" rx="1.2" fill={emas} />
+					<ellipse cx="24" cy="28" rx="10" ry="14" fill={w} />
+					<ellipse cx="21" cy="22" rx="2.5" ry="5" fill="#fff" opacity="0.3" />
+					<ellipse cx="24" cy="28" rx="10.6" ry="3" fill="none" stroke={emas} strokeWidth="2" />
+				</>
+			);
+			break;
+		case "naga":
+			bentuk = (
+				<>
+					<circle cx="24" cy="6" r="4.5" fill={w2} opacity="0.35" />
+					<circle cx="24" cy="6" r="2.6" fill={w2} />
+					<rect x="22.8" y="7" width="2.4" height="8" rx="1.2" fill={w} />
+					<ellipse cx="24" cy="28" rx="10" ry="14" fill={w} />
+					{[20, 28, 36].map((y) => (
+						<path key={y} d={`M14.5 ${y} Q24 ${y + 5} 33.5 ${y}`} fill="none" stroke={w2} strokeWidth="2.2" strokeLinecap="round" />
+					))}
+				</>
+			);
+			break;
+		default:
+			bentuk = (
+				<>
+					<rect x="22.5" y="4" width="3" height="11" rx="1.5" fill="#fde047" stroke="#a16207" strokeWidth="0.8" />
+					<path d="M10 28 A14 14 0 0 1 38 28 Z" fill={w} />
+					<path d="M10 28 A14 14 0 0 0 38 28 Z" fill={w2} stroke="#cbd5e1" strokeWidth="0.6" />
+					<circle cx="24" cy="28" r="14" fill="none" stroke="#0f172a" strokeOpacity="0.25" />
+				</>
+			);
+	}
+	return (
+		<svg viewBox="0 0 48 48" className="h-12 w-12 shrink-0">
+			{bentuk}
+			<path d="M3 28 H45" stroke="#38bdf8" strokeWidth="1" strokeDasharray="3 2" opacity="0.7" />
+		</svg>
+	);
+}
+
+// Teks efek pelampung: hanya pengali yang bukan 1.
+const efekPelampung = (p) =>
+	[
+		p.cepat !== 1 && `Sambaran ${persen(1 / p.cepat - 1)}`,
+		p.reaksi !== 1 && `Waktu sentak ${persen(p.reaksi - 1)}`,
+		p.hoki !== 1 && `Peluang premium ${persen(p.hoki - 1)}`,
+	].filter(Boolean);
+
 // Toko pancing: pilih jenis joran (tiap jenis unggul di kecepatan sambaran atau peluang ikan
-// premium) dan upgrade senar (lebih kuat & lebih panjang) pakai koin.
+// premium), senar (lebih kuat & lebih panjang) dan pelampung, semuanya dibeli pakai koin.
 export default function PanelJoran({ onTutup }) {
 	const { poin: koin } = useKoleksi();
 	const [tab, setTab] = useState("joran");
 	const [kabar, setKabar] = useState(null);
 	const dipakai = joranKini();
 	const senar = senarKini();
+	const pelampung = pelampungKini();
 	const tSenar = tingkatSenar();
 	const umumkan = (k) => {
 		setKabar({ ...k, id: Date.now() });
@@ -99,14 +216,16 @@ export default function PanelJoran({ onTutup }) {
 						<div className="flex flex-wrap items-center gap-2">
 							<span className="text-base font-black">{dipakai.nama}</span>
 							<span className="rounded-full bg-white px-2.5 py-0.5 text-[11px] font-semibold text-sky-700 ring-1 ring-sky-200">🧵 {senar.nama}</span>
+							<span className="rounded-full bg-white px-2.5 py-0.5 text-[11px] font-semibold text-rose-700 ring-1 ring-rose-200">🔴 {pelampung.nama}</span>
 						</div>
 					</div>
 
 					{/* tab bersegmen */}
-					<div className="mt-4 grid grid-cols-2 rounded-2xl bg-slate-100 p-1">
+					<div className="mt-4 grid grid-cols-3 rounded-2xl bg-slate-100 p-1">
 						{[
-							["joran", "Jenis Joran"],
-							["senar", "Upgrade Senar"],
+							["joran", "Joran"],
+							["senar", "Senar"],
+							["pelampung", "Pelampung"],
 						].map(([id, judul]) => (
 							<button key={id} onClick={() => setTab(id)} className={`rounded-xl py-2 text-sm font-bold transition ${tab === id ? "bg-white text-slate-900 shadow-sm" : "text-slate-500 hover:text-slate-800"}`}>
 								{judul}
@@ -179,50 +298,88 @@ export default function PanelJoran({ onTutup }) {
 					{tab === "senar" && (
 						<ul className="mt-3 space-y-2.5">
 							{SENAR.map((s, i) => {
-								const sudah = i <= tSenar;
-								const berikut = i === tSenar + 1;
+								const punya = punyaSenar(i);
 								const aktif = i === tSenar;
 								return (
-									<li key={s.nama} className={`flex items-center gap-3 rounded-2xl border p-3 transition ${aktif ? "border-sky-300 bg-sky-50/50" : "border-slate-200 bg-white"} ${!sudah && !berikut ? "opacity-55" : ""}`}>
+									<li key={s.nama} className={`flex items-center gap-3 rounded-2xl border p-3 transition ${aktif ? "border-sky-300 bg-sky-50/50" : "border-slate-200 bg-white"}`}>
 										<Gulungan senar={s} tingkat={i} />
 										<div className="min-w-0 flex-1">
 											<p className="flex flex-wrap items-center gap-2 text-sm font-black">
 												<span className="rounded-md bg-slate-900 px-1.5 py-0.5 text-[10px] text-white">Lv {i + 1}</span>
 												{s.nama}
 											</p>
+											<p className="mt-0.5 text-[11px] text-slate-500">{s.tebal}</p>
 											<div className="mt-1.5 flex items-center gap-2">
 												<div className="h-1.5 flex-1 overflow-hidden rounded-full bg-slate-100">
-													<div className="h-full rounded-full bg-sky-500" style={{ width: `${((s.kuat - 0.9) / 1) * 100}%` }} />
+													<div className="h-full rounded-full bg-sky-500" style={{ width: `${Math.min(100, Math.max(4, ((s.kuat - 0.9) / 1.5) * 100))}%` }} />
 												</div>
 												<span className="shrink-0 text-[11px] font-semibold tabular-nums text-slate-500">
 													kuat {persen(s.kuat - 1)} · {s.panjang} m
 												</span>
 											</div>
 										</div>
-										{aktif && (
+										{aktif ? (
 											<span className="flex h-9 shrink-0 items-center gap-1 rounded-xl bg-sky-100 px-3 text-xs font-bold text-sky-700">
 												<FiCheck /> Terpasang
 											</span>
-										)}
-										{berikut && (
+										) : (
 											<button
-												disabled={koin < s.harga}
+												disabled={!punya && koin < s.harga}
 												onClick={() => {
-													const gagal = upgradeSenar();
-													umumkan(gagal ? { ok: false, teks: gagal } : { ok: true, teks: `Senar di-upgrade: ${s.nama}!` });
+													const baru = !punya;
+													const gagal = pakaiSenar(i);
+													umumkan(gagal ? { ok: false, teks: gagal } : { ok: true, teks: `${s.nama} ${baru ? "dibeli & " : ""}dipakai!` });
 												}}
-												className="h-9 shrink-0 rounded-xl bg-sky-500 px-3.5 text-sm font-bold text-white transition hover:bg-sky-600 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-400"
+												className={`h-9 shrink-0 rounded-xl px-3.5 text-sm font-bold transition ${punya ? "bg-slate-900 text-white hover:bg-slate-800" : "bg-sky-500 text-white hover:bg-sky-600"} disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-400`}
 											>
-												🪙 {angka(s.harga)}
+												{punya ? "Pakai" : `🪙 ${angka(s.harga)}`}
 											</button>
 										)}
-										{sudah && !aktif && <FiCheck className="shrink-0 text-emerald-500" />}
 									</li>
 								);
 							})}
 						</ul>
 					)}
-					<p className="mt-4 text-center text-[11px] leading-relaxed text-slate-400">Joran menentukan seberapa cepat & seberapa premium ikan yang datang. Senar kuat tidak gampang putus saat ikan monster melawan.</p>
+
+					{tab === "pelampung" && (
+						<ul className="mt-3 space-y-2.5">
+							{PELAMPUNG.map((p) => {
+								const punya = punyaPelampung(p.id);
+								const aktif = pelampung.id === p.id;
+								const efek = efekPelampung(p);
+								return (
+									<li key={p.id} className={`flex items-center gap-3 rounded-2xl border p-3 transition ${aktif ? "border-rose-300 bg-rose-50/50" : "border-slate-200 bg-white"}`}>
+										<IkonPelampung p={p} />
+										<div className="min-w-0 flex-1">
+											<p className="text-sm font-black">{p.nama}</p>
+											<p className="mt-0.5 text-xs leading-relaxed text-slate-500">{p.ket}</p>
+											<div className="mt-1.5 flex flex-wrap gap-1">
+												{efek.length ? efek.map((e) => <span key={e} className="rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-bold text-emerald-700">{e}</span>) : <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-bold text-slate-500">Standar</span>}
+											</div>
+										</div>
+										{aktif ? (
+											<span className="flex h-9 shrink-0 items-center gap-1 rounded-xl bg-rose-100 px-3 text-xs font-bold text-rose-700">
+												<FiCheck /> Terpasang
+											</span>
+										) : (
+											<button
+												disabled={!punya && koin < p.harga}
+												onClick={() => {
+													const baru = !punya;
+													const gagal = pakaiPelampung(p.id);
+													umumkan(gagal ? { ok: false, teks: gagal } : { ok: true, teks: `${p.nama} ${baru ? "dibeli & " : ""}dipakai!` });
+												}}
+												className={`h-9 shrink-0 rounded-xl px-3.5 text-sm font-bold transition ${punya ? "bg-slate-900 text-white hover:bg-slate-800" : "bg-rose-500 text-white hover:bg-rose-600"} disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-400`}
+											>
+												{punya ? "Pakai" : `🪙 ${angka(p.harga)}`}
+											</button>
+										)}
+									</li>
+								);
+							})}
+						</ul>
+					)}
+					<p className="mt-4 text-center text-[11px] leading-relaxed text-slate-400">Joran menentukan seberapa cepat & seberapa premium ikan yang datang. Senar kuat tidak gampang putus saat ikan monster melawan. Pelampung memengaruhi sambaran, waktu menyentak, dan peluang ikan premium.</p>
 				</div>
 			</motion.div>
 		</div>

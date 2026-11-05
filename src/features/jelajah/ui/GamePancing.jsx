@@ -1,12 +1,12 @@
 import { useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { FiBookOpen, FiVolume2, FiVolumeX, FiX } from "react-icons/fi";
+import { FiBookOpen, FiX } from "react-icons/fi";
 import { kirimUcap } from "../multipemain";
 import { IKAN, KELAS, MODE_KAMERA, aturOtomatis, bolehOtomatis, gantiKamera, jamLapar, joranKini, ketuk, lanjutPancing, pancing, senarKini, tarikanSakti, useKoleksi, usePancing, zonaKini } from "../pancing";
 import PanelJoran from "./PanelJoran";
-import { aturSuara, suaraMati } from "../suaraPancing";
 import AlbumIkan from "./AlbumIkan";
 import IkonIkan from "./IkonIkan";
+import { useTutorial } from "../tutorial";
 
 // HUD permainan memancing di atas kanvas 3D. Fase & pesan memicu render React;
 // batang tenaga/tegangan/stamina diperbarui langsung ke DOM tiap frame.
@@ -115,7 +115,6 @@ export default function GamePancing({ sentuh, bersama, onSelesai }) {
 	const { poin, koleksi } = useKoleksi();
 	const [album, setAlbum] = useState(false);
 	const [joran, setJoran] = useState(false);
-	const [mati, setMati] = useState(suaraMati.nilai);
 	// jam ikan lapar (diperiksa tiap detik)
 	const [lapar, setLapar] = useState(jamLapar);
 	useEffect(() => {
@@ -286,6 +285,8 @@ export default function GamePancing({ sentuh, bersama, onSelesai }) {
 		onPointerCancel: () => (pancing.tahan = false),
 		onContextMenu: (e) => e.preventDefault(),
 	};
+	const tipLempar = useTutorial("lempar", fase === "siap");
+	const tipTunggu = useTutorial("tunggu", fase === "tunggu");
 	const labelTombol = fase === "siap" ? "Tahan untuk melempar" : fase === "gigit" ? "TARIK!" : fase === "tarik" ? "KETUK berulang!" : "Gulung";
 	const k = ikan ? KELAS[ikan.kelas] : null;
 	const jumlahJenis = IKAN.filter((i) => koleksi[i.id]).length;
@@ -350,16 +351,6 @@ export default function GamePancing({ sentuh, bersama, onSelesai }) {
 					{MODE_KAMERA.find((k) => k.id === pancing.kamera)?.ikon}
 					<span className="hidden lg:inline"> {MODE_KAMERA.find((k) => k.id === pancing.kamera)?.nama}</span>
 				</button>
-				<button
-					onClick={() => {
-						aturSuara(!mati);
-						setMati(!mati);
-					}}
-					className="rounded-xl bg-white/10 p-1.5 hover:bg-white/20 max-[400px]:hidden"
-					aria-label={mati ? "Nyalakan suara" : "Matikan suara"}
-				>
-					{mati ? <FiVolumeX /> : <FiVolume2 />}
-				</button>
 				<button onClick={onSelesai} className="rounded-xl bg-rose-500/80 p-1.5 hover:bg-rose-500" aria-label="Selesai memancing (E)">
 					<FiX />
 				</button>
@@ -399,12 +390,12 @@ export default function GamePancing({ sentuh, bersama, onSelesai }) {
 						<Batang label="Tenaga lemparan" refIsi={tenagaIsi}>
 							<div className="absolute inset-y-0 right-0 w-[7%] bg-amber-400/30" />
 						</Batang>
-						<p className="mt-2 text-center text-[11px] text-white/75">
+						{tipLempar && <p className="mt-2 text-center text-[11px] text-white/75">
 							{sentuh ? "Tahan tombol 🎣 · analog ◀ ▶ membidik" : "Tahan SPASI, lepas di ujung kuning · A/D membidik"}
-						</p>
+						</p>}
 					</motion.div>
 				)}
-				{fase === "tunggu" && (
+				{tipTunggu && (
 					<motion.p initial={{ y: 16, opacity: 0 }} animate={{ y: 0, opacity: 1 }} className="rounded-full bg-slate-950/60 px-4 py-2 text-xs text-white/85 backdrop-blur">
 						Pelampung mengapung… ketuk saat <b>tenggelam</b> · {sentuh ? "analog" : "geser mouse"} = seret pelampung · tahan {sentuh ? "tombol" : "SPASI"} = gulung pelan-pelan
 					</motion.p>

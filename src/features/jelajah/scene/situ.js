@@ -98,6 +98,9 @@ export const keDuniaDermaga = (d, s, w) => ({ x: d.x + d.nx * s + d.nz * w, z: d
 // Kios Toko Pancing di darat dekat pangkal tiap dermaga (lokal dermaga) & posisinya di dunia.
 export const KIOS_DERMAGA = { s: -3.6, w: 3.4 };
 export const KIOS_TOKO_PANCING = DERMAGA.map((d) => keDuniaDermaga(d, KIOS_DERMAGA.s, KIOS_DERMAGA.w));
+// Kios Toko Perahu: di seberang titian dari kios joran, digeser keluar supaya tak menabrak papan nama SPOT MANCING (x −3,9…−1,3 lokal, s −2,7).
+export const KIOS_PERAHU = { s: -3.6, w: -6.4 };
+export const KIOS_TOKO_PERAHU = DERMAGA.map((d) => keDuniaDermaga(d, KIOS_PERAHU.s, KIOS_PERAHU.w));
 const keLokal = (d, x, z) => {
 	const dx = x - d.x;
 	const dz = z - d.z;

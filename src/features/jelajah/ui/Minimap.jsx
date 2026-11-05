@@ -1,7 +1,7 @@
 import { useEffect, useRef } from "react";
 import { AREA_LAIN, LOBI, RUANGAN } from "../kantorConfig";
 import { KOTAK_DENAH as BATAS, posisi, useDiKawasan } from "../jelajahStore";
-import MinimapKawasan from "./MinimapKawasan";
+import MinimapKabupaten from "./MinimapKabupaten";
 
 // Denah mini dari atas untuk lantai tempat pemain berada. Posisi pemain diperbarui
 // langsung ke atribut SVG lewat requestAnimationFrame, tanpa render ulang React.
@@ -24,7 +24,7 @@ const LABEL_PENDUKUNG = {
 	dapur: "DAPUR",
 };
 
-export default function Minimap({ area, lantai, dikunjungi, onPilih, className = "" }) {
+export default function Minimap({ area, lantai, dikunjungi, onPilih, onPeta, perhatian = 0, className = "" }) {
 	const penanda = useRef(null);
 	const kawasan = useDiKawasan(lantai);
 
@@ -41,11 +41,15 @@ export default function Minimap({ area, lantai, dikunjungi, onPilih, className =
 	}, []);
 
 	const ruang = [LOBI, ...RUANGAN].filter((r) => r.lantai === lantai);
-	if (kawasan) return <MinimapKawasan className={className} />;
+	if (kawasan) return <MinimapKabupaten className={className} onPeta={onPeta} perhatian={perhatian} />;
 
 	return (
 		<div className={`rounded-2xl bg-white/90 p-2 shadow-lg ring-1 ring-black/5 backdrop-blur ${className}`}>
-			<p className="mb-1 text-center text-[10px] font-bold uppercase tracking-wider text-slate-500">Lantai {lantai + 1}</p>
+			{/* isi denah dipakai pindah ruang, jadi popup peta kecamatan dibuka dari judulnya */}
+			<button type="button" onClick={onPeta} title="Buka peta kecamatan" className="relative mb-1 block w-full text-center text-[10px] font-bold uppercase tracking-wider text-slate-500 hover:text-slate-800">
+				Lantai {lantai + 1} · 🗺️
+				{perhatian > 0 && <span className="absolute -right-1 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-rose-500 px-1 text-[10px] font-extrabold leading-none text-white">{perhatian}</span>}
+			</button>
 			<svg
 				viewBox={`${BATAS.x0} ${BATAS.z0} ${BATAS.lebar} ${BATAS.tinggi}`}
 				className="block h-auto w-full"

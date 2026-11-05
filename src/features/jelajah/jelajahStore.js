@@ -11,7 +11,7 @@ import { GEDUNG, TITIK_MULAI } from "./kantorConfig";
 // `lari` = tombol Lari (sakelar), `lariAnalog` = analog didorong penuh, `putar` = tombol putar
 // kamera (-1 kiri, 1 kanan), `loncat` = minta meloncat, `aksi` = duduk/berdiri/naik/turun
 // kendaraan (id dari `dekat`).
-export const kendali = { arah: { x: 0, y: 0 }, lari: false, lariAnalog: false, putar: 0, loncat: false, aksi: null, target: null, teleport: null };
+export const kendali = { arah: { x: 0, y: 0 }, lari: false, lariAnalog: false, putar: 0, loncat: false, jongkok: false, aksi: null, target: null, teleport: null };
 
 // Posisi pemain terkini (dibaca minimap, pintu otomatis, dan pegawai yang menoleh).
 export const posisi = { x: TITIK_MULAI.x, y: 0, z: TITIK_MULAI.z, rot: TITIK_MULAI.rot, lantai: 0 };
@@ -83,6 +83,7 @@ export function resetJelajah() {
 	kendali.lariAnalog = false;
 	kendali.putar = 0;
 	kendali.loncat = false;
+	kendali.jongkok = false;
 	kendali.aksi = null;
 	kendali.target = null;
 	kendali.teleport = { ...TITIK_MULAI };

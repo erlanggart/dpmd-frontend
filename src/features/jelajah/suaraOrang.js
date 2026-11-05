@@ -1,10 +1,9 @@
 import { posisi } from "./jelajahStore";
 import { suaraMati } from "./suaraPancing";
 
-// Suara orang berbahasa Indonesia (sapaan, ajakan penjual, obrolan) lewat sintesis ucapan
-// peramban (Web Speech API, suara id-ID). Satu ucapan sekaligus; yang jauh lebih pelan dan
-// yang terlalu jauh tidak diucapkan. Bila peramban tidak punya suara Bahasa Indonesia,
-// tidak ada yang diucapkan (logat asing justru terdengar aneh) — balon kata tetap tampil.
+// Narasi film bioskop lewat sintesis ucapan peramban (Web Speech API, suara id-ID); percakapan
+// orang di dunia cukup balon kata. Bila peramban tidak punya suara Bahasa Indonesia, tidak ada
+// yang diucapkan (logat asing justru terdengar aneh) — subtitel tetap tampil.
 
 const sintesis = typeof window !== "undefined" ? window.speechSynthesis : null;
 let suaraId = [];
@@ -71,17 +70,3 @@ export const SAPAAN_JALAN = [
 ];
 export const SAPAAN_MALAM = ["Selamat malam.", "Mari, Kak.", "Permisi, mau pulang dulu.", "Malam-malam jalan-jalan, nih?"];
 export const SAPAAN_PAGI = ["Selamat pagi!", "Pagi, Kak. Mari.", "Wah, pagi-pagi sudah jalan-jalan."];
-
-// Obrolan pelanggan & pengunjung (dua orang bergantian).
-export const OBROLAN = [
-	["Udah makan belum?", "Belum, ini mau pesan dulu."],
-	["Tadi Tegar Beriman macet banget, ya.", "Iya, jam pulang kantor sih."],
-	["Nanti sore mancing di Situ Pemda, yuk!", "Ayo, siapa tahu dapat ikan legenda."],
-	["Laporan desanya sudah dikirim?", "Sudah, tinggal diverifikasi Pemdes."],
-	["Kayaknya mau hujan, nih.", "Iya, mendung banget dari tadi."],
-	["Filmnya di CCM bagus, lho.", "Oh ya? Nanti malam nonton, deh."],
-	["Pecel ayam Bude sambalnya mantap!", "Pedasnya pas, aku suka."],
-	["Motor baru, nih?", "Ah, motor lama dicuci saja."],
-	["Besok rapat jam berapa?", "Jam sembilan di aula."],
-	["Kopinya enak banget.", "Gula arennya pas."],
-];

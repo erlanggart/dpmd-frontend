@@ -15,6 +15,7 @@ import LaluLintasKawasan from "./LaluLintasKawasan";
 import SuasanaHidup from "./SuasanaHidup";
 import MalCcm from "./MalCcm";
 import Distro from "./Distro";
+import DetailToko from "./DetailToko";
 import PagarDepan from "./PagarDepan";
 import Parkiran from "./Parkiran";
 
@@ -283,6 +284,7 @@ export default function Lingkungan({ daftarDinding }) {
 				<McD daftarDinding={daftarDinding} />
 				<MalCcm daftarDinding={daftarDinding} />
 				<Distro daftarDinding={daftarDinding} />
+				<DetailToko />
 			</group>
 			<Gabung>
 				<PondasiTeras />

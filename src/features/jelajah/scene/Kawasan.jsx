@@ -22,6 +22,7 @@ import {
 import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils.js";
 import { warnai } from "./geometri";
 import { JALAN_TAMPIL, POHON_TAMPIL as POHON_KAWASAN, pasangan, tinggiGedung } from "./kawasanBantu";
+import { teksturPaving } from "./tekstur";
 import { AIR, AREA, GEDUNG, JENIS_AREA, JENIS_GEDUNG, JENIS_JALAN, SUNGAI } from "./kawasanData";
 import SituPemda from "./SituPemda.jsx";
 import KolamMonster from "./KolamMonster.jsx";
@@ -384,7 +385,7 @@ function susunPermukaan() {
 	};
 }
 
-// Tanah rumput seluas kawasan, berlubang tepat di situ supaya air bisa lebih rendah.
+// Tanah berpaving blok seluas kawasan, berlubang tepat di situ supaya air bisa lebih rendah.
 function geometriTanah() {
 	const L = 2600;
 	const s = new Shape([new Vector2(-L, L), new Vector2(L, L), new Vector2(L, -L), new Vector2(-L, -L)]);
@@ -456,6 +457,8 @@ function Permukaan() {
 	const tanah = useMemo(geometriTanah, []);
 	const air = useMemo(geometriAir, []);
 	const riak = useMemo(teksturRiak, []);
+	// UV tanah dalam meter (ShapeGeometry); satu ubin paving = 1,6 m
+	const paving = useMemo(() => teksturPaving([1 / 1.6, 1 / 1.6]), []);
 	const bahanAir = useRef();
 	useEffect(
 		() => () => {
@@ -463,8 +466,9 @@ function Permukaan() {
 			tanah.dispose();
 			air.dispose();
 			riak.dispose();
+			paving.dispose();
 		},
-		[geo, tanah, air, riak],
+		[geo, tanah, air, riak, paving],
 	);
 	// riak halus: warna air bergeser pelan, lebih gelap saat malam
 	useFrame(({ clock }) => {
@@ -479,7 +483,7 @@ function Permukaan() {
 	return (
 		<group>
 			<mesh geometry={tanah} position-y={-0.03}>
-				<meshStandardMaterial color="#8faa66" roughness={1} />
+				<meshStandardMaterial map={paving} roughness={1} />
 			</mesh>
 			<mesh geometry={air} position-y={-0.45}>
 				<meshStandardMaterial ref={bahanAir} color="#3d7f9e" roughness={0.1} metalness={0.35} normalMap={riak} />

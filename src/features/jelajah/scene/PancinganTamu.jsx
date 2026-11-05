@@ -4,6 +4,8 @@ import { BufferGeometry, Float32BufferAttribute, Line, LineBasicMaterial, Vector
 import { FASE_PANCING, IKAN, IKAN_PER_ID, pancing, panjangCm } from "../pancing";
 import { TANAH } from "./layout";
 import ModelIkan from "./ModelIkan";
+import { lenturkanJoran } from "./joranLentur";
+import ModelJoran from "./ModelJoran";
 import { AIR_Y } from "./situ";
 import { AIR_KOLAM_Y, diAirKolam } from "./kolamMonsterData";
 
@@ -17,7 +19,7 @@ const N = 12;
 
 export default function PancinganTamu({ sumber, tampil }) {
 	const akar = useRef();
-	const ruas = useRef();
+	const ruas = useRef([]);
 	const ujung = useRef();
 	const pelampung = useRef();
 	const ikanG = useRef();
@@ -35,7 +37,7 @@ export default function PancinganTamu({ sumber, tampil }) {
 	useFrame(({ clock }) => {
 		const s = sumber();
 		const pc = s?.pc;
-		const tampak = !!pc && (s.pose === "mancing" || s.pose === "perahu");
+		const tampak = !!pc && (s.pose === "mancing" || s.pose === "perahu" || s.pose === "duduk");
 		akar.current.visible = tampak;
 		senar.visible = false;
 		pelampung.current.visible = false;
@@ -45,15 +47,14 @@ export default function PancinganTamu({ sumber, tampil }) {
 		const fase = FASE_PANCING[pc.f] || "siap";
 		const p = tampil.current;
 		AIR = TANAH + (diAirKolam(pc.x, pc.z, -0.2) ? AIR_KOLAM_Y : AIR_Y);
-		const duduk = s.pose === "perahu";
+		const duduk = s.pose !== "mancing";
 
 		// joran: tegak saat menunggu, melengkung saat ikan melawan
 		const a = akar.current;
 		a.position.set(p.x + Math.cos(pc.a) * 0.24 + Math.sin(pc.a) * 0.28, p.y + (duduk ? 0.78 : 1.12), p.z - Math.sin(pc.a) * 0.24 + Math.cos(pc.a) * 0.28);
 		a.rotation.set(0, pc.a, 0);
-		const lentur = fase === "tarik" ? 0.08 + Math.min(1.1, pc.t) * 0.32 : 0.04;
-		ruas.current.rotation.x = fase === "tarik" ? 0.3 + Math.sin(t * 17) * 0.02 * pc.t : fase === "dapat" ? 0.15 : 0.95;
-		ruas.current.children[1].rotation.x = lentur * 2.2;
+		const lentur = fase === "tarik" ? 0.12 + Math.min(1.15, pc.t) * 1.15 : fase === "gigit" ? 0.75 : 0.06;
+		lenturkanJoran(ruas.current, fase === "tarik" ? 0.3 + Math.sin(t * 17) * 0.02 * pc.t : fase === "dapat" ? 0.15 : 0.95, lentur);
 		a.updateMatrixWorld(true);
 		ujung.current.getWorldPosition(v.u);
 
@@ -73,14 +74,16 @@ export default function PancinganTamu({ sumber, tampil }) {
 			senar.visible = true;
 			const jarak = v.u.distanceTo(akhir);
 			v.c.lerpVectors(v.u, akhir, 0.5);
-			v.c.y -= fase === "tarik" ? 0 : jarak * 0.1;
+			// senar lawan tamu ikut kendur/kencang sesuai tegangannya
+			v.c.y -= fase === "tarik" ? jarak * Math.max(0, 0.16 * (1 - pc.t * 1.65)) : jarak * 0.1;
+			const getar = fase === "tarik" ? Math.min(1.2, pc.t) ** 2 * 0.016 : 0;
 			const pos = senar.geometry.attributes.position;
 			for (let i = 0; i < N; i++) {
 				const u = i / (N - 1);
 				const a1 = (1 - u) * (1 - u);
 				const b1 = 2 * (1 - u) * u;
 				const c1 = u * u;
-				pos.setXYZ(i, a1 * v.u.x + b1 * v.c.x + c1 * akhir.x, a1 * v.u.y + b1 * v.c.y + c1 * akhir.y, a1 * v.u.z + b1 * v.c.z + c1 * akhir.z);
+				pos.setXYZ(i, a1 * v.u.x + b1 * v.c.x + c1 * akhir.x, a1 * v.u.y + b1 * v.c.y + c1 * akhir.y + Math.sin(u * Math.PI) * Math.sin(t * 74 + u * 11) * getar, a1 * v.u.z + b1 * v.c.z + c1 * akhir.z);
 			}
 			pos.needsUpdate = true;
 		}
@@ -109,9 +112,9 @@ export default function PancinganTamu({ sumber, tampil }) {
 				ig.position.set(pc.x, AIR - 0.015 * L + naik + Math.sin(t * 9) * 0.02, pc.z);
 				ig.rotation.set(naik > 0 ? -(fl - 0.5) * 1.8 : Math.sin(t * 6) * 0.1, Math.atan2(pc.x - p.x, pc.z - p.z) + Math.sin(t * 7) * 0.35, Math.sin(t * 9) * 0.25);
 			} else {
-				// dipegang di depan dada (joran diletakkan)
-				ig.position.set(p.x + Math.sin(pc.a) * 0.45, p.y + (duduk ? 0.8 : 1.12) + Math.abs(Math.sin(t * 7)) * 0.06, p.z + Math.cos(pc.a) * 0.45);
-				ig.rotation.set(0, pc.a + Math.PI / 2, Math.sin(t * 11) * 0.12);
+				// dipegang di depan dada (joran diletakkan); ikut arah badan yang berbalik, bukan pc.a
+				ig.position.set(p.x + Math.sin(p.rot) * 0.45, p.y + (duduk ? 0.8 : 1.12) + Math.abs(Math.sin(t * 7)) * 0.06, p.z + Math.cos(p.rot) * 0.45);
+				ig.rotation.set(0, p.rot + Math.PI / 2, Math.sin(t * 11) * 0.12);
 				akar.current.visible = false;
 			}
 		}
@@ -120,23 +123,7 @@ export default function PancinganTamu({ sumber, tampil }) {
 	return (
 		<>
 			<group ref={akar} visible={false}>
-				<mesh position={[0, -0.1, 0]}>
-					<cylinderGeometry args={[0.025, 0.028, 0.45, 6]} />
-					<meshStandardMaterial color="#b8895a" />
-				</mesh>
-				<group ref={ruas}>
-					<mesh position-y={0.55}>
-						<cylinderGeometry args={[0.014, 0.02, 1.1, 5]} />
-						<meshStandardMaterial color="#1f2937" />
-					</mesh>
-					<group position-y={1.1}>
-						<mesh position-y={0.85}>
-							<cylinderGeometry args={[0.005, 0.012, 1.7, 4]} />
-							<meshStandardMaterial color="#dc2626" />
-						</mesh>
-						<object3D ref={ujung} position-y={1.7} />
-					</group>
-				</group>
+				<ModelJoran ruas={ruas} ujung={ujung} warna="#1f2937" warnaUjung="#dc2626" />
 			</group>
 			<primitive object={senar} />
 			<group ref={pelampung} visible={false}>

@@ -20,7 +20,7 @@ function kegiatan(s) {
 	if (!s) return "Baru masuk";
 	if (s.pc && s.pc.f === 5) return "🐟 Baru dapat ikan!";
 	if (s.pc && s.pc.f === 4) return "🎣 Sedang adu tarik ikan";
-	const k = KEGIATAN[s.pose] || KEGIATAN.jalan;
+	const k = (s.pc && s.pose === "duduk" ? KEGIATAN.mancing : KEGIATAN[s.pose]) || KEGIATAN.jalan;
 	return s.kend && (s.kend.kursi ?? 0) > 0 && s.pose !== "perahu" ? `${k} (penumpang)` : k;
 }
 

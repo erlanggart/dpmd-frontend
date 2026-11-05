@@ -2,7 +2,8 @@ import { useEffect, useLayoutEffect, useMemo, useRef } from "react";
 import { useFrame } from "@react-three/fiber";
 import { Color, Euler, Matrix4, Quaternion, Vector3 } from "three";
 import { posisi } from "../jelajahStore";
-import { SAPAAN_JALAN, SAPAAN_MALAM, SAPAAN_PAGI, ucapkan } from "../suaraOrang";
+import { SAPAAN_JALAN, SAPAAN_MALAM, SAPAAN_PAGI } from "../suaraOrang";
+import { sapaBalon } from "./balonKata";
 import { laporTabrak } from "../tenaga";
 import { BAHAN_WARNA } from "./geometri";
 import {
@@ -278,7 +279,7 @@ function Pejalan() {
 			if (jarak < 2.4 && kini > a.sapaLagi && !posisi.kend) {
 				a.sapaLagi = kini + 45000;
 				const jam = suasana.malam > 0.6 ? SAPAAN_MALAM : suasana.pagi ? SAPAAN_PAGI : SAPAAN_JALAN;
-				ucapkan(jam[Math.floor(Math.random() * jam.length)], { x: a.x, z: a.z, perempuan: a.perempuan, penting: true, jangkau: 8 });
+				sapaBalon(jam[Math.floor(Math.random() * jam.length)], a);
 			}
 		}
 	});

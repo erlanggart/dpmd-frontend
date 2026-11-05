@@ -11,13 +11,12 @@ import {
 } from "three";
 import { ambilKeadaan, posisi } from "../jelajahStore";
 import { TINGGI_DINDING } from "./layout";
-import Papan from "./Papan";
 import { suasana } from "./suasana";
 import Videotron from "./Videotron";
 
 // Tampak luar gedung DPMD mengikuti foto kantor: dua lantai berwarna arang, atap
-// perisai oranye, menara tengah berlambang Kabupaten Bogor, pita hijau limau, dan
-// papan SID. Cangkang ini hanya terlihat dari halaman; begitu pengunjung masuk,
+// perisai oranye, menara tengah berlambang Kabupaten Bogor, dan pita hijau limau.
+// Cangkang ini hanya terlihat dari halaman; begitu pengunjung masuk,
 // ia memudar sehingga interior terlihat dari atas seperti rumah boneka.
 
 const ARANG = "#5a5551";
@@ -244,20 +243,6 @@ function Cangkang({ statistik }) {
 					{ judul: "JELAJAHI KANTOR KAMI", sub: "Tujuh bidang layanan di dua lantai" },
 				]}
 			/>
-
-			{/* papan SID di sayap kanan */}
-			<Papan
-				posisi={[9.4, 4.9, GEDUNG.z1 + 0.04]}
-				lebar={3.2}
-				tinggi={1.1}
-				latar={ARANG}
-				diterangi
-				baris={[{ teks: "SID", ukuran: 0.95, tebal: true, warna: "#e0482b", y: 0.52 }]}
-			/>
-			<mesh position={[9.4, 3.95, GEDUNG.z1 + 0.06]}>
-				<boxGeometry args={[3, 0.5, 0.08]} />
-				<meshStandardMaterial color="#d9532f" />
-			</mesh>
 
 			{/* kusen di atas pintu masuk */}
 			<mesh position={[0, TINGGI_DINDING - 0.06, 12.05]}>

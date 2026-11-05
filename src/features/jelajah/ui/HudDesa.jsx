@@ -50,14 +50,14 @@ export function KartuMisi() {
 	const harian = harianKini();
 	const sisaHarian = harian.filter((h) => !h.selesai).length;
 	return (
-		<div className="pointer-events-auto w-[11rem] rounded-2xl bg-slate-950/80 p-2.5 text-white shadow-lg ring-1 ring-amber-300/30 backdrop-blur sm:w-[16.5rem] sm:p-3">
-			<div className="flex items-start gap-2">
+		<div onClick={() => setBuka((v) => !v)} className="pointer-events-auto w-[10.5rem] cursor-pointer rounded-2xl bg-slate-950/70 p-2 text-white shadow-lg ring-1 ring-amber-300/30 backdrop-blur sm:w-[16.5rem] sm:cursor-default sm:bg-slate-950/80 sm:p-3">
+			<div className="flex items-center gap-2 sm:items-start">
 				<div className="min-w-0 flex-1">
-					<p className="m-0 text-[10.5px] font-bold uppercase tracking-wider text-amber-300">{m ? `📜 Misi ${desa.misi.i + 1}` : "⭐ Misi harian"}</p>
+					<p className="m-0 hidden text-[10.5px] font-bold uppercase tracking-wider text-amber-300 sm:block">{m ? `📜 Misi ${desa.misi.i + 1}` : "⭐ Misi harian"}</p>
 					{m ? (
 						<>
-							<p className="m-0 text-[12.5px] font-bold leading-snug sm:text-[13.5px]">{m.teks}</p>
-							<div className="mt-1.5 flex items-center gap-2">
+							<p className={`m-0 text-[11.5px] font-bold leading-snug sm:text-[13.5px] ${buka ? "" : "line-clamp-2 sm:line-clamp-none"}`}>{m.teks}</p>
+							<div className="mt-1.5 hidden items-center gap-2 sm:flex">
 								<span className="h-1.5 flex-1 overflow-hidden rounded-full bg-white/15"><span className="block h-full rounded-full bg-amber-400" style={{ width: `${(desa.misi.n / m.target) * 100}%` }} /></span>
 								<span className="text-[11px] font-bold tabular-nums">{desa.misi.n}/{m.target}</span>
 							</div>
@@ -69,7 +69,7 @@ export function KartuMisi() {
 				</div>
 				<Kompas />
 			</div>
-			<button type="button" onClick={() => setBuka((v) => !v)} className="mt-2 w-full rounded-lg bg-white/10 py-1 text-[11px] font-bold text-white/80 hover:bg-white/20">
+			<button type="button" className={`mt-2 w-full rounded-lg bg-white/10 py-1 text-[11px] font-bold text-white/80 hover:bg-white/20 ${buka ? "block" : "hidden sm:block"}`}>
 				{buka ? "Tutup" : `Misi harian (${harian.length - sisaHarian}/${harian.length}) ${desa.piala ? `· 🏆 ${desa.piala}` : ""}`}
 			</button>
 			{buka && (

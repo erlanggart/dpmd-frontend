@@ -2,7 +2,7 @@ import { useSyncExternalStore } from "react";
 import { bayarKoin } from "./pancing";
 import { catat, tambahXp } from "./progres";
 import { posisi } from "./jelajahStore";
-import { KENDARAAN, tabrakKendaraan, tambahMilik } from "./scene/kendaraan";
+import { KENDARAAN, airDekat, tabrakKendaraan, tambahMilik } from "./scene/kendaraan";
 import { MODEL_PER_JENIS, SLOT_MILIK, cariModel, idMilik } from "./scene/modelKendaraan";
 import { SERAH_MOBIL, SERAH_MOTOR } from "./scene/showroomData";
 import { TANAH, tabrakKendaraanStatis, tinggiTanah } from "./scene/layout";
@@ -55,6 +55,13 @@ export function beliKendaraan(jenis, modelId, warna) {
 	simpan();
 	catat("kendaraan");
 	tambahXp(Math.round(m.harga / 25));
+	if (jenis === "perahu") {
+		// perahu langsung ditaruh di air dekat pemain; bila tak ada air lapang, dipanggil nanti
+		const air = airDekat(posisi.x, posisi.z);
+		if (!air) return `✅ ${m.nama} dibeli! Panggil dari dekat Situ Pemda 🌊`;
+		tambahMilik(idUnit(jenis, modelId), milikSaya(jenis, modelId).warna, air.x, air.z, air.rot);
+		return null;
+	}
 	// diserahkan di halaman showroom
 	const serah = jenis === "mobil" ? SERAH_MOBIL : SERAH_MOTOR;
 	tambahMilik(idUnit(jenis, modelId), milikSaya(jenis, modelId).warna, serah.x, serah.z, serah.rot);
@@ -83,6 +90,12 @@ export function panggilKendaraan(jenis, modelId) {
 	const id = idUnit(jenis, modelId);
 	const k = KENDARAAN.find((v) => v.id === id);
 	if (k && posisi.kend === k) return "Kendaraan ini sedang kamu kendarai";
+	if (jenis === "perahu") {
+		const air = airDekat(posisi.x, posisi.z);
+		if (!air) return "Panggil dari dekat Situ Pemda 🌊";
+		tambahMilik(id, p.warna, air.x, air.z, air.rot);
+		return null;
+	}
 	const r = jenis === "mobil" ? 1.3 : 0.5;
 	const arah = posisi.rot ?? 0;
 	// coba beberapa titik di samping & depan pemain

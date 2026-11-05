@@ -64,6 +64,7 @@ export const RUTE_TANDUR = { x0: 4, x1: 16, z: 28.2 };
 export const TITIK_CANGKUL = { x: -44, z: -2, rot: 0.6 };
 
 export const PENGHALANG_KEBUN = [];
+export const PAGAR_KEBUN = []; // ruas pagar bambu yang bisa dipanjat
 export const PENGHALANG_KAMERA = [];
 
 // ---------------------------------------------------------------- pola ladang
@@ -345,6 +346,7 @@ function susunPenghalang() {
 		{ x0: KEBUN.x0 - T, x1: KEBUN.x0 + T, z0: KEBUN.z0, z1: KEBUN.z1 },
 		{ x0: KEBUN.x1 - T, x1: KEBUN.x1 + T, z0: KEBUN.z0, z1: KEBUN.z1 },
 	];
+	isi(PAGAR_KEBUN, pagar.map((k) => ({ ...k, tinggi: 1 })));
 	isi(PENGHALANG_KEBUN, [
 		...pagar,
 		kotak(SUMUR_KEBUN.x, SUMUR_KEBUN.z, SUMUR_KEBUN.r * 2, SUMUR_KEBUN.r * 2),

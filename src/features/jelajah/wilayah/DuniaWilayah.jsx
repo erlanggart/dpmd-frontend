@@ -1,8 +1,9 @@
 import { Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { Canvas } from "@react-three/fiber";
 import { AnimatePresence, motion } from "framer-motion";
-import { FiArrowLeft, FiX } from "react-icons/fi";
+import { FiArrowLeft, FiMessageSquare, FiSend, FiX } from "react-icons/fi";
 import { kendali } from "../jelajahStore";
+import { kirimUcap, pindahDunia, useMultipemain } from "../multipemain";
 import { useKoleksi } from "../pancing";
 import { aturHujan } from "../suaraPancing";
 import { aturSuasanaSuara, senyapkanSuasana } from "../suasanaSuara";
@@ -25,6 +26,9 @@ import PanelWarungDesa from "../ui/PanelWarungDesa";
 import Joystick from "../ui/Joystick";
 import LingkunganDesa from "./LingkunganDesa";
 import PemainWilayah from "./PemainWilayah";
+import BalonSuasana from "../scene/BalonSuasana";
+import PemainLain from "../scene/PemainLain";
+import TombolSuara from "../ui/TombolSuara";
 import WargaDesa from "./Warga";
 import { WARGA_PER_ID, kalimatWarga, posWarga, tempatkanWarga, wargaAktif } from "./wargaDesa";
 import { layar, useProyektor } from "./layar";
@@ -89,6 +93,24 @@ export default function DuniaWilayah({ wilayah, penampilan, sentuh, onKeluar, on
 	const masukPada = useRef(performance.now());
 	const dekatRef = useRef(null);
 	dekatRef.current = uiWilayah.dekat;
+	const { daftar: tamuLain, obrolan: pesan, status: statusMp } = useMultipemain();
+	const [ketik, setKetik] = useState(null);
+
+	// main bareng: pindah ke ruang kecamatan ini, kirim posisi tokoh dunia ini
+	useEffect(() => {
+		const q = pemainWilayah;
+		pindahDunia(wilayah.kecamatan, () => ({ x: +q.x.toFixed(2), y: +(q.y || 0).toFixed(2), z: +q.z.toFixed(2), rot: +q.rot.toFixed(2), pose: q.pose || "jalan", udara: !!q.udara, lari: !!q.lari, pu: q.pose === "panjat" ? q.pu : undefined, pt: q.pose === "panjat" ? q.pt : undefined }));
+		return () => pindahDunia(null);
+	}, [wilayah.kecamatan]);
+
+	// teman datang/pergi & pesan teman tampil sebagai toast (balonnya di atas kepala)
+	const pesanTerakhir = pesan.at(-1);
+	const pesanLalu = useRef(pesanTerakhir);
+	useEffect(() => {
+		if (pesanTerakhir === pesanLalu.current) return;
+		pesanLalu.current = pesanTerakhir;
+		if (pesanTerakhir && !pesanTerakhir.sendiri) ubahTenaga(0, { teks: pesanTerakhir.sistem ? pesanTerakhir.teks : `💬 ${pesanTerakhir.nama}: ${pesanTerakhir.teks}`, jenis: "info" });
+	}, [pesanTerakhir]);
 
 	// tata & kebun kecamatan ini dipasang sebelum isi dunianya dirender
 	useMemo(() => {
@@ -220,6 +242,8 @@ export default function DuniaWilayah({ wilayah, penampilan, sentuh, onKeluar, on
 					<BumdesDesa kecamatan={wilayah.kecamatan} />
 					<WargaDesa model={k?.model} />
 					<PemainWilayah penampilan={penampilan} />
+					<PemainLain diWilayah />
+					<BalonSuasana pemain={pemainWilayah} />
 					<Proyektor />
 				</Suspense>
 			</Canvas>
@@ -253,23 +277,46 @@ export default function DuniaWilayah({ wilayah, penampilan, sentuh, onKeluar, on
 				<div className="flex gap-2">
 					<button type="button" onClick={onKeluar}
 						className="pointer-events-auto flex items-center gap-2 rounded-xl bg-white/90 px-3 py-2 text-[13px] font-bold text-slate-800 shadow-lg backdrop-blur hover:bg-white">
-						<FiArrowLeft /> <span className="hidden sm:inline">Kembali ke kantor DPMD</span><span className="sm:hidden">Kantor</span>
+						<FiArrowLeft aria-label="Kembali ke kantor DPMD" /> <span className="hidden sm:inline">Kembali ke kantor DPMD</span>
 					</button>
 					<button type="button" onClick={() => setPanel("peta")} title="Peta kecamatan (M)"
 						className="pointer-events-auto flex items-center gap-2 rounded-xl bg-white/90 px-3 py-2 text-[13px] font-bold text-slate-800 shadow-lg backdrop-blur hover:bg-white">
-						🗺️ Peta
+						🗺️ <span className="hidden sm:inline">Peta</span>
 					</button>
+					<TombolSuara />
+					{statusMp === "tersambung" && (
+						<button type="button" onClick={() => setKetik("")} aria-label="Ngobrol dengan teman di kecamatan ini" title="Ngobrol dengan teman di kecamatan ini"
+							className="pointer-events-auto flex h-10 items-center gap-1.5 rounded-xl bg-white/90 px-2.5 text-[13px] font-bold text-slate-800 shadow-lg backdrop-blur hover:bg-white">
+							<FiMessageSquare /> <span className="tabular-nums">{tamuLain.length + 1}</span>
+						</button>
+					)}
 				</div>
 				<div className="flex flex-wrap items-center justify-end gap-2">
 					<JamDesa />
-					<span className="rounded-xl bg-slate-950/75 px-3 py-2 text-[13px] font-bold text-white shadow-lg backdrop-blur" title="Cuaca">{cuaca.ikon}<span className="hidden sm:inline"> {cuaca.nama}</span></span>
+					<span className="hidden rounded-xl bg-slate-950/75 px-3 py-2 text-[13px] font-bold text-white shadow-lg backdrop-blur sm:inline" title="Cuaca">{cuaca.ikon} {cuaca.nama}</span>
 					<span className="hidden rounded-xl bg-slate-950/75 px-3 py-2 text-[13px] font-bold text-white shadow-lg backdrop-blur sm:inline">Kec. {wilayah.kecamatan}</span>
-					<span className="rounded-xl bg-amber-400 px-3 py-2 text-[13px] font-extrabold text-slate-900 shadow-lg">🪙 {koin}</span>
+					<span className="hidden rounded-xl bg-amber-400 px-3 py-2 text-[13px] font-extrabold text-slate-900 shadow-lg sm:inline">🪙 {koin}</span>
 				</div>
 			</div>
 
+			{ketik !== null && (
+				<form
+					className="absolute inset-x-3 top-[3.75rem] z-20 flex gap-2 sm:left-4 sm:right-auto sm:w-96"
+					onSubmit={(e) => {
+						e.preventDefault();
+						kirimUcap(ketik);
+						setKetik(null);
+					}}
+				>
+					<input autoFocus value={ketik} onChange={(e) => setKetik(e.target.value.slice(0, 120))} onKeyDown={(e) => e.key === "Escape" && setKetik(null)} onBlur={() => !ketik && setKetik(null)}
+						maxLength={120} placeholder={`Tulis pesan untuk teman di ${wilayah.kecamatan}…`} aria-label="Pesan obrolan"
+						className="min-w-0 flex-1 rounded-xl border-0 bg-white px-3.5 py-2.5 text-sm text-slate-900 shadow-lg outline-none ring-2 ring-sky-500" />
+					<button type="submit" aria-label="Kirim" className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-sky-600 text-white shadow-lg"><FiSend /></button>
+				</form>
+			)}
+
 			<HudKebun />
-			<div className="absolute right-3 top-[4.25rem] sm:right-4 sm:top-[4.5rem]"><KartuMisi /></div>
+			<div className="absolute right-3 top-[5.25rem] sm:right-4 sm:top-[4.5rem]"><KartuMisi /></div>
 			<div className="pointer-events-none absolute inset-x-0 top-[3.6rem] flex justify-center sm:top-3"><SpandukAcara /></div>
 			<Selebrasi />
 			<LayarTidur />
@@ -302,7 +349,7 @@ export default function DuniaWilayah({ wilayah, penampilan, sentuh, onKeluar, on
 				)}
 				{!sentuh && !aksi && !panel && (
 					<p className="m-0 text-center text-[12px] font-semibold text-white drop-shadow-[0_1px_2px_rgba(0,0,0,.6)]">
-						WASD jalan · Shift lari · Spasi loncat · seret untuk memutar kamera · gulir zoom · tahan E untuk kerja · M peta{benih.length > 1 ? ` · 1–${benih.length} pilih benih` : ""}
+						WASD jalan · Shift lari · C jongkok · Spasi loncat / panjat pagar · seret untuk memutar kamera · gulir zoom · tahan E untuk kerja · M peta{benih.length > 1 ? ` · 1–${benih.length} pilih benih` : ""}
 					</p>
 				)}
 				{benih.length > 1 && !panel && (
@@ -328,6 +375,10 @@ export default function DuniaWilayah({ wilayah, penampilan, sentuh, onKeluar, on
 					<div className="absolute bottom-[max(1.5rem,env(safe-area-inset-bottom))] left-5">
 						<Joystick />
 					</div>
+					<button type="button" onPointerDown={() => (kendali.jongkok = !kendali.jongkok)} aria-label="Jongkok"
+						className="absolute bottom-[max(6.5rem,calc(env(safe-area-inset-bottom)+5rem))] right-5 flex h-12 w-12 items-center justify-center rounded-full bg-white/85 text-xl shadow-xl active:scale-90">
+						🧎
+					</button>
 					<button type="button" onPointerDown={() => (kendali.loncat = true)} aria-label="Loncat"
 						className="absolute bottom-[max(1.75rem,env(safe-area-inset-bottom))] right-5 flex h-16 w-16 items-center justify-center rounded-full bg-white/85 text-2xl font-black text-slate-800 shadow-xl active:scale-90">
 						⤒

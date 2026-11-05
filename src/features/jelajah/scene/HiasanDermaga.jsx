@@ -4,7 +4,8 @@ import { MeshStandardMaterial } from "three";
 import { IKAN_PER_ID, useKoleksi } from "../pancing";
 import Gabung from "./Gabung";
 import Papan from "./Papan";
-import { AIR_Y, BAGIAN_DERMAGA, DEK_Y, KIOS_DERMAGA } from "./situ";
+import Tokoh from "./Tokoh";
+import { AIR_Y, BAGIAN_DERMAGA, DEK_Y, KIOS_DERMAGA, KIOS_PERAHU } from "./situ";
 import { suasana } from "./suasana";
 
 // Hiasan spot mancing di satu dermaga (koordinat lokal dermaga: x = lebar w, z = panjang s,
@@ -17,6 +18,9 @@ const BAHAN_BOHLAM = new MeshStandardMaterial({ color: "#fff3c4", emissive: "#ff
 const BAHAN_KUNANG = new MeshStandardMaterial({ color: "#d9f99d", emissive: "#bef264", emissiveIntensity: 2, transparent: true, opacity: 0 });
 const BAHAN_PELAMPUNG = [new MeshStandardMaterial({ color: "#f97316" }), new MeshStandardMaterial({ color: "#f8fafc" })];
 const AIR = AIR_Y + 0.02;
+// penjaga kios: berdiri di belakang meja, menghadap pembeli
+const PENJAGA_PANCING = { seragam: "warga", perempuan: false, kulit: "#b57a4a", rambut: "#1a1410", baju: "#0f766e", celana: "#334155" };
+const PENJAGA_PERAHU = { seragam: "warga", perempuan: true, kulit: "#e0b48a", rambut: "#2a1a12", baju: "#f8fafc", celana: "#1e3a8a" };
 
 const acak = (biji) => {
 	let s = biji;
@@ -77,6 +81,8 @@ function Kunang({ n = 18 }) {
 }
 
 // Papan rekor di darat samping kios: tangkapan terberat tamu ini (dari koleksinya).
+// Papan selebar 2,4 m, atap kios selebar 2,1 m: jarak pusatnya harus di atas 2,25 m supaya tidak menumbuk kios.
+const S_PAPAN_REKOR = KIOS_DERMAGA.s - 2.6;
 function PapanRekor({ d }) {
 	const { koleksi, tangkapan } = useKoleksi();
 	const terbaik = Object.entries(koleksi)
@@ -86,7 +92,7 @@ function PapanRekor({ d }) {
 		.slice(0, 3);
 	return (
 		<Papan
-			posisi={[KIOS_DERMAGA.w, 1.55, KIOS_DERMAGA.s - 1.9]}
+			posisi={[KIOS_DERMAGA.w, 1.55, S_PAPAN_REKOR]}
 			rotasi={-Math.PI / 2}
 			lebar={2.4}
 			tinggi={1.25}
@@ -128,6 +134,7 @@ export default function HiasanDermaga({ d }) {
 	const bohlam = [];
 	for (const sisi of [-1, 1]) for (let s = 0.8; s < titian.s1 - 0.3; s += 1.5) bohlam.push([sisi * (titian.w - 0.05), s]);
 	const k = KIOS_DERMAGA;
+	const kp = KIOS_PERAHU;
 
 	return (
 		<group>
@@ -238,18 +245,92 @@ export default function HiasanDermaga({ d }) {
 						</mesh>
 					))}
 				</group>
+				{/* kios Toko Perahu di darat, di seberang titian dari kios joran */}
+				<group position={[kp.w, 0, kp.s]} rotation-y={Math.PI / 2}>
+					<mesh position-y={0.5}>
+						<boxGeometry args={[1.8, 1, 0.8]} />
+						<meshStandardMaterial color="#1d4ed8" />
+					</mesh>
+					<mesh position-y={1.02}>
+						<boxGeometry args={[1.9, 0.05, 0.9]} />
+						<meshStandardMaterial color="#e5e7eb" />
+					</mesh>
+					{[-0.95, 0.95].map((x) => (
+						<mesh key={x} position={[x, 1.3, 0.45]}>
+							<boxGeometry args={[0.06, 2.5, 0.06]} />
+							<meshStandardMaterial color="#334155" />
+						</mesh>
+					))}
+					{/* atap datar; papan nama duduk di tepi depannya */}
+					<mesh position={[0, 2.54, 0.1]}>
+						<boxGeometry args={[2.3, 0.08, 1.2]} />
+						<meshStandardMaterial color="#f8fafc" />
+					</mesh>
+					<mesh position={[0, 2.5, 0.705]}>
+						<boxGeometry args={[2.3, 0.1, 0.02]} />
+						<meshStandardMaterial color="#f97316" />
+					</mesh>
+					{/* pelampung bundar di dinding depan & dayung bersandar */}
+					<mesh position={[0, 0.55, 0.41]}>
+						<torusGeometry args={[0.17, 0.05, 8, 16]} />
+						<meshStandardMaterial color="#f97316" />
+					</mesh>
+					<mesh position={[0.78, 1.6, -0.1]} rotation-z={0.12}>
+						<cylinderGeometry args={[0.02, 0.02, 1.2, 6]} />
+						<meshStandardMaterial color="#a16207" />
+					</mesh>
+					{/* pajangan mini di atas meja: perahu fiber & jetski */}
+					<group position={[-0.45, 1.045, 0.1]}>
+						<mesh position-y={0.04}>
+							<boxGeometry args={[0.5, 0.08, 0.2]} />
+							<meshStandardMaterial color="#f8fafc" />
+						</mesh>
+						<mesh position={[0.3, 0.04, 0]} rotation-y={Math.PI / 4}>
+							<boxGeometry args={[0.14, 0.08, 0.14]} />
+							<meshStandardMaterial color="#f8fafc" />
+						</mesh>
+						<mesh position-y={0.081}>
+							<boxGeometry args={[0.52, 0.02, 0.07]} />
+							<meshStandardMaterial color="#2563eb" />
+						</mesh>
+					</group>
+					<group position={[0.45, 1.045, 0.1]}>
+						<mesh position-y={0.04}>
+							<boxGeometry args={[0.46, 0.08, 0.15]} />
+							<meshStandardMaterial color="#e11d48" />
+						</mesh>
+						<mesh position={[0.1, 0.11, 0]}>
+							<boxGeometry args={[0.14, 0.07, 0.07]} />
+							<meshStandardMaterial color="#111827" />
+						</mesh>
+						<mesh position={[-0.05, 0.1, 0]}>
+							<boxGeometry args={[0.1, 0.05, 0.05]} />
+							<meshStandardMaterial color="#f1f5f9" />
+						</mesh>
+					</group>
+				</group>
 			</Gabung>
 			{bohlam.map(([w, s], i) => (
 				<mesh key={i} position={[w, DEK_Y + 1.0, s]} material={BAHAN_BOHLAM}>
 					<sphereGeometry args={[0.055, 8, 6]} />
 				</mesh>
 			))}
+			<group position={[k.w, 0, k.s]} rotation-y={-Math.PI / 2}>
+				<group position={[0, 0, -0.8]}>
+					<Tokoh penampilan={PENJAGA_PANCING} pose="diam" />
+				</group>
+			</group>
+			<group position={[kp.w, 0, kp.s]} rotation-y={Math.PI / 2}>
+				<group position={[0, 0, -0.8]}>
+					<Tokoh penampilan={PENJAGA_PERAHU} pose="diam" />
+				</group>
+			</group>
 			<Pelampung s0={panggung.s1} />
 			<Kunang />
 			<PapanRekor d={d} />
 			{/* tiang papan rekor */}
 			{[-1, 1].map((sisi) => (
-				<mesh key={sisi} position={[KIOS_DERMAGA.w + 0.05, 0.8, KIOS_DERMAGA.s - 1.9 + sisi * 1.1]}>
+				<mesh key={sisi} position={[KIOS_DERMAGA.w + 0.05, 0.8, S_PAPAN_REKOR + sisi * 1.1]}>
 					<boxGeometry args={[0.08, 1.6, 0.08]} />
 					<meshStandardMaterial color="#5c3d24" />
 				</mesh>
@@ -261,6 +342,16 @@ export default function HiasanDermaga({ d }) {
 					tinggi={0.42}
 					latar="#0f766e"
 					baris={[{ teks: "🎣 TOKO PANCING", ukuran: 0.2, tebal: true, warna: "#fef3c7", y: 0.52 }]}
+				/>
+			</group>
+			<group position={[kp.w, 0, kp.s]} rotation-y={Math.PI / 2}>
+				<Papan
+					posisi={[0, 2.84, 0.6]}
+					lebar={1.7}
+					tinggi={0.42}
+					latar="#1d4ed8"
+					bingkai="#f8fafc"
+					baris={[{ teks: "⚓ TOKO PERAHU", ukuran: 0.2, tebal: true, warna: "#fef3c7", y: 0.52 }]}
 				/>
 			</group>
 		</group>

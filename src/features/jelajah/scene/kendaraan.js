@@ -1,6 +1,6 @@
 import { useSyncExternalStore } from "react";
 import { MOBIL, MOTOR } from "./layout";
-import { PERAHU } from "./situ";
+import { PERAHU, perahuBebas } from "./situ";
 import { modelDariId } from "./modelKendaraan";
 
 // Status mobil & motor di parkiran, dan perahu dayung di dermaga Situ Pemda, yang bisa
@@ -32,11 +32,16 @@ export const KURSI = {
 		[0, -0.55],
 		[0, 0.75],
 	],
+	jetski: [
+		[0, 0.05],
+		[0, -0.65],
+	],
 };
-export const kursiDunia = (k, i) => keDunia(k, ...KURSI[k.jenis][i]);
+const kursiKe = (k, i) => KURSI[k.jetski ? "jetski" : k.jenis][i];
+export const kursiDunia = (k, i) => keDunia(k, ...kursiKe(k, i));
 // Tempat berdiri untuk naik ke kursi i: di samping pintunya (mobil) / sisi kiri (motor).
 export function titikNaikKursi(k, i) {
-	const [x, z] = KURSI[k.jenis][i];
+	const [x, z] = kursiKe(k, i);
 	if (k.jenis === "mobil") return keDunia(k, x < 0 ? -1.3 : 1.3, z + 0.25);
 	return keDunia(k, -0.7, z);
 }
@@ -59,14 +64,14 @@ export const useArmada = () =>
 		(f) => (pendengarArmada.add(f), () => pendengarArmada.delete(f)),
 		() => versiArmada,
 	);
-// Nomor perahu panggilan diacak di antara nomor yang belum dipakai di perangkat ini. Dulu
+// Nomor 40+ milik tamu (perahu berbayar dari Toko Perahu). Nomor perahu panggilan diacak di antara nomor yang belum dipakai di perangkat ini. Dulu
 // nomornya = jumlah perahu; begitu perahu panggilan tamu lain ikut tercatat, nomor itu bisa
 // sudah dipakai — panggilan lalu "meminjam" perahu yang sedang dinaiki tamu lain dan
 // menyeretnya ke sini, sehingga di layar tamu itu perahunya hilang.
 function nomorBebas() {
 	const terpakai = new Set(KENDARAAN.filter((k) => k.jenis === "perahu").map((k) => k.id));
 	const bebas = [];
-	for (let n = JUMLAH_AWAL_PERAHU; n < 100; n++) if (!terpakai.has(`perahu:${n}`)) bebas.push(n);
+	for (let n = JUMLAH_AWAL_PERAHU; n < 40; n++) if (!terpakai.has(`perahu:${n}`)) bebas.push(n);
 	return bebas.length ? bebas[Math.floor(Math.random() * bebas.length)] : null;
 }
 
@@ -97,6 +102,7 @@ export function tambahMilik(id, warna, x, z, rot) {
 	let k = KENDARAAN.find((v) => v.id === id);
 	if (!k) {
 		k = { id, jenis: info.jenis, model: info.model.id, milik: true, warna, x, z, rot, laju: 0, setir: 0, pintu: 0, roda: 0, miring: info.jenis === "motor" ? 0.12 : 0, h: 0, vy: 0 };
+		if (info.jenis === "perahu") Object.assign(k, { kemudi: info.model.kemudi, bermesin: info.model.bermesin, jetski: !!info.model.jetski });
 		KENDARAAN.push(k);
 	} else Object.assign(k, { x, z, rot, laju: 0, setir: 0, warna: warna || k.warna });
 	kabarArmada();
@@ -108,9 +114,9 @@ export function tambahMilik(id, warna, x, z, rot) {
 export const kendaraanDariId = (id, pos) => {
 	const ada = KENDARAAN.find((k) => k.id === id);
 	if (ada || !pos) return ada;
-	if (/^perahu:\d{1,2}$/.test(id)) return tambahPerahu(pos.x, pos.z, pos.rot ?? 0, id);
 	const milik = modelDariId(id);
-	return milik ? tambahMilik(id, milik.model.warna[0], pos.x, pos.z, pos.rot ?? 0) : undefined;
+	if (milik) return tambahMilik(id, milik.model.warna[0], pos.x, pos.z, pos.rot ?? 0);
+	if (/^perahu:\d{1,2}$/.test(id)) return tambahPerahu(pos.x, pos.z, pos.rot ?? 0, id);
 };
 
 // Titik lokal → dunia untuk kendaraan k.
@@ -128,6 +134,17 @@ export function lingkaran(k) {
 	const offset = k.jenis === "mobil" ? [-1.35, 0, 1.35] : k.jenis === "perahu" ? [-1.15, 0, 1.15] : [-0.45, 0.45];
 	const r = k.jenis === "mobil" ? 0.95 : k.jenis === "perahu" ? 0.62 : 0.3;
 	return offset.map((o) => ({ ...keDunia(k, 0, o), r }));
+}
+
+// Titik air bebas di dekat (x, z) yang muat untuk badan perahu (untuk perahu panggilan).
+export function airDekat(x, z) {
+	for (let r = 3; r <= 8; r += 0.8) {
+		for (let a = 0; a < Math.PI * 2; a += Math.PI / 8) {
+			const k = { x: x + Math.cos(a) * r, z: z + Math.sin(a) * r, rot: a + Math.PI / 2, jenis: "perahu" };
+			if (lingkaran(k).every((o) => perahuBebas(o.x, o.z, o.r)) && !lingkaran(k).some((o) => tabrakKendaraan(o.x, o.z, o.r))) return k;
+		}
+	}
+	return null;
 }
 
 // Apakah lingkaran (x, z, r) menabrak kendaraan lain (selain `kecuali`)?

@@ -1,12 +1,13 @@
 import { useState } from "react";
 import { useKoleksi } from "../pancing";
+import TokoPerahu from "./TokoPerahu";
 import { MODEL, beliKendaraan, catUlang, milikSaya, panggilKendaraan, useGarasi } from "../garasi";
 
 // Showroom mobil / motor: pilih model & warna, beli dengan koin; yang sudah dimiliki bisa
 // dicat ulang dan dipanggil. mode "garasi" = daftar kendaraan milik saja (dari menu).
 
 const angka = (n) => n.toLocaleString("id-ID");
-const KECEPATAN_MAKS = { mobil: 1.15, motor: 1.4 };
+const KECEPATAN_MAKS = { mobil: 1.15, motor: 1.4, perahu: 1 };
 
 function Bilah({ label, nilai, warna }) {
 	return (
@@ -85,6 +86,7 @@ export default function PanelShowroom({ jenis, onTutup }) {
 	const [pesan, setPesan] = useState(null);
 	const garasi = jenis === "garasi";
 	const daftar = garasi ? g.punya.map((p) => ({ jenis: p.jenis, m: MODEL[p.jenis].find((x) => x.id === p.model) })).filter((x) => x.m) : MODEL[jenis].map((m) => ({ jenis, m }));
+	if (jenis === "perahu") return <TokoPerahu onTutup={onTutup} />;
 	const tampilPesan = (teks) => {
 		setPesan(teks);
 		// panggilan berhasil → tutup panel supaya kendaraannya langsung terlihat
@@ -97,7 +99,7 @@ export default function PanelShowroom({ jenis, onTutup }) {
 				<span className="text-base font-black tabular-nums text-amber-900">🪙 {angka(poin)}</span>
 			</div>
 			{pesan && <p className={`rounded-2xl px-3 py-2 text-sm font-semibold ${pesan.startsWith("✅") ? "bg-emerald-50 text-emerald-800" : "bg-rose-50 text-rose-700"}`}>{pesan}</p>}
-			{garasi && !daftar.length && <p className="rounded-2xl bg-slate-50 p-4 text-center text-sm text-slate-500">Garasi masih kosong. Beli mobil atau motor di Showroom (timur kantor, di balik gedung tetangga).</p>}
+			{garasi && !daftar.length && <p className="rounded-2xl bg-slate-50 p-4 text-center text-sm text-slate-500">Garasi masih kosong. Beli mobil atau motor di Showroom (timur kantor, di balik gedung tetangga), atau perahu di Toko Perahu (dermaga Situ Pemda).</p>}
 			<ul className="grid gap-3 sm:grid-cols-2">
 				{daftar.map(({ jenis: j, m }) => (
 					<Kartu key={`${j}:${m.id}`} jenis={j} m={m} onPesan={tampilPesan} />

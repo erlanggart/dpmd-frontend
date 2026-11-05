@@ -1,16 +1,16 @@
 import { useEffect, useLayoutEffect, useMemo, useRef } from "react";
 import { useFrame } from "@react-three/fiber";
-import { CircleGeometry, CylinderGeometry, ExtrudeGeometry, MeshBasicMaterial, MeshStandardMaterial, Object3D, Path, Shape, ShapeGeometry } from "three";
+import { BoxGeometry, BufferGeometry, CanvasTexture, CircleGeometry, CylinderGeometry, ExtrudeGeometry, Float32BufferAttribute, MeshBasicMaterial, MeshStandardMaterial, Object3D, Path, PlaneGeometry, SRGBColorSpace, Shape, ShapeGeometry, SpriteMaterial } from "three";
 import { IKAN_PER_ID, pancing } from "../pancing";
 import { posisi } from "../jelajahStore";
 import Gabung from "./Gabung";
-import { BAHAN_WARNA, gabung, warnai } from "./geometri";
 import { KENDARAAN, useArmada } from "./kendaraan";
 import ModelIkan from "./ModelIkan";
 import Papan from "./Papan";
 import { AIR_Y, BAGIAN_DERMAGA, DEK_Y, DERMAGA, diSitu, jarakKeTepi } from "./situ";
 import { suasana } from "./suasana";
 import HiasanDermaga from "./HiasanDermaga";
+import { KapalTamu, Perahu } from "./ModelKapal";
 
 // Situ Pemda yang hidup: dermaga spot mancing, perahu dayung, ikan berenang & melompat.
 // Dipasang di grup halaman (y = TANAH); semua y relatif terhadap tanah.
@@ -156,75 +156,6 @@ function Dermaga({ d, daftarDinding }) {
 
 // ---------- perahu dayung ----------
 
-// Garis lambung dilihat dari atas (x = samping, z = haluan ke +z).
-const LAMBUNG = [
-	[0, 1.5],
-	[0.5, 1.0],
-	[0.64, 0.2],
-	[0.6, -0.8],
-	[0.46, -1.35],
-	[-0.46, -1.35],
-	[-0.6, -0.8],
-	[-0.64, 0.2],
-	[-0.5, 1.0],
-];
-const keShape = (titik, skala = 1) => titik.map(([x, z]) => ({ x: x * skala, y: -z * skala }));
-
-function geometriPerahu() {
-	const luar = new Shape(keShape(LAMBUNG));
-	luar.holes.push(new Path(keShape(LAMBUNG, 0.9).reverse()));
-	const dinding = new ExtrudeGeometry(luar, { depth: 0.46, bevelEnabled: false });
-	dinding.rotateX(-Math.PI / 2);
-	dinding.translate(0, -0.2, 0);
-	const lantai = new ShapeGeometry(new Shape(keShape(LAMBUNG, 0.92)));
-	lantai.rotateX(-Math.PI / 2);
-	lantai.translate(0, -0.1, 0);
-	const badan = warnai(dinding, "#ffffff"); // dicat per perahu lewat warna bahan
-	const isi = warnai(lantai, "#9c6b40");
-	const bangku = gabung([-0.55, 0.75].map((z) => warnai(new CylinderGeometry(0.06, 0.06, 1.1, 6), "#7b4f2e", { p: [0, 0.06, z], r: [0, 0, Math.PI / 2] })));
-	return { badan, isi, bangku };
-}
-const GEO_PERAHU = geometriPerahu();
-const GEO_DAYUNG = gabung([
-	warnai(new CylinderGeometry(0.03, 0.03, 2.1, 6), "#a47148", { r: [0, 0, Math.PI / 2], p: [0.75, 0, 0] }),
-	warnai(new CylinderGeometry(0.02, 0.02, 0.01, 4), "#a47148"),
-	warnai(new CylinderGeometry(0.16, 0.16, 0.04, 8), "#c9a06b", { s: [1, 1, 2.2], r: [0, 0, Math.PI / 2], p: [1.75, 0, 0] }),
-]);
-
-function Perahu({ k, i }) {
-	const g = useRef();
-	const dayung = useRef([]);
-	const bahan = useMemo(() => new MeshStandardMaterial({ color: k.warna, roughness: 0.6 }), [k.warna]);
-	const fase = useRef(0);
-	useFrame(({ clock }, dt) => {
-		const t = clock.elapsedTime;
-		const o = g.current;
-		o.position.set(k.x, AIR_Y + Math.sin(t * 1.3 + i) * 0.035, k.z);
-		o.rotation.set(Math.sin(t * 0.9 + i) * 0.02, k.rot, Math.sin(t * 1.1 + i * 2) * 0.03 - k.setir * Math.min(1, Math.abs(k.laju) / 3) * 0.05);
-		// mendayung: ayunan bolak-balik secepat lajunya; diam = dayung disandarkan
-		fase.current += dt * Math.min(6, Math.abs(k.laju) * 1.6) * Math.sign(k.laju || 1);
-		const gerak = Math.abs(k.laju) > 0.15;
-		dayung.current.forEach((dy, sisi) => {
-			if (!dy) return;
-			const s = sisi ? 1 : -1;
-			const sapu = gerak ? Math.sin(fase.current) * 0.55 : 0.9;
-			dy.rotation.set(0, s > 0 ? -sapu : Math.PI + sapu, gerak ? -0.25 + Math.cos(fase.current) * 0.18 : -0.05);
-		});
-	});
-	return (
-		<group ref={g}>
-			<mesh geometry={GEO_PERAHU.badan} material={bahan} />
-			<mesh geometry={GEO_PERAHU.isi} material={BAHAN_WARNA} />
-			<mesh geometry={GEO_PERAHU.bangku} material={BAHAN_WARNA} />
-			{[0, 1].map((sisi) => (
-				<group key={sisi} position={[sisi ? 0.6 : -0.6, 0.27, -0.25]} ref={(el) => (dayung.current[sisi] = el)}>
-					<mesh geometry={GEO_DAYUNG} material={BAHAN_WARNA} />
-				</group>
-			))}
-		</group>
-	);
-}
-
 // ---------- ikan berenang & melompat ----------
 
 const N_BAYANG = 26;
@@ -352,7 +283,7 @@ export default function SituPemda({ daftarDinding }) {
 				<Dermaga key={d.id} d={d} daftarDinding={daftarDinding} />
 			))}
 			{perahu.map((k, i) => (
-				<Perahu key={k.id} k={k} i={i} />
+				k.milik ? <KapalTamu key={k.id} k={k} i={i} /> : <Perahu key={k.id} k={k} i={i} />
 			))}
 			<IkanSitu />
 		</group>

@@ -1,10 +1,13 @@
 import { useMemo, useRef } from "react";
 import { useFrame } from "@react-three/fiber";
-import { BufferGeometry, Float32BufferAttribute, Line, LineBasicMaterial, MeshBasicMaterial, Object3D, RingGeometry, SphereGeometry, Vector3 } from "three";
+import { BufferGeometry, Color, Float32BufferAttribute, Line, LineBasicMaterial, MeshBasicMaterial, Object3D, RingGeometry, SphereGeometry, Vector3 } from "three";
 import { posisi } from "../jelajahStore";
-import { IKAN, arahJoran, bebasLempar, joranKini, panjangCm, pancing, senarKini, tickPancing, useKoleksi } from "../pancing";
+import { IKAN, arahJoran, bebasLempar, joranKini, panjangCm, pancing, pelampungKini, senarKini, tickPancing, useKoleksi } from "../pancing";
 import { TANAH } from "./layout";
 import ModelIkan from "./ModelIkan";
+import ModelPelampung from "./ModelPelampung";
+import { lenturkanJoran } from "./joranLentur";
+import ModelJoran from "./ModelJoran";
 import { AIR_Y } from "./situ";
 import { AIR_KOLAM_Y, diAirKolam } from "./kolamMonsterData";
 
@@ -17,11 +20,14 @@ const AIR_KOLAM = TANAH + AIR_KOLAM_Y;
 // permukaan air tempat pemain memancing: situ, atau Kolam Monster yang lebih tinggi
 let AIR = AIR_SITU;
 const airDi = (x, z) => (diAirKolam(x, z, -0.2) ? AIR_KOLAM : AIR_SITU);
-const N_SENAR = 18;
+const N_SENAR = 48;
 const N_PERCIK = 10;
 const N_TETES = 60;
 const detik = () => performance.now() / 1000;
 const dekati = (a, b, k, dt) => a + (b - a) * (1 - Math.exp(-k * dt));
+const MERAH_TEGANG = new Color("#ef4444");
+const C1 = new Color();
+const C2 = new Color();
 
 const GEO_CINCIN = new RingGeometry(0.82, 1, 28).rotateX(-Math.PI / 2);
 const GEO_TETES = new SphereGeometry(0.035, 5, 4);
@@ -89,58 +95,24 @@ function Cipratan() {
 	);
 }
 
-// Joran 3 ruas: pangkal (gagang gabus + gulungan), tengah, dan ujung yang paling lentur.
-function Joran({ akar, ruas, ujung }) {
-	useKoleksi(); // warna ikut berganti saat joran di-upgrade
+function Joran({ akar, ruas, ujung, engkol }) {
+	useKoleksi(); // warna ikut berganti saat joran diganti
 	const { warna, ujung: warnaUjung } = joranKini();
 	return (
 		<group ref={akar}>
-			<mesh position={[0, -0.1, 0]}>
-				<cylinderGeometry args={[0.025, 0.028, 0.45, 6]} />
-				<meshStandardMaterial color="#b8895a" />
-			</mesh>
-			<mesh position={[0.06, 0.12, 0]} rotation-z={Math.PI / 2}>
-				<cylinderGeometry args={[0.055, 0.055, 0.06, 10]} />
-				<meshStandardMaterial color="#334155" metalness={0.6} roughness={0.3} />
-			</mesh>
-			<group ref={(el) => (ruas.current[0] = el)}>
-				<mesh position-y={0.55}>
-					<cylinderGeometry args={[0.014, 0.02, 1.1, 5]} />
-					<meshStandardMaterial color={warna} metalness={0.3} roughness={0.4} />
-				</mesh>
-				<group ref={(el) => (ruas.current[1] = el)} position-y={1.1}>
-					<mesh position-y={0.5}>
-						<cylinderGeometry args={[0.009, 0.014, 1.0, 5]} />
-						<meshStandardMaterial color={warna} metalness={0.3} roughness={0.4} />
-					</mesh>
-					<group ref={(el) => (ruas.current[2] = el)} position-y={1.0}>
-						<mesh position-y={0.4}>
-							<cylinderGeometry args={[0.005, 0.009, 0.8, 4]} />
-							<meshStandardMaterial color={warnaUjung} />
-						</mesh>
-						<object3D ref={ujung} position-y={0.8} />
-					</group>
-				</group>
-			</group>
+			<ModelJoran ruas={ruas} ujung={ujung} engkol={engkol} warna={warna} warnaUjung={warnaUjung} />
 		</group>
 	);
 }
 
 function Pelampung({ g }) {
+	useKoleksi(); // warna & ukuran ikut pelampung yang dipakai
+	const { id, warna, warna2, ukuran } = pelampungKini();
 	return (
 		<group ref={g}>
-			<mesh position-y={0.04}>
-				<sphereGeometry args={[0.065, 10, 8, 0, Math.PI * 2, 0, Math.PI / 2]} />
-				<meshStandardMaterial color="#ef4444" emissive="#7f1d1d" />
-			</mesh>
-			<mesh position-y={0.04} rotation-x={Math.PI}>
-				<sphereGeometry args={[0.065, 10, 8, 0, Math.PI * 2, 0, Math.PI / 2]} />
-				<meshStandardMaterial color="#f8fafc" />
-			</mesh>
-			<mesh position-y={0.17}>
-				<cylinderGeometry args={[0.008, 0.008, 0.18, 4]} />
-				<meshStandardMaterial color="#fde047" emissive="#a16207" />
-			</mesh>
+				<group scale={ukuran}>
+				<ModelPelampung id={id} warna={warna} warna2={warna2} />
+			</group>
 		</group>
 	);
 }
@@ -211,11 +183,12 @@ export default function Pancingan() {
 	const akar = useRef();
 	const ruas = useRef([]);
 	const ujung = useRef();
+	const engkol = useRef();
 	const pelampung = useRef();
 	const bidik = useRef();
 	const ikanG = useRef();
 	const percik = useRef([]);
-	const st = useRef({ sudut: 0.5, lentur: 0, ikanId: null });
+	const st = useRef({ sudut: 0.5, lentur: 0, ikanId: null, lendut: 0.1, sentakan: 0, faseLalu: null });
 	// riak melingkar di permukaan air (pelampung mendarat/dicolek/disambar, ikan melawan)
 	const riak = useRef([]);
 	const riakData = useRef(Array.from({ length: 8 }, () => ({ t: 99, x: 0, z: 0, besar: 1 })));
@@ -224,7 +197,8 @@ export default function Pancingan() {
 	const senar = useMemo(() => {
 		const g = new BufferGeometry();
 		g.setAttribute("position", new Float32BufferAttribute(new Float32Array(N_SENAR * 3), 3));
-		const l = new Line(g, new LineBasicMaterial({ color: "#f1f5f9", transparent: true, opacity: 0.85 }));
+			g.setAttribute("color", new Float32BufferAttribute(new Float32Array(N_SENAR * 3).fill(1), 3));
+		const l = new Line(g, new LineBasicMaterial({ vertexColors: true, transparent: true, opacity: 0.85 }));
 		l.frustumCulled = false;
 		return l;
 	}, []);
@@ -256,34 +230,57 @@ export default function Pancingan() {
 		// logika permainan berjalan di sini, satu kali per frame
 		tickPancing(dt);
 		aturGaya(p, dt);
-		senar.material.color.set(senarKini().warna);
+		// strike: senar tersentak tegang & bergetar kencang, lalu mereda
+		const sk = st.current;
+		if (p.fase !== sk.faseLalu) {
+			if (p.fase === "tarik") sk.sentakan = 1;
+			else if (p.fase === "gigit") sk.sentakan = Math.max(sk.sentakan, 0.45);
+			sk.faseLalu = p.fase;
+		}
+		if (p.fase === "tarik" && (p.sentak > 0 || p.lari > 0)) sk.sentakan = Math.max(sk.sentakan, 0.35);
+		sk.sentakan = Math.max(0, sk.sentakan - dt * 2.4);
+		const tegangan = p.fase === "tarik" ? Math.min(1.2, p.tegang) : p.fase === "gigit" ? 0.8 : 0;
+		// makin dekat putus, senar makin memerah
+		// warna dipasang per titik (vertexColors) sesuai pola senar; merahnya ikut ke kedua warna
+		const sn = senarKini();
+		const merah = p.fase === "tarik" ? Math.max(0, Math.min(1, (p.tegang - 0.92) * 6)) : 0;
+		C1.set(sn.warna).lerp(MERAH_TEGANG, merah);
+		C2.set(sn.warna2).lerp(MERAH_TEGANG, merah);
+		senar.material.opacity = Math.min(1, (sn.opacity * (0.7 + Math.min(1, tegangan) * 0.3)) / 0.85);
 
 		// --- joran di tangan kanan pemancing ---
 		const arah = arahJoran();
-		const tinggiTangan = p.perahu ? 0.78 : 1.12;
+		const tinggiTangan = p.perahu || p.duduk ? 0.78 : 1.12;
 		const a = akar.current;
 		a.position.set(posisi.x + Math.cos(arah) * 0.24 + Math.sin(arah) * 0.28, (posisi.yTampil ?? posisi.y) + tinggiTangan, posisi.z - Math.sin(arah) * 0.24 + Math.cos(arah) * 0.28);
 		const s = st.current;
 		let sudut = 0.5;
-		let lentur = 0.03;
+		let lentur = 0.06;
 		if (p.fase === "siap") sudut = p.tahan ? 0.5 - p.tenaga * 1.5 : 0.55;
 		else if (p.fase === "lempar") sudut = 1.2;
 		else if (p.fase === "tunggu") sudut = (p.menggulung ? 0.72 + Math.sin(t * 14) * 0.03 : 0.95) + (p.colek ? Math.sin(t * 40) * 0.05 : 0);
 		else if (p.fase === "gigit") {
 			// joran tertarik ke depan & melengkung berat
 			sudut = 0.8 + Math.sin(t * 30) * 0.05;
-			lentur = 0.38 + Math.sin(t * 19) * 0.04;
+			lentur = 0.75 + Math.sin(t * 19) * 0.07;
 		} else if (p.fase === "tarik") {
 			// joran ikut terangkat tinggi saat tarikan sakti
 			sudut = 0.3 + (p.sentak > 0 ? 0.3 : 0) + Math.sin(t * 17) * 0.02 * p.tegang - Math.max(0, p.gaya.lengan - 0.4) * 0.55;
-			lentur = 0.06 + Math.min(1.1, p.tegang) * 0.32;
+			lentur = 0.12 + Math.min(1.15, p.tegang) * 1.15 + sk.sentakan * Math.sin(t * 24) * 0.22;
 		} else if (p.fase === "dapat") sudut = 0.15;
 		s.sudut = dekati(s.sudut, sudut, p.fase === "lempar" ? 22 : 9, dt);
 		s.lentur = dekati(s.lentur, lentur, 10, dt);
 		a.rotation.set(0, arah, 0);
-		ruas.current[0].rotation.x = s.sudut;
-		ruas.current[1].rotation.x = s.lentur;
-		ruas.current[2].rotation.x = s.lentur * 1.6;
+		// saat adu tarik ujung joran ikut tertarik ke arah ikan di samping
+		let sisi = 0;
+		if (p.fase === "tarik") {
+			const dx = p.ikanPos.x - a.position.x;
+			const dz = p.ikanPos.z - a.position.z;
+			sisi = Math.max(-0.7, Math.min(0.7, Math.atan2(dx * Math.cos(arah) - dz * Math.sin(arah), dx * Math.sin(arah) + dz * Math.cos(arah)))) * Math.min(1, p.tegang);
+		}
+		s.sisi = dekati(s.sisi ?? 0, sisi, 8, dt);
+		lenturkanJoran(ruas.current, s.sudut, s.lentur, s.sisi);
+		if (engkol.current) engkol.current.rotation.x = p.fase === "tarik" ? p.gaya.engkol : engkol.current.rotation.x + (p.menggulung ? dt * 9 : 0);
 		a.updateMatrixWorld(true);
 		ujung.current.getWorldPosition(v.ujung);
 
@@ -311,11 +308,12 @@ export default function Pancingan() {
 			pl.rotation.z = gigit ? Math.sin(t * 25) * 0.4 : Math.sin(t * 1.7) * 0.08;
 			pl.visible = true;
 			ujungSenar = pl.position;
-			lendut = gigit ? 0 : 0.1;
+			lendut = gigit ? 0 : 0.11;
 		} else if (p.fase === "tarik") {
 			v.akhir.set(p.ikanPos.x, AIR - 0.05, p.ikanPos.z);
 			ujungSenar = v.akhir;
-			lendut = Math.max(0, 0.08 * (1 - p.tegang));
+			// tegangan rendah: senar kendur melengkung; di atas ±0,6 lurus kencang
+			lendut = Math.max(0, 0.16 * (1 - p.tegang * 1.65));
 		}
 
 		// --- riak air ---
@@ -372,17 +370,26 @@ export default function Pancingan() {
 		if (ujungSenar) {
 			senar.visible = true;
 			const jarak = v.ujung.distanceTo(ujungSenar);
+			// menegang seketika, mengendur pelan
+			s.lendut = dekati(s.lendut, lendut, lendut < s.lendut ? 30 : 5, dt);
 			v.kontrol.lerpVectors(v.ujung, ujungSenar, 0.5);
-			v.kontrol.y -= jarak * lendut;
+			v.kontrol.y -= jarak * s.lendut;
+			// getar senar kencang: gelombang berdiri, terbesar di tengah bentangan
+			const getar = s.sentakan * 0.14 + tegangan * tegangan * 0.016;
 			const pos = senar.geometry.attributes.position;
+			const warnaV = senar.geometry.attributes.color;
 			for (let i = 0; i < N_SENAR; i++) {
 				const u = i / (N_SENAR - 1);
 				const a1 = (1 - u) * (1 - u);
 				const b1 = 2 * (1 - u) * u;
 				const c1 = u * u;
-				pos.setXYZ(i, a1 * v.ujung.x + b1 * v.kontrol.x + c1 * ujungSenar.x, a1 * v.ujung.y + b1 * v.kontrol.y + c1 * ujungSenar.y, a1 * v.ujung.z + b1 * v.kontrol.z + c1 * ujungSenar.z);
+				const cv = sn.pola === "anyam" ? ((i >> 1) & 1 ? C2 : C1) : sn.pola === "pusaka" ? (i & 1 ? C2 : C1) : C1;
+				warnaV.setXYZ(i, cv.r, cv.g, cv.b);
+				const g = Math.sin(u * Math.PI) * Math.sin(t * 74 + u * 11) * getar;
+				pos.setXYZ(i, a1 * v.ujung.x + b1 * v.kontrol.x + c1 * ujungSenar.x + g * 0.6, a1 * v.ujung.y + b1 * v.kontrol.y + c1 * ujungSenar.y + g, a1 * v.ujung.z + b1 * v.kontrol.z + c1 * ujungSenar.z);
 			}
 			pos.needsUpdate = true;
+			warnaV.needsUpdate = true;
 		}
 
 		// --- ikan: melawan di permukaan, melompat, lalu diangkat tinggi ---
@@ -423,7 +430,7 @@ export default function Pancingan() {
 				const hadap = arahJoran() + Math.PI * p.gaya.balik;
 				const tangan = {
 					x: posisi.x + Math.sin(hadap) * 0.45,
-					y: (posisi.yTampil ?? posisi.y) + (p.perahu ? 0.8 : 1.12) + Math.abs(Math.sin(t * 7)) * 0.06 + p.gaya.lompat * 0.32,
+					y: (posisi.yTampil ?? posisi.y) + (p.perahu || p.duduk ? 0.8 : 1.12) + Math.abs(Math.sin(t * 7)) * 0.06 + p.gaya.lompat * 0.32,
 					z: posisi.z + Math.cos(hadap) * 0.45,
 				};
 				const ease = 1 - Math.pow(1 - f, 3);
@@ -459,7 +466,7 @@ export default function Pancingan() {
 
 	return (
 		<>
-			<Joran akar={akar} ruas={ruas} ujung={ujung} />
+			<Joran akar={akar} ruas={ruas} ujung={ujung} engkol={engkol} />
 			<primitive object={senar} />
 			<Pelampung g={pelampung} />
 			{riakData.current.map((_, i) => (

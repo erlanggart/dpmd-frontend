@@ -106,6 +106,16 @@ export function kursiTerpakai(id) {
 }
 
 let socket = null;
+// Kecamatan tempat pemain kini (null = kantor) & penyusun data gerak dunia itu.
+let duniaKec = null;
+let gerakDunia = null;
+export function pindahDunia(kec, ambilGerak = null) {
+	duniaKec = kec;
+	gerakDunia = ambilGerak;
+	pemainLain.clear();
+	ubah({ daftar: [] });
+	if (socket?.connected) socket.emit("pindah", { kec });
+}
 // Naik setiap sambung/putus, supaya sambungan yang masih memuat pustaka dibatalkan.
 let generasi = 0;
 let pengirim = null;
@@ -170,14 +180,14 @@ export async function sambungJelajah(profil) {
 	s.on("masuk", (p) => {
 		pemainLain.set(p.id, { profil: { nama: p.nama, jk: p.jk, avatar: p.avatar, kulit: p.kulit, gaya: bersihkanGaya(p.gaya) }, s: p.s });
 		ubah({ daftar: daftarDariMap() });
-		tambahObrolan({ sistem: true, teks: `${p.nama} masuk ke kantor`, waktu: Date.now() });
+		tambahObrolan({ sistem: true, teks: duniaKec ? `👋 ${p.nama} tiba di ${duniaKec}` : `${p.nama} masuk ke kantor`, waktu: Date.now() });
 	});
 	s.on("keluar", ({ id }) => {
 		const p = pemainLain.get(id);
 		if (!p) return;
 		pemainLain.delete(id);
 		ubah({ daftar: daftarDariMap() });
-		tambahObrolan({ sistem: true, teks: `${p.profil.nama} meninggalkan kantor`, waktu: Date.now() });
+		tambahObrolan({ sistem: true, teks: `${p.profil.nama} meninggalkan ${duniaKec || "kantor"}`, waktu: Date.now() });
 	});
 	s.on("posisi", (daftar) => {
 		const kini = performance.now();
@@ -235,7 +245,7 @@ export async function sambungJelajah(profil) {
 	pengirim = setInterval(() => {
 		if (!s.connected) return;
 		const k = posisi.kend;
-		const data = {
+		const data = gerakDunia ? gerakDunia() : {
 			x: +posisi.x.toFixed(2),
 			y: +(posisi.yTampil ?? posisi.y).toFixed(2),
 			z: +posisi.z.toFixed(2),
@@ -243,6 +253,8 @@ export async function sambungJelajah(profil) {
 			pose: posisi.pose || "jalan",
 			udara: !!posisi.udara,
 			lari: !!posisi.lari,
+			pu: posisi.pose === "panjat" ? +posisi.panjatU.toFixed(2) : undefined,
+			pt: posisi.pose === "panjat" ? posisi.panjatT : undefined,
 			kend: k
 				? { id: k.id, x: +k.x.toFixed(2), z: +k.z.toFixed(2), rot: +k.rot.toFixed(2), laju: +k.laju.toFixed(2), setir: +k.setir.toFixed(2), pintu: +k.pintu.toFixed(2), miring: +k.miring.toFixed(2), h: +(k.h || 0).toFixed(2), kursi: posisi.kursi ?? 0 }
 				: undefined,
@@ -255,7 +267,11 @@ export async function sambungJelajah(profil) {
 		terakhir = kunci;
 		s.volatile.emit("gerak", data);
 	}, JEDA_KIRIM);
-	s.on("connect", () => (terakhir = ""));
+	s.on("connect", () => {
+		terakhir = "";
+		// tersambung ulang selalu mulai di kantor: kembali ke kecamatan semula
+		if (duniaKec) s.emit("pindah", { kec: duniaKec });
+	});
 
 	// Lepas kursi saat tab disembunyikan cukup lama; sambung lagi saat kembali.
 	lepasTersembunyi = () => {
@@ -316,7 +332,9 @@ export function putusJelajah() {
 
 export function kirimUcap(teks) {
 	const t = String(teks || "").trim().slice(0, 120);
-	if (t && socket?.connected) socket.emit("ucap", { teks: t });
+	if (!t || !socket?.connected) return false;
+	socket.emit("ucap", { teks: t });
+	return true;
 }
 export const kirimEmote = (jenis) => socket?.connected && socket.emit("emote", { jenis });
 export const kirimKlakson = () => socket?.connected && socket.emit("klakson");

@@ -10,6 +10,7 @@ import { kendaraanDariId } from "./kendaraan";
 import { dalamLahanCcm } from "./gedungKhusus";
 import { aturBadanRenang } from "./layout";
 import PancinganTamu from "./PancinganTamu";
+import { pemainWilayah } from "../wilayah/uiWilayah";
 import { KeranjangTamu } from "./KeranjangTangan";
 import Tokoh from "./Tokoh";
 
@@ -22,7 +23,7 @@ const FONT = '"Segoe UI", system-ui, -apple-system, Roboto, sans-serif';
 const EMOJI = { lambai: "👋", jempol: "👍", tepuk: "👏", tawa: "😂", hati: "❤️" };
 const sudutDekat = (dari, ke) => dari + Math.atan2(Math.sin(ke - dari), Math.cos(ke - dari));
 // Tinggi label nama di atas kepala per pose.
-const TINGGI_LABEL = { mobil: 1.85, motor: 2.0, duduk: 1.65, perahu: 1.35 };
+const TINGGI_LABEL = { mobil: 1.85, motor: 2.0, duduk: 1.65, perahu: 1.35, jongkok: 1.6 };
 // Posisi tamu lain diputar TUNDA ms di belakang waktu nyata dan diinterpolasi di antara
 // dua kiriman server (±10x/detik), jadi tetap mulus walau paket datang tak teratur.
 // Bila kiriman terlambat, gerak diteruskan sebentar (maks. EKSTRA ms) lalu berhenti.
@@ -176,7 +177,7 @@ function Hiasan({ sumber, tinggiRef, lihat, posisiRef }) {
 	);
 }
 
-function Tamu({ id, nama, jk, avatar, kulit, gaya }) {
+function Tamu({ id, nama, jk, avatar, kulit, gaya, diWilayah }) {
 	const kunciGaya = JSON.stringify(gaya || null);
 	// eslint-disable-next-line react-hooks/exhaustive-deps
 	const penampilan = useMemo(() => kenakanGaya(penampilanAvatar({ jk, avatar, kulit }), gaya), [jk, avatar, kulit, kunciGaya]);
@@ -228,7 +229,11 @@ function Tamu({ id, nama, jk, avatar, kulit, gaya }) {
 		const bergerak = t.laju > 0.4;
 		const gr = gerak.current;
 		gr.laju += ((bergerak ? (s.lari ? 1 : 0.7) : 0) - gr.laju) * (1 - Math.exp(-8 * dt));
-		if (bergerak) gr.fase += dt * (s.lari ? 13 : 9);
+		if (bergerak) gr.fase += dt * (s.lari ? 13 : s.pose === "jongkok" ? 6.5 : 9);
+		gr.jongkok = (gr.jongkok ?? 0) + ((s.pose === "jongkok" ? 1 : 0) - (gr.jongkok ?? 0)) * (1 - Math.exp(-10 * dt));
+		// kiriman ±10x/detik: u dihaluskan supaya tangan & kaki tidak patah-patah
+		gr.panjatU = s.pose !== "panjat" ? -1 : gr.panjatU >= 0 ? gr.panjatU + ((s.pu ?? 0) - gr.panjatU) * (1 - Math.exp(-20 * dt)) : s.pu ?? 0;
+		gr.panjatT = s.pt ?? 0;
 		gr.udara = !!s.udara;
 		gerakDuduk.current.aktivitas = s.ak === "makan" ? "makan" : null;
 		mangkuk.current.visible = s.ak === "makan";
@@ -260,10 +265,10 @@ function Tamu({ id, nama, jk, avatar, kulit, gaya }) {
 			k.roda += (k.laju * dt) / 0.32;
 		}
 
-		const tampak = lantaiTampak(t.y, t.x, t.z);
+		const tampak = diWilayah || lantaiTampak(t.y, t.x, t.z);
 		lihat.current = tampak;
 		g.visible = tampak && s.pose !== "mobil";
-		jalan.current.visible = s.pose === "jalan" || s.pose === "mancing" || s.pose === "renang";
+		jalan.current.visible = s.pose === "jalan" || s.pose === "mancing" || s.pose === "renang" || s.pose === "jongkok" || s.pose === "panjat";
 		duduk.current.visible = s.pose === "duduk" || s.pose === "motor" || s.pose === "perahu";
 		duduk.current.position.y = s.pose === "motor" ? 0.38 : 0;
 		tinggi.current = TINGGI_LABEL[s.pose] ?? 2.05;
@@ -307,27 +312,29 @@ function Tamu({ id, nama, jk, avatar, kulit, gaya }) {
 }
 
 // Balon chat & emote milik pemain sendiri.
-function HiasanSendiri() {
+function HiasanSendiri({ diWilayah }) {
 	const pos = useRef({ x: 0, y: 0, z: 0 });
 	const tinggi = useRef(2.05);
 	const lihat = useRef(true);
 	useFrame(() => {
-		pos.current.x = posisi.x;
-		pos.current.y = posisi.yTampil ?? posisi.y;
-		pos.current.z = posisi.z;
+		const q = diWilayah ? pemainWilayah : posisi;
+		pos.current.x = q.x;
+		pos.current.y = q.yTampil ?? q.y ?? 0;
+		pos.current.z = q.z;
 		tinggi.current = TINGGI_LABEL[posisi.pose] ?? 2.05;
 	});
 	return <Hiasan sumber={() => diriSendiri} tinggiRef={tinggi} lihat={lihat} posisiRef={pos} />;
 }
 
-export default function PemainLain() {
+// diWilayah: di dunia kecamatan (posisi sendiri dari pemainWilayah, tanpa lantai kantor).
+export default function PemainLain({ diWilayah = false }) {
 	const { daftar, status } = useMultipemain();
 	return (
 		<>
 			{daftar.map((p) => (
-				<Tamu key={p.id} id={p.id} nama={p.nama} jk={p.jk} avatar={p.avatar} kulit={p.kulit} gaya={p.gaya} />
+				<Tamu key={p.id} id={p.id} nama={p.nama} jk={p.jk} avatar={p.avatar} kulit={p.kulit} gaya={p.gaya} diWilayah={diWilayah} />
 			))}
-			{status === "tersambung" && <HiasanSendiri />}
+			{status === "tersambung" && <HiasanSendiri diWilayah={diWilayah} />}
 		</>
 	);
 }

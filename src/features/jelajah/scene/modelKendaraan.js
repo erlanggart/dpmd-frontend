@@ -316,12 +316,85 @@ export const MODEL_MOTOR = [
 	},
 ];
 
-export const MODEL_PER_JENIS = { mobil: MODEL_MOBIL, motor: MODEL_MOTOR };
+// ---------- perahu ----------
+// Dijual di Toko Perahu (dermaga Situ Pemda). Tanpa pembuat geometri: bentuknya digambar
+// SituPemda.jsx menurut id model. kemudi = parameter gerak di air (lihat Pemain.jsx).
+
+export const MODEL_PERAHU = [
+	{
+		id: "kano",
+		nama: "Kano Kayu",
+		ikon: "🛶",
+		ket: "Ramping & ringan, didayung santai — langkah pertama sebelum bermesin",
+		harga: 800,
+		warna: ["#a16207", "#b45309", "#78350f", "#d6a35c"],
+		laju: 0.35,
+		gas: 0.5,
+		kursi: 2,
+		bermesin: false,
+		kemudi: { maju: 4, turbo: 6, mundur: 1.6, gas: 2.2, rem: 3, belok: 1.05 },
+	},
+	{
+		id: "sampan",
+		nama: "Sampan Motor Tempel",
+		ikon: "⛵",
+		ket: "Sampan lebar bermotor tempel di buritan — santai tapi tak perlu mendayung",
+		harga: 2500,
+		warna: ["#0ea5e9", "#16a34a", "#f59e0b", "#dc2626"],
+		laju: 0.5,
+		gas: 0.65,
+		kursi: 2,
+		bermesin: true,
+		kemudi: { maju: 6, turbo: 8.5, mundur: 2, gas: 3, rem: 3.5, belok: 0.95 },
+	},
+	{
+		id: "fiber",
+		nama: "Perahu Fiber Pancing",
+		ikon: "🚤",
+		ket: "Lambung fiber putih berkonsol, stabil dan gesit untuk keliling situ",
+		harga: 6000,
+		warna: ["#2563eb", "#dc2626", "#16a34a", "#f59e0b", "#0f172a"],
+		laju: 0.68,
+		gas: 0.8,
+		kursi: 2,
+		bermesin: true,
+		kemudi: { maju: 8, turbo: 11.5, mundur: 2.2, gas: 4, rem: 4, belok: 1.1 },
+	},
+	{
+		id: "speedboat",
+		nama: "Speedboat Wisata",
+		ikon: "🛥️",
+		ket: "Haluan tertutup berkaca depan dan dua motor — melesat membelah situ",
+		harga: 12000,
+		warna: ["#ef4444", "#3b82f6", "#f8fafc", "#facc15", "#111827"],
+		laju: 0.85,
+		gas: 1.1,
+		kursi: 2,
+		bermesin: true,
+		kemudi: { maju: 10, turbo: 14.5, mundur: 2.5, gas: 5.5, rem: 4.5, belok: 1.25 },
+	},
+	{
+		id: "jetski",
+		nama: "Jetski",
+		ikon: "🌊",
+		ket: "Paling kencang dan lincah di situ — bukan main tarikannya",
+		harga: 25000,
+		warna: ["#e11d48", "#f59e0b", "#0ea5e9", "#22c55e", "#7c3aed"],
+		laju: 1,
+		gas: 1.3,
+		kursi: 2,
+		bermesin: true,
+		jetski: true,
+		kemudi: { maju: 11, turbo: 17, mundur: 2, gas: 6.5, rem: 5, belok: 1.5 },
+	},
+];
+
+export const MODEL_PER_JENIS = { mobil: MODEL_MOBIL, motor: MODEL_MOTOR, perahu: MODEL_PERAHU };
 export const cariModel = (jenis, id) => MODEL_PER_JENIS[jenis]?.find((m) => m.id === id) || null;
 
 // id kendaraan milik → { jenis, model, slot } (atau null untuk kendaraan parkir biasa)
 export function modelDariId(id) {
-	const m = /^(mobil|motor):(\d{1,2})$/.exec(id || "");
+	const m = /^(mobil|motor|perahu):(\d{1,2})$/.exec(id || "");
 	if (!m) return null;
 	const n = +m[2] - NOMOR_MILIK;
 	const daftar = MODEL_PER_JENIS[m[1]];

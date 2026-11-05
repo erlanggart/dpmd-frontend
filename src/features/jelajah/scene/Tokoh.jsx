@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef } from "react";
 import { useFrame } from "@react-three/fiber";
 import { posisi } from "../jelajahStore";
 import { BAHAN_ORANG, PANJANG_PAHA, buangOrang, rakitOrang } from "./orang";
+import { sudutJongkok, sudutPanjat } from "./gerakPanjat";
 
 const sudutDekat = (dari, ke) => dari + Math.atan2(Math.sin(ke - dari), Math.cos(ke - dari));
 // Tampak bila dirinya dan semua induknya tampak (lantai lain / di balik dinding = tidak).
@@ -258,6 +259,32 @@ export default function Tokoh({ penampilan, pose = "jalan", gerak, aktivitas, as
 				lkn.current.rotation.z = -0.35 - buka;
 				sbka.current.rotation.x = -0.3;
 				sbkn.current.rotation.x = -0.3;
+			}
+
+			// --- memanjat & jalan jongkok menimpa pose di atas; j = seberapa penuh posenya ---
+			const gk = gerak?.current;
+			const manjat = gk?.panjatU >= 0;
+			const j = manjat ? 1 : gk?.jongkok ?? 0;
+			if (j > 0.01) {
+				const q = manjat ? sudutPanjat(gk.panjatT, gk.panjatU) : sudutJongkok(gk.fase, gk.laju);
+				const c = q.c * j;
+				const campur = (o, ke) => { o.rotation.x += (ke - o.rotation.x) * j; };
+				badan.current.rotation.x = c;
+				badan.current.position.y = badan.current.position.y * (1 - j) + 0.9 * (1 - Math.cos(c)) - q.turun * j;
+				badan.current.position.z = -0.9 * Math.sin(c);
+				miring.current = true;
+				campur(kki.current, q.ki);
+				campur(kka.current, q.ka);
+				campur(lki.current, q.kiB);
+				campur(lka2.current, q.kaB);
+				if (manjat || !isyarat) {
+					campur(lka.current, q.ta + q.ayun);
+					campur(lkn.current, q.ta - q.ayun);
+					campur(sbka.current, q.tb);
+					campur(sbkn.current, q.tb);
+				}
+				if (manjat) lkn.current.rotation.z = lka.current.rotation.z = 0;
+				kepala.current.rotation.x = -c * 0.7; // pandangan tetap ke depan
 			}
 		}
 	});

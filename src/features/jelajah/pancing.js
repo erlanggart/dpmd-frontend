@@ -5,6 +5,8 @@ import { suasana } from "./scene/suasana";
 import { hentikanLaga, hentikanRiang, laguLaga, putarLaga, putarRiang } from "./musikJelajah";
 import { suara } from "./suaraPancing";
 import { catat, tambahXp } from "./progres";
+import { IKAN_TAMBAHAN } from "./ikanTambahan";
+import { tutorialBaru } from "./tutorial";
 
 // Game memancing di Situ Pemda. Logika murni (tanpa React/three): Pancingan.jsx memanggil
 // `tickPancing` tiap frame, GamePancing.jsx membaca `pancing` untuk HUD.
@@ -19,16 +21,16 @@ import { catat, tambahXp } from "./progres";
 // zona = rentang tegangan "pas" (makin sempit makin sulit); regen = tenaga ikan pulih per
 // detik saat senar kendor; lari = peluang per detik ikan kabur menarik senar.
 export const KELAS = [
-	{ nama: "Biasa", warna: "#94a3b8", bobot: 60, tenaga: 0.55, stamina: 6.5, sentak: 0.18, reaksi: 0.85, poin: 10, zona: [0.34, 0.9], regen: 0.1, lari: 0.06, colek: 3 },
-	{ nama: "Langka", warna: "#3b82f6", bobot: 26, tenaga: 0.8, stamina: 12, sentak: 0.28, reaksi: 0.72, poin: 25, zona: [0.4, 0.88], regen: 0.35, lari: 0.13, colek: 4 },
-	{ nama: "Epik", warna: "#a855f7", bobot: 10, tenaga: 1.02, stamina: 19, sentak: 0.36, reaksi: 0.58, poin: 60, zona: [0.46, 0.85], regen: 0.6, lari: 0.19, colek: 5 },
-	{ nama: "Monster", warna: "#ef4444", bobot: 2.6, tenaga: 1.22, stamina: 27, sentak: 0.45, reaksi: 0.48, poin: 120, zona: [0.52, 0.82], regen: 0.9, lari: 0.25, colek: 6 },
-	{ nama: "Legenda", warna: "#f59e0b", bobot: 0.4, tenaga: 1.42, stamina: 31, sentak: 0.5, reaksi: 0.4, poin: 300, zona: [0.56, 0.8], regen: 0.9, lari: 0.27, colek: 7 },
+	{ nama: "Biasa", warna: "#94a3b8", bobot: 72, tenaga: 0.55, stamina: 6.5, sentak: 0.18, reaksi: 0.85, poin: 10, zona: [0.34, 0.9], regen: 0.1, lari: 0.06, colek: 3 },
+	{ nama: "Langka", warna: "#3b82f6", bobot: 20, tenaga: 0.8, stamina: 12, sentak: 0.28, reaksi: 0.72, poin: 25, zona: [0.4, 0.88], regen: 0.35, lari: 0.13, colek: 4 },
+	{ nama: "Epik", warna: "#a855f7", bobot: 6.5, tenaga: 1.02, stamina: 19, sentak: 0.36, reaksi: 0.58, poin: 60, zona: [0.46, 0.85], regen: 0.6, lari: 0.19, colek: 5 },
+	{ nama: "Monster", warna: "#ef4444", bobot: 1.3, tenaga: 1.22, stamina: 27, sentak: 0.45, reaksi: 0.48, poin: 120, zona: [0.52, 0.82], regen: 0.9, lari: 0.25, colek: 6 },
+	{ nama: "Legenda", warna: "#f59e0b", bobot: 0.2, tenaga: 1.42, stamina: 31, sentak: 0.5, reaksi: 0.4, poin: 300, zona: [0.56, 0.8], regen: 0.9, lari: 0.27, colek: 7 },
 ];
 
 // bentuk: tinggi/lebar badan relatif panjang; ekor "garpu" | "bulat" | "pisau" | "belut".
 // k = faktor gemuk Fulton (berat g = k · panjang cm³ / 100) untuk menghitung panjang.
-export const IKAN = [
+const IKAN_DASAR = [
 	{ id: "nila", nama: "Nila", latin: "Oreochromis niloticus", kelas: 0, kg: [0.2, 1.3], k: 1.6, warna: { punggung: "#5b6b62", perut: "#c9cfc4", sirip: "#7c5a5a" }, bentuk: { tinggi: 0.42, lebar: 0.16, ekor: "bulat", belang: true }, kisah: "Penghuni paling ramah Situ Pemda. Hampir semua pemancing di sini memulai dari nila." },
 	{ id: "mujair", nama: "Mujair", latin: "Oreochromis mossambicus", kelas: 0, kg: [0.15, 0.8], k: 1.7, warna: { punggung: "#3f4a45", perut: "#a9b3a5", sirip: "#4b3b3b" }, bentuk: { tinggi: 0.44, lebar: 0.17, ekor: "bulat" }, kisah: "Sepupu nila yang lebih gelap dan lebih rakus. Sering menyambar umpan duluan." },
 	{ id: "tawes", nama: "Tawes", latin: "Barbonymus gonionotus", kelas: 0, kg: [0.2, 1.1], k: 1.4, warna: { punggung: "#8a8f7a", perut: "#e8e4d0", sirip: "#d6b25a" }, bentuk: { tinggi: 0.36, lebar: 0.13, ekor: "garpu" }, kisah: "Sisiknya berkilau keperakan saat diangkat dari air." },
@@ -63,6 +65,8 @@ export const IKAN = [
 	{ id: "mekong", nama: "Lele Raksasa Mekong", latin: "Pangasianodon gigas", kelas: 4, kolam: true, kg: [120, 300], k: 1.0, warna: { punggung: "#475569", perut: "#e2e8f0", sirip: "#64748b" }, bentuk: { tinggi: 0.27, lebar: 0.19, ekor: "garpu" }, kisah: "Ikan air tawar terbesar di dunia, langka di alam. Babon idaman setiap peserta lomba kolam." },
 	{ id: "beluga", nama: "Sturgeon Beluga", latin: "Huso huso", kelas: 4, kolam: true, kg: [150, 400], k: 0.7, warna: { punggung: "#64748b", perut: "#f1f5f9", sirip: "#475569" }, bentuk: { tinggi: 0.18, lebar: 0.16, ekor: "garpu", duri: true }, sifat: { lompat: true }, kisah: "Ikan purba berzirah penghasil kaviar. Penguasa Kolam Monster DPMD." },
 ];
+// Urut kelas (sort stabil) supaya album tersusun dari Biasa sampai Legenda.
+export const IKAN = [...IKAN_DASAR, ...IKAN_TAMBAHAN].sort((a, b) => a.kelas - b.kelas);
 export const IKAN_PER_ID = Object.fromEntries(IKAN.map((i) => [i.id, i]));
 
 export const panjangCm = (ikan, kg) => Math.round(Math.cbrt((100 * kg * 1000) / ikan.k));
@@ -83,7 +87,7 @@ const KUNCI = "jelajah-pancing-v1";
 function bacaSimpanan() {
 	try {
 		const d = JSON.parse(localStorage.getItem(KUNCI));
-		if (d && typeof d === "object") return { koleksi: d.koleksi || {}, poin: d.poin || 0, tangkapan: d.tangkapan || 0, joran: d.joran || 0, joranPunya: d.joranPunya, joranPakai: d.joranPakai, senar: d.senar || 0 };
+		if (d && typeof d === "object") return { koleksi: d.koleksi || {}, poin: d.poin || 0, tangkapan: d.tangkapan || 0, joran: d.joran || 0, joranPunya: d.joranPunya, joranPakai: d.joranPakai, senar: d.senar || 0, senarPunya: d.senarPunya, pelampungPunya: d.pelampungPunya, pelampungPakai: d.pelampungPakai };
 	} catch {
 		/* penyimpanan tidak tersedia */
 	}
@@ -112,15 +116,24 @@ export function bayarKoin(n) {
 //   cepat = pengali lama menunggu sambaran (0,6 = ikan datang ±1,7× lebih cepat);
 //   hoki  = pengali peluang ikan Epik ke atas (premium);
 //   gulung = pengali tenaga ketukan; lebar = pelebaran zona tegangan "pas".
-// Senar di-upgrade berurutan: kuat = batas tegangan sebelum putus, panjang = senar (m).
+// Senar dibeli & dipilih bebas (simpanan.senar = indeks yang dipakai, senarPunya = yang dimiliki):
+// kuat = batas tegangan sebelum putus, panjang = senar (m).
 export const JORAN = [
 	{ id: "bambu", nama: "Joran Bambu", harga: 0, cepat: 1, hoki: 1, gulung: 1, lebar: 0, warna: "#a16207", ujung: "#dc2626", ket: "Joran warisan kakek. Cukup untuk ikan biasa." },
+	{ id: "pring", nama: "Joran Pring Muda", harga: 150, cepat: 0.95, hoki: 1.05, gulung: 1.03, lebar: 0.01, warna: "#65a30d", ujung: "#f59e0b", ket: "Bambu pring muda yang lentur — sedikit lebih peka dari bambu biasa." },
 	{ id: "fiber", nama: "Joran Fiber", harga: 300, cepat: 0.9, hoki: 1.1, gulung: 1.07, lebar: 0.02, warna: "#1f2937", ujung: "#dc2626", ket: "Lentur & ringan — serba sedikit lebih baik." },
+	{ id: "teleskop", nama: "Joran Teleskop", harga: 600, cepat: 0.85, hoki: 1.1, gulung: 1.1, lebar: 0.025, warna: "#475569", ujung: "#38bdf8", ket: "Ruas bisa dipanjangkan, ringan dibawa: gulungan jadi lebih bertenaga." },
 	{ id: "karbon", nama: "Joran Karbon", harga: 900, cepat: 0.8, hoki: 1.25, gulung: 1.14, lebar: 0.035, warna: "#0f172a", ujung: "#22d3ee", ket: "Kaku & peka: gulungan cepat, ikan besar lebih sering." },
 	{ id: "kilat", nama: "Joran Casting Kilat", harga: 1200, cepat: 0.5, hoki: 1, gulung: 1.1, lebar: 0.02, warna: "#0369a1", ujung: "#fde047", ket: "Spesialis cepat: umpan disambar 2× lebih cepat — panen ikan." },
+	{ id: "spinning", nama: "Joran Spinning Lincah", harga: 1600, cepat: 0.6, hoki: 1.1, gulung: 1.18, lebar: 0.03, warna: "#7c3aed", ujung: "#f472b6", ket: "Spesialis lincah: sambaran datang cepat dan tarikan gulung terasa ringan." },
 	{ id: "titanium", nama: "Joran Titanium Pro", harga: 2200, cepat: 0.7, hoki: 1.45, gulung: 1.22, lebar: 0.05, auto: true, warna: "#94a3b8", ujung: "#f97316", ket: "Joran turnamen: cepat, kuat, sering disambar ikan premium. Bisa mode AUTO." },
+	{ id: "elite", nama: "Joran Karbon Elite", harga: 2800, cepat: 0.65, hoki: 1.5, gulung: 1.2, lebar: 0.05, auto: true, warna: "#1e293b", ujung: "#34d399", ket: "Peka dan seimbang: ikan premium sering mampir. Bisa mode AUTO." },
 	{ id: "dasar", nama: "Joran Dasar Monster", harga: 3500, cepat: 1.15, hoki: 2.3, gulung: 1.18, lebar: 0.04, auto: true, warna: "#3f2a1d", ujung: "#ef4444", ket: "Spesialis premium: sabar menunggu, yang datang ikan-ikan monster. Bisa mode AUTO." },
+	{ id: "baitcast", nama: "Joran Baitcast Berat", harga: 4200, cepat: 1, hoki: 1.7, gulung: 1.38, lebar: 0.08, auto: true, warna: "#7f1d1d", ujung: "#fb923c", ket: "Tenaga gulung terbesar untuk menaklukkan ikan raksasa. Bisa mode AUTO." },
 	{ id: "naga", nama: "Joran Naga Emas", harga: 5000, cepat: 0.6, hoki: 1.9, gulung: 1.32, lebar: 0.07, auto: true, warna: "#ca8a04", ujung: "#facc15", ket: "Legenda para pemancing: cepat & ikan langka seolah datang sendiri. Bisa mode AUTO." },
+	{ id: "kapal", nama: "Joran Kapal Samudra", harga: 7500, cepat: 0.55, hoki: 2, gulung: 1.35, lebar: 0.08, auto: true, warna: "#0e7490", ujung: "#fde68a", ket: "Dibuat untuk ikan terbesar: cepat, kuat, dan ikan langka sering menyambar. Bisa mode AUTO." },
+	{ id: "maestro", nama: "Joran Perak Maestro", harga: 12000, cepat: 0.5, hoki: 2.4, gulung: 1.4, lebar: 0.09, auto: true, warna: "#cbd5e1", ujung: "#a78bfa", ket: "Buatan pengrajin ternama: hampir setiap sambaran berpeluang ikan besar. Bisa mode AUTO." },
+	{ id: "garuda", nama: "Joran Garuda Sakti", harga: 20000, cepat: 0.45, hoki: 2.8, gulung: 1.45, lebar: 0.1, auto: true, warna: "#111827", ujung: "#ef4444", ket: "Joran pusaka tertinggi. Ikan legenda pun sulit menolak. Bisa mode AUTO." },
 ];
 // Mode AUTO (auto pilot) hanya untuk joran kelas atas. Koinnya 75% — memancing
 // sendiri tetap paling menguntungkan.
@@ -131,12 +144,28 @@ export const PENGALI_KOIN_KOLAM = 0.06;
 export const bolehOtomatis = () => !!joranKini().auto;
 export const JORAN_PER_ID = Object.fromEntries(JORAN.map((j) => [j.id, j]));
 export const SENAR = [
-	{ nama: "Senar Nilon 0,25 mm", harga: 0, kuat: 1, panjang: 45, warna: "#f1f5f9" },
-	{ nama: "Senar Nilon Kuat 0,35 mm", harga: 200, kuat: 1.12, panjang: 48, warna: "#e0f2fe" },
-	{ nama: "Senar PE Anyam ×4", harga: 600, kuat: 1.28, panjang: 52, warna: "#bbf7d0" },
-	{ nama: "Senar PE Anyam ×8", harga: 1500, kuat: 1.45, panjang: 56, warna: "#fde68a" },
-	{ nama: "Senar Fluorocarbon Pro", harga: 3000, kuat: 1.62, panjang: 62, warna: "#c4b5fd" },
-	{ nama: "Senar Kevlar Naga", harga: 6000, kuat: 1.85, panjang: 70, warna: "#fca5a5" },
+	{ nama: "Senar Nilon 0,25 mm", harga: 0, kuat: 1, panjang: 45, warna: "#f1f5f9", pola: "mono", warna2: "#f1f5f9", opacity: 0.85, tebal: "0,25 mm" },
+	{ nama: "Senar Nilon Kuat 0,35 mm", harga: 200, kuat: 1.12, panjang: 48, warna: "#e0f2fe", pola: "mono", warna2: "#e0f2fe", opacity: 0.85, tebal: "0,35 mm" },
+	{ nama: "Senar PE Anyam ×4", harga: 600, kuat: 1.28, panjang: 52, warna: "#bbf7d0", pola: "anyam", warna2: "#16a34a", opacity: 0.9, tebal: "PE ×4" },
+	{ nama: "Senar PE Anyam ×8", harga: 1500, kuat: 1.45, panjang: 56, warna: "#fde68a", pola: "anyam", warna2: "#d97706", opacity: 0.9, tebal: "PE ×8" },
+	{ nama: "Senar Fluorocarbon Pro", harga: 3000, kuat: 1.62, panjang: 62, warna: "#c4b5fd", pola: "fluoro", warna2: "#c4b5fd", opacity: 0.35, tebal: "0,40 mm bening" },
+	{ nama: "Senar Kevlar Naga", harga: 6000, kuat: 1.85, panjang: 70, warna: "#fca5a5", pola: "anyam", warna2: "#b91c1c", opacity: 0.9, tebal: "Kevlar ×8" },
+	{ nama: "Senar Dyneema Pro", harga: 8000, kuat: 1.98, panjang: 76, warna: "#67e8f9", pola: "anyam", warna2: "#0e7490", opacity: 0.9, tebal: "PE ×12" },
+	{ nama: "Senar Titanium Anyam", harga: 10500, kuat: 2.1, panjang: 82, warna: "#d1d5db", pola: "anyam", warna2: "#475569", opacity: 0.9, tebal: "Titanium ×12" },
+	{ nama: "Senar Karbon Hitam", harga: 12500, kuat: 2.2, panjang: 86, warna: "#a5b4fc", pola: "anyam", warna2: "#312e81", opacity: 0.95, tebal: "Karbon ×16" },
+	{ nama: "Senar Serat Naga Langit", harga: 15000, kuat: 2.3, panjang: 90, warna: "#fcd34d", pola: "pusaka", warna2: "#fff7ed", opacity: 1, tebal: "Pusaka ×24" },
+];
+// Pelampung: dibeli lalu dipilih. cepat = pengali lama menunggu sambaran; reaksi = pengali waktu
+// sentak saat ikan menyambar (lebih besar = lebih longgar); hoki = pengali peluang ikan premium.
+export const PELAMPUNG = [
+	{ id: "bola", nama: "Pelampung Bola", harga: 0, cepat: 1, reaksi: 1, hoki: 1, warna: "#ef4444", warna2: "#f8fafc", ukuran: 1, ket: "Pelampung merah-putih standar. Tidak ada keunggulan, tidak ada kekurangan." },
+	{ id: "pena", nama: "Pelampung Pena", harga: 100, cepat: 1, reaksi: 1.35, hoki: 1, warna: "#38bdf8", warna2: "#f8fafc", ukuran: 0.9, ket: "Sangat peka: sentakan terasa jelas dan waktu menyentak lebih longgar." },
+	{ id: "peluru", nama: "Pelampung Peluru", harga: 250, cepat: 0.88, reaksi: 1, hoki: 1, warna: "#f59e0b", warna2: "#78350f", ukuran: 1, ket: "Tenggelam cepat ke umpan, ikan jadi lebih cepat menyambar." },
+	{ id: "tembaga", nama: "Pelampung Tembaga Malam", harga: 500, cepat: 0.95, reaksi: 1.1, hoki: 1.12, warna: "#b45309", warna2: "#fde68a", ukuran: 1.05, ket: "Berkilau lembut di air gelap, menarik ikan yang lebih besar." },
+	{ id: "neon", nama: "Pelampung Neon", harga: 900, cepat: 0.92, reaksi: 1.3, hoki: 1.05, warna: "#a3e635", warna2: "#18181b", ukuran: 1, ket: "Terlihat jelas dari kejauhan; sentak lebih mudah tepat waktu." },
+	{ id: "kristal", nama: "Pelampung Kristal", harga: 1500, cepat: 0.85, reaksi: 1.2, hoki: 1.25, warna: "#67e8f9", warna2: "#e0f2fe", ukuran: 1.1, ket: "Bening bak kaca: cepat, peka, dan disukai ikan langka." },
+	{ id: "giok", nama: "Pelampung Giok Hijau", harga: 3000, cepat: 0.8, reaksi: 1.35, hoki: 1.4, warna: "#10b981", warna2: "#064e3b", ukuran: 1.1, ket: "Batu giok bertuah: ikan premium lebih sering datang." },
+	{ id: "naga", nama: "Pelampung Naga", harga: 6000, cepat: 0.72, reaksi: 1.5, hoki: 1.5, warna: "#facc15", warna2: "#b91c1c", ukuran: 1.2, ket: "Pelampung pusaka: paling cepat, paling peka, dan paling disukai ikan legenda." },
 ];
 // Simpanan lama (simpanan.joran = tingkat 0–4 dari daftar berurutan dulu) dipindahkan:
 // joran yang dulu terbeli tetap dimiliki & tingkat senar ikut naik setara.
@@ -149,11 +178,17 @@ function pindahkanSimpananLama() {
 	simpanan.senar = lama;
 }
 pindahkanSimpananLama();
+// Senar dulu dibeli berurutan (simpanan.senar = tingkat): semua senar sampai tingkat itu tetap dimiliki.
+if (!Array.isArray(simpanan.senarPunya)) simpanan.senarPunya = Array.from({ length: Math.min(SENAR.length - 1, simpanan.senar || 0) + 1 }, (_, i) => i);
 
 export const joranKini = () => JORAN_PER_ID[simpanan.joranPakai] || JORAN[0];
 export const senarKini = () => SENAR[Math.min(SENAR.length - 1, simpanan.senar || 0)];
 export const tingkatSenar = () => Math.min(SENAR.length - 1, simpanan.senar || 0);
 export const punyaJoran = (id) => id === "bambu" || (simpanan.joranPunya || []).includes(id);
+export const punyaSenar = (i) => i === 0 || (simpanan.senarPunya || []).includes(i);
+export const PELAMPUNG_PER_ID = Object.fromEntries(PELAMPUNG.map((p) => [p.id, p]));
+export const pelampungKini = () => PELAMPUNG_PER_ID[simpanan.pelampungPakai] || PELAMPUNG[0];
+export const punyaPelampung = (id) => id === "bola" || (simpanan.pelampungPunya || []).includes(id);
 export const zonaKini = (kelas) => {
 	const [b, a] = KELAS[kelas].zona;
 	const l = joranKini().lebar;
@@ -171,11 +206,26 @@ export function pakaiJoran(id) {
 	simpan();
 	return null;
 }
-export function upgradeSenar() {
-	const berikut = SENAR[tingkatSenar() + 1];
-	if (!berikut) return "Senar sudah yang terbaik";
-	if (!bayarKoin(berikut.harga)) return "Koin belum cukup (perlu 🪙 " + berikut.harga + ")";
-	simpanan.senar = tingkatSenar() + 1;
+// Beli (bila belum punya) lalu langsung dipakai.
+export function pakaiSenar(i) {
+	const sn = SENAR[i];
+	if (!sn) return "Senar tidak dikenal";
+	if (!punyaSenar(i)) {
+		if (!bayarKoin(sn.harga)) return "Koin belum cukup (perlu 🪙 " + sn.harga + ")";
+		simpanan.senarPunya = [...(simpanan.senarPunya || []), i];
+	}
+	simpanan.senar = i;
+	simpan();
+	return null;
+}
+export function pakaiPelampung(id) {
+	const p = PELAMPUNG_PER_ID[id];
+	if (!p) return "Pelampung tidak dikenal";
+	if (!punyaPelampung(id)) {
+		if (!bayarKoin(p.harga)) return "Koin belum cukup (perlu 🪙 " + p.harga + ")";
+		simpanan.pelampungPunya = [...(simpanan.pelampungPunya || []), id];
+	}
+	simpanan.pelampungPakai = id;
 	simpan();
 	return null;
 }
@@ -478,15 +528,15 @@ export function ujungJoran() {
 	return { x: pancing.asal.x + Math.sin(a) * 1.4, z: pancing.asal.z + Math.cos(a) * 1.4 };
 }
 
-export function mulaiPancing({ x, z, rot, perahu, kolam }) {
-	Object.assign(pancing, { aktif: true, perahu: !!perahu, kolam: !!kolam, asal: { x, z, rot }, aim: 0, tahan: false, arah: 0, arahOto: 0, hasil: null, ikan: null, cipratan: [], kuasa: 0, habisi: false, kilat: 0, dorong: 0, lambat: 0, sorak: null });
+export function mulaiPancing({ x, z, rot, perahu, kolam, duduk }) {
+	Object.assign(pancing, { aktif: true, perahu: !!perahu, kolam: !!kolam, duduk: !!duduk, asal: { x, z, rot }, aim: 0, tahan: false, arah: 0, arahOto: 0, hasil: null, ikan: null, cipratan: [], kuasa: 0, habisi: false, kilat: 0, dorong: 0, lambat: 0, sorak: null });
 	// AUTO tidak terbawa ke joran biasa atau ke lomba
 	if (pancing.otomatis && (!bolehOtomatis() || (kolam && kaitKolam.lombaBerjalan()))) pancing.otomatis = false;
 	oto.faseLalu = null;
-	keFase("siap", {
+	keFase("siap", tutorialBaru(kolam ? "pesan:kolam" : "pesan:lempar") ? {
 		teks: kolam ? "🦈 Kolam Monster — isinya hanya ikan Monster & Legenda. Tahan untuk mengayun!" : "Tahan untuk mengayun joran, lepas untuk melempar",
 		jenis: kolam ? "besar" : "info",
-	});
+	} : null);
 }
 
 export function berhentiPancing() {
@@ -507,7 +557,7 @@ export function lanjutPancing() {
 	hentikanRiang();
 	pancing.hasil = null;
 	pancing.ikan = null;
-	keFase("siap", { teks: "Lempar lagi! Makin jauh ke tengah, makin besar ikannya", jenis: "info" });
+	keFase("siap", tutorialBaru("pesan:lagi") ? { teks: "Lempar lagi! Makin jauh ke tengah, makin besar ikannya", jenis: "info" } : null);
 }
 
 function gagal(teks) {
@@ -526,7 +576,7 @@ function mulaiTunggu(teks, jenis) {
 	const kls = KELAS[calon.ikan.kelas];
 	const cepat = (malam() ? 0.85 : 1) * (p.sempurna ? 0.8 : 1) * (1 + calon.ikan.kelas * 0.3) * (jamLapar().aktif ? 0.5 : 1) * (suasana.hujan > 0.5 ? 0.8 : 1) * (p.kolam ? 0.55 : 1); // hujan: ikan lebih aktif; kolam berbayar: padat ikan
 	// ikan butuh waktu menemukan umpan; makin dalam & makin besar makin lama
-	p.tungguSampai = acak(4.5, 11) * cepat * joranKini().cepat;
+	p.tungguSampai = acak(4.5, 11) * cepat * joranKini().cepat * pelampungKini().cepat;
 	const n = Math.floor(Math.random() * (kls.colek + 1));
 	p.colekBunyi = -1;
 	p.colek = false;
@@ -554,8 +604,8 @@ function lepasTapiTunggu(teks) {
 
 // Kolam Monster: hanya kelas Monster & Legenda (situ maupun eksklusif kolam), tanpa
 // syarat malam/perahu/kedalaman; berat condong lebih besar daripada di situ.
-export function pilihIkanKolam(hoki = joranKini().hoki) {
-	const bobot = [0, 0, 0, 78, 22 * Math.sqrt(hoki)];
+export function pilihIkanKolam(hoki = joranKini().hoki * pelampungKini().hoki) {
+	const bobot = [0, 0, 0, 92, 8 * Math.sqrt(hoki)];
 	const kelas = Math.random() * (bobot[3] + bobot[4]) < bobot[3] ? 3 : 4;
 	const calon = IKAN.filter((f) => f.kelas === kelas && f.id !== "raja");
 	const ikan = calon[Math.floor(Math.random() * calon.length)];
@@ -563,7 +613,7 @@ export function pilihIkanKolam(hoki = joranKini().hoki) {
 	return { ikan, kg: Math.round(kg * 100) / 100 };
 }
 
-function pilihIkan(jauh) {
+export function pilihIkan(jauh) {
 	if (pancing.kolam) return pilihIkanKolam();
 	const m = malam();
 	const kali = [1, 1, 1, 1, 1];
@@ -575,13 +625,15 @@ function pilihIkan(jauh) {
 	if (pancing.perahu) kalikan([1, 1, 1.1, 1.3, 1.5]);
 	if (pancing.sempurna) kalikan([1, 1, 1.25, 1.5, 1.6]);
 	if (jamLapar().aktif) kalikan([1, 1, 1.3, 1.6, 1.8]);
-	const hoki = joranKini().hoki;
+	const hoki = joranKini().hoki * pelampungKini().hoki;
 	kalikan([1, 1, Math.sqrt(hoki), hoki, hoki * 1.1]);
+	// pengali bonus dibatasi supaya ikan langka tetap jarang (kelas Biasa/Langka boleh turun, tidak naik)
+	const BATAS_BONUS = [1, 1, 3, 3.5, 4];
 	const layak = (ikan) => {
 		const s = ikan.syarat || {};
 		return !ikan.kolam && (!s.malam || m) && (!s.perahu || pancing.perahu) && (!s.jauh || jauh >= s.jauh) && (!s.sempurna || pancing.sempurna);
 	};
-	const bobot = KELAS.map((k, i) => (IKAN.some((f) => f.kelas === i && layak(f)) ? k.bobot * kali[i] : 0));
+	const bobot = KELAS.map((k, i) => (IKAN.some((f) => f.kelas === i && layak(f)) ? k.bobot * Math.min(kali[i], BATAS_BONUS[i]) : 0));
 	let r = Math.random() * bobot.reduce((a, b) => a + b, 0);
 	let kelas = 0;
 	for (let i = 0; i < bobot.length; i++) {
@@ -749,7 +801,7 @@ export function tickPancing(dt) {
 			const { ikan, kg } = p.ikanTunggu || pilihIkan(kedalaman(p.pelampung.x, p.pelampung.z));
 			p.ikan = ikan;
 			p.kg = kg;
-			p.jendela = KELAS[ikan.kelas].reaksi;
+			p.jendela = KELAS[ikan.kelas].reaksi * pelampungKini().reaksi;
 			percik(p.pelampung.x, p.pelampung.z, 0.8 + ikan.kelas * 0.3);
 			suara("sambar");
 			try {
@@ -821,7 +873,7 @@ export function tickPancing(dt) {
 
 	if (p.fase === "tarik") return tarik(dt, o, ketukBaru);
 
-	if (p.fase === "gagal" && p.t > 1.8) keFase("siap", { teks: "Tahan untuk mengayun joran, lepas untuk melempar", jenis: "info" });
+	if (p.fase === "gagal" && p.t > 1.8) keFase("siap", null);
 }
 
 function tarik(dt, o, ketukBaru) {

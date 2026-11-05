@@ -57,12 +57,12 @@ export default function PanelGaya({ mode = "lemari", dasar }) {
 			{/* --- pratinjau & barang terpilih --- */}
 			<aside className="sm:sticky sm:top-0 sm:self-start">
 				{penampilan && (
-					<div className="relative h-56 overflow-hidden rounded-2xl bg-gradient-to-b from-violet-100 via-slate-50 to-slate-200 ring-1 ring-slate-200 sm:h-80">
+					<div className="relative h-[46dvh] overflow-hidden rounded-2xl bg-gradient-to-b from-violet-100 via-slate-50 to-slate-200 ring-1 ring-slate-200 sm:h-[min(66dvh,40rem)]">
 						<Suspense fallback={<div className="flex h-full items-center justify-center text-xs text-slate-400">Memuat pratinjau…</div>}>
 							<PratinjauAvatar penampilan={penampilan} />
 						</Suspense>
-						<span className="pointer-events-none absolute right-2 top-2 rounded-full bg-amber-100/95 px-2.5 py-1 text-xs font-black text-amber-800 shadow">🪙 {angka(koin)}</span>
-						<span className="pointer-events-none absolute left-2 top-2 whitespace-nowrap rounded-full bg-white/80 px-2 py-0.5 text-[10px] font-semibold text-slate-500">⟲ seret untuk memutar</span>
+						<span className="pointer-events-none absolute bottom-2 right-2 rounded-full bg-amber-100/95 px-2.5 py-1 text-xs font-black text-amber-800 shadow">🪙 {angka(koin)}</span>
+						<span className="pointer-events-none absolute bottom-2 left-2 whitespace-nowrap rounded-full bg-white/80 px-2 py-1 text-[10px] font-semibold text-slate-500">⟲ seret untuk memutar</span>
 					</div>
 				)}
 				<div className="mt-3 rounded-2xl bg-slate-50 p-3 ring-1 ring-slate-200">

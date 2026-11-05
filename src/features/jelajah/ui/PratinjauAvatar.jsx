@@ -33,7 +33,7 @@ export default function PratinjauAvatar({ penampilan }) {
 			onPointerUp={() => Object.assign(s, { aktif: false, terakhir: performance.now() })}
 			onPointerCancel={() => Object.assign(s, { aktif: false, terakhir: performance.now() })}
 		>
-			<Canvas dpr={[1, 2]} camera={{ fov: 30, position: [0, 1.0, 4.3] }} onCreated={({ camera }) => camera.lookAt(0, 0.86, 0)}>
+			<Canvas dpr={[1, 2]} camera={{ fov: 30, position: [0, 1.0, 4.7] }} onCreated={({ camera }) => camera.lookAt(0, 0.92, 0)}>
 				<ambientLight intensity={1.4} />
 				<directionalLight position={[2, 4, 3]} intensity={1.8} />
 				<directionalLight position={[-3, 2, -2]} intensity={0.6} />
