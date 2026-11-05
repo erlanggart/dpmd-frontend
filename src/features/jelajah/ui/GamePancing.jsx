@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { FiBookOpen, FiX } from "react-icons/fi";
+import { FiBookOpen, FiChevronRight, FiX } from "react-icons/fi";
 import { kirimUcap } from "../multipemain";
 import { IKAN, KELAS, MODE_KAMERA, aturOtomatis, bolehOtomatis, gantiKamera, jamLapar, joranKini, ketuk, lanjutPancing, pancing, senarKini, tarikanSakti, useKoleksi, usePancing } from "../pancing";
 import PanelJoran from "./PanelJoran";
@@ -84,6 +84,8 @@ export default function GamePancing({ sentuh, bersama, onSelesai, onTas }) {
 	const { poin, koleksi } = useKoleksi();
 	const [album, setAlbum] = useState(false);
 	const [joran, setJoran] = useState(false);
+	// HP: tombol-tombol terlipat di balik 🎣 supaya air, senar, dan ikan tidak tertutup
+	const [menuBuka, setMenuBuka] = useState(false);
 	// jam ikan lapar (diperiksa tiap detik)
 	const [lapar, setLapar] = useState(jamLapar);
 	useEffect(() => {
@@ -280,7 +282,18 @@ export default function GamePancing({ sentuh, bersama, onSelesai, onTas }) {
 			</div>
 
 			{/* kartu poin, album, suara */}
-			<div className={`pointer-events-auto absolute right-3 top-[5.5rem] z-20 flex max-w-[calc(100%-1.5rem)] flex-wrap items-center justify-end gap-1.5 rounded-2xl bg-slate-950/70 px-2 py-1.5 text-white shadow-lg ring-1 ring-white/10 backdrop-blur sm:top-20 ${fase === "tarik" ? "max-sm:hidden" : ""}`}>
+			<div className={`pointer-events-auto absolute right-3 top-[5.5rem] z-20 flex max-w-[calc(100%-1.5rem)] items-center justify-end gap-1.5 rounded-2xl bg-slate-950/70 px-2 py-1.5 text-white shadow-lg ring-1 ring-white/10 backdrop-blur sm:top-20 ${fase === "tarik" ? "max-sm:hidden" : ""}`}>
+				<AnimatePresence initial={false}>
+				{(!sentuh || menuBuka) && (
+				<motion.div
+					key="tombol"
+					initial={{ width: 0, opacity: 0 }}
+					animate={{ width: "auto", opacity: 1 }}
+					exit={{ width: 0, opacity: 0 }}
+					transition={{ type: "spring", stiffness: 300, damping: 32 }}
+					onClick={() => setMenuBuka(false)}
+					className={`flex items-center justify-end gap-1.5 ${sentuh ? "overflow-hidden whitespace-nowrap" : "flex-wrap"}`}
+				>
 				<span className="px-1.5 text-xs font-bold tabular-nums" title="Koin — belanja di Alfamart">🪙 {angka(poin)}</span>
 				{pancing.combo >= 2 && (
 					<span className="rounded-xl bg-gradient-to-r from-orange-500 to-rose-500 px-2 py-1 text-xs font-black" title="Tangkapan beruntun: koin bertambah">
@@ -314,6 +327,14 @@ export default function GamePancing({ sentuh, bersama, onSelesai, onTas }) {
 				<button onClick={onSelesai} className="rounded-xl bg-rose-500/80 p-1.5 hover:bg-rose-500" aria-label="Selesai memancing (E)">
 					<FiX />
 				</button>
+				</motion.div>
+				)}
+				</AnimatePresence>
+				{sentuh && (
+					<button onClick={() => setMenuBuka((b) => !b)} aria-expanded={menuBuka} aria-label={menuBuka ? "Tutup menu memancing" : "Buka menu memancing"} className="flex shrink-0 items-center justify-center rounded-xl bg-white/10 px-2 py-1 text-lg active:bg-white/20">
+						{menuBuka ? <FiChevronRight /> : <span aria-hidden>🎣</span>}
+					</button>
+				)}
 			</div>
 
 			{/* jam ikan lapar & pesan (satu tumpukan supaya tidak saling menutupi) */}

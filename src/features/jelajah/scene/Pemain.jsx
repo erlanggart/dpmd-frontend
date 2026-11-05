@@ -63,6 +63,15 @@ const JARAK_KASIR = 1.4;
 const JARAK_GEROBAK = 1.5;
 const JARAK_PETI = 1.3;
 const SUDUT_LIHAT_JORAN = 0.75;
+// Ujung senar selama terentang di air, untuk kamera standar memancing.
+function ujungSenar() {
+	const f = pancing.fase;
+	if (!pancing.aktif || pancing.kamera !== "standar") return null;
+	return f === "tarik" || f === "gigit" ? pancing.ikanPos : f === "tunggu" || f === "lempar" ? pancing.pelampung : null;
+}
+// Geser samping saat adu tarik, sebatas pemain & ikan masih di bingkai. 0,37 = 80% dari tan(fov 50 / 2):
+// layar HP tegak hanya selebar ±12°, jadi geser penuh 43° melempar senar dan ikan keluar layar.
+const sudutSamping = (aspek, jarak, jarakSenar) => Math.min(SUDUT_LIHAT_JORAN, Math.asin(Math.min(1, (0.37 * aspek * jarak) / Math.max(jarakSenar / 2, 1))));
 const JARAK_ATAP_SAUNG = 14;
 // tenaga berkurang per detik: diam/jalan, tambahan saat berlari, tambahan saat adu tarik ikan
 const KURAS = { dasar: 1 / 25, lari: 1 / 4, tarik: 1 / 6, renang: 1 / 7 };
@@ -709,9 +718,13 @@ export default function Pemain({ daftarDinding, penghuni, penampilan = PENAMPILA
 				geserAsal(jok.x, jok.z, kend.rot);
 			}
 			g.rotation.y = arahJoran() + Math.PI * pancing.gaya.balik;
-			// kamera mengikuti arah bidikan saja (bukan ayunan joran) supaya ayunannya terlihat
+			// senar terentang: kamera mengikuti ujung senar dan ayunan joran, supaya senar & ikan tetap terlihat
+			const senar = ujungSenar();
+			const jarakSenar = senar ? Math.hypot(senar.x - p.x, senar.z - p.z) : 0;
+			const arahBidik = pancing.asal.rot + pancing.aim;
+			const arahKamera = jarakSenar > 1.5 ? Math.atan2(senar.x - p.x, senar.z - p.z) + arahJoran() - arahBidik : arahBidik;
 			// saat adu tarik kamera standar bergeser ke samping: dari belakang persis, lengkung joran (tanda tegangan) tak terlihat
-			const ke = pancing.asal.rot + pancing.aim + Math.PI + (pancing.kamera === "standar" && (pancing.fase === "tarik" || pancing.fase === "gigit") ? SUDUT_LIHAT_JORAN : 0);
+			const ke = arahKamera + Math.PI + (pancing.kamera === "standar" && (pancing.fase === "tarik" || pancing.fase === "gigit") ? sudutSamping(camera.aspect, k.jarak - 3, jarakSenar) : 0);
 			k.yaw += (sudutDekat(k.yaw, ke) - k.yaw) * (1 - Math.exp(-3 * dt));
 			if (!pancing.aktif) {
 				pancing.arah = 0;
@@ -1088,7 +1101,9 @@ export default function Pemain({ daftarDinding, penghuni, penampilan = PENAMPILA
 		const jarakKamera = diToko
 			? Math.min(k.jarak, 5)
 			: k.jarak + (mk.jenis === "kemudi" && mk.k.jenis === "mobil" ? 2.5 : 0) + (mk.jenis === "mancing" ? (pancing.fase === "dapat" ? -4.5 : pancing.fase === "tarik" ? -3 : 1.5) : 0);
-		const pitch = Math.max(0.12, k.pitch - 0.27 * k.luar);
+		const ujung = mk.jenis === "mancing" ? ujungSenar() : null;
+		// layar tegak: kamera lebih tinggi, senar membentang ke atas layar dari pemain sampai ikan
+		const pitch = Math.max(0.12, k.pitch - 0.27 * k.luar) + (ujung && camera.aspect < 1 ? 0.25 : 0);
 		const sy = Math.sin(k.yaw);
 		const cy = Math.cos(k.yaw);
 		// Saat pemain di luar gedung, kamera tidak boleh masuk ke badan gedung (misalnya
@@ -1124,6 +1139,8 @@ export default function Pemain({ daftarDinding, penghuni, penampilan = PENAMPILA
 		// dan menatap ikan di depan dada, bukan ke langit
 		const angkatIkan = mk.jenis === "mancing" && pancing.fase === "dapat";
 		bantu.fokus.set(p.x, p.y + (angkatIkan ? 1.35 : 1.2 + 1.8 * k.luar), p.z);
+		// senar terentang: menatap titik tengah pemain dan ujung senar, keduanya masuk satu bingkai
+		if (ujung) bantu.fokus.set((p.x + ujung.x) / 2, (p.y + 1.2 + TANAH + (pancing.kolam ? AIR_KOLAM_Y : AIR_Y)) / 2, (p.z + ujung.z) / 2);
 		let tx = p.x + sy * datar;
 		let ty = angkatIkan ? Math.min(p.y + 1.2 + tinggi, p.y + 1.75) : p.y + 1.2 + tinggi;
 		let tz = p.z + cy * datar;

@@ -907,7 +907,7 @@ export default function JelajahPage() {
 					)}
 
 					{!jeda && !fokusTarik && <BarTenaga onTas={() => setMenu("tas")} onAlbum={modeMain === "mancing" ? null : () => setMenu("album")} onGaya={() => setMenu("gaya")} onMisi={() => setMenu("misi")} onPeringkat={() => setMenu("peringkat")} onPancing={modeMain === "mancing" ? null : () => setMenu("pancing")} ringkas={modeMain === "mancing"} sentuh={sentuh} />}
-					{!jeda && <HudLomba mancing={modeMain === "mancing"} />}
+					{!jeda && <HudLomba mancing={modeMain === "mancing"} sentuh={sentuh} />}
 					{!jeda && mainBasket && <HudBasket sentuh={sentuh} />}
 					{!jeda && <ChipBasket />}
 					{!jeda && !mancingHp && !mainBasket && (

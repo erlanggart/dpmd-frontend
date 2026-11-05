@@ -71,7 +71,7 @@ function Podium({ hasil }) {
 
 // posisi: di bawah bar tenaga; saat memancing di HP turun di bawah kartu & pesan pancing,
 // di HP mendatar (layar pendek) naik dan diringkas supaya tidak menabrak joystick
-export default function HudLomba({ mancing = false }) {
+export default function HudLomba({ mancing = false, sentuh = false }) {
 	const kolam = useKolam();
 	useMultipemain();
 	usePancing();
@@ -81,7 +81,7 @@ export default function HudLomba({ mancing = false }) {
 	const k = lombaKini();
 	if (k?.hasil) return <Podium hasil={k.hasil} />;
 	const tiket = tiketAktif(kini);
-	const pos = mancing ? "top-[13.5rem] sm:top-[10.5rem] [@media(max-height:520px)]:top-[7rem]" : "top-[11rem] [@media(max-height:520px)]:top-[10.25rem]";
+	const pos = mancing ? "top-[15.5rem] sm:top-[10.5rem] [@media(max-height:520px)]:top-[7rem]" : "top-[11rem] [@media(max-height:520px)]:top-[10.25rem]";
 	const chip = (teks, warna) => <p className={`pointer-events-none absolute left-3 ${pos} z-20 max-w-[14rem] rounded-2xl px-3 py-1 text-[11px] font-black text-white shadow-lg sm:left-4 sm:max-w-xs ${warna}`}>{teks}</p>;
 	const manusia = k ? k.peserta.filter((p) => p.npc === false || p.saya).length : 0;
 	if (k?.fase === "daftar")
@@ -94,6 +94,11 @@ export default function HudLomba({ mancing = false }) {
 	const urut = k.peserta;
 	const saya = urut.findIndex((p) => p.saya);
 	const sisa = k.sampai - kini;
+	// HP: papan penuh menutupi air, jadi cukup satu baris: peringkat, waktu, babon sendiri, babon teratas
+	if (sentuh) {
+		const babon = urut[saya]?.babon;
+		return chip(`🏆 ${saya + 1}/${urut.length} · ⏱ ${jam(sisa)} · ${babon ? `${angka(babon)} kg` : "—"}${urut[0]?.babon ? ` · 🥇 ${angka(urut[0].babon)}` : ""}`, "bg-slate-950/75");
+	}
 	return (
 		<div className={`pointer-events-none absolute left-3 ${pos} z-20 w-48 overflow-hidden rounded-2xl bg-slate-950/75 text-white shadow-lg ring-1 ring-amber-400/50 backdrop-blur sm:left-4 sm:w-56 [@media(max-height:520px)]:w-44`}>
 			<div className="flex items-center justify-between bg-gradient-to-r from-amber-500/80 to-orange-500/80 px-2.5 py-1">
