@@ -2,9 +2,10 @@ import { useMemo, useRef } from "react";
 import { useFrame } from "@react-three/fiber";
 import { Euler, Matrix4, Quaternion, Vector3 } from "three";
 import Tokoh from "./Tokoh";
-import { LANTAI, RIM, basket, majukanBasket, useBasket } from "../basket";
+import { posisi } from "../jelajahStore";
+import { LANTAI, RIM, basket, majukanBasket, sedangTanding, useBasketPilih } from "../basket";
 
-// Tampilan 3D laga basket 1 lawan 1: bola, jaring, lawan, dan semburan koin.
+// Tampilan 3D laga basket: bola, jaring, lawan warga (laga sendiri), penanda pemain, dan semburan koin.
 // Logika & fisika ada di basket.js; di sini hanya membaca state tiap frame (tanpa setState).
 
 const PENAMPILAN_LAWAN = { seragam: "warga", perempuan: false, kulit: "#c08d63", rambut: "#15100c", jilbab: null, baju: "#1d4ed8", celana: "#1e293b", kacamata: false };
@@ -21,22 +22,35 @@ function Jaring({ i, r, jaring }) {
 	);
 }
 
+function Cincin({ warna, cincin }) {
+	return (
+		<mesh ref={cincin} rotation-x={-Math.PI / 2} visible={false}>
+			<ringGeometry args={[0.42, 0.5, 24]} />
+			<meshBasicMaterial color={warna} transparent opacity={0.75} depthWrite={false} />
+		</mesh>
+	);
+}
+
 export default function MainBasket() {
-	const aktif = useBasket().aktif;
+	const lawanWarga = useBasketPilih((b) => b.aktif && !b.ikutOnline);
 	const grupBola = useRef();
+	const bahanBola = useRef();
 	const bayangan = useRef();
 	const grupLawan = useRef();
 	const jaring = useRef([]);
 	const koin = useRef();
+	const cincinSaya = useRef();
+	const cincinOper = useRef();
 	const geraknya = useRef(basket.lawan.gerak);
 	const alat = useMemo(() => ({ m: new Matrix4(), e: new Euler(), q: new Quaternion(), p: new Vector3(), s: new Vector3() }), []);
 
 	useFrame((_, dt) => {
 		majukanBasket(dt);
 		const o = basket.bola;
+		const laga = basket.aktif || sedangTanding();
 		const g = grupBola.current;
 		if (g) {
-			if (basket.aktif) {
+			if (laga) {
 				g.position.set(o.x, o.y, o.z);
 				g.rotation.x = o.putar;
 			} else {
@@ -44,11 +58,24 @@ export default function MainBasket() {
 				g.rotation.x = 0;
 			}
 		}
+		// pemain yang sedang panas: bola menyala
+		if (bahanBola.current) bahanBola.current.emissiveIntensity = laga && basket.panas ? 0.9 : 0;
 		const by = bayangan.current;
 		if (by) {
-			const yb = basket.aktif ? o.y : LANTAI;
+			const yb = laga ? o.y : LANTAI;
 			by.position.set(g ? g.position.x : -58, 0.08, g ? g.position.z : 19);
 			by.scale.setScalar(1 - Math.min(0.5, yb * 0.1));
+		}
+		const cs = cincinSaya.current;
+		if (cs) {
+			cs.visible = basket.aktif && basket.ikutOnline;
+			cs.position.set(posisi.x, 0.09, posisi.z);
+		}
+		const co = cincinOper.current;
+		if (co) {
+			const t = basket.sasaranOper;
+			co.visible = !!t;
+			if (t) co.position.set(t.x, 0.09, t.z);
 		}
 		// jaring berayun sesaat setelah bola masuk
 		const now = performance.now();
@@ -102,7 +129,7 @@ export default function MainBasket() {
 			<group ref={grupBola} position={[-58, LANTAI, 19]}>
 				<mesh>
 					<sphereGeometry args={[0.12, 18, 14]} />
-					<meshStandardMaterial color="#ea6a1f" roughness={0.65} />
+					<meshStandardMaterial ref={bahanBola} color="#ea6a1f" roughness={0.65} emissive="#ff5a00" emissiveIntensity={0} />
 				</mesh>
 				{[[0, 0, 0], [0, Math.PI / 2, 0], [Math.PI / 2, 0, 0]].map((rot, i) => (
 					<mesh key={i} rotation={rot}>
@@ -115,7 +142,9 @@ export default function MainBasket() {
 				<circleGeometry args={[0.14, 12]} />
 				<meshBasicMaterial color="#000" transparent opacity={0.28} depthWrite={false} />
 			</mesh>
-			{aktif && (
+			<Cincin warna="#ffffff" cincin={cincinSaya} />
+			<Cincin warna="#fde047" cincin={cincinOper} />
+			{lawanWarga && (
 				<group ref={grupLawan}>
 					<Tokoh penampilan={PENAMPILAN_LAWAN} gerak={geraknya} bayangan />
 				</group>

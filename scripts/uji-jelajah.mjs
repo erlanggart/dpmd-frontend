@@ -54,7 +54,7 @@ await build({
 	format: "esm",
 	outfile: keluar,
 	plugins: [rintisApi],
-	define: { "import.meta.env.DEV": "true" },
+	define: { "import.meta.env.DEV": "true", "import.meta.env": "{}" },
 	logLevel: "error",
 });
 const { B, P, R, K, S, H, Situ, Desa, ABANG_HUJAN, PENGHALANG, POTENSI } = await import(pathToFileURL(keluar).href);
@@ -132,6 +132,26 @@ Object.assign(P.pancing, { otomatis: false, kolam: false, perahu: false });
 assert.ok(K.peluangPemain(0.8, 3, 0) > 0.9, "rilis sempurna hampir pasti masuk");
 assert.ok(K.peluangPemain(0.2, 3, 0) < 0.4, "rilis buruk jauh lebih sering meleset");
 assert.ok(K.peluangPemain(0.8, 3, 1) < K.peluangPemain(0.8, 3, 0), "dijaga menurunkan peluang");
+// dribble: bola menyentuh lantai & telapak tanpa loncatan antar-fase; bidik memuncak di zona hijau
+{
+	const H = 0.82;
+	assert.ok(Math.abs(K.tinggiDribble(0, H) - K.LANTAI) < 1e-9 && Math.abs(K.tinggiDribble(0.5, H) - H) < 1e-9, "lantai & telapak");
+	for (let u = 0; u < 1; u += 0.005) assert.ok(Math.abs(K.tinggiDribble(u + 0.005, H) - K.tinggiDribble(u, H)) < 0.05, `dribble tanpa loncatan di u=${u}`);
+	assert.ok(K.tinggiDribble(0.1, H) - K.LANTAI > H - K.tinggiDribble(0.68, H), "naik melambat, turun makin cepat");
+	for (const l of [K.bolaBidik(0.4), K.gayaBaru().lokal]) for (const k of ["x", "y", "z", "ty", "condong", "tekuk"]) assert.ok(Number.isFinite(l[k]), `titik bola punya ${k}`);
+	assert.ok(K.bolaBidik(0.79).y > K.bolaBidik(0.3).y && K.bolaBidik(0.79).y === K.bolaBidik(1.2).y, "bola naik sampai zona hijau");
+}
+// tiap jenis tembakan tersambung: titik ruas berurutan, masuk berakhir di pusat ring, meleset punya pantulan
+for (let n = 0; n < 200; n++) {
+	const dekat = n % 4 === 0;
+	const masuk = n % 2 === 0;
+	const p = { x: -58 + Math.random() * 4 - 2, z: dekat ? 12.5 : 17 };
+	const r = K.rencanaTembakan(p, K.RIM[0], { masuk, perfect: n % 8 === 2, dekat, dunk: n % 16 === 0, jauh: n % 3 === 1 && !masuk });
+	assert.equal(r.titik.length, r.T.length + 1, r.gaya);
+	const akhir = r.titik.at(-1);
+	if (masuk) assert.deepEqual(akhir, [K.RIM[0].x, K.RIM[0].y, K.RIM[0].z], r.gaya);
+	else assert.ok(r.pantul?.every(Number.isFinite), r.gaya);
+}
 {
 	const a = { x: -58, y: 2.15, z: 18 };
 	const T = 1.1;

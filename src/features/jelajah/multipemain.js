@@ -140,6 +140,14 @@ export function kirimIkanLomba(data) {
 	if (socket?.connected) socket.emit("lomba:ikan", data);
 	else antreIkanLomba.push(data);
 }
+// ---------- Lomba Basket antar-tamu (Taman Warga) ----------
+// Keadaan lagannya dikelola basket.js; modul ini hanya meneruskan pesan server.
+let kaitBasket = null;
+export const aturKaitBasket = (f) => (kaitBasket = f);
+export const kirimBasket = (acara, data) => socket?.connected && socket.emit(acara, data);
+export const idSocket = () => socket?.id ?? null;
+export const pesanSistem = (teks) => tambahObrolan({ sistem: true, teks, waktu: Date.now() });
+
 function terimaLomba(m) {
 	if (m?.fase === "daftar" && m.id !== lombaDiumumkan) {
 		lombaDiumumkan = m.id;
@@ -244,6 +252,7 @@ export async function sambungJelajah(profil) {
 		}
 		ubah({ status: "tersambung", id: m.id, ruang: m.ruang ?? null, daftar: daftarDariMap(), galat: null });
 		terimaLomba(m.lomba);
+		kaitBasket?.(m.basket ?? null);
 		terimaGotong(m.gotong ?? null);
 		tanda("bersama");
 		if (m.namaDitolak && !tolakDiumumkan) {
@@ -260,6 +269,7 @@ export async function sambungJelajah(profil) {
 		}
 	});
 	s.on("lomba", terimaLomba);
+	s.on("basket", (m) => kaitBasket?.(m));
 	s.on("gotong", terimaGotong);
 	s.on("masuk", (p) => {
 		pemainLain.set(p.id, { profil: { nama: p.nama, jk: p.jk, avatar: p.avatar, kulit: p.kulit, gaya: bersihkanGaya(p.gaya) }, s: p.s });
@@ -409,6 +419,7 @@ export function putusJelajah() {
 	socket = null;
 	antreIkanLomba.length = 0;
 	kaitLomba?.(undefined); // keluar dari mode bersama
+	kaitBasket?.(null);
 	pemainLain.clear();
 	diriSendiri.ucap = null;
 	diriSendiri.emote = null;

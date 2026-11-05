@@ -6,6 +6,13 @@ import { sudutJongkok, sudutPanjat } from "./gerakPanjat";
 import { ANGKAT_JORAN, CONDONG_JORAN, KENOP_JORAN, PANGKAL_JORAN, SUDUT_JORAN_TAMU } from "./joranLentur";
 import { SUDUT_BAHU_PAYUNG, SUDUT_SIKU_PAYUNG } from "./ModelPayung";
 
+const sudutDekat = (dari, ke) => dari + Math.atan2(Math.sin(ke - dari), Math.cos(ke - dari));
+// Tampak bila dirinya dan semua induknya tampak (lantai lain / di balik dinding = tidak).
+const tampak = (o) => {
+	for (let p = o; p; p = p.parent) if (!p.visible) return false;
+	return true;
+};
+
 // IK dua ruas: telapak mencapai titik (tx, ty, tz) rangka tokoh, dengan badan condong sebesar c.
 const PANJANG_ATAS = 0.29;
 const PANJANG_BAWAH = 0.29;
@@ -21,13 +28,6 @@ function ikLengan(atas, bawah, bahuX, tx, ty, tz, c = 0) {
 	atas.rotation.x = Math.atan2(-zb, -yb) + siku;
 	bawah.rotation.x = -(Math.PI - Math.acos((PANJANG_ATAS ** 2 + PANJANG_BAWAH ** 2 - d * d) / (2 * PANJANG_ATAS * PANJANG_BAWAH)));
 }
-
-const sudutDekat = (dari, ke) => dari + Math.atan2(Math.sin(ke - dari), Math.cos(ke - dari));
-// Tampak bila dirinya dan semua induknya tampak (lantai lain / di balik dinding = tidak).
-const tampak = (o) => {
-	for (let p = o; p; p = p.parent) if (!p.visible) return false;
-	return true;
-};
 
 // Satu tokoh manusia, menghadap +z.
 // - pose "jalan": kaki & lengan berayun mengikuti `gerak.current` = { laju 0..1, fase }.
@@ -52,6 +52,9 @@ export default function Tokoh({ penampilan, pose = "jalan", gerak, aktivitas, as
 	const lki = useRef();
 	const lka2 = useRef();
 	const lutut = (a, b) => { if (lki.current) { lki.current.rotation.x = a; lka2.current.rotation.x = b; } };
+	// gerak.halus: tiap sendi mengejar posenya, supaya pergantian pose basket tidak patah
+	const sendi = useMemo(() => [lka, lkn, sbka, sbkn, kki, kka, lki, lka2], []);
+	const riwayat = useMemo(() => Array.from({ length: 9 }, () => [0, 0]), []);
 	const geser = useMemo(() => Math.random() * 20, []);
 	const miring = useRef(false);
 	const akar = useRef();
@@ -282,41 +285,41 @@ export default function Tokoh({ penampilan, pose = "jalan", gerak, aktivitas, as
 				lkn.current.rotation.z = -0.35 - buka;
 				sbka.current.rotation.x = -0.3;
 				sbkn.current.rotation.x = -0.3;
-			} else if (isyarat === "dribble") {
-				// tangan penggiring menekan bola: u 0,5 = bola di tangan, u 0/1 = bola di lantai
-				const u = gerak.current.dribbleU ?? 0;
-				const kiri = (gerak.current.dribbleSisi ?? 1) < 0;
-				const tekan = -Math.cos(u * Math.PI * 2);
-				const atas = kiri ? lka : lkn;
-				const bawah = kiri ? sbka : sbkn;
-				atas.current.rotation.x = -0.5 + (1 - tekan) * 0.12;
-				atas.current.rotation.z = kiri ? -0.14 : 0.14;
-				bawah.current.rotation.x = -0.95 + (1 - tekan) * 0.3;
+			} else if (isyarat === "dribble" && gerak.current.bola) {
+				// telapak mengikuti bola di titik atasnya; tangan satunya melindungi bola
+				const b = gerak.current.bola;
+				const kiri = b.x < 0;
+				ikLengan((kiri ? lka : lkn).current, (kiri ? sbka : sbkn).current, kiri ? -0.245 : 0.245, b.x, b.ty, b.z, b.condong);
+				const lain = kiri ? lkn : lka;
+				lain.current.rotation.x = -0.45;
+				lain.current.rotation.z = kiri ? 0.18 : -0.18;
+				(kiri ? sbkn : sbka).current.rotation.x = -0.75;
+				badan.current.rotation.x = b.condong;
+				miring.current = true;
+			} else if (isyarat === "bidik" && gerak.current.bola) {
+				// dua telapak di sisi bola; lutut menekuk dalam lalu menegak saat bola mencapai dahi
+				const b = gerak.current.bola;
+				ikLengan(lka.current, sbka.current, -0.245, -0.11, b.y - 0.03, b.z);
+				ikLengan(lkn.current, sbkn.current, 0.245, 0.11, b.y - 0.03, b.z);
+				kki.current.rotation.x = -0.15 - 0.55 * b.tekuk;
+				kka.current.rotation.x = -0.15 - 0.55 * b.tekuk;
+				lutut(0.3 + 1.1 * b.tekuk, 0.3 + 1.1 * b.tekuk);
+				badan.current.position.y = -0.02 - 0.15 * b.tekuk;
+			} else if (isyarat === "tembak") {
+				// gaya ikut setelah lepas: lengan kanan menjulur tinggi ke ring, tangan kiri menyingkir
+				ikLengan(lkn.current, sbkn.current, 0.245, 0.14, 1.98, 0.42);
+				ikLengan(lka.current, sbka.current, -0.245, -0.2, 1.72, 0.26);
+			} else if (isyarat === "oper") {
+				// dorongan dari dada
+				ikLengan(lka.current, sbka.current, -0.245, -0.1, 1.3, 0.5);
+				ikLengan(lkn.current, sbkn.current, 0.245, 0.1, 1.3, 0.5);
 				badan.current.rotation.x = 0.1;
 				miring.current = true;
-			} else if (isyarat === "bidik") {
-				// bola dibawa dua tangan di atas dahi, lutut sedikit menekuk
-				lka.current.rotation.x = -2.35;
-				lkn.current.rotation.x = -2.35;
-				sbka.current.rotation.x = -1.25;
-				sbkn.current.rotation.x = -1.25;
-				lka.current.rotation.z = 0.12;
-				lkn.current.rotation.z = -0.12;
-				kki.current.rotation.x = -0.28;
-				kka.current.rotation.x = -0.28;
-				lutut(0.5, 0.5);
-			} else if (isyarat === "tembak") {
-				// lengan terjulur ke ring setelah bola lepas
-				lkn.current.rotation.x = -2.75;
-				sbkn.current.rotation.x = -0.2;
-				lka.current.rotation.x = -2.35;
-				sbka.current.rotation.x = -0.75;
 			} else if (isyarat === "rebut") {
 				// menjulur merebut bola
-				lkn.current.rotation.x = -1.55;
-				sbkn.current.rotation.x = -0.1;
+				ikLengan(lkn.current, sbkn.current, 0.245, 0.14, 0.95, 0.55, 0.28);
 				lka.current.rotation.x = -0.6;
-				badan.current.rotation.x = 0.25;
+				badan.current.rotation.x = 0.28;
 				miring.current = true;
 			}
 
@@ -353,6 +356,24 @@ export default function Tokoh({ penampilan, pose = "jalan", gerak, aktivitas, as
 				lkn.current.rotation.z = 0;
 				sbkn.current.rotation.x = SUDUT_SIKU_PAYUNG;
 				sbkn.current.rotation.z = 0;
+			}
+
+			if (gk?.halus) {
+				const f = 1 - Math.exp(-26 * dt);
+				for (let i = 0; i < sendi.length; i++) {
+					const rot = sendi[i].current.rotation;
+					const r = riwayat[i];
+					r[0] += (rot.x - r[0]) * f;
+					r[1] += (rot.z - r[1]) * f;
+					rot.x = r[0];
+					rot.z = r[1];
+				}
+				const r = riwayat[8];
+				r[0] += (badan.current.rotation.x - r[0]) * f;
+				r[1] += (badan.current.position.y - r[1]) * f;
+				badan.current.rotation.x = r[0];
+				badan.current.position.y = r[1];
+				miring.current = true; // kembali tegak tiap frame, lalu dihaluskan di sini
 			}
 		}
 	});

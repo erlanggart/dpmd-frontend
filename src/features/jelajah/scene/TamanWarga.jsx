@@ -5,7 +5,7 @@ import AreaTampak from "./AreaTampak";
 import Gabung from "./Gabung";
 import MainBasket from "./MainBasket";
 import OrangInstans from "./OrangInstans";
-import { basket } from "../basket";
+import { lapanganBebas } from "../basket";
 import Papan from "./Papan";
 import Tokoh from "./Tokoh";
 import { penampilanWarga } from "./layout";
@@ -380,7 +380,7 @@ function Keramaian() {
 		if (Math.hypot(camera.position.x + 50, camera.position.z - 10) > 130) return;
 		const dt = Math.min(dt0, 0.1);
 		for (const a of agen) {
-			if (a.jenis === "basket") a.tampak = !basket.aktif;
+			if (a.jenis === "basket") a.tampak = lapanganBebas();
 			let tx;
 			let tz;
 			if (a.jenis === "basket") {

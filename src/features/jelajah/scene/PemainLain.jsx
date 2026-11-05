@@ -13,6 +13,7 @@ import PancinganTamu from "./PancinganTamu";
 import { pemainWilayah } from "../wilayah/uiWilayah";
 import { KeranjangTamu } from "./KeranjangTangan";
 import Tokoh from "./Tokoh";
+import { animasiTamu, seragamTim, timDari, useBasketPilih } from "../basket";
 
 // Tamu lain yang sedang menjelajah bersama: tokoh sesuai avatar pilihannya, label
 // nama, balon chat, dan emote. Posisi dari server (±10x/detik) dihaluskan tiap
@@ -179,8 +180,9 @@ function Hiasan({ sumber, tinggiRef, lihat, posisiRef }) {
 
 function Tamu({ id, nama, jk, avatar, kulit, gaya, diWilayah }) {
 	const kunciGaya = JSON.stringify(gaya || null);
+	const tim = useBasketPilih(() => timDari(id));
 	// eslint-disable-next-line react-hooks/exhaustive-deps
-	const penampilan = useMemo(() => kenakanGaya(penampilanAvatar({ jk, avatar, kulit }), gaya), [jk, avatar, kulit, kunciGaya]);
+	const penampilan = useMemo(() => seragamTim(kenakanGaya(penampilanAvatar({ jk, avatar, kulit }), gaya), tim), [jk, avatar, kulit, kunciGaya, tim]);
 	const grup = useRef();
 	const jalan = useRef();
 	const duduk = useRef();
@@ -240,6 +242,7 @@ function Tamu({ id, nama, jk, avatar, kulit, gaya, diWilayah }) {
 		const kini = performance.now();
 		// sedang memancing: tangan menggenggam joran, atau mengangkat ikan hasil tangkapan
 		gr.isyarat = s.pc && s.pose === "mancing" ? (s.pc.f === 5 ? "angkat" : "mancing") : s.pose === "renang" ? "renang" : p.emote && kini < p.emote.sampai ? p.emote.jenis : s.kr ? "keranjang" : null;
+		animasiTamu(id, gr, t, dt);
 		// berenang: badan mendatar saat bergerak, tegak mengapung saat diam
 		gr.renang = s.pose === "renang" ? (gr.renang ?? 0) + ((bergerak ? 1 : 0) - (gr.renang ?? 0)) * (1 - Math.exp(-4 * dt)) : 0;
 		if (s.pose === "renang") aturBadanRenang(jalan.current, gr.renang);
