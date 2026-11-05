@@ -10,7 +10,7 @@ const JARI = (i) => 0.019 - (i / N_RUAS) * 0.0155;
 const GEO_RUAS = Array.from({ length: N_RUAS }, (_, i) => new CylinderGeometry(JARI(i + 1), JARI(i), L + 0.004, 7));
 const GEO_MATA = Array.from({ length: N_RUAS }, (_, i) => new TorusGeometry(0.024 - i * 0.002, 0.0028, 5, 10));
 const GEO_LILIT = Array.from({ length: N_RUAS }, (_, i) => new CylinderGeometry(JARI(i) + 0.0012, JARI(i) + 0.0012, 0.035, 7));
-const GEO_GAGANG = new CylinderGeometry(0.024, 0.027, 0.42, 10);
+const GEO_GAGANG = new CylinderGeometry(0.024, 0.027, 0.3, 10);
 const GEO_GAGANG_DEPAN = new CylinderGeometry(0.019, 0.023, 0.11, 10);
 const GEO_TUTUP = new CylinderGeometry(0.03, 0.03, 0.035, 10);
 const GEO_DUDUKAN = new CylinderGeometry(0.021, 0.021, 0.12, 10);
@@ -46,10 +46,10 @@ function Ruas({ i, ruas, ujung, warna, warnaUjung }) {
 export default function ModelJoran({ ruas, ujung, engkol, warna, warnaUjung }) {
 	return (
 		<>
-			<mesh geometry={GEO_GAGANG} position-y={-0.13}>
+			<mesh geometry={GEO_GAGANG} position-y={-0.07}>
 				<meshStandardMaterial color="#c8a27a" roughness={0.95} />
 			</mesh>
-			<mesh geometry={GEO_TUTUP} position-y={-0.355}>
+			<mesh geometry={GEO_TUTUP} position-y={-0.235}>
 				<meshStandardMaterial color="#1f2937" roughness={0.5} />
 			</mesh>
 			<mesh geometry={GEO_DUDUKAN} position-y={0.135}>
@@ -69,11 +69,11 @@ export default function ModelJoran({ ruas, ujung, engkol, warna, warnaUjung }) {
 				<mesh geometry={GEO_SPOOL} position={[0, 0.033, 0.07]}>
 					<meshStandardMaterial color="#94a3b8" metalness={0.85} roughness={0.22} />
 				</mesh>
-				<group ref={engkol} position={[0.032, -0.02, 0.07]}>
-					<mesh geometry={GEO_LENGAN} position={[0.006, 0.036, 0]}>
+				<group ref={engkol} position={[-0.032, -0.02, 0.07]}>
+					<mesh geometry={GEO_LENGAN} position={[-0.006, 0.036, 0]}>
 						<meshStandardMaterial color="#cbd5e1" metalness={0.8} roughness={0.25} />
 					</mesh>
-					<mesh geometry={GEO_KENOP} position={[0.018, 0.074, 0]}>
+					<mesh geometry={GEO_KENOP} position={[-0.018, 0.074, 0]}>
 						<meshStandardMaterial color="#111827" roughness={0.6} />
 					</mesh>
 				</group>

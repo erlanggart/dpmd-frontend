@@ -17,3 +17,14 @@ export function lenturkanJoran(ruas, sudut, lentur, sisi = 0) {
 		g.rotation.z = -sisi * BOBOT[i];
 	}
 }
+
+// Pangkal joran di rangka tokoh berdiri: gagang di depan perut, sedikit ke sisi kiri supaya kenop
+// engkol terjangkau tangan kanan. Dipakai bersama agar joran & tangan tokoh selalu bertemu.
+export const PANGKAL_JORAN = { x: 0.14, y: 1.12, z: 0.28 };
+// joran ikut terangkat bersama lengan, dan maju-mundur mengikuti bahu saat badan condong
+export const ANGKAT_JORAN = 0.2;
+export const CONDONG_JORAN = 0.53;
+// kenop engkol dari pangkal joran; r = jari-jari putarannya (lihat ModelJoran)
+export const KENOP_JORAN = { x: -0.05, y: 0.115, z: 0.092, r: 0.074 };
+// kemiringan joran bila tidak ada gaya.sudut (tokoh tamu lain, fase menunggu)
+export const SUDUT_JORAN_TAMU = 0.95;

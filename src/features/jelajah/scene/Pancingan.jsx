@@ -10,7 +10,7 @@ import { aturSenar } from "../suaraPancing";
 import { TANAH } from "./layout";
 import ModelIkan from "./ModelIkan";
 import ModelPelampung from "./ModelPelampung";
-import { lenturkanJoran } from "./joranLentur";
+import { ANGKAT_JORAN, CONDONG_JORAN, PANGKAL_JORAN, lenturkanJoran } from "./joranLentur";
 import ModelJoran from "./ModelJoran";
 import { AIR_Y } from "./situ";
 import { AIR_KOLAM_Y, diAirKolam } from "./kolamMonsterData";
@@ -289,11 +289,12 @@ export default function Pancingan() {
 		// makin tegang makin tebal, kalau tidak merahnya tak terlihat. Lebar dalam piksel perangkat, jadi dikali rasio layar
 		senar.material.linewidth = (1.2 + Math.max(0, rasa - 1 / 3) * 3.6) * gl.getPixelRatio();
 
-		// --- joran di tangan kanan pemancing ---
+		// --- joran di tangan pemancing ---
 		const arah = arahJoran();
 		const tinggiTangan = p.perahu || p.duduk ? 0.78 : 1.12;
 		const a = akar.current;
-		a.position.set(posisi.x + Math.cos(arah) * 0.24 + Math.sin(arah) * 0.28, (posisi.yTampil ?? posisi.y) + tinggiTangan, posisi.z - Math.sin(arah) * 0.24 + Math.cos(arah) * 0.28);
+		const majuJoran = PANGKAL_JORAN.z + CONDONG_JORAN * Math.sin(p.gaya.condong);
+		a.position.set(posisi.x + Math.cos(arah) * PANGKAL_JORAN.x + Math.sin(arah) * majuJoran, (posisi.yTampil ?? posisi.y) + tinggiTangan + p.gaya.lengan * ANGKAT_JORAN, posisi.z - Math.sin(arah) * PANGKAL_JORAN.x + Math.cos(arah) * majuJoran);
 		const s = st.current;
 		let sudut = 0.5;
 		let lentur = 0.06;
@@ -314,7 +315,6 @@ export default function Pancingan() {
 		s.sudut = dekati(s.sudut, sudut, p.fase === "lempar" ? 22 : 9, dt);
 		s.lentur = dekati(s.lentur, lentur, 10, dt);
 		// gemetar dipasang setelah penghalusan, kalau tidak getarannya teredam
-		a.rotation.set(0, arah, 0);
 		// saat adu tarik ujung joran ikut tertarik ke arah ikan di samping
 		let sisi = 0;
 		if (p.fase === "tarik") {
@@ -323,8 +323,13 @@ export default function Pancingan() {
 			sisi = Math.max(-0.7, Math.min(0.7, Math.atan2(dx * Math.cos(arah) - dz * Math.sin(arah), dx * Math.sin(arah) + dz * Math.cos(arah)))) * Math.min(1, p.tegang);
 		}
 		s.sisi = dekati(s.sisi ?? 0, sisi, 8, dt);
-		lenturkanJoran(ruas.current, s.sudut + Math.sin(t * 41) * 0.05 * gemetar, s.lentur + Math.sin(t * 38) * 0.16 * gemetar, s.sisi);
-		if (engkol.current) engkol.current.rotation.x = p.fase === "tarik" ? p.gaya.engkol : engkol.current.rotation.x + (p.menggulung ? dt * 9 : 0);
+		// kemiringan dipasang di akar, bukan di ruas pertama: gagang & gulungan segaris batang
+		p.gaya.sudut = s.sudut + Math.sin(t * 41) * 0.05 * gemetar;
+		a.rotation.set(p.gaya.sudut, arah, 0, "YXZ");
+		lenturkanJoran(ruas.current, 0, s.lentur + Math.sin(t * 38) * 0.16 * gemetar, s.sisi);
+		// sudut engkol satu sumber dengan tangan tokoh, supaya kenop tetap di genggaman
+		if (p.fase !== "tarik" && p.menggulung) p.gaya.engkol += dt * 9;
+		if (engkol.current) engkol.current.rotation.x = p.gaya.engkol;
 		a.updateMatrixWorld(true);
 		ujung.current.getWorldPosition(v.ujung);
 
