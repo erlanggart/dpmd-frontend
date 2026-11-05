@@ -29,6 +29,7 @@ import KolamMonster from "./KolamMonster.jsx";
 import PasarBumdes from "./PasarBumdes.jsx";
 import Showroom from "./Showroom.jsx";
 import AreaTampak from "./AreaTampak.jsx";
+import TamanWarga from "./TamanWarga.jsx";
 import { suasana } from "./suasana";
 
 // Kawasan Kompleks Perkantoran Pemda Kabupaten Bogor di sekeliling kantor DPMD, dari
@@ -548,6 +549,9 @@ export default function Kawasan({ daftarDinding }) {
 			<AreaTampak x={-41} z={-12} jarak={160}>
 				<KolamMonster />
 				<PasarBumdes />
+			</AreaTampak>
+			<AreaTampak x={-48} z={12} jarak={150}>
+				<TamanWarga />
 			</AreaTampak>
 			<AreaTampak x={67} z={-5} jarak={150}>
 				<Showroom daftarDinding={daftarDinding} />

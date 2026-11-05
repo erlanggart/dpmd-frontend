@@ -5,6 +5,7 @@ import { AIR_Y, DEK_Y, DERMAGA, KIOS_TOKO_PANCING, KIOS_TOKO_PERAHU, dermagaDi, 
 import { BANGKU_TAMU_KOLAM, PAGAR_KOLAM, PENGHALANG_KOLAM } from "./kolamMonsterData";
 import { KURSI_PASAR_DASAR, KURSI_PASAR_NPC, PENGHALANG_PASAR } from "./pasarBumdesData";
 import { PENGHALANG_SHOWROOM } from "./showroomData";
+import { BANGKU_TAMAN, PENGHALANG_TAMAN } from "./tamanWargaData";
 
 // Geometri turunan dari kantorConfig: dinding per lantai, pintu, tangga, perabot,
 // penghuni kantor, penghalang tabrakan, dan pencarian jalur. Semua dalam meter.
@@ -739,6 +740,7 @@ export const KURSI_PLASTIK = [
 export const KURSI_REHAT = [
 	...BANGKU_TOKO.map((b) => ({ x: b.x, z: b.z, rot: Math.PI, lantai: 0, y: TANAH, rehat: true })),
 	...KURSI_PLASTIK.map((k) => ({ x: k.x, z: k.z, rot: k.rot + Math.PI, lantai: 0, y: TANAH, rehat: true })),
+	...BANGKU_TAMAN.map((b) => ({ x: b.x, z: b.z, rot: b.rot, lantai: 0, y: TANAH, rehat: true })),
 ];
 
 // Fasilitas halaman toko yang bisa dipakai (aksi id "fasilitas:<id>", ditangani JelajahPage).
@@ -868,6 +870,7 @@ export const PENGHALANG = [0, 1].map((l) => [
 				...PENGHALANG_KOLAM,
 				...PENGHALANG_PASAR,
 				...PENGHALANG_SHOWROOM,
+				...PENGHALANG_TAMAN,
 			]
 		: []),
 ]);

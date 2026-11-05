@@ -11,6 +11,7 @@ import Pancingan from "./Pancingan";
 import PemainLain from "./PemainLain";
 import SiangMalam from "./SiangMalam";
 import Cuaca from "./Cuaca";
+import Langit from "./Langit";
 import Petugas from "./Petugas";
 import AcaraKawasan, { PapanAntrean } from "./AcaraKawasan";
 
@@ -85,6 +86,7 @@ export default function KantorScene({ statistik, dikunjungi, jeda, penghuni, pen
 			<fog attach="fog" args={["#cfe6f1", 80, 330]} />
 			<SiangMalam />
 			<Cuaca />
+			<Langit />
 
 			<KualitasOtomatis />
 			<PenandaSiap onSiap={onSiap} />
