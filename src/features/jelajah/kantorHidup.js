@@ -1,3 +1,4 @@
+import { ikutMisi } from "./ikutMisi";
 import { useSyncExternalStore } from "react";
 import { catat, hariIni, tambahXp } from "./progres";
 import { tambahKoin } from "./pancing";
@@ -102,6 +103,7 @@ export const misiKantorKini = () => RANTAI_KANTOR[kantor.misi.i] || null;
 
 /** catat kejadian kantor (sapa, antrean, urusan, etalase, acara) untuk misi cerita */
 export function catatKantor(jenis, d = {}) {
+	if (!ikutMisi()) return;
 	const m = misiKantorKini();
 	if (!m || m.jenis !== jenis || (m.syarat && !m.syarat(d))) return;
 	kantor.misi.n += 1;
@@ -322,6 +324,7 @@ export function sasaranKantor() {
 		const a = AREA_PER_ID[t.area];
 		return titik(a.npc.x, a.npc.z, a.lantai);
 	}
+	if (!ikutMisi()) return null;
 	const m = misiKantorKini();
 	if (t && m?.jenis === "urusan") return null;
 	if (!m) return sasaranAcara();

@@ -7,7 +7,9 @@
     "dev": "vite",
     "build": "vite build && node scripts/inject-custom-sw.js && node scripts/generate-version.js",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "test:jelajah": "node scripts/uji-jelajah.mjs",
+    "test:jelajah-socket": "node scripts/uji-jelajah-socket.mjs"
   },
   "dependencies": {
     "@fontsource-variable/plus-jakarta-sans": "^5.3.0",

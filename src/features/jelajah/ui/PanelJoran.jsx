@@ -265,7 +265,7 @@ export default function PanelJoran({ onTutup }) {
 														{j.nama}
 														{pakai && <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-amber-700">Dipakai</span>}
 														{punya && !pakai && <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-slate-500">Dimiliki</span>}
-														{j.auto && <span title="Mode AUTO: memancing otomatis (koin hasil ×0,75)" className="rounded-full bg-violet-100 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-violet-700">🤖 Auto</span>}
+														{j.auto && <span title="Mode AUTO: memancing otomatis (koin ×0,3, ikan besar lebih jarang)" className="rounded-full bg-violet-100 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-violet-700">🤖 Auto</span>}
 													</p>
 													<p className="mt-0.5 text-xs leading-relaxed text-slate-500">{j.ket}</p>
 												</div>

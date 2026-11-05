@@ -67,7 +67,7 @@ const KONTROL_SENTUH = [
 	["Tombol 💬 🙂", "chat · emote ke tamu lain"],
 ];
 
-export default function LayarAwal({ webglOk, sentuh, sarankan2D, onMulai3D, onMulai2D }) {
+export default function LayarAwal({ webglOk, sentuh, sarankan2D, onMulai3D, onMulai2D, onKodeSimpan }) {
 	const kontrol = sentuh ? KONTROL_SENTUH : KONTROL_DESKTOP;
 	const [profil, setProfil] = useState(() => bacaProfil() || { nama: "", jk: "L", avatar: 0, kulit: 1, mode: "bersama" });
 	const [cobaKirim, setCobaKirim] = useState(false);
@@ -255,6 +255,12 @@ export default function LayarAwal({ webglOk, sentuh, sarankan2D, onMulai3D, onMu
 							)}
 						</button>
 					</div>
+
+					{onKodeSimpan && (
+						<button onClick={onKodeSimpan} className="mt-3 self-start text-sm text-white/70 underline underline-offset-2 hover:text-white">
+							Punya kode simpan?
+						</button>
+					)}
 
 					{!webglOk && (
 						<p className="mt-4 max-w-xl rounded-xl bg-black/20 px-4 py-3 text-sm text-white/80">

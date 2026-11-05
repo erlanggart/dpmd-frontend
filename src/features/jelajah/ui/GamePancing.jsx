@@ -37,7 +37,7 @@ const busur = (v0, v1) => {
 function Pengukur({ zona, refJarum, refTeks }) {
 	const [zb, za] = zona;
 	return (
-		<div className="relative mx-auto w-40 sm:w-48">
+		<div className="relative mx-auto w-full max-w-[10rem] sm:w-48 sm:max-w-none">
 			<svg viewBox="0 0 200 108" className="w-full">
 				<path d={busur(0, 1.1)} stroke="rgba(0,0,0,.45)" strokeWidth="20" fill="none" strokeLinecap="round" />
 				<path d={busur(0, zb)} stroke="#3b82f6" strokeWidth="14" fill="none" strokeLinecap="round" />
@@ -323,7 +323,7 @@ export default function GamePancing({ sentuh, bersama, onSelesai }) {
 			</div>
 
 			{/* kartu poin, album, suara */}
-			<div className="pointer-events-auto absolute right-3 top-[6.75rem] z-20 flex max-w-[calc(100%-1.5rem)] flex-wrap items-center justify-end gap-1.5 rounded-2xl bg-slate-950/70 px-2 py-1.5 text-white shadow-lg ring-1 ring-white/10 backdrop-blur sm:top-20">
+			<div className={`pointer-events-auto absolute right-3 top-[5.5rem] z-20 flex max-w-[calc(100%-1.5rem)] flex-wrap items-center justify-end gap-1.5 rounded-2xl bg-slate-950/70 px-2 py-1.5 text-white shadow-lg ring-1 ring-white/10 backdrop-blur sm:top-20 ${fase === "tarik" ? "max-sm:hidden" : ""}`}>
 				<span className="px-1.5 text-xs font-bold tabular-nums" title="Koin — belanja di Alfamart">🪙 {angka(poin)}</span>
 				{pancing.combo >= 2 && (
 					<span className="rounded-xl bg-gradient-to-r from-orange-500 to-rose-500 px-2 py-1 text-xs font-black" title="Tangkapan beruntun: koin bertambah">
@@ -343,7 +343,7 @@ export default function GamePancing({ sentuh, bersama, onSelesai }) {
 					onClick={() => aturOtomatis(!pancing.otomatis)}
 					className={`rounded-xl px-2 py-1 text-xs font-black transition ${pancing.otomatis ? "bg-violet-500 text-white shadow-[0_0_14px_rgba(139,92,246,0.8)]" : bolehOtomatis() ? "bg-white/10 hover:bg-white/20" : "bg-white/5 text-white/45"}`}
 					aria-pressed={pancing.otomatis}
-					title={bolehOtomatis() ? "Memancing otomatis (O) — koin hasil 75%" : "Butuh joran premium: Kapal Samudra, Perak Maestro, atau Garuda Sakti"}
+					title={bolehOtomatis() ? "Memancing otomatis (O) — koin 30%, ikan besar jauh lebih jarang" : "Butuh joran premium: Kapal Samudra, Perak Maestro, atau Garuda Sakti"}
 				>
 					{bolehOtomatis() ? "🤖" : "🔒"} AUTO
 				</button>
@@ -357,7 +357,7 @@ export default function GamePancing({ sentuh, bersama, onSelesai }) {
 			</div>
 
 			{/* jam ikan lapar & pesan (satu tumpukan supaya tidak saling menutupi) */}
-			<div className="pointer-events-none absolute inset-x-0 top-[9.5rem] z-20 flex flex-col items-center gap-1.5 px-4 sm:top-[7.25rem]">
+			<div className={`pointer-events-none absolute inset-x-0 z-20 flex flex-col items-center gap-1.5 px-4 sm:top-[7.25rem] ${fase === "tarik" ? "top-[12.5rem]" : "top-[8.25rem]"}`}>
 				{lapar.aktif && (
 					<motion.p
 						animate={{ scale: [1, 1.04, 1] }}
@@ -402,22 +402,21 @@ export default function GamePancing({ sentuh, bersama, onSelesai }) {
 				)}
 			</div>
 
-			{/* panel tarik di pojok kiri bawah — tidak menutupi pemancing & ikannya di tengah layar */}
-			{/* layar sentuh: di HP tegak di atas joystick, di tablet / HP mendatar di kanan joystick */}
+			{/* panel tarik: di HP tegak kartu lebar di atas; di tablet / HP mendatar di kanan joystick; di desktop pojok kiri bawah */}
 			<div
-				className={`pointer-events-none absolute left-3 z-20 sm:left-5 ${
+				className={`pointer-events-none absolute left-3 z-20 max-sm:left-2 max-sm:right-2 max-sm:top-[max(0.5rem,env(safe-area-inset-top))] max-sm:bottom-auto sm:left-5 ${
 					sentuh ? "bottom-[calc(max(1rem,env(safe-area-inset-bottom))+8.75rem)] sm:bottom-[calc(max(1rem,env(safe-area-inset-bottom))+0.5rem)] sm:left-[9.75rem] [@media(max-height:520px)]:bottom-2" : "bottom-6"
 				}`}
 			>
 				{fase === "tarik" && ikan && (
 					<motion.div initial={{ x: -120, opacity: 0, rotate: -4, scale: 0.85 }} animate={{ x: 0, opacity: 1, rotate: 0, scale: 1 }} transition={{ type: "spring", stiffness: 500, damping: 20 }}>
-					<div ref={panelTarik} className="w-[min(18rem,58vw)] origin-bottom-left [@media(max-width:639px)_and_(min-height:761px)]:scale-[0.85] [@media(max-width:639px)_and_(max-height:760px)]:scale-[0.76] [@media(min-width:640px)_and_(max-height:520px)]:scale-[0.62] space-y-2 rounded-2xl bg-slate-950/75 p-2.5 text-white shadow-2xl ring-1 ring-white/10 backdrop-blur sm:w-[19rem] sm:space-y-2.5 sm:p-3">
+					<div ref={panelTarik} className="w-full origin-bottom-left [@media(min-width:640px)_and_(max-height:520px)]:scale-[0.62] space-y-2 rounded-2xl bg-slate-950/75 p-2.5 text-white shadow-2xl ring-1 ring-white/10 backdrop-blur sm:w-[19rem] sm:space-y-2.5 sm:p-3">
 						{/* ikan misterius: belum terlihat jenisnya, hanya kilau kelasnya */}
 						<div className="flex items-center gap-3">
 							<motion.span
 								animate={{ boxShadow: [`0 0 0 0 ${k.warna}aa`, `0 0 0 10px ${k.warna}00`] }}
 								transition={{ duration: 1.2, repeat: Infinity }}
-								className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full text-2xl font-black"
+								className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-lg font-black sm:h-12 sm:w-12 sm:text-2xl"
 								style={{ background: `radial-gradient(circle, ${k.warna}66, ${k.warna}22)`, border: `2px solid ${k.warna}` }}
 							>
 								?
@@ -433,16 +432,22 @@ export default function GamePancing({ sentuh, bersama, onSelesai }) {
 								</div>
 							</div>
 						</div>
-						<Pengukur zona={zonaKini(ikan.kelas)} refJarum={tegangJarum} refTeks={tegangTeks} />
-						<Batang label={sentuh ? "Laju gulung — ketuk 🎣 berulang" : "Laju gulung — ketuk SPASI berulang"} refIsi={gulungIsi}>
-							<span ref={pulihTanda} className="absolute inset-0 flex items-center justify-center whitespace-nowrap text-[8px] font-black uppercase leading-none tracking-wide text-sky-200 opacity-0 transition-opacity">
-								Ikan pulih — beri tekanan!
-							</span>
-						</Batang>
-						<div className="[@media(max-height:520px)]:hidden">
-							<Batang label="Senar terulur" kanan={senarTeks} refIsi={senarIsi} />
+						<div className="max-sm:flex max-sm:items-center max-sm:gap-3 sm:space-y-2.5">
+							<div className="max-sm:w-[7.25rem] max-sm:shrink-0">
+								<Pengukur zona={zonaKini(ikan.kelas)} refJarum={tegangJarum} refTeks={tegangTeks} />
+							</div>
+							<div className="min-w-0 flex-1 space-y-1.5 sm:space-y-2.5">
+								<Batang label={sentuh ? "Laju gulung" : "Laju gulung — ketuk SPASI berulang"} refIsi={gulungIsi}>
+									<span ref={pulihTanda} className="absolute inset-0 flex items-center justify-center whitespace-nowrap text-[8px] font-black uppercase leading-none tracking-wide text-sky-200 opacity-0 transition-opacity">
+										Ikan pulih — beri tekanan!
+									</span>
+								</Batang>
+								<div className="[@media(max-height:520px)]:hidden">
+									<Batang label="Senar terulur" kanan={senarTeks} refIsi={senarIsi} />
+								</div>
+								<Batang label="⚡ Tarikan sakti" kanan={kuasaTeks} refIsi={kuasaIsi} />
+							</div>
 						</div>
-						<Batang label="⚡ Tarikan sakti" kanan={kuasaTeks} refIsi={kuasaIsi} />
 						<div>
 							<div className="flex items-center gap-2">
 								<span ref={arahKiri} className="text-lg leading-none">⬅</span>
@@ -453,7 +458,7 @@ export default function GamePancing({ sentuh, bersama, onSelesai }) {
 								</div>
 								<span ref={arahKanan} className="text-lg leading-none">➡</span>
 							</div>
-							<p className="mt-1 text-center text-[11px] font-semibold text-white/75 [@media(max-height:520px)]:hidden">
+							<p className="mt-1 text-center text-[10px] font-semibold text-white/75 sm:text-[11px] [@media(max-height:520px)]:hidden">
 								Ikan lari ke panah terang — {sentuh ? "dorong analog" : "arahkan mouse"} ke arah <b>sebaliknya</b>
 							</p>
 						</div>

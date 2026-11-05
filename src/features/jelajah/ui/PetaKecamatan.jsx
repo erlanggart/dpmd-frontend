@@ -1,8 +1,10 @@
 import { useEffect, useMemo, useState } from "react";
+import api from "../../../api";
 import { useGeoWilayah } from "../../../components/landingpage/petaWilayah";
 import { GAME, POTENSI, potensiKecamatan } from "../potensiWilayah";
 import { infoGame, semuaBintang } from "../rekorWilayah";
 import { useKoleksi } from "../pancing";
+import { useMultipemain } from "../multipemain";
 import { KOMODITAS, USAHA } from "../usahaWilayah";
 import {
 	BONUS_KUNJUNGAN, KAS_MAKS_JAM, ambilKas, ambilSemuaKas, bangunKec, daftarPencapaian, kasTersedia, naikBumdes, pesananHariIni, ringkasBangun,
@@ -57,6 +59,18 @@ export default function PetaKecamatan({ onMain, kiniDi = null }) {
 	const [pesanNaik, setPesanNaik] = useState(null);
 	const [, setDetak] = useState(0);
 	useBangun();
+	const { gotong } = useMultipemain();
+	// data resmi DPMD per kecamatan; bila gagal, kotaknya saja yang tidak tampil
+	const [resmi, setResmi] = useState(null);
+	useEffect(() => {
+		let batal = false;
+		api.get("/public/jelajah/wilayah")
+			.then((x) => !batal && setResmi(Object.fromEntries((x.data?.data || []).map((w) => [normNama(w.nama), w]))))
+			.catch(() => {});
+		return () => {
+			batal = true;
+		};
+	}, []);
 	const koin = useKoleksi().poin;
 
 	// kas berjalan terus: segarkan tampilan tiap 30 detik
@@ -80,6 +94,7 @@ export default function PetaKecamatan({ onMain, kiniDi = null }) {
 	const terpilih = wilayah.find((w) => w.nama === pilih);
 	const game = terpilih?.potensi && GAME[terpilih.potensi.game];
 	const catatan = terpilih?.potensi ? infoGame(terpilih.potensi.game, terpilih.nama) : null;
+	const dataResmi = terpilih ? resmi?.[normNama(terpilih.nama)] : null;
 	const desaTerpilih = terpilih && geo?.desa ? geo.desa.filter((d) => normNama(d.kec) === normNama(terpilih.nama)) : [];
 
 	const pilihKec = (nama) => { setPilih(nama); setPesanNaik(null); };
@@ -219,6 +234,19 @@ export default function PetaKecamatan({ onMain, kiniDi = null }) {
 									{desaTerpilih.length > 6 ? ` dan ${desaTerpilih.length - 6} lainnya` : ""}
 								</p>
 							)}
+							{dataResmi && (
+								<div className="mt-2 rounded-xl bg-sky-50 p-3 text-[13px] text-sky-950">
+									<p className="m-0 font-bold">📊 Data resmi DPMD</p>
+									<p className="m-0 mt-1 text-[12px]">
+										{dataResmi.desa} desa · {dataResmi.kelurahan} kelurahan · {dataResmi.bumdes_aktif} BUMDes aktif · {dataResmi.produk} produk
+									</p>
+									{dataResmi.produk > 0 && (
+										<a href="/pasar-bumdes" target="_blank" rel="noreferrer" className="mt-1 inline-block text-[12px] font-semibold text-sky-700 underline">
+											Lihat Pasar BUM Desa
+										</a>
+									)}
+								</div>
+							)}
 							{catatan?.bintang > 0 && (
 								<p className="m-0 mt-2 text-[13px] font-semibold text-slate-700">
 									<span className="text-amber-500">{"★".repeat(catatan.bintang)}{"☆".repeat(3 - catatan.bintang)}</span> · Panen beruntun terbaik {catatan.rekor.toLocaleString("id-ID")} · Tingkat {catatan.tingkat}
@@ -288,6 +316,15 @@ export default function PetaKecamatan({ onMain, kiniDi = null }) {
 				<div className="mt-3">
 					<p className="m-0 text-[15px] font-bold text-slate-900">Pesanan kabupaten hari ini</p>
 					<p className="m-0 text-[12px] text-slate-500">berganti tengah malam, sama untuk semua pemain</p>
+					{gotong && (
+						<div className="mt-3 rounded-xl bg-emerald-50 p-3 text-[13px] text-emerald-950">
+							<p className="m-0 font-bold">🤝 Gotong royong hari ini: {gotong.jumlah}/{gotong.target} pesanan se-kabupaten</p>
+							<div className="mt-1.5 h-2 overflow-hidden rounded-full bg-emerald-200">
+								<div className="h-full rounded-full bg-emerald-600 transition-all" style={{ width: `${Math.min(100, (gotong.jumlah / Math.max(1, gotong.target)) * 100)}%` }} />
+							</div>
+							<p className="m-0 mt-1 text-[11px]">Bonus 🪙 150 bila tercapai dan Anda ikut menyumbang</p>
+						</div>
+					)}
 					<ul className="m-0 mt-3 list-none space-y-2.5 p-0">
 						{pesanan.map((p) => (
 							<li key={p.id} className={`rounded-xl border border-slate-200 p-3 ${p.selesai ? "opacity-50" : ""}`}>

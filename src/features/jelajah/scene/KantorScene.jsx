@@ -1,6 +1,7 @@
 import { useEffect, useRef } from "react";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import Fasad from "./Fasad";
+import { jagaKonteks } from "./jagaKonteks";
 import Gedung, { GrupLantai } from "./Gedung";
 import Lingkungan from "./Lingkungan";
 import Pegawai from "./Pegawai";
@@ -60,7 +61,7 @@ function PenandaSiap({ onSiap }) {
 
 // Seluruh adegan 3D. Berkas ini (beserta three.js) hanya dimuat saat pengunjung
 // membuka /jelajah, jadi landing page biasa tidak ikut menanggung bobotnya.
-export default function KantorScene({ statistik, dikunjungi, jeda, penghuni, penampilan, onSiap }) {
+export default function KantorScene({ statistik, dikunjungi, jeda, penghuni, penampilan, onSiap, onKonteksHilang }) {
 	// Dinding per lantai yang bisa dipudarkan saat menghalangi kamera.
 	const daftarDinding = useRef({ 0: [], 1: [] });
 	// kembali dari dunia kecamatan, adegan disusun ulang dari nol
@@ -74,6 +75,7 @@ export default function KantorScene({ statistik, dikunjungi, jeda, penghuni, pen
 			gl={{ antialias: true, powerPreference: "high-performance" }}
 			style={{ touchAction: "none" }}
 			onCreated={({ gl, scene }) => {
+				jagaKonteks(gl, onKonteksHilang);
 				// dev: statistik render untuk uji performa otomatis
 				if (import.meta.env.DEV) Object.assign(window, { __gl: gl, __adegan: scene });
 			}}

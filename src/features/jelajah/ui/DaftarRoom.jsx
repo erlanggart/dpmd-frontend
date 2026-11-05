@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { FiX } from "react-icons/fi";
 import { posisi } from "../jelajahStore";
-import { beriHadiah, pemainLain, sapaPemain } from "../multipemain";
+import { beriHadiah, bisukanPemain, laporkanPemain, pemainLain, sapaPemain, sudahDibisukan, sudahDilaporkan } from "../multipemain";
 import { ubahTenaga } from "../tenaga";
 
 // Daftar tamu yang sedang berada di room jelajah bersama: nama, sedang apa, dan jaraknya.
@@ -38,7 +38,7 @@ export default function DaftarRoom({ namaSaya, ruang, onTutup }) {
 		.sort((a, b) => (a.jarak ?? 1e9) - (b.jarak ?? 1e9));
 
 	return (
-		<div className="absolute right-0 top-12 z-40 w-72 overflow-hidden rounded-2xl bg-white text-slate-800 shadow-2xl ring-1 ring-black/10">
+		<div className="absolute right-0 top-12 z-40 w-80 overflow-hidden rounded-2xl bg-white text-slate-800 shadow-2xl ring-1 ring-black/10">
 			<div className="flex items-center justify-between border-b border-slate-100 px-4 py-3">
 				<div>
 					<p className="text-sm font-black">{daftar.length + 1} orang di room</p>
@@ -80,6 +80,23 @@ export default function DaftarRoom({ namaSaya, ruang, onTutup }) {
 							title="Beri 20 koin"
 						>
 							🎁20
+						</button>
+						<button
+							onClick={() => bisukanPemain(t.nama)}
+							className="shrink-0 rounded-lg bg-slate-100 px-2 py-1 text-xs font-bold text-slate-700 hover:bg-slate-200"
+							aria-label={sudahDibisukan(t.nama) ? `Buka bisu ${t.nama}` : `Bisukan ${t.nama}`}
+							title={sudahDibisukan(t.nama) ? "Buka bisu" : "Bisukan"}
+						>
+							{sudahDibisukan(t.nama) ? "🔊" : "🔇"}
+						</button>
+						<button
+							onClick={() => laporkanPemain(t.id) && ubahTenaga(0, { teks: "Laporan terkirim. Terima kasih.", jenis: "baik" })}
+							disabled={sudahDilaporkan(t.id)}
+							className="shrink-0 rounded-lg bg-rose-50 px-2 py-1 text-xs font-bold text-rose-700 hover:bg-rose-100 disabled:opacity-40"
+							aria-label={`Laporkan ${t.nama}`}
+							title="Laporkan"
+						>
+							🚩
 						</button>
 					</li>
 				))}

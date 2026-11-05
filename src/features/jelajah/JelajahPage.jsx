@@ -1,10 +1,11 @@
-import { Component, Suspense, lazy, memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Component, Suspense, lazy, memo, useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import { Link } from "react-router-dom";
 import { AnimatePresence, motion } from "framer-motion";
 import {
 	FiArrowLeft,
 	FiCheckCircle,
 	FiGrid,
+	FiSave,
 	FiHelpCircle,
 	FiMap,
 	FiMoon,
@@ -44,6 +45,9 @@ import PanelEtalaseBumdes from "./ui/PanelEtalaseBumdes";
 import PanelShowroom from "./ui/PanelShowroom";
 import { modelDariId } from "./scene/modelKendaraan";
 import PanelPeringkat from "./ui/PanelPeringkat";
+import PanelSimpan from "./ui/PanelSimpan";
+import SaranSimpan from "./ui/SaranSimpan";
+import { tanda } from "./tandaJelajah";
 import { kendaraanDariId } from "./scene/kendaraan";
 import { kirimEmote, kirimGaya, kirimKlakson, kirimUcap, putusJelajah, sambungJelajah, sapaPemain, tutupSapaan, useMultipemain } from "./multipemain";
 import { AREA_PER_ID, BENDA, HALAMAN, LOBI, RUANGAN, TITIK_MULAI, titikDepanPetugas } from "./kantorConfig";
@@ -127,6 +131,24 @@ function adaWebGL2() {
 
 const cocokMedia = (q) => typeof window !== "undefined" && window.matchMedia?.(q).matches;
 
+// Tata letak HP dipakai layar sentuh dan juga jendela sempit, dan mengikuti putar layar & ubah ukuran.
+const MEDIA_HP = "(pointer: coarse), (max-width: 767px)";
+function langgananHp(f) {
+	const m = window.matchMedia(MEDIA_HP);
+	m.addEventListener("change", f);
+	return () => m.removeEventListener("change", f);
+}
+const useLayarHp = () => useSyncExternalStore(langgananHp, () => cocokMedia(MEDIA_HP));
+
+const KUNCI_PETA = "jelajah-peta-v1";
+function bacaPeta() {
+	try {
+		return localStorage.getItem(KUNCI_PETA) !== "0";
+	} catch {
+		return true;
+	}
+}
+
 // Bila pembuatan konteks WebGL gagal di tengah jalan, pindah ke Denah 2D alih-alih layar kosong.
 class PenjagaScene extends Component {
 	state = { gagal: false };
@@ -186,7 +208,7 @@ function Lembar({ judul, onTutup, lebar = "sm:max-w-md", children }) {
 
 export default function JelajahPage() {
 	const webglOk = useMemo(adaWebGL2, []);
-	const sentuh = useMemo(() => cocokMedia("(pointer: coarse)"), []);
+	const sentuh = useLayarHp();
 	const sarankan2D = useMemo(
 		() => cocokMedia("(prefers-reduced-motion: reduce)") || (navigator.deviceMemory && navigator.deviceMemory <= 2),
 		[],
@@ -205,7 +227,14 @@ export default function JelajahPage() {
 	const perhatian = useMemo(() => jumlahPerhatian(), [menu, dunia]);
 	const misiSiap = misiSiapKlaim(useProgres());
 	// peta juga pintu ke popup peta kecamatan, jadi tampil sejak awal di semua perangkat
-	const [peta, setPeta] = useState(true);
+	const [peta, setPeta] = useState(bacaPeta);
+	useEffect(() => {
+		try {
+			localStorage.setItem(KUNCI_PETA, peta ? "1" : "0");
+		} catch {
+			/* penyimpanan diblokir: pilihan bertahan selama halaman terbuka */
+		}
+	}, [peta]);
 	const [dikunjungi, setDikunjungi] = useState(bacaDikunjungi);
 	const [selesai, setSelesai] = useState(false);
 	const [statistik, setStatistik] = useState(null);
@@ -237,6 +266,12 @@ export default function JelajahPage() {
 		kirimKlakson();
 	}, [modeMain]);
 	useEffect(() => () => aturSendu(false), []);
+	useEffect(() => {
+		tanda("layar-awal");
+	}, []);
+	useEffect(() => {
+		if (modeMain === "mancing") tanda("mancing");
+	}, [modeMain]);
 	// Jelajah bersama tamu lain
 	const [profil, setProfil] = useState(null);
 	const gayaDipakai = gayaTampil(useLemari());
@@ -518,7 +553,13 @@ export default function JelajahPage() {
 		resetJelajah();
 		setKini(Date.now());
 		setMode("3d");
+		tanda("mulai-3d");
 	};
+	// konteks WebGL yang tidak pulih: sama seperti kegagalan membuat adegan, turun ke Denah 2D
+	const konteksHilang = useCallback(() => {
+		setGagal3D("Grafis 3D terhenti");
+		setMode("2d");
+	}, []);
 
 	const areaPanel = panel && AREA_PER_ID[panel];
 	// Yang bisa diajak berinteraksi: petugas (punya npc) atau benda.
@@ -617,6 +658,9 @@ export default function JelajahPage() {
 										: ["Buka pintu & keluar", "Keluar", "#334155"]
 							: null;
 	// Panel adu tarik setinggi layar di pojok kiri bawah (lebar s.d. 20,25rem): chat desktop pindah ke kanannya.
+	// HP: selama memancing layar diberikan ke permainan; saat adu tarik hanya panelnya yang tampil.
+	const mancingHp = sentuh && modeMain === "mancing";
+	const fokusTarik = mancingHp && sedangTarik;
 	const kiriChat = !sentuh && modeMain === "mancing" && sedangTarik ? "left-3 sm:left-[21rem]" : "left-3 sm:left-4";
 	// Saat memancing, tombol & tombol E dipegang HUD pancing sendiri.
 	const sasaran = modeMain === "mancing"
@@ -646,7 +690,11 @@ export default function JelajahPage() {
 					sentuh={sentuh}
 					sarankan2D={sarankan2D}
 					onMulai3D={mulai3D}
-					onMulai2D={() => setMode("2d")}
+					onMulai2D={() => {
+						tanda("mulai-2d");
+						setMode("2d");
+					}}
+					onKodeSimpan={() => setMenu("simpan")}
 				/>
 			)}
 
@@ -668,6 +716,7 @@ export default function JelajahPage() {
 						penampilan={penampilan}
 						sentuh={sentuh}
 						onPindah={setDunia}
+						onKonteksHilang={konteksHilang}
 						onKeluar={() => {
 							const k = posisiKantor.current;
 							if (k) kendali.teleport = { x: k.x, y: k.y, z: k.z, lantai: k.lantai, rot: k.rot, yaw: k.rot + Math.PI };
@@ -686,14 +735,14 @@ export default function JelajahPage() {
 						}}
 					>
 						<Suspense fallback={null}>
-							<KantorScene statistik={statistik} dikunjungi={dikunjungi} jeda={jeda} penghuni={penghuni} penampilan={penampilan} onSiap={setSiap3D} />
+							<KantorScene statistik={statistik} dikunjungi={dikunjungi} jeda={jeda} penghuni={penghuni} penampilan={penampilan} onSiap={setSiap3D} onKonteksHilang={konteksHilang} />
 						</Suspense>
 					</PenjagaScene>
 					{/* jeda menghentikan loop render, penanda siap tak akan datang: jangan tutupi panelnya */}
 					<LayarMemuat selesai={siap3D || jeda} />
 
 					{/* --- HUD atas: di HP ringkas (kembali, lokasi, progres, menu) --- */}
-					<div className={`pointer-events-none absolute inset-x-0 top-0 flex items-start justify-between gap-2 px-3 pb-3 sm:px-4 ${sentuh ? "pt-[max(0.75rem,env(safe-area-inset-top))]" : "pt-[max(2rem,env(safe-area-inset-top))]"}`}>
+					<div className={`pointer-events-none absolute inset-x-0 top-0 flex items-start justify-between gap-2 px-3 pb-3 sm:px-4 ${fokusTarik ? "hidden" : ""} ${sentuh ? "pt-[max(0.75rem,env(safe-area-inset-top))]" : "pt-[max(2rem,env(safe-area-inset-top))]"}`}>
 						<div className="pointer-events-auto flex min-w-0 items-center gap-2">
 							<Link
 								to="/"
@@ -739,7 +788,7 @@ export default function JelajahPage() {
 								<span className="sr-only">ruang dikunjungi</span>
 							</div>
 							<TombolSuara />
-							<div className="hidden items-center gap-2 sm:flex">
+							<div className={`items-center gap-2 ${sentuh ? "hidden" : "hidden sm:flex"}`}>
 								<TombolIkon label="Pindah cepat" aktif={menu === "pindah"} onClick={() => setMenu("pindah")}>
 									<FiNavigation />
 								</TombolIkon>
@@ -761,8 +810,11 @@ export default function JelajahPage() {
 								<TombolIkon label="Cara bermain" aktif={menu === "bantuan"} onClick={() => setMenu("bantuan")}>
 									<FiHelpCircle />
 								</TombolIkon>
+								<TombolIkon label="Kode simpan" aktif={menu === "simpan"} onClick={() => setMenu("simpan")}>
+									<FiSave />
+								</TombolIkon>
 							</div>
-							<div className="relative sm:hidden">
+							<div className={sentuh ? "relative" : "relative sm:hidden"}>
 								<TombolIkon label="Menu" aktif={menu === "aksi"} onClick={() => setMenu("aksi")}>
 									<FiMenu />
 								</TombolIkon>
@@ -772,9 +824,24 @@ export default function JelajahPage() {
 					</div>
 
 					{/* peta 40 kecamatan (potensi tiap wilayah & game-nya) selalu bisa dibuka, juga di HP saat minimap disembunyikan */}
-					<div className={sentuh ? "absolute right-3 top-[3.5rem] w-32" : "absolute bottom-4 right-4 w-44"}>
-						{peta && <Minimap area={area} lantai={lantai} dikunjungi={dikunjungi} onPilih={pindahCepat} onPeta={() => setMenu("kecamatan")} perhatian={perhatian} />}
-					</div>
+					{!mancingHp && (
+						<div className={sentuh ? "absolute right-3 top-[3.75rem] w-28" : "absolute bottom-4 right-4 w-40"}>
+							{peta ? (
+								<Minimap area={area} lantai={lantai} dikunjungi={dikunjungi} onPilih={pindahCepat} onPeta={() => setMenu("kecamatan")} onTutup={() => setPeta(false)} perhatian={perhatian} />
+							) : (
+								<button
+									type="button"
+									onClick={() => setPeta(true)}
+									aria-label="Tampilkan peta"
+									title="Tampilkan peta"
+									className="relative ml-auto flex h-10 w-10 items-center justify-center rounded-full bg-slate-950/55 text-white shadow ring-1 ring-white/30 backdrop-blur"
+								>
+									<FiMap />
+									{perhatian > 0 && <span className="absolute -right-1 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-rose-500 px-1 text-[10px] font-extrabold leading-none text-white">{perhatian}</span>}
+								</button>
+							)}
+						</div>
+					)}
 
 					{/* kartu nama area */}
 					<AnimatePresence>
@@ -826,11 +893,11 @@ export default function JelajahPage() {
 						</div>
 					)}
 
-					{!jeda && <BarTenaga onTas={() => setMenu("tas")} onAlbum={modeMain === "mancing" ? null : () => setMenu("album")} onGaya={() => setMenu("gaya")} onMisi={() => setMenu("misi")} onPeringkat={() => setMenu("peringkat")} onPancing={modeMain === "mancing" ? null : () => setMenu("pancing")} ringkas={modeMain === "mancing"} sentuh={sentuh} />}
+					{!jeda && !fokusTarik && <BarTenaga onTas={() => setMenu("tas")} onAlbum={modeMain === "mancing" ? null : () => setMenu("album")} onGaya={() => setMenu("gaya")} onMisi={() => setMenu("misi")} onPeringkat={() => setMenu("peringkat")} onPancing={modeMain === "mancing" ? null : () => setMenu("pancing")} ringkas={modeMain === "mancing"} sentuh={sentuh} />}
 					{!jeda && <HudLomba mancing={modeMain === "mancing"} />}
-					{!jeda && (
-						<div className={sentuh ? "absolute right-3 top-[18rem] w-[10.5rem] [@media(max-height:520px)]:right-[9rem] [@media(max-height:520px)]:top-[3.5rem]" : "absolute right-4 top-[4.5rem] w-[16.5rem]"}>
-							<KartuKantor sentuh={sentuh} onAntar={pindahCepat} />
+					{!jeda && !mancingHp && (
+						<div className={sentuh ? "absolute right-3 top-[11.25rem] [@media(max-height:520px)]:right-[9rem] [@media(max-height:520px)]:top-[3.75rem]" : "absolute right-4 top-[4.5rem]"}>
+							<KartuKantor onAntar={pindahCepat} />
 						</div>
 					)}
 					<PerayaanKantor />
@@ -849,7 +916,7 @@ export default function JelajahPage() {
 					)}
 
 					{/* --- jelajah bersama: obrolan, emote, sapaan --- */}
-					{statusMp === "tersambung" && !jeda && (
+					{statusMp === "tersambung" && !jeda && !fokusTarik && (
 						<>
 							<div
 								className={`pointer-events-none absolute flex flex-col gap-1 ${kiriChat} ${
@@ -1003,7 +1070,7 @@ export default function JelajahPage() {
 										<FiArrowUp className="h-5 w-5" />
 									</button>
 								)}
-								{statusMp === "tersambung" && (
+								{statusMp === "tersambung" && !fokusTarik && (
 									<div className="relative flex gap-2">
 										{pilihEmote && (
 											<div className="absolute bottom-12 right-0 flex gap-1 rounded-2xl bg-white/95 p-1.5 shadow-xl">
@@ -1057,6 +1124,8 @@ export default function JelajahPage() {
 				</div>
 			)}
 
+			{mode === "3d" && !menu && !panel && modeMain !== "mancing" && <SaranSimpan onBuka={() => setMenu("simpan")} />}
+
 			{menu === "aksi" && (
 				<Lembar judul="Menu" onTutup={() => setMenu(null)}>
 					{modeMain !== "mancing" && <MenuPemain onPilih={setMenu} perhatian={perhatian} />}
@@ -1078,6 +1147,7 @@ export default function JelajahPage() {
 							[modeCuaca === "hujan" ? FiCloudRain : FiCloud, `Cuaca: ${labelCuaca}`, "Ketuk untuk ganti otomatis/cerah/hujan", gantiCuaca],
 							[FiMusic, `Musik latar: ${musikMati ? "Mati" : "Nyala"}`, "Lagu saat berjalan, berkendara & di mal", () => aturMusikLatar(!musikMati)],
 							[FiHelpCircle, "Cara bermain", "Kontrol & tips", () => setMenu("bantuan")],
+							[FiSave, "Kode simpan", "Pindahkan kemajuan antarperangkat", () => setMenu("simpan")],
 						].map(([Ikon, judul, ket, aksi]) => (
 							<button
 								key={judul}
@@ -1254,6 +1324,12 @@ export default function JelajahPage() {
 			{menu === "tas" && (
 				<Lembar judul="🎒 Tas belanjaan" onTutup={() => setMenu(null)}>
 					<PanelTas />
+				</Lembar>
+			)}
+
+			{menu === "simpan" && (
+				<Lembar judul="💾 Kode simpan" onTutup={() => setMenu(null)}>
+					<PanelSimpan />
 				</Lembar>
 			)}
 

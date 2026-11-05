@@ -1,5 +1,6 @@
 import { Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { Canvas } from "@react-three/fiber";
+import { jagaKonteks } from "../scene/jagaKonteks";
 import { AnimatePresence, motion } from "framer-motion";
 import { FiArrowLeft, FiMessageSquare, FiSend, FiX } from "react-icons/fi";
 import { kendali } from "../jelajahStore";
@@ -79,7 +80,7 @@ const daftarkan = (kunci, data) => (el) => {
 	else layar.delete(kunci);
 };
 
-export default function DuniaWilayah({ wilayah, penampilan, sentuh, onKeluar, onPindah }) {
+export default function DuniaWilayah({ wilayah, penampilan, sentuh, onKeluar, onPindah, onKonteksHilang }) {
 	useKebun();
 	useUiWilayah();
 	useDesa();
@@ -235,7 +236,7 @@ export default function DuniaWilayah({ wilayah, penampilan, sentuh, onKeluar, on
 
 	return (
 		<div className="fixed inset-0 z-[60] select-none overflow-hidden bg-[#cfe6f5]">
-			<Canvas shadows dpr={[1, 1.5]} camera={{ fov: 50, near: 0.1, far: 900, position: [2, 6, -43] }}>
+			<Canvas shadows dpr={[1, 1.5]} camera={{ fov: 50, near: 0.1, far: 900, position: [2, 6, -43] }} onCreated={({ gl }) => jagaKonteks(gl, onKonteksHilang)}>
 				<Suspense fallback={null}>
 					<LingkunganDesa kecamatan={wilayah.kecamatan} model={k?.model} game={wilayah.game} varian={k?.varian} />
 					<KebunDesa />

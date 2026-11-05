@@ -3,6 +3,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import { posisi } from "../jelajahStore";
 import { RANTAI_KANTOR, acaraKini, formatNomor, kantor, misiKantorKini, sasaranKantor, useKantor } from "../kantorHidup";
 import { GERBANG_JETSKI, TENDA_BAZAR } from "../scene/acaraData";
+import PilMisi from "./PilMisi";
 
 /*
  * HUD kantor: kartu misi cerita Kang Ujang + tiket antrean + acara harian dengan kompas
@@ -40,16 +41,15 @@ function Kompas() {
 		return () => cancelAnimationFrame(id);
 	}, []);
 	return (
-		<span className="flex shrink-0 flex-col items-center">
-			<span ref={panah} className="flex h-7 w-7 items-center justify-center rounded-full bg-amber-400 text-[15px] font-black text-slate-900 shadow">↑</span>
-			<span ref={jarak} className="mt-0.5 text-[10px] font-bold tabular-nums text-amber-200" />
+		<span className="flex shrink-0 items-center gap-1">
+			<span ref={panah} className="flex h-5 w-5 items-center justify-center rounded-full bg-amber-400 text-[12px] font-black text-slate-900 shadow">↑</span>
+			<span ref={jarak} className="text-[10px] font-bold tabular-nums text-amber-200" />
 		</span>
 	);
 }
 
-export function KartuKantor({ sentuh, onAntar }) {
+export function KartuKantor({ onAntar }) {
 	useKantor();
-	const [buka, setBuka] = useState(false);
 	const [, detak] = useState(0);
 	const hidup = !!(kantor.lomba || kantor.tiket);
 	// hitung mundur tiket & waktu lomba bergerak tiap 200 ms
@@ -65,61 +65,54 @@ export function KartuKantor({ sentuh, onAntar }) {
 	const acara = acaraKini();
 	const stempel = kantor.hari.stempel.length;
 	const tuntas = acara === "bazar" ? stempel >= TENDA_BAZAR.length : kantor.hari.medali === "emas";
-	const ringkas = sentuh && !buka;
 	const tombolAntar = !tuntas && (
-		<button type="button" onClick={(e) => { e.stopPropagation(); onAntar(acara); }} className="shrink-0 rounded-md bg-amber-400 px-2 py-0.5 text-[10.5px] font-bold text-slate-900 hover:bg-amber-300">Antar</button>
+		<button type="button" onClick={() => onAntar(acara)} className="shrink-0 rounded-md bg-amber-400 px-2 py-0.5 text-[10.5px] font-bold text-slate-900 hover:bg-amber-300">Antar</button>
 	);
+	const judul = l
+		? `Gerbang ${l.gerbang}/${GERBANG_JETSKI.length}`
+		: t
+			? `${formatNomor(t.nomor)}${t.fase === "tunggu" ? "" : ` · ${menit(t.batas - Date.now())}`}`
+			: m?.teks ?? "Urusan & acara";
 
 	return (
-		<div onClick={() => sentuh && setBuka((v) => !v)} className={`pointer-events-auto w-full rounded-2xl bg-slate-950/80 text-white shadow-lg ring-1 ring-amber-300/30 backdrop-blur ${sentuh ? "cursor-pointer p-2" : "p-3"}`}>
-			<div className="flex items-start gap-2">
-				<div className="min-w-0 flex-1">
-					{!sentuh && <p className="m-0 text-[10.5px] font-bold uppercase tracking-wider text-amber-300">{m ? `📜 Misi ${kantor.misi.i + 1}/${RANTAI_KANTOR.length}` : "⭐ Urusan & acara harian"}</p>}
-					{m ? (
-						<>
-							<p className={`m-0 font-bold leading-snug ${sentuh ? "text-[11.5px]" : "text-[13.5px]"} ${ringkas ? "line-clamp-2" : ""}`}>{m.teks}</p>
-							{!ringkas && (
-								<>
-									<div className="mt-1.5 flex items-center gap-2">
-										<span className="h-1.5 flex-1 overflow-hidden rounded-full bg-white/15"><span className="block h-full rounded-full bg-amber-400" style={{ width: `${(kantor.misi.n / m.target) * 100}%` }} /></span>
-										<span className="text-[11px] font-bold tabular-nums">{kantor.misi.n}/{m.target}</span>
-									</div>
-									<p className="m-0 mt-1 text-[11px] text-white/60">Hadiah: 🪙 {m.koin}</p>
-								</>
-							)}
-						</>
-					) : (
-						<p className={`m-0 font-semibold ${ringkas ? "line-clamp-2 text-[11.5px]" : "text-[12.5px]"}`}>{sentuh ? "⭐ Urusan & acara harian" : "Cerita tamat. Selesaikan urusan dan ikut acara tiap hari."}</p>
-					)}
-				</div>
-				<Kompas />
-			</div>
-			{!ringkas && (
-				<div className="mt-2 space-y-1.5 border-t border-white/10 pt-2 text-[11.5px]">
-					{t && (
-						<div className="rounded-lg bg-white/10 px-2 py-1.5">
-							<p className="m-0 font-bold">🎫 {formatNomor(t.nomor)} · {t.judul}</p>
-							<p className="m-0 mt-0.5 text-white/75">
-								{t.fase === "tunggu" ? "Menunggu panggilan" : `Dipanggil · sisa ${menit(t.batas - Date.now())}`}
-								{!t.terungkap && " · Cari bidang yang tepat"}
-							</p>
-						</div>
-					)}
-					{kantor.kombo > 0 && <p className="m-0 font-bold text-amber-300">🔥 Kombo urusan x{kantor.kombo}</p>}
-					{l ? (
-						<p className="m-0 font-bold tabular-nums">🏁 Gerbang {l.gerbang}/{GERBANG_JETSKI.length} · {l.mulai ? `${((performance.now() - l.mulai) / 1000).toFixed(1)} dtk` : "siap, lewati garis start"}</p>
-					) : (
-						<div className="flex items-center justify-between gap-2">
-							<span className="min-w-0 font-semibold">
-								{acara === "bazar" ? `🎪 Bazar Desa · stempel ${stempel}/${TENDA_BAZAR.length}` : `🏁 Lomba Jetski · rekor ${kantor.rekor != null ? `${kantor.rekor.toFixed(1)} dtk` : "belum ada"}`}
-								{tuntas && " ✅"}
-							</span>
-							{tombolAntar}
-						</div>
-					)}
-				</div>
+		<PilMisi judul={judul} kompas={<Kompas />} aktif={hidup}>
+			<p className="m-0 text-[10.5px] font-bold uppercase tracking-wider text-amber-300">{m ? `📜 Misi ${kantor.misi.i + 1}/${RANTAI_KANTOR.length}` : "⭐ Urusan & acara harian"}</p>
+			{m ? (
+				<>
+					<p className="m-0 text-[13px] font-bold leading-snug">{m.teks}</p>
+					<div className="mt-1.5 flex items-center gap-2">
+						<span className="h-1.5 flex-1 overflow-hidden rounded-full bg-white/15"><span className="block h-full rounded-full bg-amber-400" style={{ width: `${(kantor.misi.n / m.target) * 100}%` }} /></span>
+						<span className="text-[11px] font-bold tabular-nums">{kantor.misi.n}/{m.target}</span>
+					</div>
+					<p className="m-0 mt-1 text-[11px] text-white/60">Hadiah: 🪙 {m.koin}</p>
+				</>
+			) : (
+				<p className="m-0 text-[12.5px] font-semibold">Cerita tamat. Selesaikan urusan dan ikut acara tiap hari.</p>
 			)}
-		</div>
+			<div className="mt-2 space-y-1.5 border-t border-white/10 pt-2 text-[11.5px]">
+				{t && (
+					<div className="rounded-lg bg-white/10 px-2 py-1.5">
+						<p className="m-0 font-bold">🎫 {formatNomor(t.nomor)} · {t.judul}</p>
+						<p className="m-0 mt-0.5 text-white/75">
+							{t.fase === "tunggu" ? "Menunggu panggilan" : `Dipanggil · sisa ${menit(t.batas - Date.now())}`}
+							{!t.terungkap && " · Cari bidang yang tepat"}
+						</p>
+					</div>
+				)}
+				{kantor.kombo > 0 && <p className="m-0 font-bold text-amber-300">🔥 Kombo urusan x{kantor.kombo}</p>}
+				{l ? (
+					<p className="m-0 font-bold tabular-nums">🏁 Gerbang {l.gerbang}/{GERBANG_JETSKI.length} · {l.mulai ? `${((performance.now() - l.mulai) / 1000).toFixed(1)} dtk` : "siap, lewati garis start"}</p>
+				) : (
+					<div className="flex items-center justify-between gap-2">
+						<span className="min-w-0 font-semibold">
+							{acara === "bazar" ? `🎪 Bazar Desa · stempel ${stempel}/${TENDA_BAZAR.length}` : `🏁 Lomba Jetski · rekor ${kantor.rekor != null ? `${kantor.rekor.toFixed(1)} dtk` : "belum ada"}`}
+							{tuntas && " ✅"}
+						</span>
+						{tombolAntar}
+					</div>
+				)}
+			</div>
+		</PilMisi>
 	);
 }
 

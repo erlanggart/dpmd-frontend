@@ -135,9 +135,11 @@ export const JORAN = [
 	{ id: "maestro", nama: "Joran Perak Maestro", harga: 12000, cepat: 0.5, hoki: 2.4, gulung: 1.4, lebar: 0.09, auto: true, warna: "#cbd5e1", ujung: "#a78bfa", ket: "Buatan pengrajin ternama: hampir setiap sambaran berpeluang ikan besar. Bisa mode AUTO." },
 	{ id: "garuda", nama: "Joran Garuda Sakti", harga: 20000, cepat: 0.45, hoki: 2.8, gulung: 1.45, lebar: 0.1, auto: true, warna: "#111827", ujung: "#ef4444", ket: "Joran pusaka tertinggi. Ikan legenda pun sulit menolak. Bisa mode AUTO." },
 ];
-// Mode AUTO (auto pilot) hanya untuk 3 joran termahal. Koinnya 75% — memancing
+// Mode AUTO (auto pilot) hanya untuk 3 joran termahal. Koinnya 30% — memancing
 // sendiri tetap paling menguntungkan.
-export const PENGALI_KOIN_AUTO = 0.75;
+export const PENGALI_KOIN_AUTO = 0.3;
+// AUTO jauh lebih jarang mendapat ikan besar: tegang & puasnya tetap milik yang memancing sendiri.
+const PELUANG_AUTO = [1, 1, 0.5, 0.15, 0.1];
 // Ikan Kolam Monster milik pengelola: koin per tangkapan kecil (ikannya dijamin besar);
 // hadiah besarnya ada di lomba galatama.
 export const PENGALI_KOIN_KOLAM = 0.06;
@@ -425,7 +427,7 @@ export function aturOtomatis(nyala) {
 	pancing.tahan = false;
 	pancing.arahOto = 0;
 	oto.tunda = 0.4;
-	pesanSaja(nyala ? "🤖 AUTO menyala — joran bekerja sendiri (koin 75%)" : "AUTO mati — kendali kembali ke tanganmu", nyala ? "baik" : "info");
+	pesanSaja(nyala ? "🤖 AUTO menyala — koin 30% & ikan besar jauh lebih jarang" : "AUTO mati — kendali kembali ke tanganmu", nyala ? "baik" : "info");
 	return null;
 }
 
@@ -612,11 +614,12 @@ function lepasTapiTunggu(teks) {
 // Kolam Monster: hanya kelas Monster & Legenda (situ maupun eksklusif kolam), tanpa
 // syarat malam/perahu/kedalaman; berat condong lebih besar daripada di situ.
 export function pilihIkanKolam(hoki = joranKini().hoki * pelampungKini().hoki) {
-	const bobot = [0, 0, 0, 92, 8 * Math.sqrt(hoki)];
+	const auto = pancing.otomatis;
+	const bobot = [0, 0, 0, 92, 8 * Math.sqrt(hoki) * (auto ? PELUANG_AUTO[4] : 1)];
 	const kelas = Math.random() * (bobot[3] + bobot[4]) < bobot[3] ? 3 : 4;
 	const calon = IKAN.filter((f) => f.kelas === kelas && f.id !== "raja");
 	const ikan = calon[Math.floor(Math.random() * calon.length)];
-	const kg = ikan.kg[0] + (ikan.kg[1] - ikan.kg[0]) * Math.pow(Math.random(), 1.5);
+	const kg = ikan.kg[0] + (ikan.kg[1] - ikan.kg[0]) * Math.pow(Math.random(), auto ? 3 : 1.5);
 	return { ikan, kg: Math.round(kg * 100) / 100 };
 }
 
@@ -640,7 +643,7 @@ export function pilihIkan(jauh) {
 		const s = ikan.syarat || {};
 		return !ikan.kolam && (!s.malam || m) && (!s.perahu || pancing.perahu) && (!s.jauh || jauh >= s.jauh) && (!s.sempurna || pancing.sempurna);
 	};
-	const bobot = KELAS.map((k, i) => (IKAN.some((f) => f.kelas === i && layak(f)) ? k.bobot * Math.min(kali[i], BATAS_BONUS[i]) : 0));
+	const bobot = KELAS.map((k, i) => (IKAN.some((f) => f.kelas === i && layak(f)) ? k.bobot * Math.min(kali[i], BATAS_BONUS[i]) * (pancing.otomatis ? PELUANG_AUTO[i] : 1) : 0));
 	let r = Math.random() * bobot.reduce((a, b) => a + b, 0);
 	let kelas = 0;
 	for (let i = 0; i < bobot.length; i++) {
@@ -667,6 +670,7 @@ export function tickPancing(dt) {
 	p.t += dt;
 	// AUTO: masukan (tahan/ketukan/arah) disuntikkan sebelum dibaca di bawah
 	if (p.otomatis) {
+		p.dibantuAuto = true;
 		if (!bolehOtomatis() || (p.kolam && kaitKolam.lombaBerjalan())) p.otomatis = false;
 		else kendaliOtomatis(dt);
 	}
@@ -835,6 +839,8 @@ export function tickPancing(dt) {
 			p.perfect = p.t < p.jendela * 0.3;
 			p.kendor = 0;
 			p.tegurKendor = false;
+			// tangkapan yang sempat dibantu AUTO tetap dihitung AUTO, walau dimatikan sebelum ikan naik
+			p.dibantuAuto = p.otomatis;
 			p.staminaMaks = k.stamina * (0.75 + 0.5 * besar);
 			p.stamina = p.staminaMaks * (p.perfect ? 0.85 : 1);
 			p.jarak = Math.hypot(p.pelampung.x - o.x, p.pelampung.z - o.z) + 2;
@@ -1081,7 +1087,7 @@ function dapat() {
 	// poin tumbuh dengan akar berat: ikan monster tetap jauh lebih berharga, tapi tidak meledak
 	p.combo += 1;
 	// pengali koin: combo tangkapan beruntun (maks ×1,5) & perfect strike (+15%)
-	const pengali = (1 + Math.min(p.combo - 1, 5) * 0.1) * (p.perfect ? 1.15 : 1) * (p.otomatis ? PENGALI_KOIN_AUTO : 1) * (p.kolam ? PENGALI_KOIN_KOLAM : 1);
+	const pengali = (1 + Math.min(p.combo - 1, 5) * 0.1) * (p.perfect ? 1.15 : 1) * (p.dibantuAuto ? PENGALI_KOIN_AUTO : 1) * (p.kolam ? PENGALI_KOIN_KOLAM : 1);
 	const poin = Math.round(KELAS[ikan.kelas].poin * (1 + Math.sqrt(p.kg)) * (p.sempurna ? 1.2 : 1) * pengali);
 	// tangkapan di kolam ikut dihitung lomba (bila sedang berlangsung)
 	const lomba = p.kolam ? kaitKolam.saatDapat(ikan, p.kg) : null;
@@ -1096,7 +1102,7 @@ function dapat() {
 	if (ikan.kelas >= 1) catat("ikanLangka");
 	if (p.kolam) catat("ikanKolam");
 	tambahXp(Math.round(poin * 0.6));
-	p.hasil = { ikan, kg: p.kg, cm: panjangCm(ikan, p.kg), baru, rekor, poin, total: simpanan.poin, combo: p.combo, perfect: p.perfect, pengali, bintang: bintangUkuran(ikan, p.kg), lapar: jamLapar().aktif, otomatis: p.otomatis, kolam: p.kolam, lomba };
+	p.hasil = { ikan, kg: p.kg, cm: panjangCm(ikan, p.kg), baru, rekor, poin, total: simpanan.poin, combo: p.combo, perfect: p.perfect, pengali, bintang: bintangUkuran(ikan, p.kg), lapar: jamLapar().aktif, otomatis: p.dibantuAuto, kolam: p.kolam, lomba };
 	percik(p.ikanPos.x, p.ikanPos.z, 1.4 + ikan.kelas * 0.3);
 	// backsound Ajojing / Mancing Mania; fanfare sintetis bila berkasnya tak bisa diputar
 	// laga selesai: musik riang "selamat" selama kartu hasil tampil

@@ -12,19 +12,27 @@ export default function PanelEtalaseBumdes() {
 	const [data, setData] = useState(null);
 	const [galat, setGalat] = useState(null);
 	const [kategori, setKategori] = useState("");
+	const [kecamatan, setKecamatan] = useState("");
+	// opsi disimpan terpisah supaya tidak hilang saat data dimuat ulang
+	const [opsiKec, setOpsiKec] = useState([]);
 
 	useEffect(() => {
 		let batal = false;
 		setData(null);
 		setGalat(null);
 		api
-			.get("/public/bumdes/katalog-produk", { params: { limit: 24, ...(kategori ? { kategori } : {}) } })
-			.then((r) => !batal && setData(r.data?.data || null))
+			.get("/public/bumdes/katalog-produk", { params: { limit: 24, ...(kategori ? { kategori } : {}), ...(kecamatan ? { kecamatan } : {}) } })
+			.then((r) => {
+				if (batal) return;
+				setData(r.data?.data || null);
+				const k = r.data?.data?.kecamatan;
+				if (Array.isArray(k) && k.length) setOpsiKec(k.map((x) => (typeof x === "string" ? x : x.kecamatan || x.nama)).filter(Boolean));
+			})
 			.catch(() => !batal && setGalat("Etalase belum bisa dimuat — coba lagi nanti"));
 		return () => {
 			batal = true;
 		};
-	}, [kategori]);
+	}, [kategori, kecamatan]);
 
 	const opsi = data?.kategori_opsi || data?.kategori || [];
 	const daftarKategori = (Array.isArray(opsi) ? opsi : []).map((k) => (typeof k === "string" ? k : k.kategori || k.nama)).filter(Boolean);
@@ -47,6 +55,14 @@ export default function PanelEtalaseBumdes() {
 					))}
 				</div>
 			)}
+			<select aria-label="Saring kecamatan" value={kecamatan} onChange={(e) => setKecamatan(e.target.value)} className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-700">
+				<option value="">Semua kecamatan</option>
+				{opsiKec.map((k) => (
+					<option key={k} value={k}>
+						{k}
+					</option>
+				))}
+			</select>
 			{galat && <p className="rounded-xl bg-rose-50 px-3 py-2 text-sm text-rose-700">{galat}</p>}
 			{!data && !galat && (
 				<div className="grid grid-cols-2 gap-2 sm:grid-cols-3">

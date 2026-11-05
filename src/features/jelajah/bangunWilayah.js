@@ -6,6 +6,7 @@ import { suara } from "./suaraPancing";
 import { ubahTenaga } from "./tenaga";
 import { POTENSI } from "./potensiWilayah";
 import { KOMODITAS, USAHA } from "./usahaWilayah";
+import { tanda } from "./tandaJelajah";
 
 /*
  * Lapisan "Bangun Kabupaten": BUMDes tiap kecamatan (kas pasif, bonus harga jual),
@@ -245,6 +246,7 @@ export function selesaikanPesanan(id) {
 	rayakan(`📦 Pesanan kabupaten terkirim ke Kec. ${p.tujuan}!`, `🪙 +${p.koin}`);
 	periksaPencapaian();
 	simpan();
+	tanda("pesanan");
 	return true;
 }
 
@@ -323,9 +325,16 @@ export function ringkasBangun() {
 	};
 }
 
+export const totalPesanan = () => data.totalPesanan;
+
 export const skorBangun = () => {
 	const r = ringkasBangun();
-	return { pembangun: r.poin, bintangW: r.bintang };
+	const kec = {};
+	for (const nama of Object.keys(POTENSI)) {
+		const { lv } = bangunKec(nama);
+		if (lv > 0) kec[nama] = lv;
+	}
+	return { pembangun: r.poin, bintangW: r.bintang, kec };
 };
 
 export const daftarPencapaian = () => PENCAPAIAN.map((p) => ({ id: p.id, ikon: p.ikon, teks: p.teks, koin: p.koin, selesai: data.capai.includes(p.id) }));

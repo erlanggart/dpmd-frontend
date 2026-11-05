@@ -1,10 +1,13 @@
 import { useEffect, useRef } from "react";
 import { AREA_LAIN, LOBI, RUANGAN } from "../kantorConfig";
 import { KOTAK_DENAH as BATAS, posisi, useDiKawasan } from "../jelajahStore";
+import BingkaiPeta from "./BingkaiPeta";
 import MinimapKabupaten from "./MinimapKabupaten";
 
-// Denah mini dari atas untuk lantai tempat pemain berada. Posisi pemain diperbarui
+// Denah mini dari atas untuk lantai tempat pemain berada, berpusat pada pemain. Posisi diperbarui
 // langsung ke atribut SVG lewat requestAnimationFrame, tanpa render ulang React.
+
+const RENTANG = 32; // selebar denah: lensa hanya bergeser utara-selatan, label ruang tetap terlihat
 
 const persegi = (r) => ({ x: r.x0, y: r.z0, width: r.x1 - r.x0, height: r.z1 - r.z0 });
 
@@ -24,7 +27,8 @@ const LABEL_PENDUKUNG = {
 	dapur: "DAPUR",
 };
 
-export default function Minimap({ area, lantai, dikunjungi, onPilih, onPeta, perhatian = 0, className = "" }) {
+export default function Minimap({ area, lantai, dikunjungi, onPilih, onPeta, onTutup, perhatian = 0, className = "" }) {
+	const svg = useRef(null);
 	const penanda = useRef(null);
 	const kawasan = useDiKawasan(lantai);
 
@@ -34,6 +38,9 @@ export default function Minimap({ area, lantai, dikunjungi, onPilih, onPeta, per
 			const x = Math.min(BATAS.x0 + BATAS.lebar - 1, Math.max(BATAS.x0 + 1, posisi.x));
 			const z = Math.min(BATAS.z0 + BATAS.tinggi - 1, Math.max(BATAS.z0 + 1, posisi.z));
 			penanda.current?.setAttribute("transform", `translate(${x} ${z}) rotate(${(-posisi.rot * 180) / Math.PI})`);
+			// lensa berhenti di tepi denah supaya tidak menampilkan area kosong
+			const tz = Math.min(BATAS.z0 + BATAS.tinggi - RENTANG, Math.max(BATAS.z0, z - RENTANG / 2));
+			svg.current?.setAttribute("viewBox", `${BATAS.x0} ${tz} ${RENTANG} ${RENTANG}`);
 			id = requestAnimationFrame(putar);
 		};
 		id = requestAnimationFrame(putar);
@@ -41,23 +48,20 @@ export default function Minimap({ area, lantai, dikunjungi, onPilih, onPeta, per
 	}, []);
 
 	const ruang = [LOBI, ...RUANGAN].filter((r) => r.lantai === lantai);
-	if (kawasan) return <MinimapKabupaten className={className} onPeta={onPeta} perhatian={perhatian} />;
+	if (kawasan) return <MinimapKabupaten className={className} onPeta={onPeta} onTutup={onTutup} perhatian={perhatian} />;
 
 	return (
-		<div className={`rounded-2xl bg-white/90 p-2 shadow-lg ring-1 ring-black/5 backdrop-blur ${className}`}>
-			{/* isi denah dipakai pindah ruang, jadi popup peta kecamatan dibuka dari judulnya */}
-			<button type="button" onClick={onPeta} title="Buka peta kecamatan" className="relative mb-1 block w-full text-center text-[10px] font-bold uppercase tracking-wider text-slate-500 hover:text-slate-800">
-				Lantai {lantai + 1} · 🗺️
-				{perhatian > 0 && <span className="absolute -right-1 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-rose-500 px-1 text-[10px] font-extrabold leading-none text-white">{perhatian}</span>}
-			</button>
+		<BingkaiPeta label={`Lantai ${lantai + 1}`} onPeta={onPeta} onTutup={onTutup} perhatian={perhatian} className={className}>
 			<svg
-				viewBox={`${BATAS.x0} ${BATAS.z0} ${BATAS.lebar} ${BATAS.tinggi}`}
-				className="block h-auto w-full"
+				ref={svg}
+				viewBox={`${BATAS.x0} ${BATAS.z0} ${RENTANG} ${RENTANG}`}
+				preserveAspectRatio="xMidYMid slice"
+				className="block h-full w-full"
 				role="img"
 				aria-label={`Denah mini lantai ${lantai + 1}. Ketuk ruang bidang untuk pindah ke sana.`}
 			>
-				<rect x={-15} y={-13} width={30} height={25} fill="#e7e1d4" />
-				{lantai === 0 && <rect x={-15} y={12.3} width={30} height={10.7} fill="#e2d3bd" />}
+				<rect x={-15} y={-13} width={30} height={25} fill="#e7e1d4" fillOpacity={0.5} />
+				{lantai === 0 && <rect x={-15} y={12.3} width={30} height={10.7} fill="#e2d3bd" fillOpacity={0.5} />}
 				{PENDUKUNG.filter((a) => a.lantai === lantai).map((a) => (
 					<g key={a.id}>
 						<rect {...persegi(a.rect)} fill="#cbd5e1" fillOpacity={0.5} stroke="#94a3b8" strokeWidth={0.15} />
@@ -66,7 +70,7 @@ export default function Minimap({ area, lantai, dikunjungi, onPilih, onPeta, per
 							y={(a.rect.z0 + a.rect.z1) / 2}
 							textAnchor="middle"
 							dominantBaseline="middle"
-							fontSize={1.1}
+							fontSize={1.3}
 							fill="#475569"
 						>
 							{LABEL_PENDUKUNG[a.id]}
@@ -94,9 +98,12 @@ export default function Minimap({ area, lantai, dikunjungi, onPilih, onPeta, per
 								y={(r.rect.z0 + r.rect.z1) / 2}
 								textAnchor="middle"
 								dominantBaseline="middle"
-								fontSize={1.5}
+								fontSize={1.9}
 								fontWeight={700}
 								fill="#1f2937"
+								stroke="#ffffff"
+								strokeWidth={0.3}
+								paintOrder="stroke"
 							>
 								{r.labelPeta}
 								{sudah ? " ✓" : ""}
@@ -109,6 +116,6 @@ export default function Minimap({ area, lantai, dikunjungi, onPilih, onPeta, per
 					<polygon points="0,1.8 -0.65,0.6 0.65,0.6" fill="#e0703a" />
 				</g>
 			</svg>
-		</div>
+		</BingkaiPeta>
 	);
 }

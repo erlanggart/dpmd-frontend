@@ -326,7 +326,7 @@ const PasarBumdesPublicPage = lazy(
   () => import("./pages/PasarBumdesPublicPage"),
 );
 // Tur 3D kantor DPMD (tanpa login) — dibuka dari tombol di hero landing page.
-const JelajahPage = lazy(() => import("./features/jelajah/JelajahPage"));
+const JelajahPage = lazy(() => import("./features/jelajah/JelajahRute"));
 const AparaturDesaPage = lazy(
   () => import("./pages/desa/aparatur-desa/AparaturDesaPage"),
 );

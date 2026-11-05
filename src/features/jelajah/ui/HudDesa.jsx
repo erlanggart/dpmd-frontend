@@ -3,6 +3,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import { desa, harianKini, misiKini, namaWaktu, sasaranKini, teksJam, useDesa } from "../wilayah/desaHidup";
 import { pemainWilayah } from "../wilayah/uiWilayah";
 import { usahaKini } from "../usahaWilayah";
+import PilMisi from "./PilMisi";
 
 /*
  * HUD "desa hidup": kartu misi dengan kompas ke tujuan, misi harian, spanduk
@@ -36,53 +37,43 @@ function Kompas() {
 		return () => cancelAnimationFrame(id);
 	}, []);
 	return (
-		<span className="flex shrink-0 flex-col items-center">
-			<span ref={panah} className="flex h-7 w-7 items-center justify-center rounded-full bg-amber-400 text-[15px] font-black text-slate-900 shadow">↑</span>
-			<span ref={jarak} className="mt-0.5 text-[10px] font-bold tabular-nums text-amber-200" />
+		<span className="flex shrink-0 items-center gap-1">
+			<span ref={panah} className="flex h-5 w-5 items-center justify-center rounded-full bg-amber-400 text-[12px] font-black text-slate-900 shadow">↑</span>
+			<span ref={jarak} className="text-[10px] font-bold tabular-nums text-amber-200" />
 		</span>
 	);
 }
 
 export function KartuMisi() {
 	useDesa();
-	const [buka, setBuka] = useState(false);
 	const m = misiKini();
 	const harian = harianKini();
 	const sisaHarian = harian.filter((h) => !h.selesai).length;
 	return (
-		<div onClick={() => setBuka((v) => !v)} className="pointer-events-auto w-[10.5rem] cursor-pointer rounded-2xl bg-slate-950/70 p-2 text-white shadow-lg ring-1 ring-amber-300/30 backdrop-blur sm:w-[16.5rem] sm:cursor-default sm:bg-slate-950/80 sm:p-3">
-			<div className="flex items-center gap-2 sm:items-start">
-				<div className="min-w-0 flex-1">
-					<p className="m-0 hidden text-[10.5px] font-bold uppercase tracking-wider text-amber-300 sm:block">{m ? `📜 Misi ${desa.misi.i + 1}` : "⭐ Misi harian"}</p>
-					{m ? (
-						<>
-							<p className={`m-0 text-[11.5px] font-bold leading-snug sm:text-[13.5px] ${buka ? "" : "line-clamp-2 sm:line-clamp-none"}`}>{m.teks}</p>
-							<div className="mt-1.5 hidden items-center gap-2 sm:flex">
-								<span className="h-1.5 flex-1 overflow-hidden rounded-full bg-white/15"><span className="block h-full rounded-full bg-amber-400" style={{ width: `${(desa.misi.n / m.target) * 100}%` }} /></span>
-								<span className="text-[11px] font-bold tabular-nums">{desa.misi.n}/{m.target}</span>
-							</div>
-							<p className="m-0 mt-1 hidden text-[11px] text-white/60 sm:block">Hadiah: 🪙 {m.hadiah.koin}{m.hadiah.pupuk ? ` · ${usahaKini().pupuk.ikon} ${m.hadiah.pupuk}` : ""}</p>
-						</>
-					) : (
-						<p className="m-0 text-[12.5px] font-semibold">{sisaHarian ? `${sisaHarian} misi tersisa hari ini` : "Semua selesai! Datang lagi besok"}</p>
-					)}
-				</div>
-				<Kompas />
-			</div>
-			<button type="button" className={`mt-2 w-full rounded-lg bg-white/10 py-1 text-[11px] font-bold text-white/80 hover:bg-white/20 ${buka ? "block" : "hidden sm:block"}`}>
-				{buka ? "Tutup" : `Misi harian (${harian.length - sisaHarian}/${harian.length}) ${desa.piala ? `· 🏆 ${desa.piala}` : ""}`}
-			</button>
-			{buka && (
-				<ul className="m-0 mt-2 list-none space-y-1.5 p-0">
-					{harian.map((h) => (
-						<li key={h.id} className={`rounded-lg px-2 py-1.5 text-[11.5px] ${h.selesai ? "bg-emerald-500/20 text-emerald-200" : "bg-white/5"}`}>
-							<div className="flex justify-between gap-2"><span>{h.selesai ? "✅ " : ""}{h.teks}</span><span className="shrink-0 font-bold">🪙 {h.hadiah.koin}</span></div>
-							{!h.selesai && <span className="mt-1 block h-1 overflow-hidden rounded-full bg-white/15"><span className="block h-full bg-amber-400" style={{ width: `${(h.n / h.target) * 100}%` }} /></span>}
-						</li>
-					))}
-				</ul>
+		<PilMisi judul={m?.teks ?? (sisaHarian ? `${sisaHarian} misi harian` : "Misi selesai")} kompas={<Kompas />}>
+			<p className="m-0 text-[10.5px] font-bold uppercase tracking-wider text-amber-300">{m ? `📜 Misi ${desa.misi.i + 1}` : "⭐ Misi harian"}</p>
+			{m ? (
+				<>
+					<p className="m-0 text-[13px] font-bold leading-snug">{m.teks}</p>
+					<div className="mt-1.5 flex items-center gap-2">
+						<span className="h-1.5 flex-1 overflow-hidden rounded-full bg-white/15"><span className="block h-full rounded-full bg-amber-400" style={{ width: `${(desa.misi.n / m.target) * 100}%` }} /></span>
+						<span className="text-[11px] font-bold tabular-nums">{desa.misi.n}/{m.target}</span>
+					</div>
+					<p className="m-0 mt-1 text-[11px] text-white/60">Hadiah: 🪙 {m.hadiah.koin}{m.hadiah.pupuk ? ` · ${usahaKini().pupuk.ikon} ${m.hadiah.pupuk}` : ""}</p>
+				</>
+			) : (
+				<p className="m-0 text-[12.5px] font-semibold">{sisaHarian ? `${sisaHarian} misi tersisa hari ini` : "Semua selesai! Datang lagi besok"}</p>
 			)}
-		</div>
+			<p className="m-0 mt-2 border-t border-white/10 pt-2 text-[11px] font-bold text-white/80">Misi harian ({harian.length - sisaHarian}/{harian.length}){desa.piala ? ` · 🏆 ${desa.piala}` : ""}</p>
+			<ul className="m-0 mt-1.5 list-none space-y-1.5 p-0">
+				{harian.map((h) => (
+					<li key={h.id} className={`rounded-lg px-2 py-1.5 text-[11.5px] ${h.selesai ? "bg-emerald-500/20 text-emerald-200" : "bg-white/5"}`}>
+						<div className="flex justify-between gap-2"><span>{h.selesai ? "✅ " : ""}{h.teks}</span><span className="shrink-0 font-bold">🪙 {h.hadiah.koin}</span></div>
+						{!h.selesai && <span className="mt-1 block h-1 overflow-hidden rounded-full bg-white/15"><span className="block h-full bg-amber-400" style={{ width: `${(h.n / h.target) * 100}%` }} /></span>}
+					</li>
+				))}
+			</ul>
+		</PilMisi>
 	);
 }
 

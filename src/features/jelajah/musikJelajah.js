@@ -3,40 +3,25 @@ import { dengarMati, siapkan, suaraMati } from "./suaraPancing";
 // Musik di Situ Pemda, mengikuti jalannya memancing:
 // - sendu: selama naik perahu & menunggu sambaran — digubah langsung oleh WebAudio
 //   (pad A minor yang pelan, bas, dan melodi pentatonis bergema), tanpa berkas;
-// - laga: sejak strike sampai ikan terangkat — backsound "Ajojing" / "Oncom Gondrong" / "Mancing Mania"
+// - laga: sejak strike sampai ikan terangkat — backsound "Ajojing" / "Mancing Mania"
 //   (dari backsound voting SIMPASKOR; Mancing Mania untuk ikan Epik ke atas), diulang;
 // - riang: lagu "selamat" yang ceria (C mayor, cepat) selama kartu hasil tangkapan tampil.
 // Sendu diredam selama laga atau riang berbunyi.
 
-const LAGU_LAGA = { ajojing: "/audio/jelajah/ajojing.mp3", oncom: "/audio/jelajah/oncom-gondrong.mp3", mania: "/audio/jelajah/mancing-mania.mp3" };
-// Ikan biasa: "Ajojing" dan "Oncom Gondrong" bergantian tiap strike (berkas oncom-gondrong.mp3
-// opsional — bila belum ada, otomatis kembali ke Ajojing). Ikan Epik ke atas: Mancing Mania.
-const GILIRAN_BIASA = [LAGU_LAGA.ajojing, LAGU_LAGA.oncom];
-let giliran = Math.floor(Math.random() * GILIRAN_BIASA.length);
+const LAGU_LAGA = { ajojing: "/audio/jelajah/ajojing.mp3", mania: "/audio/jelajah/mancing-mania.mp3" };
+// Ikan biasa: Ajojing. Ikan Epik ke atas: Mancing Mania.
 let laga = null;
 
 export function putarLaga(kelas) {
 	hentikanLaga();
 	if (suaraMati.nilai) return false;
 	try {
-		const sumber = kelas >= 2 ? LAGU_LAGA.mania : GILIRAN_BIASA[giliran++ % GILIRAN_BIASA.length];
+		const sumber = kelas >= 2 ? LAGU_LAGA.mania : LAGU_LAGA.ajojing;
 		const a = new Audio(sumber);
 		laga = a;
 		a.volume = 0.7;
 		a.loop = true;
-		// a.paused: mengganti src ke lagu cadangan ikut menolak play() lama padahal lagu baru
-		// sudah berbunyi; bila pegangan dilepas, lagu itu tak bisa dihentikan dan menumpuk.
-		const putar = () => a.play()?.catch?.(() => laga === a && a.paused && (laga = null));
-		a.addEventListener(
-			"error",
-			() => {
-				if (laga !== a || a.src.endsWith(LAGU_LAGA.ajojing)) return;
-				a.src = LAGU_LAGA.ajojing;
-				putar();
-			},
-			{ once: true },
-		);
-		putar();
+		a.play()?.catch?.(() => laga === a && a.paused && (laga = null));
 		return true;
 	} catch {
 		laga = null;

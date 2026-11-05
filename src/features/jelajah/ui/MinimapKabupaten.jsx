@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import BingkaiPeta from "./BingkaiPeta";
 import { useGeoWilayah } from "../../../components/landingpage/petaWilayah";
 import { posisi } from "../jelajahStore";
 import { SUDUT_UTARA } from "../scene/kawasanData";
@@ -53,7 +54,7 @@ function dalamCincin([x, y], c) {
 	return ya;
 }
 
-export default function MinimapKabupaten({ className = "", onPeta, perhatian = 0 }) {
+export default function MinimapKabupaten({ className = "", onPeta, onTutup, perhatian = 0 }) {
 	const geo = useGeoWilayah();
 	const svg = useRef(null);
 	const penanda = useRef(null);
@@ -90,13 +91,11 @@ export default function MinimapKabupaten({ className = "", onPeta, perhatian = 0
 	}, [peta]);
 
 	return (
-		<button type="button" onClick={onPeta} title="Buka peta kecamatan" aria-label={`Buka peta kecamatan${perhatian > 0 ? `, ${perhatian} perlu perhatian` : ""}`} className={`relative block w-full cursor-pointer rounded-2xl bg-white/90 p-1.5 text-left shadow-lg ring-1 ring-black/5 backdrop-blur hover:ring-2 hover:ring-slate-400 sm:p-2 ${className}`}>
-			{perhatian > 0 && <span className="absolute -right-1 -top-1 z-10 flex h-4 min-w-4 items-center justify-center rounded-full bg-rose-500 px-1 text-[10px] font-extrabold leading-none text-white">{perhatian}</span>}
-			<p className="mb-1 truncate text-center text-[10px] font-bold uppercase tracking-wider text-slate-500">{kecamatanKini ? `Kec. ${kecamatanKini}` : "Kabupaten Bogor"}</p>
-			<div className="relative overflow-hidden rounded-lg">
-				<svg ref={svg} viewBox={`${-LEBAR / 2} ${-TINGGI / 2} ${LEBAR} ${TINGGI}`} className="block h-auto w-full bg-slate-200" role="img" aria-label={`Peta mini Kabupaten Bogor${kecamatanKini ? `, posisi Anda di Kecamatan ${kecamatanKini}` : ""}`}>
+		<BingkaiPeta label={kecamatanKini ? `Kec. ${kecamatanKini}` : "Kabupaten Bogor"} onPeta={onPeta} onTutup={onTutup} perhatian={perhatian} className={className}>
+			<button type="button" onClick={onPeta} tabIndex={-1} aria-hidden="true" className="relative block h-full w-full cursor-pointer">
+				<svg ref={svg} viewBox={`${-LEBAR / 2} ${-TINGGI / 2} ${LEBAR} ${TINGGI}`} preserveAspectRatio="xMidYMid slice" className="block h-full w-full" role="img" aria-label={`Peta mini Kabupaten Bogor${kecamatanKini ? `, posisi Anda di Kecamatan ${kecamatanKini}` : ""}`}>
 					{peta?.kecamatan.map((k) => (
-						<path key={k.nama} d={k.d} fill={k.nama === kecamatanKini ? "#f7dfa8" : "#bcd8a0"} fillRule="evenodd" />
+						<path key={k.nama} d={k.d} fill={k.nama === kecamatanKini ? "#f7dfa8" : "#bcd8a0"} fillOpacity={0.55} fillRule="evenodd" />
 					))}
 					{peta && <path d={peta.desa} fill="none" stroke="#ffffff" strokeOpacity={0.55} strokeWidth={35} />}
 					{peta?.kecamatan.map((k) => (
@@ -113,8 +112,8 @@ export default function MinimapKabupaten({ className = "", onPeta, perhatian = 0
 					</g>
 				</svg>
 				{/* bangunan di dunia 3D bersumber dari OpenStreetMap: atribusi ODbL tetap wajib tampil */}
-				<p className="pointer-events-none absolute bottom-0.5 left-1 text-[8px] text-slate-600/80">© OpenStreetMap</p>
-			</div>
-		</button>
+				<p className="pointer-events-none absolute inset-x-0 bottom-1 m-0 text-center text-[7px] font-semibold text-slate-800 [text-shadow:0_0_2px_#fff]">© OpenStreetMap</p>
+			</button>
+		</BingkaiPeta>
 	);
 }

@@ -1,3 +1,4 @@
+import { ikutMisi } from "../ikutMisi";
 import { useSyncExternalStore } from "react";
 import { efekTeks, jumlahPetakAktif, kebun, pendengarCatat, tumbuhSaatPergi } from "../kebun";
 import { usahaKini } from "../usahaWilayah";
@@ -117,6 +118,7 @@ const misiMentah = () => RANTAI[desa.misi.i] || null;
 export const misiKini = () => { const m = misiMentah(); return m && { ...m, teks: teksMisi(m) }; };
 
 function majukanMisi(jenis, d) {
+	if (!ikutMisi()) return;
 	const m = misiMentah();
 	if (m && m.jenis === jenis && (!m.syarat || m.syarat(d))) {
 		desa.misi.n += 1;
@@ -308,6 +310,7 @@ export function sasaranKini() {
 	if (a?.jenis === "wereng") return petakYang((p) => p.hama);
 	if (a?.jenis === "tengkulak" && Object.values(kebun.bawa).some((n) => n > 0)) return TITIK_PENGEPUL;
 	if (a?.jenis === "lomba") return petakYang((p) => p.tahap === "siap");
+	if (!ikutMisi()) return null;
 	const m = misiKini();
 	const jenis = m?.jenis;
 	if (!jenis) return null;

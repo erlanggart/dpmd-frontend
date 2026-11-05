@@ -8,8 +8,9 @@ import { bersihkanGaya, lemari } from "./lemari";
 import { belanja } from "./belanja";
 import { ambilKoleksi, bayarKoin, dengarKoleksi, tambahKoin } from "./pancing";
 import { ubahTenaga } from "./tenaga";
-import { dengarProgres, levelDari, progres } from "./progres";
-import { dengarBangun, skorBangun } from "./bangunWilayah";
+import { dengarProgres, hariIni, levelDari, progres } from "./progres";
+import { dengarBangun, skorBangun, totalPesanan } from "./bangunWilayah";
+import { tanda } from "./tandaJelajah";
 
 // Jelajah bersama: setiap tamu yang membuka /jelajah tersambung ke namespace
 // socket.io "/jelajah" (lihat dpmd-fahri-express/src/socket/jelajah.socket.js).
@@ -29,7 +30,7 @@ export const pemainLain = new Map();
 // Balon chat & emote milik pemain sendiri, digambar di atas kepalanya.
 export const diriSendiri = { ucap: null, emote: null };
 
-let ringkas = { status: "mati", id: null, ruang: null, daftar: [], obrolan: [], sapaan: null, galat: null };
+let ringkas = { status: "mati", id: null, ruang: null, daftar: [], obrolan: [], sapaan: null, galat: null, gotong: null };
 const pendengar = new Set();
 function ubah(patch) {
 	ringkas = { ...ringkas, ...patch };
@@ -40,6 +41,80 @@ const langganan = (fn) => {
 	return () => pendengar.delete(fn);
 };
 export const useMultipemain = () => useSyncExternalStore(langganan, () => ringkas);
+
+// Identitas anonim perangkat ini, dipakai server untuk moderasi (bisu/lapor); bukan akun.
+function kunciPemain() {
+	const KUNCI = "jelajah-kunci-pemain-v1";
+	try {
+		const ada = localStorage.getItem(KUNCI);
+		if (ada && /^[a-z0-9]{16,40}$/.test(ada)) return ada;
+	} catch {
+		/* penyimpanan tidak tersedia */
+	}
+	const b = crypto.getRandomValues(new Uint8Array(12));
+	const baru = Array.from(b, (x) => x.toString(16).padStart(2, "0")).join("");
+	try {
+		localStorage.setItem(KUNCI, baru);
+	} catch {
+		/* tetap pakai nilai di memori */
+	}
+	return baru;
+}
+const kunciSesi = kunciPemain();
+
+// Bisu sisi klien: bertahan selama halaman terbuka, walau tersambung ulang.
+const dibisukan = new Set();
+export function bisukanPemain(nama) {
+	const n = String(nama).toLowerCase();
+	if (!dibisukan.delete(n)) dibisukan.add(n);
+}
+export const sudahDibisukan = (nama) => dibisukan.has(String(nama).toLowerCase());
+const dilaporkan = new Set();
+export function laporkanPemain(id) {
+	if (!socket?.connected || dilaporkan.has(id)) return false;
+	dilaporkan.add(id);
+	socket.emit("lapor", { ke: id });
+	return true;
+}
+export const sudahDilaporkan = (id) => dilaporkan.has(id);
+
+// ---------- Gotong royong se-kabupaten ----------
+// Pesanan kabupaten yang kita selesaikan ikut dihitung server; bonus diklaim sekali sehari.
+const KUNCI_GOTONG = "jelajah-gotong-v1";
+const bacaGotong = () => {
+	try {
+		return JSON.parse(localStorage.getItem(KUNCI_GOTONG)) || {};
+	} catch {
+		return {};
+	}
+};
+const simpanGotong = (d) => {
+	try {
+		localStorage.setItem(KUNCI_GOTONG, JSON.stringify(d));
+	} catch {
+		/* penyimpanan tidak tersedia */
+	}
+};
+function terimaGotong(g) {
+	ubah({ gotong: g });
+	const d = bacaGotong();
+	if (!g || g.jumlah < g.target || d.tanggal !== g.tanggal || !d.ikut || d.klaim) return;
+	simpanGotong({ ...d, klaim: true });
+	tambahKoin(150);
+	ubahTenaga(0, { teks: "🤝 Gotong royong tercapai! Bonus 🪙 150", jenis: "baik" });
+}
+let totalTerakhir = totalPesanan();
+function pantauBangun() {
+	kirimSkor();
+	const n = totalPesanan();
+	if (n > totalTerakhir) {
+		const tanggal = ringkas.gotong?.tanggal ?? hariIni();
+		const d = bacaGotong();
+		simpanGotong(d.tanggal === tanggal ? { ...d, ikut: true } : { tanggal, ikut: true, klaim: false });
+		if (socket?.connected) socket.emit("gotong");
+	}
+	totalTerakhir = n;
+}
 
 const daftarDariMap = () => [...pemainLain.entries()].map(([id, p]) => ({ id, ...p.profil }));
 
@@ -111,6 +186,7 @@ let duniaKec = null;
 let gerakDunia = null;
 export function pindahDunia(kec, ambilGerak = null) {
 	duniaKec = kec;
+	if (kec) tanda("kecamatan");
 	gerakDunia = ambilGerak;
 	pemainLain.clear();
 	ubah({ daftar: [] });
@@ -137,7 +213,7 @@ export async function sambungJelajah(profil) {
 	if (saya !== generasi) return;
 	const asal = asalSocket();
 	socket = io(`${asal ?? ""}/jelajah`, {
-		auth: { nama: profil.nama, jk: profil.jk, avatar: profil.avatar, kulit: profil.kulit, gaya: lemari.pakai },
+		auth: { nama: profil.nama, jk: profil.jk, avatar: profil.avatar, kulit: profil.kulit, gaya: lemari.pakai, kunci: kunciSesi },
 		transports: ["polling", "websocket"],
 		reconnectionDelayMax: 8000,
 	});
@@ -157,6 +233,7 @@ export async function sambungJelajah(profil) {
 		pemainLain.clear();
 		ubah({ status: "terputus", daftar: [] });
 	});
+	let tolakDiumumkan = false;
 	s.on("selamat", (m) => {
 		pemainLain.clear();
 		for (const p of m.pemain || []) pemainLain.set(p.id, { profil: { nama: p.nama, jk: p.jk, avatar: p.avatar, kulit: p.kulit, gaya: bersihkanGaya(p.gaya) }, s: p.s });
@@ -167,16 +244,23 @@ export async function sambungJelajah(profil) {
 		}
 		ubah({ status: "tersambung", id: m.id, ruang: m.ruang ?? null, daftar: daftarDariMap(), galat: null });
 		terimaLomba(m.lomba);
+		terimaGotong(m.gotong ?? null);
+		tanda("bersama");
+		if (m.namaDitolak && !tolakDiumumkan) {
+			tolakDiumumkan = true;
+			tambahObrolan({ sistem: true, teks: "Nama itu tidak bisa dipakai di mode bersama, jadi Anda tampil sebagai Tamu.", waktu: Date.now() });
+		}
 		while (antreIkanLomba.length) s.emit("lomba:ikan", antreIkanLomba.shift());
 		kirimSkor();
 		if (!lepasSkor) {
 			const a = dengarProgres(kirimSkor);
 			const b = dengarKoleksi(kirimSkor);
-			const c = dengarBangun(kirimSkor);
+			const c = dengarBangun(pantauBangun);
 			lepasSkor = () => (a(), b(), c());
 		}
 	});
 	s.on("lomba", terimaLomba);
+	s.on("gotong", terimaGotong);
 	s.on("masuk", (p) => {
 		pemainLain.set(p.id, { profil: { nama: p.nama, jk: p.jk, avatar: p.avatar, kulit: p.kulit, gaya: bersihkanGaya(p.gaya) }, s: p.s });
 		ubah({ daftar: daftarDariMap() });
@@ -202,6 +286,7 @@ export async function sambungJelajah(profil) {
 		}
 	});
 	s.on("ucap", (m) => {
+		if (m.id !== s.id && sudahDibisukan(m.nama)) return;
 		const sampai = performance.now() + LAMA_UCAP;
 		if (m.id === s.id) diriSendiri.ucap = { teks: m.teks, sampai };
 		else {
@@ -237,7 +322,7 @@ export async function sambungJelajah(profil) {
 		tambahKoin(n);
 		ubahTenaga(0, { teks: `🎁 ${m.nama || "Tamu"} memberi Anda 🪙 ${n} koin!`, jenis: "baik" });
 	});
-	s.on("disapa", (m) => ubah({ sapaan: { ...m, waktu: Date.now() } }));
+	s.on("disapa", (m) => !sudahDibisukan(m.nama) && ubah({ sapaan: { ...m, waktu: Date.now() } }));
 	s.on("ditolak", (m) => tambahObrolan({ sistem: true, teks: m.alasan, waktu: Date.now() }));
 
 	// Kirim posisi sendiri ±10x per detik, hanya bila berubah.
