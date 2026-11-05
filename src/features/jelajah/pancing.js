@@ -126,16 +126,16 @@ export const JORAN = [
 	{ id: "karbon", nama: "Joran Karbon", harga: 900, cepat: 0.8, hoki: 1.25, gulung: 1.14, lebar: 0.035, warna: "#0f172a", ujung: "#22d3ee", ket: "Kaku & peka: gulungan cepat, ikan besar lebih sering." },
 	{ id: "kilat", nama: "Joran Casting Kilat", harga: 1200, cepat: 0.5, hoki: 1, gulung: 1.1, lebar: 0.02, warna: "#0369a1", ujung: "#fde047", ket: "Spesialis cepat: umpan disambar 2× lebih cepat — panen ikan." },
 	{ id: "spinning", nama: "Joran Spinning Lincah", harga: 1600, cepat: 0.6, hoki: 1.1, gulung: 1.18, lebar: 0.03, warna: "#7c3aed", ujung: "#f472b6", ket: "Spesialis lincah: sambaran datang cepat dan tarikan gulung terasa ringan." },
-	{ id: "titanium", nama: "Joran Titanium Pro", harga: 2200, cepat: 0.7, hoki: 1.45, gulung: 1.22, lebar: 0.05, auto: true, warna: "#94a3b8", ujung: "#f97316", ket: "Joran turnamen: cepat, kuat, sering disambar ikan premium. Bisa mode AUTO." },
-	{ id: "elite", nama: "Joran Karbon Elite", harga: 2800, cepat: 0.65, hoki: 1.5, gulung: 1.2, lebar: 0.05, auto: true, warna: "#1e293b", ujung: "#34d399", ket: "Peka dan seimbang: ikan premium sering mampir. Bisa mode AUTO." },
-	{ id: "dasar", nama: "Joran Dasar Monster", harga: 3500, cepat: 1.15, hoki: 2.3, gulung: 1.18, lebar: 0.04, auto: true, warna: "#3f2a1d", ujung: "#ef4444", ket: "Spesialis premium: sabar menunggu, yang datang ikan-ikan monster. Bisa mode AUTO." },
-	{ id: "baitcast", nama: "Joran Baitcast Berat", harga: 4200, cepat: 1, hoki: 1.7, gulung: 1.38, lebar: 0.08, auto: true, warna: "#7f1d1d", ujung: "#fb923c", ket: "Tenaga gulung terbesar untuk menaklukkan ikan raksasa. Bisa mode AUTO." },
-	{ id: "naga", nama: "Joran Naga Emas", harga: 5000, cepat: 0.6, hoki: 1.9, gulung: 1.32, lebar: 0.07, auto: true, warna: "#ca8a04", ujung: "#facc15", ket: "Legenda para pemancing: cepat & ikan langka seolah datang sendiri. Bisa mode AUTO." },
+	{ id: "titanium", nama: "Joran Titanium Pro", harga: 2200, cepat: 0.7, hoki: 1.45, gulung: 1.22, lebar: 0.05, warna: "#94a3b8", ujung: "#f97316", ket: "Joran turnamen: cepat, kuat, sering disambar ikan premium." },
+	{ id: "elite", nama: "Joran Karbon Elite", harga: 2800, cepat: 0.65, hoki: 1.5, gulung: 1.2, lebar: 0.05, warna: "#1e293b", ujung: "#34d399", ket: "Peka dan seimbang: ikan premium sering mampir." },
+	{ id: "dasar", nama: "Joran Dasar Monster", harga: 3500, cepat: 1.15, hoki: 2.3, gulung: 1.18, lebar: 0.04, warna: "#3f2a1d", ujung: "#ef4444", ket: "Spesialis premium: sabar menunggu, yang datang ikan-ikan monster." },
+	{ id: "baitcast", nama: "Joran Baitcast Berat", harga: 4200, cepat: 1, hoki: 1.7, gulung: 1.38, lebar: 0.08, warna: "#7f1d1d", ujung: "#fb923c", ket: "Tenaga gulung terbesar untuk menaklukkan ikan raksasa." },
+	{ id: "naga", nama: "Joran Naga Emas", harga: 5000, cepat: 0.6, hoki: 1.9, gulung: 1.32, lebar: 0.07, warna: "#ca8a04", ujung: "#facc15", ket: "Legenda para pemancing: cepat & ikan langka seolah datang sendiri." },
 	{ id: "kapal", nama: "Joran Kapal Samudra", harga: 7500, cepat: 0.55, hoki: 2, gulung: 1.35, lebar: 0.08, auto: true, warna: "#0e7490", ujung: "#fde68a", ket: "Dibuat untuk ikan terbesar: cepat, kuat, dan ikan langka sering menyambar. Bisa mode AUTO." },
 	{ id: "maestro", nama: "Joran Perak Maestro", harga: 12000, cepat: 0.5, hoki: 2.4, gulung: 1.4, lebar: 0.09, auto: true, warna: "#cbd5e1", ujung: "#a78bfa", ket: "Buatan pengrajin ternama: hampir setiap sambaran berpeluang ikan besar. Bisa mode AUTO." },
 	{ id: "garuda", nama: "Joran Garuda Sakti", harga: 20000, cepat: 0.45, hoki: 2.8, gulung: 1.45, lebar: 0.1, auto: true, warna: "#111827", ujung: "#ef4444", ket: "Joran pusaka tertinggi. Ikan legenda pun sulit menolak. Bisa mode AUTO." },
 ];
-// Mode AUTO (auto pilot) hanya untuk joran kelas atas. Koinnya 75% — memancing
+// Mode AUTO (auto pilot) hanya untuk 3 joran termahal. Koinnya 75% — memancing
 // sendiri tetap paling menguntungkan.
 export const PENGALI_KOIN_AUTO = 0.75;
 // Ikan Kolam Monster milik pengelola: koin per tangkapan kecil (ikannya dijamin besar);
@@ -383,6 +383,13 @@ export const usePancing = () =>
 		() => versi,
 	);
 
+// Boolean, bukan versi: halaman induk hanya render ulang saat adu tarik mulai/selesai.
+export const useSedangTarik = () =>
+	useSyncExternalStore(
+		(f) => (pendengar.add(f), () => pendengar.delete(f)),
+		() => pancing.fase === "tarik",
+	);
+
 const acak = (a, b) => a + Math.random() * (b - a);
 const malam = () => suasana.malam > 0.5;
 
@@ -409,7 +416,7 @@ export function gantiKamera() {
 
 // Nyalakan/matikan AUTO. Mengembalikan pesan alasan bila ditolak.
 export function aturOtomatis(nyala) {
-	const tolak = nyala && !bolehOtomatis() ? "🔒 AUTO hanya untuk Joran Titanium Pro, Dasar Monster, atau Naga Emas" : nyala && pancing.kolam && kaitKolam.lombaBerjalan() ? "🏆 Selama lomba, memancing wajib manual" : null;
+	const tolak = nyala && !bolehOtomatis() ? "🔒 AUTO hanya untuk Joran Kapal Samudra, Perak Maestro, atau Garuda Sakti" : nyala && pancing.kolam && kaitKolam.lombaBerjalan() ? "🏆 Selama lomba, memancing wajib manual" : null;
 	if (tolak) {
 		pesanSaja(tolak, "buruk");
 		return tolak;

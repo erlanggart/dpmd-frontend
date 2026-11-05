@@ -25,6 +25,10 @@ export default function PanelGaya({ mode = "lemari", dasar }) {
 	// eslint-disable-next-line react-hooks/exhaustive-deps
 	const penampilan = useMemo(() => dasar && kenakanGaya(dasar, gayaPratinjau), [dasar, kunci]);
 
+	// kategori & barang khusus perempuan hanya tampil untuk tokoh perempuan
+	const bolehBarang = (b) => !b.khusus || dasar?.perempuan;
+	const jenisTampil = JENIS_GAYA.filter((k) => !GAYA[k].khusus || dasar?.perempuan);
+
 	const item = GAYA[pilih.k].isi[pilih.i];
 	const dipakai = l.pakai[pilih.k] === pilih.i;
 	const milik = punya(pilih.k, pilih.i);
@@ -93,9 +97,9 @@ export default function PanelGaya({ mode = "lemari", dasar }) {
 
 			{/* --- jenis & kisi barang --- */}
 			<div className="mt-4 sm:mt-0">
-				<div className="mb-3 grid grid-cols-4 gap-1.5">
-					{JENIS_GAYA.map((k) => {
-						const dimiliki = GAYA[k].isi.filter((_, i) => punya(k, i)).length;
+				<div className={`mb-3 grid gap-1.5 ${jenisTampil.length > 4 ? "grid-cols-5" : "grid-cols-4"}`}>
+					{jenisTampil.map((k) => {
+						const dimiliki = GAYA[k].isi.filter((b, i) => bolehBarang(b) && punya(k, i)).length;
 						return (
 							<button
 								key={k}
@@ -105,7 +109,7 @@ export default function PanelGaya({ mode = "lemari", dasar }) {
 								<span className="block text-lg leading-none">{GAYA[k].ikon}</span>
 								<span className="mt-1 block">{GAYA[k].judul}</span>
 								<span className={`block text-[10px] font-semibold ${jenis === k ? "text-slate-300" : "text-slate-400"}`}>
-									{dimiliki}/{GAYA[k].isi.length}
+									{dimiliki}/{GAYA[k].isi.filter(bolehBarang).length}
 								</span>
 							</button>
 						);
@@ -113,6 +117,7 @@ export default function PanelGaya({ mode = "lemari", dasar }) {
 				</div>
 				<ul className="grid grid-cols-2 gap-2 sm:grid-cols-3">
 					{GAYA[jenis].isi.map((b, i) => {
+						if (!bolehBarang(b)) return null;
 						const dipilih = pilih.k === jenis && pilih.i === i;
 						const sedangDipakai = l.pakai[jenis] === i;
 						const sudahPunya = punya(jenis, i);
@@ -142,7 +147,7 @@ export default function PanelGaya({ mode = "lemari", dasar }) {
 						);
 					})}
 				</ul>
-				{mode === "lemari" && GAYA[jenis].isi.every((_, i) => i === 0 || !punya(jenis, i)) && (
+				{mode === "lemari" && GAYA[jenis].isi.every((b, i) => i === 0 || !bolehBarang(b) || !punya(jenis, i)) && (
 					<p className="mt-3 rounded-xl bg-slate-50 p-3 text-center text-xs text-slate-500">Belum punya {GAYA[jenis].judul.toLowerCase()} lain. Belanja di Distro Gaya!</p>
 				)}
 			</div>

@@ -33,7 +33,7 @@ import PanelJoran from "./ui/PanelJoran";
 import PanelKolam from "./ui/PanelKolam";
 import PanelCapit from "./ui/PanelCapit";
 import PanelAtm from "./ui/PanelAtm";
-import { bayarKoin } from "./pancing";
+import { bayarKoin, useSedangTarik } from "./pancing";
 import { ubahTenaga } from "./tenaga";
 import HudLomba from "./ui/HudLomba";
 import PanelEtalaseBumdes from "./ui/PanelEtalaseBumdes";
@@ -215,6 +215,7 @@ export default function JelajahPage() {
 	const penghuni = useMemo(() => susunPenghuni(dataPegawai), [dataPegawai]);
 	const baruLengkap = useRef(false);
 	const { area, lantai, dekat, minta, mode: modeMain, lantaiMal } = useKeadaan();
+	const sedangTarik = useSedangTarik();
 	const musikMati = useMusikMati();
 	const diKawasan = useDiKawasan(lantai);
 	const [lihatRoom, setLihatRoom] = useState(false);
@@ -604,6 +605,8 @@ export default function JelajahPage() {
 										? ["Turun dari kendaraan", "Turun", "#334155"]
 										: ["Buka pintu & keluar", "Keluar", "#334155"]
 							: null;
+	// Panel adu tarik setinggi layar di pojok kiri bawah (lebar s.d. 20,25rem): chat desktop pindah ke kanannya.
+	const kiriChat = !sentuh && modeMain === "mancing" && sedangTarik ? "left-3 sm:left-[21rem]" : "left-3 sm:left-4";
 	// Saat memancing, tombol & tombol E dipegang HUD pancing sendiri.
 	const sasaran = modeMain === "mancing"
 		? null
@@ -833,7 +836,7 @@ export default function JelajahPage() {
 					{statusMp === "tersambung" && !jeda && (
 						<>
 							<div
-								className={`pointer-events-none absolute left-3 flex flex-col gap-1 sm:left-4 ${
+								className={`pointer-events-none absolute flex flex-col gap-1 ${kiriChat} ${
 									sentuh ? (ketik !== null ? "top-[9.25rem] w-[calc(100%-1.5rem)]" : "top-[6.5rem] w-[calc(100%-9.5rem)]") : "bottom-20 w-80"
 								}`}
 								aria-live="polite"
@@ -857,7 +860,7 @@ export default function JelajahPage() {
 							{ketik !== null && (
 								<form
 									onSubmit={kirimChat}
-									className={`absolute left-3 right-3 z-20 flex gap-2 sm:left-4 sm:right-auto sm:w-96 ${
+									className={`absolute right-3 z-20 flex gap-2 sm:right-auto sm:w-96 ${kiriChat} ${
 										sentuh ? "top-[5.75rem]" : "bottom-4"
 									}`}
 								>
@@ -879,7 +882,7 @@ export default function JelajahPage() {
 							)}
 
 							{!sentuh && ketik === null && (
-								<div className="absolute bottom-4 left-4 flex items-center gap-1.5 rounded-2xl bg-white/90 p-1.5 shadow-md ring-1 ring-black/5 backdrop-blur">
+								<div className={`absolute bottom-4 flex items-center gap-1.5 rounded-2xl bg-white/90 p-1.5 shadow-md ring-1 ring-black/5 backdrop-blur ${kiriChat}`}>
 									<button
 										onClick={() => setKetik("")}
 										className="flex h-9 items-center gap-1.5 rounded-xl px-3 text-sm font-semibold text-slate-700 hover:bg-slate-100"
@@ -1245,7 +1248,7 @@ export default function JelajahPage() {
 									["Situ Pemda", "naik perahu di dermaga; di panggung dermaga atau dari perahu tekan Mancing"],
 									["Toko Perahu", "kios biru di tiap dermaga, seberang Toko Pancing: beli kano, sampan, speedboat, jetski; panggil dari ☰ → Garasi saya"],
 									["Memancing", "tahan 🎣 lalu lepas untuk melempar; saat adu tarik KETUK 🎣 berulang untuk menggulung, berhenti saat ikan lari"],
-									["AUTO & kamera", "🤖 AUTO memancing sendiri (joran Titanium Pro / Dasar Monster / Naga Emas, koin 75%); 🎥 ganti sudut: Standar, Dekat, Atas, Sinematik"],
+									["AUTO & kamera", "🤖 AUTO memancing sendiri (joran Kapal Samudra / Perak Maestro / Garuda Sakti, koin 75%); 🎥 ganti sudut: Standar, Dekat, Atas, Sinematik"],
 									["Kolam Monster", "kolam berbayar di barat kantor: tiket 🪙 2.000 / 10 menit, isinya ikan Monster & Legenda; daftar Lomba Galatama di loket"],
 									["Pasar BUMDes", "food court di utara Kolam Monster: pesan di lapak, duduk di meja mana pun; ada live music"],
 									["Showroom", "timur kantor: beli mobil & motor di meja sales; panggil dari menu ☰ → Garasi saya"],
@@ -1265,7 +1268,7 @@ export default function JelajahPage() {
 									["Situ Pemda", "E di dermaga: naik perahu · E di panggung / perahu: memancing"],
 									["Toko Perahu", "E di kios biru dermaga (seberang Toko Pancing): beli perahu bermesin & jetski; panggil dari ☰ → Garasi saya"],
 									["Memancing", "tahan Spasi lalu lepas = lempar; KETUK Spasi berulang = gulung (jangan ditahan), arahkan mouse (atau A/D) melawan arah ikan, F = Tarikan Sakti saat meteran ⚡ penuh"],
-									["AUTO & kamera", "O = AUTO memancing (joran Titanium Pro / Dasar Monster / Naga Emas, koin 75%) · C = ganti sudut kamera: Standar, Dekat, Atas, Sinematik"],
+									["AUTO & kamera", "O = AUTO memancing (joran Kapal Samudra / Perak Maestro / Garuda Sakti, koin 75%) · C = ganti sudut kamera: Standar, Dekat, Atas, Sinematik"],
 									["Kolam Monster", "kolam berbayar di barat kantor: E di loket = tiket 🪙 2.000 / 10 menit & Lomba Galatama (juara = ikan terberat)"],
 									["Pasar BUMDes", "food court produk BUM Desa di utara Kolam Monster: E di lapak = pesan menu, duduk di meja mana pun; ada live music"],
 									["Showroom", "timur kantor: E di meja sales = beli mobil / motor; panggil kendaraanmu dari tombol 🚚 Garasi"],

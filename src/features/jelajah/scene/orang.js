@@ -55,6 +55,80 @@ const gelapkan = (w, k) => "#" + new Color(w).multiplyScalar(k).getHexString();
 // profil badan dari pinggang (y 0) sampai pangkal leher (y 0.63): [jari-jari, tinggi]
 const PROFIL_BADAN = [[0.176, 0], [0.184, 0.08], [0.194, 0.2], [0.205, 0.32], [0.208, 0.42], [0.2, 0.5], [0.172, 0.56], [0.12, 0.6], [0.05, 0.63], [0.001, 0.635]].map(([r, y]) => new Vector2(r, y));
 
+// Model kerudung: dari lemari (p.modelJilbab); NPC & avatar bawaan diturunkan dari warnanya
+// supaya tidak semua berkerudung sama (warna sama → model sama, jadi stabil antar render).
+// profil khimar dari pinggang ke leher: melebar cepat supaya bahu & lengan tertutup
+const PROFIL_KHIMAR = [[0.37, 0], [0.355, 0.38], [0.335, 0.5], [0.27, 0.58], [0.17, 0.65], [0.1, 0.7]].map(([r, y]) => new Vector2(r, y));
+// baju yang menjulur melewati pinggang menutup sabuk
+const TANPA_SABUK = ["gamis", "tunik", "kebaya", "blazer", "cardigan"];
+const MODEL_ACAK = ["bawaan", "segiempat", "pashmina", "bergo"];
+const modelJilbab = (p) => p.modelJilbab || MODEL_ACAK[parseInt(p.jilbab.slice(1), 16) % MODEL_ACAK.length];
+
+// Bagian kerudung yang menutup leher/bahu/dada (di badan). Leher y≈1.55+u, bahu y≈1.43+u.
+function kerudungBahu(p, u) {
+	const w = p.jilbab;
+	const kain = (rAtas, rBawah, tinggi, y, sz = 0.85) => bentuk(new CylinderGeometry(rAtas, rBawah, tinggi, 14, 1, true), w, [0, y + u, 0], [0, 0, 0], [1, 1, sz]);
+	switch (modelJilbab(p)) {
+		case "segiempat":
+			return [
+				kain(0.11, 0.25, 0.22, 1.5),
+				// lipatan segitiga di dada & punggung, ujung ke bawah
+				bentuk(new ConeGeometry(0.16, 0.26, 3), w, [0, 1.3 + u, 0.125], [Math.PI, 0, 0], [1, 1, 0.12]),
+				bentuk(new ConeGeometry(0.16, 0.26, 3), w, [0, 1.3 + u, -0.125], [Math.PI, 0, 0], [1, 1, 0.12]),
+				bentuk(new SphereGeometry(0.014, 8, 6), "#fbbf24", [0, 1.46 + u, 0.14]),
+			];
+		case "pashmina": {
+			const ujung = gelapkan(w, 0.8);
+			return [
+				bentuk(new CylinderGeometry(0.095, 0.115, 0.14, 14, 1, true), w, [0, 1.56 + u, 0], [0, 0, 0], [1, 1, 0.9]),
+				// dua lilitan leher (torus rebah; skala y sebelum diputar = kedalaman z)
+				bentuk(new TorusGeometry(0.115, 0.035, 8, 18), w, [0, 1.52 + u, 0], [Math.PI / 2, 0, 0], [1, 0.85, 1]),
+				bentuk(new TorusGeometry(0.125, 0.035, 8, 18), w, [0, 1.47 + u, 0], [Math.PI / 2, 0, 0], [1, 0.85, 1]),
+				bentuk(new BoxGeometry(0.11, 0.46, 0.02), w, [-0.1, 1.22 + u, 0.135], [0, 0, 0.1]),
+				bentuk(new BoxGeometry(0.12, 0.4, 0.02), w, [0.08, 1.22 + u, -0.135]),
+				bentuk(new BoxGeometry(0.11, 0.04, 0.022), ujung, [-0.079, 1.011 + u, 0.135], [0, 0, 0.1]),
+				bentuk(new BoxGeometry(0.12, 0.04, 0.022), ujung, [0.08, 1.04 + u, -0.135]),
+			];
+		}
+		case "bergo":
+			return [kain(0.11, 0.29, 0.34, 1.46), bentuk(new SphereGeometry(0.17, 14, 10), w, [0, 1.36 + u, 0.1], [0, 0, 0], [1, 0.9, 0.3])];
+		case "khimar":
+			// jubah panjang sampai pinggang
+			return [bentuk(new LatheGeometry(PROFIL_KHIMAR, 18), w, [0, 0.9 + u, 0], [0, 0, 0], [1, 1, 0.8])];
+		case "turban":
+			return []; // leher dibiarkan terlihat
+		case "sport":
+			return [kain(0.075, 0.11, 0.14, 1.52, 1)];
+		default:
+			return [kain(0.11, 0.27, 0.3, 1.48)];
+	}
+}
+
+// Bagian kerudung di kepala (ruang lokal kepala: pusat y≈0.14, jari-jari ≈0.12).
+function kerudungKepala(p) {
+	const w = p.jilbab;
+	const m = modelJilbab(p);
+	if (m === "turban") {
+		return [
+			// kubah miring ke belakang: tepi depan di atas alis, tepi belakang sampai tengkuk
+			bentuk(new SphereGeometry(0.133, 14, 10, 0, Math.PI * 2, 0, Math.PI * 0.6), w, [0, 0.155, -0.015], [-0.45, 0, 0]),
+			bentuk(new SphereGeometry(0.075, 12, 8), w, [0, 0.1, -0.1]),
+			bentuk(new TorusGeometry(0.122, 0.016, 6, 18), gelapkan(w, 0.85), [0, 0.2, -0.035], [Math.PI / 2 - 0.45, 0, 0]),
+			bentuk(new TorusGeometry(0.03, 0.014, 6, 12), gelapkan(w, 0.85), [0, 0.255, 0.085]),
+		];
+	}
+	const r = m === "sport" ? 0.124 : 0.127;
+	const d = [
+		bentuk(new SphereGeometry(r, 14, 10, Math.PI / 2 + 0.62, Math.PI * 2 - 1.24), w, [0, 0.14, 0], [0, 0, 0], [0.95, 1.08, 1]),
+		// celah wajah bola di atas berlanjut sampai ubun-ubun; tudung ini menutupnya
+		bentuk(new SphereGeometry(r, 14, 5, 0, Math.PI * 2, 0, 0.62), w, [0, 0.14, 0], [0, 0, 0], [0.95, 1.08, 1]),
+	];
+	// pet: lengkung di tepi wajah, dari pelipis ke pelipis lewat dahi
+	if (m === "bergo") d.push(bentuk(new TorusGeometry(0.105, 0.012, 6, 14, Math.PI), gelapkan(w, 0.85), [0, 0.14, 0.08]));
+	if (m === "sport") for (const s of [-1, 1]) d.push(bentuk(new BoxGeometry(0.008, 0.012, 0.08), "#f8fafc", [s * 0.117, 0.2, -0.02]));
+	return d;
+}
+
 // Bagian badan atas (dari pinggang ke leher), di koordinat berdiri. `u` = geser
 // vertikal (duduk = -0.4).
 function badanAtas(p, u) {
@@ -63,7 +137,7 @@ function badanAtas(p, u) {
 		bentuk(new LatheGeometry(PROFIL_BADAN, 22), baju, [0, 0.91 + u, 0], [0, 0, 0], [1, 1, 0.61]),
 		bentuk(new CapsuleGeometry(0.082, 0.33, 6, 14), baju, [0, 1.43 + u, 0], [0, 0, Math.PI / 2], [1, 1, 0.72]),
 		bentuk(new CylinderGeometry(0.052, 0.06, 0.12, 14), p.kulit, [0, 1.55 + u, 0]),
-		bentuk(new CylinderGeometry(0.183, 0.183, 0.05, 20), "#1c1c1c", [0, 0.93 + u, 0], [0, 0, 0], [1, 1, 0.62]),
+		!TANPA_SABUK.includes(p.motif) && bentuk(new CylinderGeometry(0.183, 0.183, 0.05, 20), "#1c1c1c", [0, 0.93 + u, 0], [0, 0, 0], [1, 1, 0.62]),
 		// panggul membulat menyambung ke paha
 		!p.rok && bentuk(new SphereGeometry(0.182, 20, 8, 0, Math.PI * 2, Math.PI / 2, Math.PI / 2), seragam(p).celana, [0, 0.925 + u, 0], [0, 0, 0], [1, 0.42, 0.62]),
 		// kerah
@@ -82,10 +156,7 @@ function badanAtas(p, u) {
 			bentuk(new BoxGeometry(0.05, 0.035, 0.01), "#c9b26a", [0, 0.93 + u, 0.12]),
 		);
 	}
-	if (p.jilbab) {
-		// selendang kerudung menutup bahu
-		daftar.push(bentuk(new CylinderGeometry(0.11, 0.27, 0.3, 14, 1, true), p.jilbab, [0, 1.48 + u, 0], [0, 0, 0], [1, 1, 0.85]));
-	}
+	if (p.jilbab) daftar.push(...kerudungBahu(p, u));
 	daftar.push(...motifBaju(p, u));
 	return daftar;
 }
@@ -94,6 +165,9 @@ function badanAtas(p, u) {
 function motifBaju(p, u) {
 	const d = [];
 	const depan = 0.124;
+	// perpanjangan baju di bawah pinggang (tunik, kebaya, blazer, cardigan); z 0.8 supaya menutupi rok
+	// u ≠ 0 = duduk: juntai baju akan menembus kursi, jadi tidak digambar
+	const ext = (y, tinggi, rAtas, rBawah) => !u && bentuk(new CylinderGeometry(rAtas, rBawah, tinggi, 16, 1, true), p.baju, [0, y + u, 0], [0, 0, 0], [1, 1, 0.8]);
 	switch (p.motif) {
 		case "merahputih":
 			// separuh bawah putih
@@ -243,6 +317,58 @@ function motifBaju(p, u) {
 				bentuk(new SphereGeometry(0.012, 6, 4), "#7c2d12", [0, 1.05 + u, depan + 0.004]),
 			);
 			break;
+		case "gamis": {
+			const { aksen = "#f3e8ee" } = p.motifWarna || {};
+			d.push(
+				bentuk(new BoxGeometry(0.03, 0.2, 0.008), aksen, [0, 1.36 + u, depan + 0.003]),
+			);
+			break;
+		}
+		case "tunik": {
+			const { aksen = "#fde8d8" } = p.motifWarna || {};
+			d.push(
+				ext(0.8, 0.3, 0.185, 0.235),
+				!u && bentuk(new CylinderGeometry(0.235, 0.239, 0.03, 16, 1, true), aksen, [0, 0.665 + u, 0], [0, 0, 0], [1, 1, 0.8]),
+				bentuk(new BoxGeometry(0.02, 0.4, 0.008), aksen, [0, 1.2 + u, depan + 0.003]),
+				...[1.36, 1.26, 1.16].map((y) => bentuk(new SphereGeometry(0.008, 6, 4), "#f8fafc", [0, y + u, depan + 0.007])),
+			);
+			break;
+		}
+		case "kebaya": {
+			const { aksen = "#fde68a" } = p.motifWarna || {};
+			d.push(
+				ext(0.84, 0.22, 0.19, 0.22),
+				bentuk(new BoxGeometry(0.1, 0.48, 0.012), aksen, [0, 1.2 + u, depan + 0.002]),
+				...[1.38, 1.28, 1.18].map((y) => bentuk(new SphereGeometry(0.012, 6, 4), "#fbbf24", [0, y + u, depan + 0.01])),
+			);
+			break;
+		}
+		case "blazer": {
+			const { aksen = "#f8fafc" } = p.motifWarna || {};
+			const gelap = gelapkan(p.baju, 0.75);
+			d.push(
+				ext(0.83, 0.24, 0.185, 0.22),
+				// kemeja dalam, kerah (pola jaket), dan lapel memanjang ke dada
+				bentuk(new BoxGeometry(0.08, 0.4, 0.01), aksen, [0, 1.25 + u, depan]),
+				bentuk(new BoxGeometry(0.1, 0.06, 0.03), gelap, [0.07, 1.47 + u, 0.1], [0, 0, 0.5]),
+				bentuk(new BoxGeometry(0.1, 0.06, 0.03), gelap, [-0.07, 1.47 + u, 0.1], [0, 0, -0.5]),
+				bentuk(new BoxGeometry(0.045, 0.2, 0.014), gelap, [0.055, 1.35 + u, depan + 0.004], [0, 0, 0.3]),
+				bentuk(new BoxGeometry(0.045, 0.2, 0.014), gelap, [-0.055, 1.35 + u, depan + 0.004], [0, 0, -0.3]),
+				bentuk(new SphereGeometry(0.011, 6, 4), gelapkan(p.baju, 0.5), [0, 1.1 + u, depan + 0.006]),
+			);
+			break;
+		}
+		case "cardigan": {
+			const { aksen = "#f8fafc" } = p.motifWarna || {};
+			d.push(
+				ext(0.87, 0.16, 0.185, 0.21),
+				// panel dalam di antara dua tepi cardigan yang terbuka
+				bentuk(new BoxGeometry(0.14, 0.5, 0.01), aksen, [0, 1.2 + u, depan + 0.002]),
+				bentuk(new BoxGeometry(0.016, 0.5, 0.014), gelapkan(p.baju, 0.8), [0.077, 1.2 + u, depan + 0.004]),
+				bentuk(new BoxGeometry(0.016, 0.5, 0.014), gelapkan(p.baju, 0.8), [-0.077, 1.2 + u, depan + 0.004]),
+			);
+			break;
+		}
 		default:
 	}
 	return d;
@@ -370,8 +496,8 @@ function geometriKepala(p) {
 		bentuk(new SphereGeometry(0.018, 8, 6), "#e8a598", [0.062, 0.112, 0.085], [0, 0, 0], [1, 0.7, 0.4]),
 		bentuk(new SphereGeometry(0.018, 8, 6), "#e8a598", [-0.062, 0.112, 0.085], [0, 0, 0], [1, 0.7, 0.4]),
 	];
-		if (p.jilbab) {
-		daftar.push(bentuk(new SphereGeometry(0.127, 14, 10, Math.PI / 2 + 0.62, Math.PI * 2 - 1.24), p.jilbab, [0, 0.14, 0], [0, 0, 0], [0.95, 1.08, 1]));
+	if (p.jilbab) {
+		daftar.push(...kerudungKepala(p));
 	} else {
 		daftar.push(
 			// alis
@@ -434,12 +560,14 @@ export const PANJANG_PAHA = 0.42;
 function geometriPaha(p) {
 	const celana = celanaDari(p);
 	const m = p.modelCelana;
-	const kain = p.rok ? gelapkan(p.kulit, 0.85) : celana;
+	// di bawah rok panjang kaki berwarna kain (kaki berayun keluar dari rok saat berjalan)
+	const kain = p.rok && !p.rokPanjang ? gelapkan(p.kulit, 0.85) : celana;
 	const d = [
 		bentuk(new SphereGeometry(0.078, 16, 10), kain, [0, -0.02, 0]),
 		bentuk(new CylinderGeometry(0.078, 0.063, 0.4, 16), m === "pendek" ? celana : kain, [0, -0.21, 0]),
 	];
 	if (m === "pendek") d.push(bentuk(new CylinderGeometry(0.06, 0.058, 0.12, 16), p.kulit, [0, -0.37, 0]));
+	if (m === "kulot") d.push(bentuk(new CylinderGeometry(0.095, 0.105, 0.4, 16), celana, [0, -0.21, 0]));
 	if (m === "training") d.push(bentuk(new BoxGeometry(0.162, 0.4, 0.02), "#f8fafc", [0, -0.21, 0]));
 	if (m === "jogger") d.push(bentuk(new BoxGeometry(0.012, 0.4, 0.16), gelapkan(celana, 0.8), [0.072, -0.21, 0]));
 	if (m === "cargo") for (const s of [-1, 1]) d.push(bentuk(new BoxGeometry(0.014, 0.12, 0.09), gelapkan(celana, 0.8), [s * 0.074, -0.3, 0]));
@@ -449,13 +577,14 @@ function geometriPaha(p) {
 function geometriBetis(p) {
 	const celana = celanaDari(p);
 	const m = p.modelCelana;
-	const kain = p.rok ? gelapkan(p.kulit, 0.85) : m === "pendek" ? p.kulit : celana;
+	const kain = p.rok && !p.rokPanjang ? gelapkan(p.kulit, 0.85) : m === "pendek" ? p.kulit : celana;
 	const d = [
 		bentuk(new SphereGeometry(0.064, 16, 10), kain, [0, 0, 0]),
 		bentuk(new CylinderGeometry(0.063, 0.047, 0.38, 16), kain, [0, -0.19, 0]),
 		// betis sedikit menggembung di belakang
 		bentuk(new SphereGeometry(0.058, 14, 10), kain, [0, -0.12, -0.012], [0, 0, 0], [1, 1.6, 1]),
 	];
+	if (m === "kulot") d.push(bentuk(new CylinderGeometry(0.105, 0.125, 0.38, 16), celana, [0, -0.19, 0]));
 	if (m === "training") d.push(bentuk(new BoxGeometry(0.135, 0.38, 0.02), "#f8fafc", [0, -0.19, 0]));
 	if (m === "jogger") d.push(bentuk(new CylinderGeometry(0.054, 0.054, 0.06, 16), gelapkan(celana, 0.7), [0, -0.35, 0]), bentuk(new BoxGeometry(0.012, 0.36, 0.13), gelapkan(celana, 0.8), [0.06, -0.19, 0]));
 	if (m === "chino") d.push(bentuk(new CylinderGeometry(0.052, 0.052, 0.04, 16), gelapkan(celana, 0.88), [0, -0.36, 0]));
@@ -464,6 +593,41 @@ function geometriBetis(p) {
 }
 // kaki utuh (lurus) untuk pose yang tidak dianimasikan
 const geometriKaki = (p) => gabung([geometriPaha(p), geometriBetis(p).translate(0, -PANJANG_PAHA, 0)]);
+
+// Rok (pose berdiri & berjalan). Tanpa rokPanjang = rok/sarung lama; rokPanjang turun sampai
+// mata kaki (y≈0.05) menurut p.modelRok: gamis, plisket, aline, rokbatik.
+function rokGeom(p) {
+	const celana = celanaDari(p);
+	const sk = [1, 1, 0.78];
+	if (!p.rokPanjang) return [bentuk(new CylinderGeometry(0.19, 0.27, 0.62, 12), celana, [0, 0.6, 0], [0, 0, 0], sk)];
+	const m = p.modelRok;
+	const rb = m === "aline" ? 0.34 : 0.3; // jari-jari ujung bawah
+	const rAt = (y) => rb - ((rb - 0.19) * (y - 0.05)) / 0.86;
+	const hem = (w) => bentuk(new CylinderGeometry(rAt(0.1) + 0.004, rb + 0.004, 0.05, 16, 1, true), w, [0, 0.075, 0], [0, 0, 0], sk);
+	const d = [bentuk(new CylinderGeometry(0.19, rb, 0.86, 16), celana, [0, 0.48, 0], [0, 0, 0], sk)];
+	if (m === "plisket") {
+		// rusuk tegak: irisan sempit dari kerucut yang sama, sedikit lebih besar
+		const gelap = gelapkan(celana, 0.85);
+		for (let i = 0; i < 14; i++) d.push(bentuk(new CylinderGeometry(0.194, rb + 0.004, 0.86, 1, 1, true, (i * Math.PI * 2) / 14, 0.07), gelap, [0, 0.48, 0], [0, 0, 0], sk));
+	}
+	if (m === "aline") d.push(hem(gelapkan(celana, 0.75)));
+	if (m === "rokbatik") {
+		const aksen = p.rokAksen || "#f2c46d";
+		d.push(hem(aksen));
+		// belah ketupat berselang-seling depan & belakang (seperti baju batik)
+		for (let r = 0; r < 6; r++) {
+			const y = 0.25 + r * 0.115;
+			for (let c = 0; c < 5; c++) {
+				const x = -0.16 + c * 0.08 + (r % 2 ? 0.04 : 0);
+				const rad = rAt(y);
+				if (Math.abs(x) > rad * 0.8) continue;
+				const z = Math.sqrt(rad * rad - x * x) * 0.78 + 0.004;
+				for (const s of [1, -1]) d.push(bentuk(new BoxGeometry(0.035, 0.035, 0.008), aksen, [x, y, s * z], [0, 0, Math.PI / 4]));
+			}
+		}
+	}
+	return d;
+}
 
 // Lengan diputar di sekitar pangkalnya lalu dipindah ke posisi bahu/siku,
 // untuk pose yang tidak dianimasikan (lengan menyatu dengan badan).
@@ -478,8 +642,7 @@ function lenganStatis(p, sisi, u, sudutAtas, sudutBawah, map = false) {
 // pose: "jalan" (lengan & kaki terpisah untuk animasi), "diam" (berdiri, satu
 // badan), "duduk" (kaki tertekuk, tangan di atas meja dipisah untuk animasi).
 export function rakitOrang(p, pose) {
-	const celana = celanaDari(p);
-	if (pose === "duduk") {
+	const celana = celanaDari(p);	if (pose === "duduk") {
 		const u = -0.4;
 		const kaki = [];
 		for (const s of [-1, 1]) {
@@ -502,12 +665,12 @@ export function rakitOrang(p, pose) {
 	if (pose === "diam") {
 		const tangan = p.map ? [...lenganStatis(p, -1, 0, -0.15, -1.25, true), ...lenganStatis(p, 1, 0, 0.05, -0.1)] : [...lenganStatis(p, -1, 0, 0.05, -0.1), ...lenganStatis(p, 1, 0, 0.05, -0.1)];
 		const kaki = [-1, 1].map((s) => geometriKaki(p).translate(s * 0.095, 0.9, 0));
-		const rok = p.rok ? [bentuk(new CylinderGeometry(0.19, 0.27, 0.62, 12), celana, [0, 0.6, 0], [0, 0, 0], [1, 1, 0.78])] : [];
+		const rok = p.rok ? rokGeom(p) : [];
 		return { badan: gabung([...badanAtas(p, 0), ...tangan, ...kaki, ...rok]), kepala: geometriKepala(p), kepalaY: 1.58 };
 	}
 	// jalan
 	return {
-		badan: gabung([...badanAtas(p, 0), ...(p.rok ? [bentuk(new CylinderGeometry(0.19, 0.27, 0.62, 12), celana, [0, 0.6, 0], [0, 0, 0], [1, 1, 0.78])] : [])]),
+		badan: gabung([...badanAtas(p, 0), ...(p.rok ? rokGeom(p) : [])]),
 		kepala: geometriKepala(p),
 		kepalaY: 1.58,
 		lenganAtas: lenganAtas(p),

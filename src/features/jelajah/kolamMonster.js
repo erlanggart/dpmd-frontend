@@ -15,7 +15,7 @@ import { aturKaitLomba, kirimIkanLomba, kirimLomba, modeBersama } from "./multip
 // Dua cara berlomba:
 //   - jelajah BERSAMA: satu lomba untuk semua tamu yang terhubung, dikelola server
 //     (dpmd-fahri-express/src/socket/jelajahLomba.js) — pendaftaran 30 dtk lalu sesi
-//     5 menit; kursi kosong diisi pemancing tetap kolam.
+//     5 menit; bila hanya satu tamu yang daftar, lawannya pemancing tetap kolam.
 //   - jelajah SENDIRI: lomba di perangkat melawan 5 pemancing tetap kolam.
 //
 // Tiket, lomba sendiri, keikutsertaan lomba bersama, dan rekor disimpan di perangkat.
@@ -169,8 +169,9 @@ function majukanLawan(kini) {
 function berikanHasil(urut) {
 	const peringkat = urut.findIndex((p) => p.saya) + 1;
 	const saya = urut[peringkat - 1];
-	// tanpa tangkapan tidak ada hadiah, sekalipun peserta lain juga kosong
-	const hadiah = saya.ikan > 0 ? LOMBA.hadiah[peringkat - 1] || 0 : 0;
+	// tanpa tangkapan tidak ada hadiah, sekalipun peserta lain juga kosong; peringkat terakhir
+	// juga tidak, supaya lomba 2–3 tamu tanpa NPC tidak menjamin koin bagi yang kalah
+	const hadiah = saya.ikan > 0 && peringkat < urut.length ? LOMBA.hadiah[peringkat - 1] || 0 : 0;
 	if (hadiah) tambahKoin(hadiah);
 	const r = st.rekor;
 	r.lomba += 1;

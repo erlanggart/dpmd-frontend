@@ -343,7 +343,7 @@ export default function GamePancing({ sentuh, bersama, onSelesai }) {
 					onClick={() => aturOtomatis(!pancing.otomatis)}
 					className={`rounded-xl px-2 py-1 text-xs font-black transition ${pancing.otomatis ? "bg-violet-500 text-white shadow-[0_0_14px_rgba(139,92,246,0.8)]" : bolehOtomatis() ? "bg-white/10 hover:bg-white/20" : "bg-white/5 text-white/45"}`}
 					aria-pressed={pancing.otomatis}
-					title={bolehOtomatis() ? "Memancing otomatis (O) — koin hasil 75%" : "Butuh joran premium: Titanium Pro, Dasar Monster, atau Naga Emas"}
+					title={bolehOtomatis() ? "Memancing otomatis (O) — koin hasil 75%" : "Butuh joran premium: Kapal Samudra, Perak Maestro, atau Garuda Sakti"}
 				>
 					{bolehOtomatis() ? "🤖" : "🔒"} AUTO
 				</button>

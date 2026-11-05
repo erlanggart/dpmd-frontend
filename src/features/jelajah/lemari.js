@@ -5,7 +5,7 @@ import { catat, tambahXp } from "./progres";
 // Lemari gaya tamu: topi, baju, celana, dan sepatu yang dibeli dengan koin lalu dipakai
 // avatar (scene/orang.js menggambarnya). Indeks 0 tiap jenis = bawaan avatar / tanpa topi
 // (gratis). Yang dimiliki & dipakai tersimpan di perangkat; yang dipakai ikut dikirim ke
-// tamu lain saat jelajah bersama (sebagai indeks {t, b, c, s}).
+// tamu lain saat jelajah bersama (sebagai indeks {t, b, c, s, k}; k = kerudung). Barang & kategori ber-`khusus` hanya untuk tokoh perempuan.
 
 export const GAYA = {
 	t: {
@@ -56,6 +56,13 @@ export const GAYA = {
 			{ id: "polo", nama: "Polo Navy", ikon: "👕", harga: 160, warna: "#1e293b", aksen: "#f8fafc" },
 			{ id: "hoodie", nama: "Hoodie Lilac", ikon: "🧥", harga: 230, warna: "#a78bfa" },
 			{ id: "garis", nama: "Kaos Garis Neon", ikon: "🟨", harga: 130, warna: "#18181b", aksen: "#a3e635" },
+			// --- khusus perempuan (busana muslimah & kantor) ---
+			{ id: "gamis", nama: "Gamis Mauve", ikon: "👗", harga: 320, warna: "#9d6b8a", aksen: "#f3e8ee", khusus: "P" },
+			{ id: "gamis", nama: "Gamis Sage", ikon: "👗", harga: 320, warna: "#7d9a85", aksen: "#eef3ee", khusus: "P" },
+			{ id: "tunik", nama: "Tunik Terakota", ikon: "👚", harga: 190, warna: "#c8704d", aksen: "#fde8d8", khusus: "P" },
+			{ id: "kebaya", nama: "Kebaya Kutubaru", ikon: "👘", harga: 380, warna: "#b91c5c", aksen: "#fde68a", khusus: "P" },
+			{ id: "blazer", nama: "Blazer Krem", ikon: "🧥", harga: 300, warna: "#d6c7a1", aksen: "#f8fafc", khusus: "P" },
+			{ id: "cardigan", nama: "Cardigan Rajut", ikon: "🧶", harga: 200, warna: "#e7a977", aksen: "#f8fafc", khusus: "P" },
 		],
 	},
 	c: {
@@ -76,6 +83,13 @@ export const GAYA = {
 			{ id: "chino", nama: "Chino Krem", ikon: "👖", harga: 140, warna: "#d6c7a1" },
 			{ id: "sarung", nama: "Sarung Kotak Hijau", ikon: "🧣", harga: 110, warna: "#166534" },
 			{ id: "cargo", nama: "Cargo Hitam", ikon: "👖", harga: 140, warna: "#18181b" },
+			// --- khusus perempuan ---
+			{ id: "plisket", nama: "Rok Plisket Krem", ikon: "👗", harga: 170, warna: "#d6c7a1", khusus: "P" },
+			{ id: "plisket", nama: "Rok Plisket Navy", ikon: "👗", harga: 170, warna: "#1e3a5f", khusus: "P" },
+			{ id: "aline", nama: "Rok A-line Denim", ikon: "👗", harga: 150, warna: "#3b5b8c", khusus: "P" },
+			{ id: "rokbatik", nama: "Rok Batik Cokelat", ikon: "👗", harga: 190, warna: "#7c2d12", aksen: "#f2c46d", khusus: "P" },
+			{ id: "kulot", nama: "Kulot Hitam", ikon: "👖", harga: 140, warna: "#18181b", khusus: "P" },
+			{ id: "kulot", nama: "Kulot Mocca", ikon: "👖", harga: 140, warna: "#a98467", khusus: "P" },
 		],
 	},
 	s: {
@@ -97,8 +111,27 @@ export const GAYA = {
 			{ id: "sandal", nama: "Sandal Gunung", ikon: "🩴", harga: 90, warna: "#334155", sol: "#78350f" },
 		],
 	},
+	k: {
+		judul: "Kerudung",
+		ikon: "🧕",
+		khusus: "P",
+		isi: [
+			{ id: null, nama: "Kerudung bawaan", ikon: "🧕", harga: 0 },
+			{ id: "segiempat", nama: "Segi Empat Krem", ikon: "🧕", harga: 70, warna: "#d6c7a1" },
+			{ id: "segiempat", nama: "Segi Empat Sage", ikon: "🧕", harga: 70, warna: "#84a98c" },
+			{ id: "pashmina", nama: "Pashmina Dusty Pink", ikon: "🧕", harga: 120, warna: "#d8a7b1" },
+			{ id: "pashmina", nama: "Pashmina Navy", ikon: "🧕", harga: 120, warna: "#1e3a5f" },
+			{ id: "bergo", nama: "Bergo Hitam", ikon: "🧕", harga: 90, warna: "#18181b" },
+			{ id: "bergo", nama: "Bergo Mocca", ikon: "🧕", harga: 90, warna: "#a98467" },
+			{ id: "khimar", nama: "Khimar Syar'i Ungu", ikon: "🧕", harga: 180, warna: "#6d4c8f" },
+			{ id: "khimar", nama: "Khimar Syar'i Abu", ikon: "🧕", harga: 180, warna: "#9ca3af" },
+			{ id: "turban", nama: "Turban Terakota", ikon: "🧕", harga: 150, warna: "#c2410c" },
+			{ id: "turban", nama: "Turban Emerald", ikon: "🧕", harga: 150, warna: "#047857" },
+			{ id: "sport", nama: "Hijab Sport Tosca", ikon: "🧕", harga: 110, warna: "#0d9488" },
+		],
+	},
 };
-export const JENIS_GAYA = ["t", "b", "c", "s"];
+export const JENIS_GAYA = ["t", "b", "c", "s", "k"];
 
 const KUNCI = "jelajah-lemari-v1";
 const bersih = (g) => Object.fromEntries(JENIS_GAYA.map((k) => [k, Number.isInteger(g?.[k]) && g[k] >= 0 && g[k] < GAYA[k].isi.length ? g[k] : 0]));
@@ -113,7 +146,7 @@ function baca() {
 	} catch {
 		/* penyimpanan tidak tersedia */
 	}
-	return { punya: { t: [0], b: [0], c: [0], s: [0] }, pakai: bersih(null) };
+	return { punya: Object.fromEntries(JENIS_GAYA.map((k) => [k, [0]])), pakai: bersih(null) };
 }
 
 // coba: gaya yang sedang dicoba di bilik ruang coba (belum tentu dimiliki); null = tidak mencoba
@@ -166,28 +199,53 @@ export function selesaiCoba() {
 // Gaya yang tampil di avatar: yang sedang dicoba, atau yang dipakai.
 export const gayaTampil = (l = lemari) => l.coba || l.pakai;
 
+const ROK_PANJANG = ["plisket", "aline", "rokbatik"];
+
 // Penampilan avatar + gaya yang dipakai (dibaca orang.js).
 export function kenakanGaya(penampilan, gaya) {
 	if (!penampilan) return penampilan;
 	const g = bersih(gaya);
 	const hasil = { ...penampilan };
-	const topi = GAYA.t.isi[g.t];
+	// barang khusus perempuan diabaikan (jatuh ke bawaan) untuk tokoh lain
+	const ambil = (k) => {
+		const it = GAYA[k].isi[g[k]];
+		return (it.khusus || GAYA[k].khusus) && !penampilan.perempuan ? GAYA[k].isi[0] : it;
+	};
+	const topi = ambil("t");
 	if (topi.id) hasil.topiGaya = { id: topi.id, warna: topi.warna };
-	const baju = GAYA.b.isi[g.b];
+	const kerudung = ambil("k");
+	if (kerudung.id) {
+		hasil.jilbab = kerudung.warna;
+		hasil.modelJilbab = kerudung.id;
+	}
+	const baju = ambil("b");
 	if (baju.id) {
 		hasil.seragam = "warga";
 		hasil.baju = baju.warna;
 		hasil.motif = baju.id;
 		hasil.motifWarna = { aksen: baju.aksen, cetak: baju.cetak };
 	}
-	const celana = GAYA.c.isi[g.c];
+	const celana = ambil("c");
 	if (celana.id) {
 		hasil.celana = celana.warna;
 		hasil.modelCelana = celana.id;
-		// sarung dipakai seperti rok panjang
-		hasil.rok = celana.id === "sarung";
+		// sarung dipakai seperti rok; rok baru ber-rokPanjang (sampai mata kaki)
+		hasil.rok = celana.id === "sarung" || ROK_PANJANG.includes(celana.id);
+		if (ROK_PANJANG.includes(celana.id)) {
+			hasil.rokPanjang = true;
+			hasil.modelRok = celana.id;
+			hasil.rokAksen = celana.aksen;
+		}
 	}
-	const sepatu = GAYA.s.isi[g.s];
+	// gamis menutup badan sampai kaki dan mengalahkan celana/rok
+	if (baju.id === "gamis") {
+		hasil.rok = true;
+		hasil.rokPanjang = true;
+		hasil.modelRok = "gamis";
+		hasil.celana = baju.warna;
+		delete hasil.modelCelana;
+	}
+	const sepatu = ambil("s");
 	if (sepatu.id) hasil.sepatu = { id: sepatu.id, warna: sepatu.warna, sol: sepatu.sol };
 	return hasil;
 }

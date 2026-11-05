@@ -86,7 +86,7 @@ function SeksiLomba({ kini, poin, onTutup, jalankan }) {
 			</div>
 			<ul className="mt-2 space-y-1 text-xs leading-relaxed text-slate-600">
 				{bersama ? (
-					<li>• Pendaftaran 30 detik, lalu sesi {LOMBA.menit} menit bersama semua tamu yang ikut; kursi kosong diisi pemancing tetap kolam.</li>
+					<li>• Pendaftaran 30 detik, lalu sesi {LOMBA.menit} menit. Ada teman yang ikut: lomba antar-tamu tanpa pemancing kolam. Daftar sendirian: lawan pemancing tetap kolam.</li>
 				) : (
 					<li>• Sesi {LOMBA.menit} menit melawan 5 pemancing tetap kolam. Pilih jelajah bersama untuk berlomba dengan tamu lain.</li>
 				)}
