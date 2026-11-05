@@ -143,6 +143,13 @@ assert.ok(K.peluangPemain(0.8, 3, 1) < K.peluangPemain(0.8, 3, 0), "dijaga menur
 	for (const l of [K.bolaBidik(0.4), K.gayaBaru().lokal]) for (const k of ["x", "y", "z", "ty", "condong", "tekuk"]) assert.ok(Number.isFinite(l[k]), `titik bola punya ${k}`);
 	assert.ok(K.bolaBidik(0.79).y > K.bolaBidik(0.3).y && K.bolaBidik(0.79).y === K.bolaBidik(1.2).y, "bola naik sampai zona hijau");
 }
+// kamera laga: layar lebar selalu dari sisi tribun; layar tegak dari belakang arah serang tiap tim
+{
+	assert.equal(K.kameraBasket(16 / 9, -58, 19, 1).yaw, Math.PI / 2, "layar lebar sama bagi kedua tim");
+	assert.ok(K.kameraBasket(16 / 9, -58, 19, 0).x > -52, "kamera di sisi tribun, di luar lapangan");
+	assert.ok(K.kameraBasket(4 / 3, -58, 19, 0).y > K.kameraBasket(2.16, -58, 19, 0).y, "layar sempit mundur lebih jauh");
+	assert.ok(K.kameraBasket(0.46, -58, 19, 0).z > 19 && K.kameraBasket(0.46, -58, 19, 1).z < 19, "layar tegak di belakang arah serang");
+}
 // tiap jenis tembakan tersambung: titik ruas berurutan, masuk berakhir di pusat ring, meleset punya pantulan
 for (let n = 0; n < 200; n++) {
 	const dekat = n % 4 === 0;

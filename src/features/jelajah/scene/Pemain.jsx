@@ -46,7 +46,7 @@ import { acaraKini, kantor, stempelSudah } from "../kantorHidup";
 import { TENDA_BAZAR, TITIK_PANITIA } from "./acaraData";
 import KeranjangTangan from "./KeranjangTangan";
 import Tokoh from "./Tokoh";
-import { basket, dalamLapangan, faktorLaju, halangBadan, kecohBasket, lapanganBebas, seragamTim, timSaya, useBasketPilih } from "../basket";
+import { basket, dalamLapangan, faktorLaju, halangBadan, kameraBasket, kecohBasket, lapanganBebas, seragamTim, timSaya, useBasketPilih } from "../basket";
 
 const H = TINGGI_LANTAI;
 const PETUGAS = [LOBI, ...RUANGAN];
@@ -234,6 +234,8 @@ export default function Pemain({ daftarDinding, penghuni, penampilan = PENAMPILA
 				aktif.y = e.clientY;
 				return;
 			}
+			// laga basket: kamera terkunci, klik & sentuhan milik tembak, rebut, dan oper
+			if (basket.aktif) return;
 			k.yaw -= (e.clientX - aktif.x) * 0.006;
 			k.pitch = Math.min(1.2, Math.max(0.3, k.pitch + (e.clientY - aktif.y) * 0.004));
 			aktif.x = e.clientX;
@@ -1172,6 +1174,14 @@ export default function Pemain({ daftarDinding, penghuni, penampilan = PENAMPILA
 				}
 			}
 		}
+		if (basket.aktif) {
+			const c = kameraBasket(camera.aspect, p.x, p.z);
+			tx = c.x;
+			ty = TANAH + c.y;
+			tz = c.z;
+			k.yaw = c.yaw;
+			bantu.fokus.set(c.lx, TANAH + 1, c.lz);
+		}
 		if (k.lompat) {
 			camera.position.set(tx, ty, tz);
 			bantu.lihat.copy(bantu.fokus);
@@ -1236,7 +1246,8 @@ export default function Pemain({ daftarDinding, penghuni, penampilan = PENAMPILA
 	// Ketuk/klik lantai untuk berjalan ke titik itu. Bidang tak terlihat ini hanya
 	// menangkap klik; seretan kamera (delta besar) diabaikan.
 	const ketukLantai = (e) => {
-		if (e.delta > 8 || mode.current.jenis !== "jalan") return;
+		// selama laga klik kiri milik tembak & rebut, jalan lewat WASD atau analog
+		if (e.delta > 8 || mode.current.jenis !== "jalan" || basket.aktif) return;
 		kendali.target = { x: e.point.x, z: e.point.z, lantai: posisi.lantai };
 	};
 

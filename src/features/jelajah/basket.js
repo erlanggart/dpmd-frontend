@@ -263,6 +263,23 @@ export function faktorLaju() {
 
 const ringSaya = () => (basket.ikutOnline ? (basket.online?.saya?.tim ?? 0) : 0);
 
+// Kamera laga, terkunci supaya pemain tidak perlu menggesernya. tan(fov 50 / 2) = 0,466.
+// Layar lebar: siaran dari sisi tribun, seluruh lapangan masuk bingkai, jarak dihitung dari sisi
+// terdekat (4,5 = majunya garis pinggir ke arah kamera). Layar tegak: dari samping 17 m tidak muat,
+// jadi dari belakang arah serang dan mengikuti pemain. y relatif tanah halaman.
+export function kameraBasket(aspek, x, z, ring = ringSaya()) {
+	const cx = (LAPANGAN.x0 + LAPANGAN.x1) / 2;
+	const cz = (LAPANGAN.z0 + LAPANGAN.z1) / 2;
+	const lebar = aspek >= 1;
+	const S = lebar ? 4.5 + 9 / (0.466 * aspek) : jepit(4 / (0.466 * aspek), 18, 30);
+	const pitch = lebar ? 0.72 : 0.9;
+	const yaw = lebar ? Math.PI / 2 : ring === 0 ? 0 : Math.PI;
+	const lx = cx + (x - cx) * (lebar ? 0.1 : 0.7);
+	// layar tegak: titik pandang maju ke arah serang, supaya ring sasaran tidak tertutup papan skor
+	const lz = cz + (z - cz) * (lebar ? 0.15 : 0.5) + (lebar ? 0 : ring === 0 ? -2.5 : 2.5);
+	return { x: lx + Math.sin(yaw) * S * Math.cos(pitch), y: 1 + S * Math.sin(pitch), z: lz + Math.cos(yaw) * S * Math.cos(pitch), lx, lz, yaw };
+}
+
 // E / tombol ditekan: membidik bila memegang bola (dekat ring langsung layup/dunk), merebut bila
 // bola di tangan lawan.
 export function tekanAksi() {

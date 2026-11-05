@@ -128,8 +128,21 @@ export default function HudBasket({ sentuh }) {
 	const [kabar, setKabar] = useState(null);
 	const idKabar = b.kabar?.id;
 
-	// keyboard: E tahan = bidik, lepas = tembak; Q oper; Esc keluar
+	// klik kiri atau E: tahan = bidik, lepas = tembak, bola di lawan = rebut; klik kanan atau Q oper; Esc keluar
 	useEffect(() => {
+		// hanya mouse: jari yang lepas dari analog tidak boleh melepas tembakan di HP
+		const mouseTurun = (e) => {
+			if (e.pointerType !== "mouse" || e.target?.tagName !== "CANVAS") return;
+			if (e.button === 0) tekanAksi();
+			else if (e.button === 2) operBola();
+		};
+		const mouseNaik = (e) => {
+			if (e.pointerType === "mouse" && e.button === 0) lepasAksi();
+		};
+		// klik kanan = oper, tanpa menu klik kanan peramban
+		const tanpaMenu = (e) => {
+			if (e.target?.tagName === "CANVAS") e.preventDefault();
+		};
 		const abaikan = (e) => e.target?.closest?.("input, textarea, [contenteditable]");
 		const turun = (e) => {
 			if (abaikan(e)) return;
@@ -143,7 +156,13 @@ export default function HudBasket({ sentuh }) {
 		window.addEventListener("keydown", turun);
 		window.addEventListener("keyup", naik);
 		window.addEventListener("blur", lepasAksi);
+		window.addEventListener("pointerdown", mouseTurun);
+		window.addEventListener("pointerup", mouseNaik);
+		window.addEventListener("contextmenu", tanpaMenu);
 		return () => {
+			window.removeEventListener("pointerdown", mouseTurun);
+			window.removeEventListener("pointerup", mouseNaik);
+			window.removeEventListener("contextmenu", tanpaMenu);
 			window.removeEventListener("keydown", turun);
 			window.removeEventListener("keyup", naik);
 			window.removeEventListener("blur", lepasAksi);
@@ -163,7 +182,7 @@ export default function HudBasket({ sentuh }) {
 	const detik = Math.ceil(b.sisa);
 	const seri = b.sisa <= 0 && b.skor.pemain === b.skor.lawan;
 	const adaKawan = lomba && lomba.peserta.some((p) => p.tim === lomba.saya?.tim && p.pid !== lomba.saya?.pid && !p.keluar);
-	const petunjuk = b.pegang === "pemain" ? `Tahan E, lepas di zona hijau = tembak · dekat ring = layup/dunk${adaKawan ? " · Q oper" : ""} · Spasi kecoh · Shift lari` : b.pegang === "lawan" ? "E rebut bola · Spasi loncat blok" : b.pegang === "kawan" ? "Cari ruang kosong, rekan Anda memegang bola" : "Kejar bolanya!";
+	const petunjuk = b.pegang === "pemain" ? `Tahan klik kiri, lepas di zona hijau = tembak · dekat ring = layup/dunk${adaKawan ? " · klik kanan oper" : ""} · Spasi kecoh · Shift lari` : b.pegang === "lawan" ? "Klik kiri rebut bola · Spasi loncat blok" : b.pegang === "kawan" ? "Cari ruang kosong, rekan Anda memegang bola" : "Kejar bolanya!";
 	return (
 		<>
 			{/* HP: di kiri bawah bilah tenaga, supaya tidak menimpa peta bundar di kanan atas */}
@@ -236,25 +255,30 @@ export function TombolBasket() {
 	const b = useBasket();
 	const pemain = b.pegang === "pemain";
 	const lawan = b.pegang === "lawan";
-	const utama = "flex h-16 w-16 select-none flex-col items-center justify-center rounded-full text-[11px] font-bold text-white shadow-2xl ring-4 ring-white/70";
+	const utama = "flex h-16 w-16 select-none flex-col items-center justify-center rounded-full text-[11px] font-bold leading-tight text-white shadow-2xl ring-4 ring-white/70 active:scale-95";
+	// menahan tombol Tembak tidak boleh memunculkan menu tekan-lama HP
+	const tanpaMenu = (e) => e.preventDefault();
 	const kecil = "flex h-12 w-12 items-center justify-center rounded-full bg-slate-900/40 text-[10px] font-bold text-white shadow-lg ring-1 ring-white/30 backdrop-blur active:bg-slate-900/70";
 	return (
 		<>
 			{pemain ? (
-				<button style={{ background: "#ea580c", touchAction: "none" }} className={utama} aria-label="Tembak" onPointerDown={tekanAksi} onPointerUp={lepasAksi} onPointerCancel={lepasAksi} onPointerLeave={lepasAksi}>
+				<button style={{ background: "#ea580c", touchAction: "none" }} className={utama} aria-label="Tembak" onPointerDown={tekanAksi} onPointerUp={lepasAksi} onPointerCancel={lepasAksi} onPointerLeave={lepasAksi} onContextMenu={tanpaMenu}>
+					<span aria-hidden className="text-lg leading-none">🏀</span>
 					Tembak
 				</button>
 			) : lawan ? (
-				<button style={{ background: "#ea580c", touchAction: "none" }} className={utama} aria-label="Rebut" onPointerDown={tekanAksi}>
+				<button style={{ background: "#dc2626", touchAction: "none" }} className={utama} aria-label="Rebut" onPointerDown={tekanAksi} onContextMenu={tanpaMenu}>
+					<span aria-hidden className="text-lg leading-none">✋</span>
 					Rebut
 				</button>
 			) : (
-				<button disabled style={{ background: "#ea580c", touchAction: "none" }} className={`${utama} opacity-50`} aria-label="Kejar bola">
-					Kejar
+				<button disabled style={{ background: "#475569", touchAction: "none" }} className={`${utama} opacity-60`} aria-label={b.pegang === "kawan" ? "Bola di rekan" : "Kejar bola"}>
+					{b.pegang === "kawan" ? "Rekan" : "Kejar"}
 				</button>
 			)}
 			{pemain && b.sasaranOper && (
-				<button onClick={operBola} aria-label="Oper bola" className={kecil}>
+				<button style={{ touchAction: "none" }} onPointerDown={operBola} onContextMenu={tanpaMenu} aria-label="Oper bola" className="flex h-14 w-14 select-none flex-col items-center justify-center rounded-full bg-sky-600 text-[10px] font-bold leading-tight text-white shadow-xl ring-2 ring-white/70 active:scale-95">
+					<span aria-hidden className="text-base leading-none">🤾</span>
 					Oper
 				</button>
 			)}
