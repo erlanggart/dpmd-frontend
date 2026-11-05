@@ -14,22 +14,100 @@ const getPasFotoUrl = (person) => {
 	return null;
 };
 
-// Hasil pemeriksaan Bidang Pemdes, supaya desa langsung melihat baris mana
-// yang ditolak tanpa membuka detailnya satu per satu.
-const CapVerifikasi = ({ status }) => {
-	if (!status) return null;
-	const ditolak = status === "ditolak";
+// Nama item sama dengan ITEM_VERIFIKASI di backend, untuk keputusan yang belum final.
+const LABEL_ITEM = {
+	biodata: "Biodata diri",
+	jabatan_sk: "Jabatan & SK pengangkatan",
+	bpjs: "Nomor BPJS",
+	file_sk_terakhir: "SK terakhir",
+	file_ktp: "KTP",
+	file_pas_foto: "Pas foto",
+	file_kk: "Kartu Keluarga",
+	file_akta_kelahiran: "Akta kelahiran",
+	file_ijazah_terakhir: "Ijazah terakhir",
+	file_bpjs_kesehatan: "Kartu BPJS Kesehatan",
+	file_bpjs_ketenagakerjaan: "Kartu BPJS Ketenagakerjaan",
+};
+
+const tanggalPendek = (nilai) => {
+	const d = nilai ? new Date(nilai) : null;
+	return d && !Number.isNaN(d.getTime())
+		? d.toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" })
+		: null;
+};
+
+// Tahap pemeriksaan: dikirim desa, diperiksa Bidang Pemdes, lalu hasilnya.
+const tahapVerifikasi = (a) => {
+	const diperiksa = Object.values(a.verifikasi_item || {}).filter((v) => v?.status).length;
+	const pada = tanggalPendek(a.dpmd_verified_at);
+	if (a.status_verifikasi === "terverifikasi") {
+		return { bilah: ["bg-emerald-500", "bg-emerald-500", "bg-emerald-500"], warna: "text-emerald-700", judul: "Terverifikasi", sub: pada && `Diperiksa ${pada}` };
+	}
+	if (a.status_verifikasi === "ditolak") {
+		return { bilah: ["bg-slate-400", "bg-slate-400", "bg-rose-500"], warna: "text-rose-700", judul: "Perlu dibetulkan", sub: pada && `Diperiksa ${pada}` };
+	}
+	if (diperiksa > 0) {
+		return { bilah: ["bg-slate-400", "bg-sky-500", "bg-slate-200"], warna: "text-sky-700", judul: "Sedang diperiksa", sub: `${diperiksa} item sudah diperiksa` };
+	}
+	return { bilah: ["bg-slate-400", "bg-slate-200", "bg-slate-200"], warna: "text-slate-600", judul: "Menunggu diperiksa", sub: "Belum diperiksa Bidang Pemdes" };
+};
+
+const TahapVerifikasi = ({ aparatur }) => {
+	const t = tahapVerifikasi(aparatur);
 	return (
-		<span
-			title={ditolak ? "Verifikasi ditolak Bidang Pemdes" : "Terverifikasi Bidang Pemdes"}
-			className={`inline-flex shrink-0 items-center rounded-full px-1.5 py-0.5 text-[10px] font-bold uppercase ${
-				ditolak ? "bg-rose-100 text-rose-700" : "bg-emerald-100 text-emerald-700"
-			}`}
-		>
-			{ditolak ? "Ditolak" : "Terverifikasi"}
-		</span>
+		<div className="min-w-[8.5rem]">
+			<div className="flex gap-0.5" aria-hidden="true">
+				{t.bilah.map((warna, i) => (
+					<span key={i} className={`h-1 flex-1 rounded-full ${warna}`} />
+				))}
+			</div>
+			<p className={`mt-1.5 text-xs font-semibold ${t.warna}`}>{t.judul}</p>
+			{t.sub && <p className="text-[11px] text-slate-500">{t.sub}</p>}
+		</div>
 	);
 };
+
+// Catatan final sudah disusun server; selama pemeriksaan berjalan diambil dari keputusan per item.
+const catatanVerifikasi = (a) => {
+	if (a.status_verifikasi === "terverifikasi") return [];
+	if (a.catatan_verifikasi) return String(a.catatan_verifikasi).split("\n").map((t) => t.trim()).filter(Boolean);
+	return Object.entries(a.verifikasi_item || {})
+		.filter(([, v]) => v?.status === "tidak_sesuai" && v.catatan)
+		.map(([kunci, v]) => `${LABEL_ITEM[kunci] || kunci}: ${v.catatan}`);
+};
+
+const CatatanVerifikasi = ({ aparatur, catatan }) => (
+	<div className="rounded-lg bg-rose-50 px-3 py-2.5">
+		<div className="flex items-start justify-between gap-3">
+			<div className="min-w-0">
+				<p className="text-xs font-semibold text-rose-900">Catatan Bidang Pemdes</p>
+				<ul className="mt-1 space-y-0.5 text-xs text-slate-700">
+					{catatan.map((baris) => {
+						const pisah = baris.indexOf(": ");
+						return (
+							<li key={baris}>
+								{pisah > 0 ? (
+									<>
+										<span className="font-semibold text-slate-900">{baris.slice(0, pisah)}:</span> {baris.slice(pisah + 2)}
+									</>
+								) : (
+									baris
+								)}
+							</li>
+						);
+					})}
+				</ul>
+			</div>
+			<Link
+				to={`/desa/aparatur-desa/${aparatur.id}/edit`}
+				className="inline-flex shrink-0 items-center gap-1 rounded-lg bg-white px-2.5 py-1.5 text-xs font-semibold text-rose-700 ring-1 ring-rose-200 transition-colors hover:bg-rose-100"
+			>
+				<Edit3 className="h-3.5 w-3.5" />
+				Betulkan
+			</Link>
+		</div>
+	</div>
+);
 
 const AparaturDesaList = ({ aparatur = [] }) => {
 	const nav = useNavigate();
@@ -141,8 +219,9 @@ const AparaturDesaList = ({ aparatur = [] }) => {
 							<tr className="bg-slate-50/80">
 								<th className="px-5 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Aparatur</th>
 								<th className="px-5 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Jabatan</th>
-								<th className="px-5 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Jenis Kelamin</th>
+								<th className="hidden px-5 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider xl:table-cell">Jenis Kelamin</th>
 								<th className="px-5 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Pendidikan</th>
+								<th className="px-5 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Verifikasi DPMD</th>
 								<th className="px-5 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Status</th>
 								<th className="px-5 py-3 text-right text-xs font-semibold text-slate-500 uppercase tracking-wider">Aksi</th>
 							</tr>
@@ -150,8 +229,10 @@ const AparaturDesaList = ({ aparatur = [] }) => {
 						<tbody className="divide-y divide-slate-100">
 							{currentData.length > 0 ? currentData.map((item) => {
 								const foto = getPasFotoUrl(item);
+								const catatan = catatanVerifikasi(item);
 								return (
-									<tr key={item.id} className="hover:bg-slate-50 transition-colors group">
+									<React.Fragment key={item.id}>
+									<tr className="hover:bg-slate-50 transition-colors group">
 										<td className="px-5 py-3">
 											<Link to={`/desa/aparatur-desa/${item.id}`} className="flex items-center gap-3">
 												{foto ? (
@@ -165,9 +246,8 @@ const AparaturDesaList = ({ aparatur = [] }) => {
 												<div className={`h-9 w-9 bg-gradient-to-br from-slate-100 to-slate-200 rounded-full flex items-center justify-center ring-2 ring-slate-100 ${foto ? 'hidden' : ''}`}>
 													<UserCircle className="h-5 w-5 text-slate-600" />
 												</div>
-												<span className="flex items-center gap-1.5 font-medium text-slate-900 group-hover:text-slate-700 transition-colors">
+												<span className="font-medium text-slate-900 group-hover:text-slate-700 transition-colors">
 													{item.nama_lengkap}
-													<CapVerifikasi status={item.status_verifikasi} />
 												</span>
 											</Link>
 										</td>
@@ -176,10 +256,13 @@ const AparaturDesaList = ({ aparatur = [] }) => {
 												{item.jabatan || "-"}
 											</span>
 										</td>
-										<td className="px-5 py-3 text-sm text-slate-600">
+										<td className="hidden px-5 py-3 text-sm text-slate-600 xl:table-cell">
 											{item.jenis_kelamin === "Laki_laki" || item.jenis_kelamin === "Laki-laki" ? "Laki-laki" : item.jenis_kelamin === "Perempuan" ? "Perempuan" : "-"}
 										</td>
 										<td className="px-5 py-3 text-sm text-slate-600">{item.pendidikan_terakhir || "-"}</td>
+										<td className="px-5 py-3">
+											<TahapVerifikasi aparatur={item} />
+										</td>
 										<td className="px-5 py-3">
 											<span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold ${
 												(item.status || "").toLowerCase() === "aktif"
@@ -211,10 +294,18 @@ const AparaturDesaList = ({ aparatur = [] }) => {
 											</div>
 										</td>
 									</tr>
+									{catatan.length > 0 && (
+										<tr className="!border-t-0">
+											<td colSpan="7" className="px-5 pb-3 pt-0">
+												<CatatanVerifikasi aparatur={item} catatan={catatan} />
+											</td>
+										</tr>
+									)}
+									</React.Fragment>
 								);
 							}) : (
 								<tr>
-									<td colSpan="6" className="px-5 py-12 text-center">
+									<td colSpan="7" className="px-5 py-12 text-center">
 										<UserCircle className="w-10 h-10 text-slate-300 mx-auto mb-2" />
 										<p className="text-slate-400 text-sm">
 											{tab === "pemdes" ? "Tidak ada data pemerintah desa" : "Tidak ada data BPD"}
@@ -230,6 +321,7 @@ const AparaturDesaList = ({ aparatur = [] }) => {
 				<div className="md:hidden divide-y divide-slate-100">
 					{currentData.length > 0 ? currentData.map((item) => {
 						const foto = getPasFotoUrl(item);
+						const catatan = catatanVerifikasi(item);
 						return (
 							<div key={item.id} className="p-4 hover:bg-slate-50/50 transition-colors">
 								<div className="flex items-center gap-3">
@@ -245,12 +337,9 @@ const AparaturDesaList = ({ aparatur = [] }) => {
 										<UserCircle className="h-6 w-6 text-slate-600" />
 									</div>
 									<div className="flex-1 min-w-0">
-										<div className="flex items-center gap-1.5">
-											<Link to={`/desa/aparatur-desa/${item.id}`} className="font-semibold text-slate-900 text-sm hover:text-slate-700">
-												{item.nama_lengkap}
-											</Link>
-											<CapVerifikasi status={item.status_verifikasi} />
-										</div>
+										<Link to={`/desa/aparatur-desa/${item.id}`} className="font-semibold text-slate-900 text-sm hover:text-slate-700">
+											{item.nama_lengkap}
+										</Link>
 										<div className="flex items-center gap-2 mt-1 flex-wrap">
 											<span className="inline-flex px-2 py-0.5 rounded text-xs font-medium bg-slate-100 text-slate-700">{item.jabatan || "-"}</span>
 											<span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold ${
@@ -270,6 +359,14 @@ const AparaturDesaList = ({ aparatur = [] }) => {
 										</button>
 									</div>
 								</div>
+								<div className="mt-3 pl-14">
+									<TahapVerifikasi aparatur={item} />
+								</div>
+								{catatan.length > 0 && (
+									<div className="mt-2">
+										<CatatanVerifikasi aparatur={item} catatan={catatan} />
+									</div>
+								)}
 							</div>
 						);
 					}) : (

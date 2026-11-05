@@ -42,17 +42,24 @@ const fotoUrl = (person) => {
 const fileUrl = (filename) =>
 	filename ? `${getBaseHost()}/uploads/aparatur_desa_files/${filename}` : null;
 
-const TombolLengkapi = ({ onClick, label = "Lengkapi" }) => (
+const TombolLengkapi = ({ onClick, label = "Lengkapi", merah = false }) => (
 	<button
 		type="button"
 		onClick={onClick}
-		className="mt-2 inline-flex items-center gap-1 rounded-md bg-slate-900 px-2.5 py-1 text-xs font-semibold text-white hover:bg-slate-800"
+		className={`mt-2 inline-flex items-center gap-1 rounded-md px-2.5 py-1 text-xs font-semibold text-white ${merah ? "bg-rose-600 hover:bg-rose-700" : "bg-slate-900 hover:bg-slate-800"}`}
 	>
 		{label}
 	</button>
 );
 
 const CHIP = "inline-flex rounded-full px-2 py-0.5 text-xs font-semibold";
+
+const CatatanDpmd = ({ children }) => (
+	<div className="mt-1.5 rounded-md bg-white px-2.5 py-1.5 text-xs text-rose-800 ring-1 ring-rose-200">
+		<p className="font-semibold">Catatan DPMD</p>
+		<p className="mt-0.5 whitespace-pre-line">{children}</p>
+	</div>
+);
 
 // Keputusan Bidang Pemdes per item, supaya desa tahu mana yang perlu direvisi.
 const PenandaVerifikasi = ({ keputusan, onPerbaiki }) => {
@@ -61,10 +68,10 @@ const PenandaVerifikasi = ({ keputusan, onPerbaiki }) => {
 	if (keputusan?.status === "tidak_sesuai") {
 		return (
 			<div>
-				<span className={`${CHIP} bg-rose-100 text-rose-700`}>Perlu diperbaiki</span>
-				{keputusan.catatan && <p className="mt-1 text-xs text-rose-700">{keputusan.catatan}</p>}
+				<span className={`${CHIP} bg-rose-600 text-white`}>Perlu diperbaiki</span>
+				{keputusan.catatan && <CatatanDpmd>{keputusan.catatan}</CatatanDpmd>}
 				<div>
-					<TombolLengkapi label="Perbaiki" onClick={onPerbaiki} />
+					<TombolLengkapi merah label="Perbaiki" onClick={onPerbaiki} />
 				</div>
 			</div>
 		);
@@ -457,36 +464,41 @@ const AparaturDesaDetailPage = () => {
 					</h3>
 					<div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
 						{[
-							{ key: "file_pas_foto", label: "Pas Foto", icon: FaUser, color: "blue" },
-							{ key: "file_sk_terakhir", label: "SK Terakhir", icon: FaFileAlt, color: "amber" },
-							{ key: "file_ktp", label: "KTP", icon: FaIdCard, color: "blue" },
-							{ key: "file_kk", label: "Kartu Keluarga", icon: FaFileAlt, color: "green" },
-							{ key: "file_akta_kelahiran", label: "Akta Kelahiran", icon: FaFileAlt, color: "purple" },
-							{ key: "file_ijazah_terakhir", label: "Ijazah Terakhir", icon: FaGraduationCap, color: "amber" },
-							{ key: "file_bpjs_kesehatan", label: "BPJS Kesehatan", icon: FaShieldAlt, color: "emerald" },
-							{ key: "file_bpjs_ketenagakerjaan", label: "BPJS Ketenagakerjaan", icon: FaShieldAlt, color: "cyan" },
-						].map(({ key, label, icon, color }) => {
+							{ key: "file_pas_foto", label: "Pas Foto", namaCatatan: "Pas foto", icon: FaUser, color: "blue" },
+							{ key: "file_sk_terakhir", label: "SK Terakhir", namaCatatan: "SK terakhir", wajib: true, icon: FaFileAlt, color: "amber" },
+							{ key: "file_ktp", label: "KTP", namaCatatan: "KTP", wajib: true, icon: FaIdCard, color: "blue" },
+							{ key: "file_kk", label: "Kartu Keluarga", namaCatatan: "Kartu Keluarga", icon: FaFileAlt, color: "green" },
+							{ key: "file_akta_kelahiran", label: "Akta Kelahiran", namaCatatan: "Akta kelahiran", icon: FaFileAlt, color: "purple" },
+							{ key: "file_ijazah_terakhir", label: "Ijazah Terakhir", namaCatatan: "Ijazah terakhir", icon: FaGraduationCap, color: "amber" },
+							{ key: "file_bpjs_kesehatan", label: "BPJS Kesehatan", namaCatatan: "Kartu BPJS Kesehatan", icon: FaShieldAlt, color: "emerald" },
+							{ key: "file_bpjs_ketenagakerjaan", label: "BPJS Ketenagakerjaan", namaCatatan: "Kartu BPJS Ketenagakerjaan", icon: FaShieldAlt, color: "cyan" },
+						].map(({ key, label, namaCatatan, wajib, icon, color }) => {
 							const fname = data?.[key];
 							const url = fileUrl(fname);
 							const isPdf = fname?.toLowerCase().endsWith('.pdf');
 							const FileIcon = isPdf ? FaFilePdf : FaFileImage;
 							const DocIcon = icon;
-							
+							// Wajib tidaknya berkas lain bergantung jabatan dan dinilai server; tandanya ada di catatan DPMD.
+							const wajibKosong = !url && (wajib || String(data?.catatan_verifikasi || "").includes(`${namaCatatan}: belum diunggah`));
+							const merah = wajibKosong || keputusanItem(key)?.status === "tidak_sesuai";
+
 							return (
 								<div
 									key={key}
 									className={`relative p-4 rounded-lg border-2 transition-all ${
-										url 
-											? `border-${color}-200 bg-${color}-50 hover:shadow-md hover:border-${color}-300` 
+										merah
+											? 'border-rose-400 bg-rose-50'
+											: url
+											? `border-${color}-200 bg-${color}-50 hover:shadow-md hover:border-${color}-300`
 											: 'border-slate-200 bg-slate-50'
 									}`}
 								>
 									<div className="flex items-start gap-3">
 										<div className={`p-2 rounded-lg ${
-											url ? `bg-${color}-100` : 'bg-slate-200'
+											merah ? 'bg-rose-100' : url ? `bg-${color}-100` : 'bg-slate-200'
 										}`}>
 											<DocIcon className={`w-5 h-5 ${
-												url ? `text-${color}-600` : 'text-slate-400'
+												merah ? 'text-rose-600' : url ? `text-${color}-600` : 'text-slate-400'
 											}`} />
 										</div>
 										<div className="flex-1 min-w-0">
@@ -499,7 +511,7 @@ const AparaturDesaDetailPage = () => {
 													href={url}
 													target="_blank"
 													rel="noopener noreferrer"
-													className={`inline-flex items-center gap-1.5 text-xs font-medium text-${color}-600 hover:text-${color}-700 group`}
+													className={`inline-flex items-center gap-1.5 text-xs font-medium group ${merah ? 'text-rose-700 hover:text-rose-800' : `text-${color}-600 hover:text-${color}-700`}`}
 												>
 													<FileIcon className="w-3.5 h-3.5" />
 													<span>Lihat Dokumen</span>
@@ -511,11 +523,12 @@ const AparaturDesaDetailPage = () => {
 												</>
 											) : (
 												<>
-												<p className="text-xs text-slate-400 flex items-center gap-1">
+												<p className={`text-xs flex items-center gap-1 ${merah ? 'font-semibold text-rose-700' : 'text-slate-400'}`}>
 													<FaTimesCircle className="w-3 h-3" />
 													<span>Belum upload</span>
 												</p>
-												<TombolLengkapi onClick={() => lengkapi(key)} />
+												{wajibKosong && <CatatanDpmd>Berkas ini wajib. Data belum bisa dinyatakan valid sebelum berkasnya diunggah.</CatatanDpmd>}
+												<TombolLengkapi merah={merah} onClick={() => lengkapi(key)} />
 												</>
 											)}
 										</div>
