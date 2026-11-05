@@ -712,13 +712,13 @@ const TandaVerifikasi = ({ status }) => {
  * Status verifikasi + seberapa jauh pemeriksaannya (progres_verifikasi dari
  * server). Yang setengah diperiksa dibedakan dari yang belum disentuh sama sekali.
  */
-const ProgresVerifikasi = ({ aparatur, ringkas = false }) => {
+const ProgresVerifikasi = ({ aparatur }) => {
 	const p = aparatur.progres_verifikasi;
 	const rupa = RUPA_VERIFIKASI[aparatur.status_verifikasi];
 	const sebagian = !rupa && p?.diperiksa > 0;
 	const persen = p?.total ? Math.round((p.diperiksa / p.total) * 100) : 0;
 	return (
-		<div className={ringkas ? 'min-w-0' : 'min-w-[8.5rem]'}>
+		<div className="min-w-[8.5rem]">
 			<span
 				className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-semibold ${
 					rupa ? rupa.pill : sebagian ? 'bg-sky-50 text-sky-700' : BELUM_VERIFIKASI.pill
@@ -737,7 +737,7 @@ const ProgresVerifikasi = ({ aparatur, ringkas = false }) => {
 					</span>
 				</div>
 			)}
-			{p?.wajib_kosong?.length > 0 && !ringkas && (
+			{p?.wajib_kosong?.length > 0 && (
 				<p className="mt-0.5 text-[10px] text-amber-700" title={`Persyaratan wajib belum lengkap: ${p.wajib_kosong.join(', ')}`}>
 					{p.wajib_kosong.length} berkas wajib kosong
 				</p>
@@ -3793,16 +3793,6 @@ const digitSaja = (nilai) => String(nilai || '').replace(/\D/g, '');
  */
 const temuanOtomatis = (a) => {
 	const temuan = [];
-	for (const item of a.item_verifikasi || []) {
-		if (item.wajib && !item.ada) {
-			temuan.push({
-				nada: 'rose',
-				judul: `${item.label} belum dilengkapi`,
-				teks: 'Persyaratan wajib. Setelah item lain diperiksa, data ini otomatis dikembalikan ke desa.',
-			});
-		}
-	}
-
 	const kosong = KOLOM_KELENGKAPAN.filter((k) => KOLOM_WAJIB_MEJA.includes(k.key) && !String(a[k.key] ?? '').trim());
 	if (kosong.length) temuan.push({ nada: 'amber', judul: 'Isian wajib kosong', teks: kosong.map((k) => k.label).join(', ') });
 
@@ -3895,14 +3885,46 @@ const sedangMengetik = (el) =>
 				el.closest?.('[role="listbox"],[role="combobox"],[role="dialog"]'))
 	);
 
+/** Penanda di baris antrean: titik warna dan seberapa jauh sudah diperiksa. */
+const StatusAntrean = ({ aparatur }) => {
+	const s = aparatur.status_verifikasi;
+	const [titik, teks] =
+		s === 'terverifikasi'
+			? ['bg-emerald-500', 'Terverifikasi']
+			: s === 'ditolak'
+				? ['bg-rose-500', 'Dikembalikan']
+				: aparatur.progres_verifikasi?.diperiksa > 0
+					? ['bg-sky-500', 'Sedang diperiksa']
+					: [null, null];
+	if (!teks) return null;
+	return (
+		<span className="mt-0.5 flex items-center gap-1.5 text-xs text-slate-500">
+			<span className={`h-1.5 w-1.5 shrink-0 rounded-full ${titik}`} />
+			<span className="truncate">{teks}</span>
+		</span>
+	);
+};
+
+const TombolAlat = ({ title, onClick, disabled, children }) => (
+	<button
+		type="button"
+		onClick={onClick}
+		disabled={disabled}
+		title={title}
+		aria-label={title}
+		className="flex h-8 w-8 items-center justify-center rounded-lg text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-900 disabled:opacity-30"
+	>
+		{children}
+	</button>
+);
+
 /**
  * Berkas pembanding di samping data. Gambar bisa diperbesar & diputar (foto
  * KTP dari ponsel sering miring); PDF disematkan. Jenis lain dibuka di tab baru.
  */
-const PenampilBerkas = ({ aparatur, kunci, pembanding = [], zoom, putar, onPilih, onZoom, onPutar, onPerbesar }) => {
+const PenampilBerkas = ({ aparatur, kunci, pembanding = [], judulItem, zoom, putar, onPilih, onZoom, onPutar, onPerbesar }) => {
 	const [rusak, setRusak] = useState(false);
 	const tersedia = BERKAS.filter((b) => aparatur?.[b.kunci]);
-	const urut = [...tersedia].sort((x, y) => Number(pembanding.includes(y.kunci)) - Number(pembanding.includes(x.kunci)));
 	const nama = kunci ? aparatur?.[kunci] : null;
 	const url = berkasUrl(nama);
 	const ext = String(nama || '').split('.').pop().toLowerCase();
@@ -3914,13 +3936,48 @@ const PenampilBerkas = ({ aparatur, kunci, pembanding = [], zoom, putar, onPilih
 	useEffect(() => setRusak(false), [url]);
 
 	return (
-		<section className="flex h-[70vh] flex-col overflow-hidden rounded-2xl border border-slate-200 bg-slate-900 shadow-sm xl:sticky xl:top-4 xl:h-[calc(100vh-2rem)]">
-			<div className="shrink-0 border-b border-white/10 p-2">
-				{urut.length === 0 ? (
-					<p className="px-2 py-1.5 text-xs text-slate-400">Belum ada berkas yang diunggah desa.</p>
-				) : (
-					<div className="flex gap-1 overflow-x-auto pb-0.5">
-						{urut.map((b) => {
+		<section className="flex h-[70vh] flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white xl:h-full">
+			<div className="shrink-0 px-4 py-2.5">
+				<div className="flex min-h-8 items-center justify-between gap-2">
+					<p className="min-w-0 truncate text-sm font-semibold text-slate-900" title={label}>
+						{label || 'Berkas'}
+						{judulItem && <span className="ml-1.5 text-xs font-normal text-slate-500">cocokkan dengan {judulItem}</span>}
+					</p>
+					{url && (
+						<div className="flex shrink-0 items-center">
+							{gambar && !rusak && (
+								<>
+									<TombolAlat title="Perkecil" onClick={() => onZoom(Math.max(1, zoom - 0.5))} disabled={zoom <= 1}>
+										<ZoomOut className="h-4 w-4" />
+									</TombolAlat>
+									<span className="w-9 text-center text-xs tabular-nums text-slate-500">{Math.round(zoom * 100)}%</span>
+									<TombolAlat title="Perbesar" onClick={() => onZoom(Math.min(4, zoom + 0.5))} disabled={zoom >= 4}>
+										<ZoomIn className="h-4 w-4" />
+									</TombolAlat>
+									<TombolAlat title="Putar (R)" onClick={onPutar}>
+										<RotateCw className="h-4 w-4" />
+									</TombolAlat>
+								</>
+							)}
+							<TombolAlat title="Layar penuh (F)" onClick={onPerbesar}>
+								<Maximize2 className="h-4 w-4" />
+							</TombolAlat>
+							<a
+								href={url}
+								target="_blank"
+								rel="noreferrer"
+								title="Buka di tab baru"
+								aria-label="Buka di tab baru"
+								className="flex h-8 w-8 items-center justify-center rounded-lg text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-900"
+							>
+								<ExternalLink className="h-4 w-4" />
+							</a>
+						</div>
+					)}
+				</div>
+				{tersedia.length > 0 && (
+					<div className="mt-1.5 flex flex-wrap gap-1">
+						{tersedia.map((b) => {
 							const s = statusItem(aparatur, b.kunci);
 							const aktif = b.kunci === kunci;
 							return (
@@ -3928,17 +3985,17 @@ const PenampilBerkas = ({ aparatur, kunci, pembanding = [], zoom, putar, onPilih
 									key={b.kunci}
 									type="button"
 									onClick={() => onPilih(b.kunci)}
-									className={`inline-flex shrink-0 items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-medium transition-colors ${
-										aktif ? 'bg-white text-slate-900' : pembanding.includes(b.kunci) ? 'bg-white/15 text-white hover:bg-white/25' : 'text-slate-400 hover:bg-white/10 hover:text-white'
+									aria-pressed={aktif}
+									className={`inline-flex items-center gap-1 rounded-lg px-2.5 py-1 text-xs font-medium transition-colors ${
+										aktif
+											? 'bg-slate-900 text-white'
+											: pembanding.includes(b.kunci)
+												? 'bg-sky-50 text-sky-800 hover:bg-sky-100'
+												: 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
 									}`}
 								>
-									{s === 'sesuai' ? (
-										<CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" />
-									) : s === 'tidak_sesuai' ? (
-										<XCircle className="h-3.5 w-3.5 text-rose-500" />
-									) : (
-										<FileText className="h-3.5 w-3.5 opacity-60" />
-									)}
+									{s === 'sesuai' && <CheckCircle2 className={`h-3 w-3 ${aktif ? 'text-emerald-300' : 'text-emerald-600'}`} />}
+									{s === 'tidak_sesuai' && <XCircle className={`h-3 w-3 ${aktif ? 'text-rose-300' : 'text-rose-600'}`} />}
 									{b.label}
 								</button>
 							);
@@ -3947,17 +4004,21 @@ const PenampilBerkas = ({ aparatur, kunci, pembanding = [], zoom, putar, onPilih
 				)}
 			</div>
 
-			<div className="relative min-h-0 flex-1">
+			<div className="relative min-h-0 flex-1 bg-slate-800">
 				{!url ? (
 					<div className="flex h-full flex-col items-center justify-center gap-2 px-6 text-center">
-						<Paperclip className="h-8 w-8 text-slate-600" />
-						<p className="text-sm text-slate-400">
-							{pembandingKosong ? 'Berkas pembanding untuk item ini belum diunggah.' : 'Pilih berkas di atas untuk ditampilkan.'}
+						<Paperclip className="h-7 w-7 text-slate-400" />
+						<p className="text-sm text-slate-300">
+							{!tersedia.length
+								? 'Desa belum mengunggah berkas apa pun.'
+								: pembandingKosong
+									? 'Berkas pembanding untuk item ini belum diunggah.'
+									: 'Pilih berkas di atas untuk ditampilkan.'}
 						</p>
 					</div>
 				) : gambar && !rusak ? (
 					<div className="h-full overflow-auto">
-						<div className={`flex items-center justify-center p-3 ${zoom === 1 ? 'h-full' : 'min-h-full'}`}>
+						<div className={`flex items-center justify-center p-4 ${zoom === 1 ? 'h-full' : 'min-h-full'}`}>
 							<img
 								key={url}
 								src={url}
@@ -3968,7 +4029,7 @@ const PenampilBerkas = ({ aparatur, kunci, pembanding = [], zoom, putar, onPilih
 									transform: `rotate(${putar}deg)`,
 									...(zoom === 1 ? {} : { width: `${zoom * 100}%`, maxWidth: 'none' }),
 								}}
-								className={`rounded-lg object-contain shadow-2xl transition-transform ${zoom === 1 ? 'max-h-full max-w-full cursor-zoom-in' : 'cursor-zoom-out'}`}
+								className={`rounded-lg object-contain shadow-md transition-transform ${zoom === 1 ? 'max-h-full max-w-full cursor-zoom-in' : 'cursor-zoom-out'}`}
 							/>
 						</div>
 					</div>
@@ -3976,194 +4037,15 @@ const PenampilBerkas = ({ aparatur, kunci, pembanding = [], zoom, putar, onPilih
 					<iframe key={url} src={url} title={label} className="h-full w-full bg-white" />
 				) : (
 					<div className="flex h-full flex-col items-center justify-center gap-2 px-6 text-center">
-						<FileText className="h-8 w-8 text-slate-600" />
-						<p className="text-sm text-slate-400">{rusak ? 'Berkas gagal dimuat.' : 'Jenis berkas ini tidak bisa dipratinjau.'}</p>
+						<FileText className="h-7 w-7 text-slate-400" />
+						<p className="text-sm text-slate-300">{rusak ? 'Berkas gagal dimuat.' : 'Jenis berkas ini tidak bisa dipratinjau.'}</p>
 						<a href={url} target="_blank" rel="noreferrer" className="text-sm font-semibold text-white underline">
 							Buka di tab baru
 						</a>
 					</div>
 				)}
 			</div>
-
-			{url && (
-				<div className="flex shrink-0 items-center justify-between gap-2 border-t border-white/10 px-3 py-2 text-white">
-					<p className="min-w-0 truncate text-xs font-semibold">{label}</p>
-					<div className="flex shrink-0 items-center gap-1">
-						{gambar && !rusak && (
-							<>
-								<button type="button" onClick={() => onZoom(Math.max(1, zoom - 0.5))} disabled={zoom <= 1} title="Perkecil" className="rounded-md p-1.5 hover:bg-white/10 disabled:opacity-30">
-									<ZoomOut className="h-4 w-4" />
-								</button>
-								<span className="w-10 text-center text-[11px] tabular-nums text-slate-300">{Math.round(zoom * 100)}%</span>
-								<button type="button" onClick={() => onZoom(Math.min(4, zoom + 0.5))} disabled={zoom >= 4} title="Perbesar" className="rounded-md p-1.5 hover:bg-white/10 disabled:opacity-30">
-									<ZoomIn className="h-4 w-4" />
-								</button>
-								<button type="button" onClick={onPutar} title="Putar (R)" className="rounded-md p-1.5 hover:bg-white/10">
-									<RotateCw className="h-4 w-4" />
-								</button>
-							</>
-						)}
-						<button type="button" onClick={onPerbesar} title="Layar penuh (F)" className="rounded-md p-1.5 hover:bg-white/10">
-							<Maximize2 className="h-4 w-4" />
-						</button>
-						<a href={url} target="_blank" rel="noreferrer" title="Buka di tab baru" className="rounded-md p-1.5 hover:bg-white/10">
-							<ExternalLink className="h-4 w-4" />
-						</a>
-					</div>
-				</div>
-			)}
 		</section>
-	);
-};
-
-/** Satu baris pemeriksaan: isi data (atau keterangan berkas) + keputusannya. */
-const BarisPeriksa = ({ item, nomor, aparatur, aktif, sibuk, menulis, alasan, onFokus, onSesuai, onTidak, onAlasan, onSimpanAlasan, onBatalTulis, simpulRef }) => {
-	const k = aparatur.verifikasi_item?.[item.key] || null;
-	const isi = ISI_ITEM[item.key]?.(aparatur);
-	const pilihanAlasan = ALASAN_CEPAT[item.key] || (item.jenis === 'berkas' ? ALASAN_CEPAT.berkas : []);
-
-	return (
-		<li
-			ref={simpulRef}
-			onClick={onFokus}
-			className={`cursor-pointer rounded-xl border p-3 transition-all ${
-				aktif
-					? 'border-slate-900 bg-white shadow-md ring-1 ring-slate-900'
-					: k?.status === 'sesuai'
-						? 'border-emerald-200 bg-emerald-50/40 hover:border-emerald-300'
-						: k?.status === 'tidak_sesuai'
-							? 'border-rose-200 bg-rose-50/40 hover:border-rose-300'
-							: 'border-slate-200 bg-white hover:border-slate-300'
-			}`}
-		>
-			<div className="flex flex-wrap items-center justify-between gap-2">
-				<div className="flex min-w-0 items-center gap-2">
-					<span
-						className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[11px] font-bold ${
-							k?.status === 'sesuai'
-								? 'bg-emerald-600 text-white'
-								: k?.status === 'tidak_sesuai'
-									? 'bg-rose-600 text-white'
-									: !item.ada
-										? 'bg-amber-100 text-amber-700'
-										: 'bg-slate-100 text-slate-600'
-						}`}
-					>
-						{k?.status === 'sesuai' ? <CheckCircle2 className="h-3.5 w-3.5" /> : k?.status === 'tidak_sesuai' ? <XCircle className="h-3.5 w-3.5" /> : nomor}
-					</span>
-					<span className="truncate text-sm font-semibold text-slate-900">{item.label}</span>
-					{item.wajib && <span className="text-[10px] font-bold uppercase tracking-wide text-brand-600">wajib</span>}
-				</div>
-
-				{item.ada ? (
-					<div className="flex shrink-0 items-center gap-1" onClick={(event) => event.stopPropagation()}>
-						<button
-							type="button"
-							disabled={sibuk}
-							onClick={onSesuai}
-							title={k?.status === 'sesuai' ? 'Batalkan keputusan' : 'Tandai sesuai (S)'}
-							className={`inline-flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-xs font-semibold transition-colors disabled:opacity-50 ${
-								k?.status === 'sesuai' ? 'bg-emerald-600 text-white shadow-sm' : 'bg-white text-emerald-700 ring-1 ring-emerald-200 hover:bg-emerald-50'
-							}`}
-						>
-							{sibuk ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <CheckCircle2 className="h-3.5 w-3.5" />}
-							Sesuai
-						</button>
-						<button
-							type="button"
-							disabled={sibuk}
-							onClick={onTidak}
-							title={k?.status === 'tidak_sesuai' ? 'Batalkan keputusan' : 'Tandai tidak sesuai (T)'}
-							className={`inline-flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-xs font-semibold transition-colors disabled:opacity-50 ${
-								k?.status === 'tidak_sesuai' || menulis ? 'bg-rose-600 text-white shadow-sm' : 'bg-white text-rose-700 ring-1 ring-rose-200 hover:bg-rose-50'
-							}`}
-						>
-							<XCircle className="h-3.5 w-3.5" />
-							Tidak sesuai
-						</button>
-					</div>
-				) : (
-					<span className="inline-flex items-center gap-1 rounded-full bg-amber-50 px-2 py-0.5 text-[11px] font-semibold text-amber-700 ring-1 ring-amber-200">
-						<Clock className="h-3 w-3" />
-						Belum diunggah
-					</span>
-				)}
-			</div>
-
-			{isi && (
-				<dl className="mt-2.5 grid grid-cols-1 gap-x-4 gap-y-1.5 pl-8 sm:grid-cols-2">
-					{isi.map(([label, nilai]) => (
-						<div key={label} className="min-w-0">
-							<dt className="text-[11px] text-slate-500">{label}</dt>
-							<dd className={`break-words text-sm font-medium ${nilai ? 'text-slate-900' : 'text-rose-500'}`}>{nilai || 'Kosong'}</dd>
-						</div>
-					))}
-				</dl>
-			)}
-			{!isi && item.ada && aktif && <p className="mt-1.5 pl-8 text-xs text-slate-500">Berkasnya tampil di panel pembanding.</p>}
-
-			{k?.status === 'tidak_sesuai' && k.catatan && !menulis && <p className="mt-2 pl-8 text-xs font-medium text-rose-700">Alasan: {k.catatan}</p>}
-			{k?.status && k.oleh && (
-				<p className="mt-1 pl-8 text-[11px] text-slate-400">
-					{k.oleh} · {formatWaktu(k.pada)}
-				</p>
-			)}
-
-			<AnimatePresence initial={false}>
-				{menulis && (
-					<motion.div
-						initial={{ height: 0, opacity: 0 }}
-						animate={{ height: 'auto', opacity: 1 }}
-						exit={{ height: 0, opacity: 0 }}
-						className="overflow-hidden"
-						onClick={(event) => event.stopPropagation()}
-					>
-						<div className="mt-3 rounded-xl bg-rose-50/70 p-2.5 ring-1 ring-rose-200">
-							{pilihanAlasan.length > 0 && (
-								<div className="mb-2 flex flex-wrap gap-1.5">
-									{pilihanAlasan.map((teks) => (
-										<button
-											key={teks}
-											type="button"
-											onClick={() => onAlasan(teks)}
-											className={`rounded-full px-2.5 py-1 text-[11px] font-medium transition-colors ${
-												alasan === teks ? 'bg-rose-600 text-white' : 'bg-white text-rose-700 ring-1 ring-rose-200 hover:bg-rose-100'
-											}`}
-										>
-											{teks}
-										</button>
-									))}
-								</div>
-							)}
-							<div className="flex gap-2">
-								<input
-									autoFocus
-									value={alasan}
-									onChange={(event) => onAlasan(event.target.value)}
-									onKeyDown={(event) => {
-										if (event.key === 'Enter' && alasan.trim()) onSimpanAlasan();
-										if (event.key === 'Escape') onBatalTulis();
-									}}
-									placeholder="Alasan untuk desa — pilih di atas atau tulis sendiri"
-									className={`${KELAS_INPUT} min-w-0 flex-1 bg-white`}
-								/>
-								<button
-									type="button"
-									disabled={sibuk || !alasan.trim()}
-									onClick={onSimpanAlasan}
-									className="shrink-0 rounded-xl bg-rose-600 px-3 py-2 text-xs font-semibold text-white transition-colors hover:bg-rose-700 disabled:opacity-50"
-								>
-									Simpan
-								</button>
-							</div>
-							<p className="mt-1.5 text-[11px] text-rose-700/80">
-								<Kbd>Enter</Kbd> simpan · <Kbd>Esc</Kbd> batal
-							</p>
-						</div>
-					</motion.div>
-				)}
-			</AnimatePresence>
-		</li>
 	);
 };
 
@@ -4172,7 +4054,8 @@ const MejaVerifikasi = ({ refreshKey = 0, jenis, stats, saring, setSaring, detai
 	const sesi = `aparatur-meja:${jenis || 'semua'}`;
 	const [pilihId, setPilihId] = useIngatSesi(`${sesi}:pilih`, null);
 	const [lanjutOtomatis, setLanjutOtomatis] = useIngatSesi(`${sesi}:lanjut`, true);
-	const [tampilPintasan, setTampilPintasan] = useIngatSesi(`${sesi}:pintasan`, true);
+	const [tampilPintasan, setTampilPintasan] = useIngatSesi(`${sesi}:pintasan`, false);
+	const [tampilTemuan, setTampilTemuan] = useIngatSesi(`${sesi}:temuan`, true);
 	const [searchInput, setSearchInput] = useState(() => saring.search || '');
 	const [kecamatanList, setKecamatanList] = useState([]);
 	const pilihanDesa = useDesaKecamatan(saring.kecamatan_id, kecamatanList);
@@ -4194,6 +4077,7 @@ const MejaVerifikasi = ({ refreshKey = 0, jenis, stats, saring, setSaring, detai
 	const [alasan, setAlasan] = useState('');
 	const [sibukKey, setSibukKey] = useState(null);
 	const [diputusSesi, setDiputusSesi] = useState(0);
+	const [bukaAntrean, setBukaAntrean] = useState(false);
 	const simpul = useRef({});
 	const simpulAntrean = useRef({});
 	// Id orang yang sedang terbuka — memuat ulang orang yang sama (setelah
@@ -4415,7 +4299,7 @@ const MejaVerifikasi = ({ refreshKey = 0, jenis, stats, saring, setSaring, detai
 	};
 
 	const pindahItem = (arah) => {
-		const daftar = a?.item_verifikasi || [];
+		const daftar = itemDiperiksa(a);
 		const i = daftar.findIndex((item) => item.key === aktifKey);
 		const tujuan = daftar[Math.min(Math.max(i + arah, 0), daftar.length - 1)];
 		if (tujuan) {
@@ -4427,6 +4311,10 @@ const MejaVerifikasi = ({ refreshKey = 0, jenis, stats, saring, setSaring, detai
 	// Pintasan dipasang sekali; isinya selalu versi terbaru lewat ref.
 	const pintasan = useRef(null);
 	pintasan.current = (event) => {
+		if (bukaAntrean) {
+			if (event.key === 'Escape') setBukaAntrean(false);
+			return;
+		}
 		if (jeda || layarPenuh || !a || event.ctrlKey || event.metaKey || event.altKey || sedangMengetik(event.target)) return;
 		const tombol = event.key.length === 1 ? event.key.toLowerCase() : event.key;
 		const aksi = {
@@ -4461,338 +4349,393 @@ const MejaVerifikasi = ({ refreshKey = 0, jenis, stats, saring, setSaring, detai
 	const adaSaringWilayah = saring.kecamatan_id.length > 0 || saring.desa_id.length > 0 || Boolean(saring.search);
 	const itemAktif = (a?.item_verifikasi || []).find((i) => i.key === aktifKey);
 	const pembanding = itemAktif?.jenis === 'berkas' ? [aktifKey] : BERKAS_PEMBANDING[aktifKey] || [];
+	const itemKurang = (a?.item_verifikasi || []).filter((item) => item.wajib && !item.ada);
+	const statusAktif = aktifKey ? statusItem(a, aktifKey) : null;
+	const sisaItem = progres ? progres.total - progres.diperiksa : 0;
+	const selesaiDiperiksa = Boolean(progres?.total) && sisaItem === 0;
+	const pilihanAlasan = ALASAN_CEPAT[aktifKey] || (itemAktif?.jenis === 'berkas' ? ALASAN_CEPAT.berkas : []);
 	const pilihanKecamatan = kecamatanList.map((k) => ({ value: String(k.id || k.id_kecamatan), label: k.nama || k.name }));
 
+	const daftarPeriksa = itemDiperiksa(a);
+	const urutanAktif = daftarPeriksa.findIndex((item) => item.key === aktifKey);
+	const isiAktif = a && aktifKey ? ISI_ITEM[aktifKey]?.(a) : null;
+	const keputusanAktif = a?.verifikasi_item?.[aktifKey] || null;
+	const itemDitolak = daftarPeriksa.filter((item) => statusItem(a, item.key) === 'tidak_sesuai');
+	const labelAntrean = PILIHAN_ANTREAN.find((p) => (saring.verifikasi || '') === p.value)?.label;
+
 	return (
-		<div className="space-y-4">
-			{/* ---------- Saringan antrean ---------- */}
-			<section className="rounded-2xl border border-slate-200 bg-white p-3 shadow-sm">
-				<div className="flex flex-col gap-3 xl:flex-row xl:items-end">
-					<div className="flex gap-1 rounded-xl bg-slate-100 p-1">
-						{PILIHAN_ANTREAN.map((pilihan) => {
-							const aktif = (saring.verifikasi || '') === pilihan.value;
-							const jumlah = stats?.verifikasi?.[pilihan.kunciStat];
-							return (
-								<button
-									key={pilihan.label}
-									type="button"
-									onClick={() => ubahSaring('verifikasi', pilihan.value)}
-									className={`flex flex-1 items-center justify-center gap-1.5 whitespace-nowrap rounded-lg px-3 py-2 text-xs font-semibold transition-colors sm:text-sm ${
-										aktif ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-900'
-									}`}
-								>
-									{pilihan.label}
-									{!adaSaringWilayah && jumlah !== undefined && (
-										<span className={`rounded-full px-1.5 text-[11px] tabular-nums ${aktif ? 'bg-slate-900 text-white' : 'bg-slate-200 text-slate-600'}`}>{fmt(jumlah)}</span>
-									)}
-								</button>
-							);
-						})}
-					</div>
-					<div className="grid flex-1 grid-cols-1 gap-2 sm:grid-cols-3">
-						<SelectBox
-							multiple
-							label="Kecamatan"
-							value={saring.kecamatan_id}
-							onChange={(nilai) => ubahSaring('kecamatan_id', nilai)}
-							placeholder="Semua Kecamatan"
-							emptyText="Kecamatan tidak ditemukan"
-							options={[{ value: '', label: 'Semua Kecamatan' }, ...pilihanKecamatan]}
-						/>
-						<SelectBox
-							multiple
-							label="Desa"
-							value={saring.desa_id}
-							onChange={(nilai) => ubahSaring('desa_id', nilai)}
-							disabled={!saring.kecamatan_id.length}
-							placeholder={saring.kecamatan_id.length ? 'Semua Desa' : 'Pilih kecamatan dulu'}
-							emptyText="Desa tidak ditemukan"
-							options={[{ value: '', label: 'Semua Desa' }, ...pilihanDesa]}
-						/>
-						<label className="block">
-							<span className="mb-1.5 block text-[11px] font-semibold uppercase tracking-[0.12em] text-brand-600">Cari</span>
-							<div className="relative">
-								<Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-								<input
-									value={searchInput}
-									onChange={(event) => setSearchInput(event.target.value)}
-									placeholder="Nama atau jabatan"
-									className="h-11 w-full rounded-xl border border-slate-200 bg-white pl-9 pr-3 text-sm text-slate-900 shadow-sm placeholder:text-slate-400 focus:border-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-900/10"
-								/>
-							</div>
-						</label>
-					</div>
-				</div>
-			</section>
+		<div className="flex flex-col gap-3 xl:h-[calc(100vh-5.75rem)] xl:min-h-[36rem]">
+			{/* ---------- Siapa yang diperiksa & sampai mana ---------- */}
+			<section className="shrink-0 rounded-2xl border border-slate-200 bg-white">
+				<div className="flex flex-wrap items-center gap-x-4 gap-y-3 px-4 py-3">
+					<button
+						type="button"
+						onClick={() => setBukaAntrean(true)}
+						className="inline-flex h-10 shrink-0 items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 text-sm font-semibold text-slate-800 transition-colors hover:bg-slate-50"
+					>
+						<ListChecks className="h-4 w-4 text-slate-500" />
+						Antrean
+						<span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs font-medium tabular-nums text-slate-600">
+							{labelAntrean} · {fmt(meta.totalItems)}
+						</span>
+					</button>
 
-			<div className="grid gap-4 lg:grid-cols-[17rem_minmax(0,1fr)] xl:grid-cols-[17rem_minmax(0,1fr)_minmax(0,1.05fr)]">
-				{/* ---------- Antrean ---------- */}
-				<aside className="flex max-h-80 flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm lg:sticky lg:top-4 lg:row-span-2 lg:max-h-[calc(100vh-2rem)] lg:self-start">
-					<div className="flex shrink-0 items-center justify-between gap-2 border-b border-slate-100 px-4 py-3">
-						<div>
-							<p className="text-sm font-semibold text-slate-900">Antrean</p>
-							<p className="text-[11px] text-slate-500">
-								{memuatAntrean && !antrean.length ? 'Memuat…' : `${fmt(meta.totalItems)} orang${indeksKini >= 0 ? ` · ke-${indeksKini + 1}` : ''}`}
-							</p>
-						</div>
-						{diputusSesi > 0 && (
-							<span className="rounded-full bg-emerald-50 px-2 py-1 text-[11px] font-semibold text-emerald-700 ring-1 ring-emerald-200" title="Orang yang tuntas diputus sejak meja ini dibuka">
-								{diputusSesi} tuntas
-							</span>
-						)}
-					</div>
-					<div className="min-h-0 flex-1 overflow-y-auto">
-						{memuatAntrean && !antrean.length ? (
-							<TableSkeleton rows={6} />
-						) : !antrean.length ? (
-							<div className="px-5 py-12 text-center">
-								<CheckCircle2 className="mx-auto h-8 w-8 text-emerald-400" />
-								<p className="mt-2 text-sm font-medium text-slate-700">Antrean kosong</p>
-								<p className="mt-1 text-xs text-slate-500">Tidak ada aparatur yang cocok dengan saringan ini.</p>
-							</div>
-						) : (
-							<ul className="divide-y divide-slate-100">
-								{antrean.map((b, i) => (
-									<li key={b.id} ref={(el) => { simpulAntrean.current[b.id] = el; }}>
-										<button
-											type="button"
-											onClick={() => setPilihId(b.id)}
-											className={`flex w-full items-start gap-2.5 px-3 py-2.5 text-left transition-colors ${
-												b.id === pilihId ? 'bg-slate-900 text-white' : 'hover:bg-slate-50'
-											}`}
-										>
-											<span className="mt-2.5 w-5 shrink-0 text-right text-[10px] tabular-nums text-slate-400">{i + 1}</span>
-											<Avatar person={b} className="h-9 w-9 text-xs" />
-											<span className="min-w-0 flex-1">
-												<span className={`block truncate text-sm font-medium ${b.id === pilihId ? 'text-white' : 'text-slate-900'}`}>{b.nama_lengkap}</span>
-												<span className={`block truncate text-[11px] ${b.id === pilihId ? 'text-slate-300' : 'text-slate-500'}`}>
-													{b.jabatan} · {b.desas?.nama || '-'}
-												</span>
-												<span className="mt-1 block">
-													<ProgresVerifikasi aparatur={b} ringkas />
-												</span>
-											</span>
-										</button>
-									</li>
-								))}
-							</ul>
-						)}
-						{meta.page < meta.totalPages && antrean.length > 0 && (
-							<button
-								type="button"
-								onClick={() => muatAntrean(meta.page + 1)}
-								disabled={memuatAntrean}
-								className="flex w-full items-center justify-center gap-2 border-t border-slate-100 py-3 text-xs font-semibold text-slate-600 hover:bg-slate-50 disabled:opacity-60"
-							>
-								{memuatAntrean ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <ChevronDown className="h-3.5 w-3.5" />}
-								Muat {Math.min(30, meta.totalItems - antrean.length)} berikutnya
+					{a && (
+						<div className="flex min-w-0 flex-1 basis-64 items-center gap-3">
+							<button type="button" onClick={() => a.file_pas_foto && setKunciBerkas('file_pas_foto')} title={a.file_pas_foto ? 'Tampilkan pas foto' : undefined}>
+								<Avatar person={a} className="h-10 w-10 text-sm" />
 							</button>
-						)}
-					</div>
-				</aside>
-
-				{/* ---------- Pemeriksaan ---------- */}
-				<section className="min-w-0">
-					{!a ? (
-						<div className="flex h-64 items-center justify-center rounded-2xl border border-dashed border-slate-300 bg-white text-sm text-slate-500">
-							{memuatDetail || memuatAntrean ? <Loader2 className="h-5 w-5 animate-spin text-slate-400" /> : 'Pilih aparatur di antrean untuk mulai memeriksa.'}
-						</div>
-					) : (
-						<div className={`space-y-3 transition-opacity ${memuatDetail ? 'opacity-50' : ''}`}>
-							{/* Kepala: siapa, di mana, dan seberapa jauh */}
-							<div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-								<div className="flex items-start gap-3">
-									<button
-										type="button"
-										onClick={() => a.file_pas_foto && setKunciBerkas('file_pas_foto')}
-										title={a.file_pas_foto ? 'Tampilkan pas foto di panel berkas' : undefined}
-									>
-										<Avatar person={a} className="h-14 w-14 text-base" />
-									</button>
-									<div className="min-w-0 flex-1">
-										<div className="flex flex-wrap items-center gap-2">
-											<h3 className="truncate text-lg font-bold text-slate-900">{a.nama_lengkap}</h3>
-											<BadgeVerifikasi status={a.status_verifikasi} />
-										</div>
-										<p className="truncate text-sm text-slate-600">{a.jabatan}</p>
-										<p className="mt-0.5 flex flex-wrap items-center gap-x-2 text-xs text-slate-500">
-											<span className="inline-flex items-center gap-1">
-												<MapPin className="h-3 w-3" />
-												{a.desas?.nama || '-'} · Kec. {a.desas?.kecamatans?.nama || '-'}
-											</span>
-											{a.nipd && <span className="font-mono text-slate-700">NIPD {formatNipd(a.nipd)}</span>}
-										</p>
-									</div>
-									<div className="flex shrink-0 items-center gap-1">
-										<button
-											type="button"
-											onClick={() => keOrang(-1)}
-											disabled={indeksKini <= 0}
-											title="Orang sebelumnya (←)"
-											className="rounded-lg border border-slate-200 p-2 text-slate-600 hover:bg-slate-50 disabled:opacity-30"
-										>
-											<ChevronLeft className="h-4 w-4" />
-										</button>
-										<button
-											type="button"
-											onClick={() => keOrang(1)}
-											title="Orang berikutnya (→)"
-											className="rounded-lg border border-slate-200 p-2 text-slate-600 hover:bg-slate-50"
-										>
-											<ChevronRight className="h-4 w-4" />
-										</button>
-									</div>
+							<div className="min-w-0">
+								<div className="flex items-center gap-2">
+									<h3 className="min-w-0 text-base font-semibold leading-snug text-slate-900 sm:truncate" title={a.nama_lengkap}>{a.nama_lengkap}</h3>
+									<TandaVerifikasi status={a.status_verifikasi} />
 								</div>
-
-								{progres && (
-									<div className="mt-3">
-										<div className="flex items-center justify-between text-xs">
-											<span className="font-medium text-slate-600">
-												{progres.diperiksa} dari {progres.total} item diperiksa
-												{progres.tidak_sesuai > 0 && <span className="text-rose-600"> · {progres.tidak_sesuai} tidak sesuai</span>}
-											</span>
-											<span className="tabular-nums text-slate-400">{progres.total ? Math.round((progres.diperiksa / progres.total) * 100) : 0}%</span>
-										</div>
-										<div className="mt-1.5 flex h-1.5 gap-0.5 overflow-hidden rounded-full">
-											{itemDiperiksa(a).map((item) => {
-												const s = statusItem(a, item.key);
-												return (
-													<span
-														key={item.key}
-														className={`flex-1 ${s === 'sesuai' ? 'bg-emerald-500' : s === 'tidak_sesuai' ? 'bg-rose-500' : item.key === aktifKey ? 'bg-slate-500' : 'bg-slate-200'}`}
-													/>
-												);
-											})}
-										</div>
-									</div>
-								)}
-
-								<div className="mt-3 flex flex-wrap items-center gap-2">
-									<button
-										type="button"
-										onClick={semuaSisaSesuai}
-										disabled={Boolean(sibukKey) || !progres || progres.diperiksa === progres.total}
-										title="Tandai semua item yang belum diputus sebagai sesuai (A)"
-										className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-600 px-3 py-2 text-xs font-semibold text-white transition-colors hover:bg-emerald-700 disabled:opacity-50"
-									>
-										{sibukKey === 'semua' ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <ListChecks className="h-3.5 w-3.5" />}
-										Semua sisa sesuai
-									</button>
-									{onUbah && (
-										<button
-											type="button"
-											onClick={() => onUbah(a.id)}
-											className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50"
-										>
-											<Pencil className="h-3.5 w-3.5" />
-											Betulkan data
-										</button>
-									)}
-									<button
-										type="button"
-										onClick={() => navigate(`${detailBasePath}/${a.id}`)}
-										className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50"
-									>
-										<Eye className="h-3.5 w-3.5" />
-										Detail lengkap
-									</button>
-									<label className="ml-auto inline-flex cursor-pointer items-center gap-2 text-xs text-slate-600" title="Setelah semua item diputus, pindah sendiri ke orang berikutnya">
-										<input type="checkbox" checked={lanjutOtomatis} onChange={(event) => setLanjutOtomatis(event.target.checked)} className="h-3.5 w-3.5 rounded border-slate-300" />
-										Lanjut otomatis
-									</label>
-								</div>
-							</div>
-
-							{/* Temuan otomatis */}
-							{temuan.length > 0 && (
-								<div className="space-y-1.5">
-									{temuan.map((t) => {
-										const nada = NADA_TEMUAN[t.nada];
-										return (
-											<div key={t.judul} className={`flex items-start gap-2.5 rounded-xl border px-3 py-2 text-xs ${nada.kotak}`}>
-												<nada.ikon className={`mt-0.5 h-4 w-4 shrink-0 ${nada.warna}`} />
-												<div className="min-w-0 flex-1">
-													<p className="font-semibold">{t.judul}</p>
-													{t.teks && <p className="mt-0.5 whitespace-pre-line opacity-90">{t.teks}</p>}
-												</div>
-												{t.aksi === 'konfirmasi_tanggal' && onUbah && (
-													<button
-														type="button"
-														onClick={konfirmasiTanggalLahir}
-														disabled={Boolean(sibukKey)}
-														className="shrink-0 rounded-lg bg-white px-2.5 py-1.5 font-semibold text-amber-800 ring-1 ring-amber-300 hover:bg-amber-100 disabled:opacity-60"
-													>
-														{sibukKey === 'tanggal' ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : 'Sesuai KTP'}
-													</button>
-												)}
-											</div>
-										);
-									})}
-								</div>
-							)}
-
-							{/* Daftar item */}
-							<ol className="space-y-2">
-								{(a.item_verifikasi || []).map((item, i) => (
-									<BarisPeriksa
-										key={item.key}
-										simpulRef={(el) => { simpul.current[item.key] = el; }}
-										item={item}
-										nomor={i + 1}
-										aparatur={a}
-										aktif={item.key === aktifKey}
-										sibuk={sibukKey === item.key || sibukKey === 'semua'}
-										menulis={menulis === item.key}
-										alasan={alasan}
-										onFokus={() => {
-											setAktifKey(item.key);
-											if (menulis !== item.key) setMenulis(null);
-										}}
-										onSesuai={() => {
-											setAktifKey(item.key);
-											tandaiSesuai(item.key);
-										}}
-										onTidak={() => mulaiTolak(item.key)}
-										onAlasan={setAlasan}
-										onSimpanAlasan={() => alasan.trim() && putuskan(item.key, 'tidak_sesuai', alasan.trim())}
-										onBatalTulis={() => setMenulis(null)}
-									/>
-								))}
-							</ol>
-
-							{/* Pintasan keyboard */}
-							<div className="hidden rounded-xl border border-slate-200 bg-white px-3 py-2 lg:block">
-								<button
-									type="button"
-									onClick={() => setTampilPintasan((x) => !x)}
-									className="flex w-full items-center gap-2 text-xs font-semibold text-slate-600"
-								>
-									<Keyboard className="h-4 w-4 text-slate-400" />
-									Pintasan keyboard
-									<ChevronDown className={`ml-auto h-3.5 w-3.5 transition-transform ${tampilPintasan ? 'rotate-180' : ''}`} />
-								</button>
-								{tampilPintasan && (
-									<div className="mt-2 flex flex-wrap gap-x-4 gap-y-1.5 text-[11px] text-slate-500">
-										{PINTASAN.map(([tombol, arti]) => (
-											<span key={arti} className="inline-flex items-center gap-1">
-												{tombol.map((t) => <Kbd key={t}>{t}</Kbd>)}
-												<span className="ml-0.5">{arti}</span>
-											</span>
-										))}
-									</div>
-								)}
+								<p className="text-sm text-slate-500 sm:truncate">
+									{a.jabatan} · {a.desas?.nama || '-'}, Kec. {a.desas?.kecamatans?.nama || '-'}
+								</p>
 							</div>
 						</div>
 					)}
-				</section>
 
-				{/* ---------- Berkas pembanding ---------- */}
-				{a && (
-					<div className="min-w-0 lg:col-start-2 xl:col-start-3 xl:row-start-1">
+					{a && (
+						<div className="ml-auto flex shrink-0 items-center gap-1 text-sm">
+							{onUbah && (
+								<button type="button" onClick={() => onUbah(a.id)} className="inline-flex h-9 items-center gap-1.5 rounded-lg px-2.5 font-medium text-slate-600 transition-colors hover:bg-slate-100 hover:text-slate-900">
+									<Pencil className="h-4 w-4" />
+									<span className="hidden sm:inline">Betulkan</span>
+								</button>
+							)}
+							<button type="button" onClick={() => navigate(`${detailBasePath}/${a.id}`)} className="inline-flex h-9 items-center gap-1.5 rounded-lg px-2.5 font-medium text-slate-600 transition-colors hover:bg-slate-100 hover:text-slate-900">
+								<Eye className="h-4 w-4" />
+								<span className="hidden sm:inline">Detail</span>
+							</button>
+							<span className="mx-1 h-5 w-px bg-slate-200" />
+							<TombolAlat title="Orang sebelumnya (←)" onClick={() => keOrang(-1)} disabled={indeksKini <= 0}>
+								<ChevronLeft className="h-4 w-4" />
+							</TombolAlat>
+							<span className="min-w-[3.25rem] text-center tabular-nums text-slate-600">
+								{fmt(indeksKini + 1)}/{fmt(meta.totalItems)}
+							</span>
+							<TombolAlat title="Orang berikutnya (→)" onClick={() => keOrang(1)}>
+								<ChevronRight className="h-4 w-4" />
+							</TombolAlat>
+						</div>
+					)}
+				</div>
+
+				{a && progres && (
+					<div className="border-t border-slate-100 px-4 py-2.5">
+						<div className="flex items-center gap-3">
+							<p className="shrink-0 text-sm font-medium tabular-nums text-slate-500">
+								{progres.diperiksa}/{progres.total}
+							</p>
+							<ol className="flex min-w-0 flex-1 gap-1 overflow-x-auto [scrollbar-width:thin] lg:flex-wrap lg:overflow-visible">
+								{daftarPeriksa.map((item, i) => {
+									const st = statusItem(a, item.key);
+									const aktif = item.key === aktifKey;
+									return (
+										<li key={item.key} data-status={st || undefined} ref={(el) => { simpul.current[item.key] = el; }} className="shrink-0">
+											<button
+												type="button"
+												onClick={() => {
+													setAktifKey(item.key);
+													if (menulis !== item.key) setMenulis(null);
+												}}
+												aria-current={aktif || undefined}
+												title={a.verifikasi_item?.[item.key]?.catatan || item.label}
+												className={`inline-flex h-8 items-center gap-1.5 whitespace-nowrap rounded-lg px-2.5 text-[13px] font-medium transition-colors ${
+													aktif
+														? 'bg-slate-900 text-white'
+														: st === 'tidak_sesuai'
+															? 'bg-rose-50 text-rose-700 hover:bg-rose-100'
+															: st === 'sesuai'
+																? 'text-emerald-700 hover:bg-emerald-50'
+																: 'text-slate-500 hover:bg-slate-100 hover:text-slate-900'
+												}`}
+											>
+												{st === 'sesuai' ? (
+													<CheckCircle2 className={`h-3.5 w-3.5 ${aktif ? 'text-emerald-300' : 'text-emerald-600'}`} />
+												) : st === 'tidak_sesuai' ? (
+													<XCircle className={`h-3.5 w-3.5 ${aktif ? 'text-rose-300' : 'text-rose-600'}`} />
+												) : (
+													<span className="text-xs tabular-nums opacity-60">{i + 1}</span>
+												)}
+												{item.label}
+											</button>
+										</li>
+									);
+								})}
+							</ol>
+							<div className="hidden shrink-0 lg:block">
+								<TombolAlat title="Pintasan keyboard (?)" onClick={() => setTampilPintasan((x) => !x)}>
+									<Keyboard className="h-4 w-4" />
+								</TombolAlat>
+							</div>
+						</div>
+
+						{tampilPintasan && (
+							<div className="mt-2 flex flex-wrap gap-x-4 gap-y-1.5 rounded-xl bg-slate-50 p-2.5 text-xs text-slate-500">
+								{PINTASAN.map(([tombol, arti]) => (
+									<span key={arti} className="inline-flex items-center gap-1">
+										{tombol.map((t) => <Kbd key={t}>{t}</Kbd>)}
+										<span className="ml-0.5">{arti}</span>
+									</span>
+								))}
+							</div>
+						)}
+					</div>
+				)}
+			</section>
+
+			{!a ? (
+				<section className="flex min-h-[20rem] flex-1 flex-col items-center justify-center rounded-2xl border border-slate-200 bg-white px-6 text-center">
+					{memuatDetail || memuatAntrean ? (
+						<Loader2 className="h-6 w-6 animate-spin text-slate-400" />
+					) : (
+						<>
+							<CheckCircle2 className="h-9 w-9 text-emerald-500" />
+							<p className="mt-3 text-base font-semibold text-slate-900">Tidak ada yang perlu diperiksa</p>
+							<p className="mt-1 text-sm text-slate-500">Antrean dengan saringan ini kosong.</p>
+							<button type="button" onClick={() => setBukaAntrean(true)} className="mt-4 rounded-xl border border-slate-200 px-3.5 py-2 text-sm font-semibold text-slate-800 hover:bg-slate-50">
+								Ubah saringan
+							</button>
+						</>
+					)}
+				</section>
+			) : (
+				<div className="grid min-h-0 flex-1 gap-3 xl:grid-cols-[minmax(0,5fr)_minmax(0,7fr)]">
+					{/* ---------- Satu pertanyaan: item ini benar atau tidak ---------- */}
+					<section className="flex min-w-0 flex-col rounded-2xl border border-slate-200 bg-white xl:h-full xl:overflow-hidden">
+						<div className={`min-h-0 flex-1 overflow-y-auto px-5 py-4 transition-opacity ${memuatDetail ? 'opacity-50' : ''}`}>
+							{urutanAktif >= 0 && (
+								<p className="text-xs font-medium text-slate-500">
+									Item {urutanAktif + 1} dari {daftarPeriksa.length}
+								</p>
+							)}
+							<h4 className="mt-0.5 text-lg font-semibold tracking-tight text-slate-900">{itemAktif?.label}</h4>
+
+							{isiAktif ? (
+								<dl className="mt-3 divide-y divide-slate-100 border-t border-slate-100">
+									{isiAktif.map(([label, nilai]) => (
+										<div key={label} className="grid grid-cols-[8.5rem_minmax(0,1fr)] gap-3 py-2.5 text-sm">
+											<dt className="text-slate-500">{label}</dt>
+											<dd className={`break-words font-medium ${nilai ? 'text-slate-900' : 'text-rose-600'}`}>{nilai || 'Kosong'}</dd>
+										</div>
+									))}
+								</dl>
+							) : (
+								<p className="mt-2 text-sm leading-relaxed text-slate-600">Lihat berkasnya, lalu putuskan apakah sudah benar dan terbaca.</p>
+							)}
+
+							{keputusanAktif?.status && keputusanAktif.oleh && (
+								<p className="mt-3 text-xs text-slate-400">
+									Diputuskan {keputusanAktif.oleh} · {formatWaktu(keputusanAktif.pada)}
+								</p>
+							)}
+
+							{itemDitolak.length > 0 && (
+								<div className="mt-4 rounded-xl bg-rose-50 px-3.5 py-3" data-catatan>
+									<p className="text-sm font-semibold text-rose-900">Catatan untuk desa ({itemDitolak.length})</p>
+									<ul className="mt-1 space-y-1 text-sm text-rose-800">
+										{itemDitolak.map((item) => (
+											<li key={item.key}>
+												<span className="font-medium">{item.label}:</span> {a.verifikasi_item?.[item.key]?.catatan || 'tidak sesuai'}
+											</li>
+										))}
+									</ul>
+								</div>
+							)}
+
+							{itemKurang.length > 0 && (
+								<div className="mt-4 rounded-xl bg-amber-50 px-3.5 py-3">
+									<p className="text-sm font-semibold text-amber-900">Belum dilengkapi desa ({itemKurang.length})</p>
+									<p className="mt-1 text-sm text-amber-900">{itemKurang.map((item) => item.label).join(', ')}</p>
+									<p className="mt-1 text-xs leading-relaxed text-amber-800">Tidak perlu diperiksa. Setelah item lain selesai, data otomatis dikembalikan ke desa.</p>
+								</div>
+							)}
+
+							{temuan.length > 0 && (
+								<div className="mt-4">
+									<button
+										type="button"
+										onClick={() => setTampilTemuan((x) => !x)}
+										aria-expanded={tampilTemuan}
+										className="flex w-full items-center gap-2 text-left text-sm font-semibold text-slate-700"
+									>
+										Perlu diperhatikan
+										<span className="rounded-full bg-amber-100 px-1.5 text-xs tabular-nums text-amber-800">{temuan.length}</span>
+										<ChevronDown className={`ml-auto h-4 w-4 text-slate-400 transition-transform ${tampilTemuan ? 'rotate-180' : ''}`} />
+									</button>
+									{tampilTemuan && (
+										<ul className="mt-2 space-y-2.5">
+											{temuan.map((t) => {
+												const nada = NADA_TEMUAN[t.nada];
+												return (
+													<li key={t.judul} className="flex items-start gap-2 text-sm">
+														<nada.ikon className={`mt-0.5 h-4 w-4 shrink-0 ${nada.warna}`} />
+														<div className="min-w-0 flex-1 text-slate-600">
+															<p className="font-medium text-slate-800">{t.judul}</p>
+															{t.teks && <p className="mt-0.5 whitespace-pre-line text-xs leading-relaxed">{t.teks}</p>}
+														</div>
+														{t.aksi === 'konfirmasi_tanggal' && onUbah && (
+															<button
+																type="button"
+																onClick={konfirmasiTanggalLahir}
+																disabled={Boolean(sibukKey)}
+																className="shrink-0 rounded-lg px-2 py-1 text-xs font-semibold text-slate-800 ring-1 ring-slate-300 hover:bg-slate-50 disabled:opacity-60"
+															>
+																{sibukKey === 'tanggal' ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : 'Sesuai KTP'}
+															</button>
+														)}
+													</li>
+												);
+											})}
+										</ul>
+									)}
+								</div>
+							)}
+						</div>
+
+						{/* Keputusan: selalu di tempat yang sama, apa pun item yang sedang diperiksa */}
+						<div className="sticky bottom-[5.5rem] z-10 shrink-0 rounded-b-2xl border-t border-slate-200 bg-white px-5 py-3 lg:bottom-0 xl:static">
+							{selesaiDiperiksa && (
+								<div
+									className={`mb-3 flex items-center gap-3 rounded-xl px-3.5 py-2.5 text-sm ${
+										a.status_verifikasi === 'terverifikasi' ? 'bg-emerald-50 text-emerald-900' : a.status_verifikasi === 'ditolak' ? 'bg-rose-50 text-rose-900' : 'bg-slate-100 text-slate-700'
+									}`}
+								>
+									<div className="min-w-0 flex-1">
+										<p className="font-semibold">
+											{a.status_verifikasi === 'terverifikasi' ? 'Data valid' : a.status_verifikasi === 'ditolak' ? 'Dikembalikan ke desa' : 'Semua item sudah diperiksa'}
+										</p>
+										<p className="truncate text-xs">
+											{a.status_verifikasi === 'terverifikasi'
+												? a.nipd
+													? `NIPD ${formatNipd(a.nipd)}`
+													: 'Jabatan ini tidak mendapat NIPD atau NIPD belum bisa terbit.'
+												: [progres.tidak_sesuai > 0 && `${progres.tidak_sesuai} tidak sesuai`, itemKurang.length > 0 && `${itemKurang.length} belum dilengkapi`].filter(Boolean).join(' · ')}
+										</p>
+									</div>
+									<button
+										type="button"
+										onClick={() => keOrang(1, { lewatiSelesai: saring.verifikasi === 'belum' })}
+										className="inline-flex shrink-0 items-center gap-1 rounded-lg bg-slate-900 px-3 py-2 text-xs font-semibold text-white hover:bg-slate-800"
+									>
+										Berikutnya
+										<ChevronRight className="h-3.5 w-3.5" />
+									</button>
+								</div>
+							)}
+
+							<AnimatePresence initial={false}>
+								{menulis === aktifKey && aktifKey && (
+									<motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
+										<div className="mb-3">
+											<p className="mb-1.5 text-sm font-medium text-slate-800">Apa yang perlu dibetulkan desa?</p>
+											{pilihanAlasan.length > 0 && (
+												<div className="mb-2 flex flex-wrap gap-1.5">
+													{pilihanAlasan.map((teks) => (
+														<button
+															key={teks}
+															type="button"
+															onClick={() => setAlasan(teks)}
+															className={`rounded-lg px-2.5 py-1 text-xs font-medium transition-colors ${alasan === teks ? 'bg-rose-600 text-white' : 'bg-slate-100 text-slate-700 hover:bg-slate-200'}`}
+														>
+															{teks}
+														</button>
+													))}
+												</div>
+											)}
+											<div className="flex gap-2">
+												<input
+													autoFocus
+													value={alasan}
+													onChange={(event) => setAlasan(event.target.value)}
+													onKeyDown={(event) => {
+														if (event.key === 'Enter' && alasan.trim()) putuskan(aktifKey, 'tidak_sesuai', alasan.trim());
+														if (event.key === 'Escape') setMenulis(null);
+													}}
+													placeholder="Tulis alasannya"
+													aria-label="Alasan untuk desa"
+													className="h-10 min-w-0 flex-1 rounded-lg border border-slate-300 bg-white px-3 text-sm text-slate-900 placeholder:text-slate-400 focus:border-rose-400 focus:outline-none focus:ring-2 focus:ring-rose-100"
+												/>
+												<button
+													type="button"
+													disabled={Boolean(sibukKey) || !alasan.trim()}
+													onClick={() => putuskan(aktifKey, 'tidak_sesuai', alasan.trim())}
+													className="shrink-0 rounded-lg bg-rose-600 px-4 text-sm font-semibold text-white transition-colors hover:bg-rose-700 disabled:opacity-50"
+												>
+													Simpan
+												</button>
+												<button type="button" onClick={() => setMenulis(null)} className="shrink-0 rounded-lg px-2 text-sm font-medium text-slate-500 hover:bg-slate-100">
+													Batal
+												</button>
+											</div>
+										</div>
+									</motion.div>
+								)}
+							</AnimatePresence>
+
+							<div className="grid grid-cols-2 gap-2.5">
+								<button
+									type="button"
+									disabled={Boolean(sibukKey) || !aktifKey}
+									onClick={() => tandaiSesuai(aktifKey)}
+									title={statusAktif === 'sesuai' ? 'Klik untuk membatalkan keputusan' : 'Tandai sesuai (S)'}
+									aria-pressed={statusAktif === 'sesuai'}
+									className={`inline-flex h-12 items-center justify-center gap-2 rounded-xl text-[15px] font-semibold transition-colors disabled:opacity-50 ${
+										statusAktif === 'tidak_sesuai' ? 'bg-white text-emerald-700 ring-1 ring-emerald-300 hover:bg-emerald-50' : 'bg-emerald-600 text-white hover:bg-emerald-700'
+									}`}
+								>
+									{sibukKey === aktifKey ? <Loader2 className="h-5 w-5 animate-spin" /> : <CheckCircle2 className="h-5 w-5" />}
+									{statusAktif === 'sesuai' ? 'Sudah sesuai' : 'Sesuai'}
+								</button>
+								<button
+									type="button"
+									disabled={Boolean(sibukKey) || !aktifKey}
+									onClick={() => mulaiTolak(aktifKey)}
+									title={statusAktif === 'tidak_sesuai' ? 'Klik untuk membatalkan keputusan' : 'Tandai tidak sesuai (T)'}
+									aria-pressed={statusAktif === 'tidak_sesuai'}
+									className={`inline-flex h-12 items-center justify-center gap-2 rounded-xl text-[15px] font-semibold transition-colors disabled:opacity-50 ${
+										statusAktif === 'tidak_sesuai' || menulis === aktifKey ? 'bg-rose-600 text-white hover:bg-rose-700' : 'bg-white text-rose-700 ring-1 ring-rose-300 hover:bg-rose-50'
+									}`}
+								>
+									<XCircle className="h-5 w-5" />
+									Tidak sesuai
+								</button>
+							</div>
+
+							<div className="mt-2.5 flex items-center justify-between gap-3 text-xs text-slate-500">
+								{sisaItem > 0 ? (
+									<button
+										type="button"
+										onClick={semuaSisaSesuai}
+										disabled={Boolean(sibukKey)}
+										title="Tandai semua item yang belum diputus sebagai sesuai (A)"
+										className="inline-flex items-center gap-1.5 font-medium hover:text-slate-900 disabled:opacity-50"
+									>
+										{sibukKey === 'semua' ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <ListChecks className="h-3.5 w-3.5" />}
+										Semua sisa sesuai ({sisaItem})
+									</button>
+								) : (
+									<span />
+								)}
+								<label className="inline-flex shrink-0 cursor-pointer items-center gap-1.5" title="Setelah semua item diputus, pindah sendiri ke orang berikutnya">
+									<input type="checkbox" checked={lanjutOtomatis} onChange={(event) => setLanjutOtomatis(event.target.checked)} className="peer sr-only" />
+									<span className="relative h-4 w-7 rounded-full bg-slate-300 transition-colors after:absolute after:left-0.5 after:top-0.5 after:h-3 after:w-3 after:rounded-full after:bg-white after:transition-transform peer-checked:bg-emerald-600 peer-checked:after:translate-x-3 peer-focus-visible:ring-2 peer-focus-visible:ring-slate-900/30" />
+									Lanjut otomatis
+								</label>
+							</div>
+						</div>
+					</section>
+
+					{/* ---------- Berkas pembanding ---------- */}
+					<div className="min-h-0 min-w-0 xl:h-full">
 						<PenampilBerkas
 							aparatur={a}
 							kunci={kunciBerkas}
 							pembanding={pembanding}
+							judulItem={itemAktif?.jenis === 'berkas' ? null : itemAktif?.label}
 							zoom={zoom}
 							putar={putar}
 							onPilih={(kunci) => {
@@ -4805,8 +4748,138 @@ const MejaVerifikasi = ({ refreshKey = 0, jenis, stats, saring, setSaring, detai
 							onPerbesar={() => setLayarPenuh(true)}
 						/>
 					</div>
+				</div>
+			)}
+
+			{/* ---------- Antrean & saringan: dibuka bila perlu, supaya meja tetap lapang ---------- */}
+			<AnimatePresence>
+				{bukaAntrean && (
+					<div className="fixed inset-0 z-[60]">
+						<motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="absolute inset-0 bg-slate-950/40" onClick={() => setBukaAntrean(false)} />
+						<motion.aside
+							initial={{ x: '-100%' }}
+							animate={{ x: 0 }}
+							exit={{ x: '-100%' }}
+							transition={{ type: 'tween', duration: 0.2 }}
+							role="dialog"
+							aria-label="Antrean verifikasi"
+							className="absolute inset-y-0 left-0 flex w-full max-w-md flex-col bg-white shadow-2xl"
+						>
+							<div className="flex shrink-0 items-center justify-between px-4 pb-2 pt-4">
+								<p className="text-lg font-semibold tracking-tight text-slate-900">Antrean</p>
+								<TombolAlat title="Tutup (Esc)" onClick={() => setBukaAntrean(false)}>
+									<X className="h-5 w-5" />
+								</TombolAlat>
+							</div>
+							<div className="shrink-0 space-y-2 border-b border-slate-100 px-4 pb-3">
+								<div className="grid grid-cols-4 gap-0.5 rounded-xl bg-slate-100 p-0.5">
+									{PILIHAN_ANTREAN.map((pilihan) => {
+										const aktif = (saring.verifikasi || '') === pilihan.value;
+										const jumlah = stats?.verifikasi?.[pilihan.kunciStat];
+										return (
+											<button
+												key={pilihan.label}
+												type="button"
+												onClick={() => ubahSaring('verifikasi', pilihan.value)}
+												aria-pressed={aktif}
+												className={`rounded-[10px] px-1 py-1.5 text-center text-xs font-medium transition-colors ${aktif ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-900'}`}
+											>
+												{pilihan.label}
+												{!adaSaringWilayah && jumlah !== undefined && <span className="block text-[11px] font-normal tabular-nums text-slate-400">{fmt(jumlah)}</span>}
+											</button>
+										);
+									})}
+								</div>
+								<div className="relative">
+									<Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+									<input
+										value={searchInput}
+										onChange={(event) => setSearchInput(event.target.value)}
+										placeholder="Cari nama atau jabatan"
+										aria-label="Cari nama atau jabatan"
+										className="h-10 w-full rounded-xl border border-slate-200 bg-white pl-9 pr-3 text-sm text-slate-900 placeholder:text-slate-400 focus:border-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-900/10"
+									/>
+								</div>
+								<div className="grid grid-cols-2 gap-2">
+									<SelectBox
+										multiple
+										size="sm"
+										value={saring.kecamatan_id}
+										onChange={(nilai) => ubahSaring('kecamatan_id', nilai)}
+										placeholder="Semua kecamatan"
+										emptyText="Kecamatan tidak ditemukan"
+										options={[{ value: '', label: 'Semua kecamatan' }, ...pilihanKecamatan]}
+									/>
+									<SelectBox
+										multiple
+										size="sm"
+										value={saring.desa_id}
+										onChange={(nilai) => ubahSaring('desa_id', nilai)}
+										disabled={!saring.kecamatan_id.length}
+										placeholder={saring.kecamatan_id.length ? 'Semua desa' : 'Pilih kecamatan dulu'}
+										emptyText="Desa tidak ditemukan"
+										options={[{ value: '', label: 'Semua desa' }, ...pilihanDesa]}
+									/>
+								</div>
+								{diputusSesi > 0 && <p className="text-xs font-medium text-emerald-700">{diputusSesi} orang tuntas sejak meja dibuka</p>}
+							</div>
+
+							<div className="min-h-0 flex-1 overflow-y-auto p-2 [scrollbar-width:thin]">
+								{memuatAntrean && !antrean.length ? (
+									<TableSkeleton rows={6} />
+								) : !antrean.length ? (
+									<div className="px-4 py-12 text-center">
+										<CheckCircle2 className="mx-auto h-8 w-8 text-emerald-500" />
+										<p className="mt-2 text-sm font-medium text-slate-800">Antrean kosong</p>
+										<p className="mt-1 text-xs text-slate-500">Tidak ada aparatur yang cocok dengan saringan ini.</p>
+									</div>
+								) : (
+									<ul className="space-y-0.5">
+										{antrean.map((b) => (
+											<li key={b.id} ref={(el) => { simpulAntrean.current[b.id] = el; }}>
+												<button
+													type="button"
+													onClick={() => {
+														setPilihId(b.id);
+														setBukaAntrean(false);
+													}}
+													aria-current={b.id === pilihId || undefined}
+													className={`flex w-full items-center gap-3 rounded-xl px-2.5 py-2.5 text-left transition-colors ${b.id === pilihId ? 'bg-slate-100' : 'hover:bg-slate-50'}`}
+												>
+													<Avatar person={b} className="h-9 w-9 text-xs" />
+													<span className="min-w-0 flex-1">
+														<span className="block truncate text-sm font-semibold text-slate-900">{b.nama_lengkap}</span>
+														<span className="block truncate text-xs text-slate-500">
+															{b.jabatan} · {b.desas?.nama || '-'}
+														</span>
+														<StatusAntrean aparatur={b} />
+													</span>
+													{!b.status_verifikasi && b.progres_verifikasi?.total > 0 && (
+														<span className="shrink-0 text-xs tabular-nums text-slate-400">
+															{b.progres_verifikasi.diperiksa}/{b.progres_verifikasi.total}
+														</span>
+													)}
+												</button>
+											</li>
+										))}
+									</ul>
+								)}
+								{meta.page < meta.totalPages && antrean.length > 0 && (
+									<button
+										type="button"
+										onClick={() => muatAntrean(meta.page + 1)}
+										disabled={memuatAntrean}
+										className="mt-1 flex w-full items-center justify-center gap-2 rounded-xl py-2.5 text-sm font-semibold text-slate-600 hover:bg-slate-50 disabled:opacity-60"
+									>
+										{memuatAntrean ? <Loader2 className="h-4 w-4 animate-spin" /> : <ChevronDown className="h-4 w-4" />}
+										Muat {Math.min(30, meta.totalItems - antrean.length)} berikutnya
+									</button>
+								)}
+							</div>
+						</motion.aside>
+					</div>
 				)}
-			</div>
+			</AnimatePresence>
 
 			{layarPenuh && kunciBerkas && a?.[kunciBerkas] && (
 				<PratinjauBerkas
@@ -5705,11 +5778,67 @@ const AparaturDesaPage = ({
 		setRefreshKey((key) => key + 1);
 	}, []);
 
+	const modeMeja = activeTab === 'verifikasi';
+	const navTab = tabs.length > 1 && (
+		<div className={modeMeja ? 'relative order-last flex w-full gap-1 overflow-x-auto rounded-xl bg-white/10 p-0.5 lg:order-none lg:w-auto lg:flex-1' : 'relative mt-5 flex gap-1 rounded-xl bg-white/10 p-1 ring-1 ring-white/10'}>
+			{tabs.map((tab) => {
+				const TabIcon = tab.icon || GraduationCap;
+				const isActive = activeTab === tab.id;
+				return (
+					<button
+						key={tab.id}
+						type="button"
+						onClick={() => setActiveTab(tab.id)}
+						className={`flex flex-1 items-center justify-center gap-2 whitespace-nowrap rounded-lg px-3 text-sm font-medium transition-colors ${modeMeja ? 'py-1.5' : 'py-2'} ${
+							isActive ? 'bg-white text-slate-900' : 'text-slate-400 hover:text-white'
+						}`}
+						title={tab.desc}
+					>
+						<TabIcon className="h-4 w-4" />
+						{tab.label}
+					</button>
+				);
+			})}
+		</div>
+	);
+
 	return (
-		<div className="min-h-screen bg-slate-50 p-4 pt-20 sm:p-6 lg:pt-6">
+		<div className={`min-h-screen bg-slate-50 pt-20 ${modeMeja ? 'p-3 lg:pt-3' : 'p-4 sm:p-6 lg:pt-6'}`}>
 			{/* Header */}
-			<header className="relative mb-5 overflow-hidden rounded-2xl bg-slate-950 p-5 sm:p-6">
+			<header className={`relative overflow-hidden rounded-2xl bg-slate-950 ${modeMeja ? 'mb-3 p-2' : 'mb-5 p-5 sm:p-6'}`}>
 				<div className="pointer-events-none absolute inset-0 bg-[radial-gradient(70%_120%_at_92%_0%,_rgba(185,28,28,0.22)_0%,_transparent_62%)]" />
+				{modeMeja ? (
+					<div className="relative flex flex-wrap items-center gap-2">
+						<h1 className="flex min-w-0 items-center gap-2 pl-1.5 text-sm font-semibold text-white">
+							<Users className="h-4 w-4 shrink-0 text-slate-400" />
+							<span className="truncate">{variant.title}</span>
+						</h1>
+						{navTab}
+						<div className="ml-auto flex items-center gap-1">
+							<button
+								type="button"
+								onClick={() => setRefreshKey((key) => key + 1)}
+								disabled={busy}
+								title="Refresh"
+								aria-label="Refresh"
+								className="flex h-8 w-8 items-center justify-center rounded-lg text-slate-300 transition-colors hover:bg-white/10 hover:text-white disabled:opacity-60"
+							>
+								<RefreshCw className={`h-4 w-4 ${busy ? 'animate-spin' : ''}`} />
+							</button>
+							{bolehKelola && (
+								<button
+									type="button"
+									onClick={() => bukaTambah(null)}
+									title={jenis === 'bpd' ? 'Tambah Anggota BPD' : jenis === 'perangkat' ? 'Tambah Perangkat Desa' : 'Tambah Aparatur'}
+									aria-label={jenis === 'bpd' ? 'Tambah Anggota BPD' : jenis === 'perangkat' ? 'Tambah Perangkat Desa' : 'Tambah Aparatur'}
+									className="flex h-8 w-8 items-center justify-center rounded-lg bg-white text-slate-900 transition-colors hover:bg-slate-200"
+								>
+									<Plus className="h-4 w-4" />
+								</button>
+							)}
+						</div>
+					</div>
+				) : (
 				<div className="relative flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
 					<div className="flex items-start gap-4">
 						<div
@@ -5761,28 +5890,9 @@ const AparaturDesaPage = ({
 					</div>
 				</div>
 
-				{tabs.length > 1 && (
-					<div className="relative mt-5 flex gap-1 rounded-xl bg-white/10 p-1 ring-1 ring-white/10">
-						{tabs.map((tab) => {
-							const TabIcon = tab.icon || GraduationCap;
-							const isActive = activeTab === tab.id;
-							return (
-								<button
-									key={tab.id}
-									type="button"
-									onClick={() => setActiveTab(tab.id)}
-									className={`flex flex-1 items-center justify-center gap-2 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
-										isActive ? 'bg-white text-slate-900' : 'text-slate-400 hover:text-white'
-									}`}
-									title={tab.desc}
-								>
-									<TabIcon className="h-4 w-4" />
-									{tab.label}
-								</button>
-							);
-						})}
-					</div>
 				)}
+
+				{!modeMeja && navTab}
 			</header>
 
 			{/* Capaian verifikasi berlaku untuk kedua mode baca, jadi berdiri di
