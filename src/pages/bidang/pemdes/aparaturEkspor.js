@@ -199,7 +199,7 @@ const bagianStatistik = (stats, pendidikan, { bpd, jabatan }) => {
 	const umum = [
 		['Total aparatur', stats.total, 100],
 		['Aktif', stats.aktif, persen(stats.aktif, total)],
-		['Tidak aktif', stats.tidak_aktif, persen(stats.tidak_aktif, total)],
+		['Tidak aktif (di luar hitungan)', stats.tidak_aktif, ''],
 		['Laki-laki', stats.laki_laki, persen(stats.laki_laki, total)],
 		['Perempuan', stats.perempuan, persen(stats.perempuan, total)],
 	];

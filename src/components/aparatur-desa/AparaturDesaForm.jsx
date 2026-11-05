@@ -491,7 +491,7 @@ const PasFoto = ({ control, existingFilename, nama }) => {
 			.toUpperCase() || null;
 
 	return (
-		<div className="flex flex-col items-center gap-3">
+		<div id="kolom-file_pas_foto" className="flex flex-col items-center gap-3">
 			<motion.div
 				{...getRootProps()}
 				whileHover={{ scale: 1.03 }}
@@ -568,6 +568,7 @@ const UbinBerkas = ({ control, name, label, existingFilename, icon: Icon, wajib 
 		<motion.div
 			layout
 			{...getRootProps()}
+			id={`kolom-${name}`}
 			whileHover={{ y: -2 }}
 			className={`group relative flex cursor-pointer items-center gap-3 rounded-2xl border p-3.5 transition-colors ${RUPA.kartu} ${
 				isDragActive ? "border-slate-900 bg-slate-50 ring-4 ring-slate-900/5" : "hover:border-slate-400"
@@ -675,6 +676,10 @@ const AparaturDesaForm = ({
 	onCancel,
 	// Navigasi seksi di samping — untuk tampilan lebar (panel layar penuh).
 	denganNavigasi = false,
+	// Hanya DPMD yang boleh mengubah status aktif/nonaktif dan data pemberhentian.
+	bolehUbahStatus = false,
+	// Nama kolom yang disorot saat datang dari tombol "Lengkapi".
+	sorotKolom = null,
 }) => {
 	const {
 		register,
@@ -728,6 +733,19 @@ const AparaturDesaForm = ({
 		});
 		reset(defaultValues);
 	}, [initialData, reset]);
+
+	// Datang dari tombol "Lengkapi" di halaman detail: langsung ke kolom yang kurang.
+	useEffect(() => {
+		if (!sorotKolom) return;
+		const el = document.getElementById(`kolom-${sorotKolom}`);
+		if (el) {
+			el.scrollIntoView({ behavior: "smooth", block: "center" });
+			el.classList.add("ring-2", "ring-amber-400", "rounded-2xl");
+		} else {
+			// Bukan setFocus: reset() di efek atas baru saja mengosongkan daftar kolom RHF.
+			document.getElementsByName(sorotKolom)[0]?.focus();
+		}
+	}, [sorotKolom]);
 
 	// Local lock to prevent rapid double submits even if parent onSubmit doesn't return a Promise
 	const [submitLock, setSubmitLock] = useState(false);
@@ -893,6 +911,7 @@ const AparaturDesaForm = ({
 							opsi={[["Laki-laki", "Laki-laki"], ["Perempuan", "Perempuan"]]}
 						/>
 					</Field>
+					{bolehUbahStatus && (
 					<Field label="Status" required error={errors.status?.message}>
 						<Segmen
 							control={control}
@@ -901,6 +920,7 @@ const AparaturDesaForm = ({
 							opsi={[["Aktif", "Aktif", "bg-emerald-600"], ["Tidak Aktif", "Tidak Aktif", "bg-rose-600"]]}
 						/>
 					</Field>
+					)}
 					<Field label="Pendidikan Terakhir" required error={errors.pendidikan_terakhir?.message}>
 						<KotakPilih daftar={register("pendidikan_terakhir")} galat={Boolean(errors.pendidikan_terakhir)}>
 							<option value="">Pilih pendidikan</option>
@@ -952,7 +972,7 @@ const AparaturDesaForm = ({
 
 				{/* Pengangkatan dan pemberhentian sebagai dua blok sejajar —
 				    pasangan nomor & tanggal SK dibaca bersama. */}
-				<div className="mt-5 grid gap-4 lg:grid-cols-2">
+				<div className={`mt-5 grid gap-4${bolehUbahStatus ? " lg:grid-cols-2" : ""}`}>
 					<div className="rounded-2xl border border-slate-200 bg-slate-50/60 p-4">
 						<p className="mb-3 flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-slate-500">
 							<span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
@@ -967,6 +987,7 @@ const AparaturDesaForm = ({
 							</Field>
 						</div>
 					</div>
+					{bolehUbahStatus && (
 					<div className="rounded-2xl border border-dashed border-slate-200 p-4">
 						<p className="mb-3 flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-slate-500">
 							<span className="h-1.5 w-1.5 rounded-full bg-rose-400" />
@@ -981,9 +1002,11 @@ const AparaturDesaForm = ({
 							</Field>
 						</div>
 					</div>
+					)}
 				</div>
 
 				<div className="mt-5 grid gap-4">
+					<div id="kolom-produk_hukum_id" className="transition-shadow">
 					<Field label="SK Pengangkatan dari Produk Hukum Desa" hint={`${(produkHukumList || []).length} dokumen tersedia`}>
 						<Controller
 							control={control}
@@ -993,6 +1016,7 @@ const AparaturDesaForm = ({
 							)}
 						/>
 					</Field>
+					</div>
 					<Field label="Keterangan" hint="opsional">
 						<textarea
 							{...register("keterangan")}

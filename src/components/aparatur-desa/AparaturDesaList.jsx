@@ -116,7 +116,7 @@ const AparaturDesaList = ({ aparatur = [] }) => {
 						Pemerintah Desa
 						<span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${
 							tab === "pemdes" ? "bg-slate-200 text-slate-700" : "bg-slate-100 text-slate-500"
-						}`}>{pemdes.length}</span>
+						}`}>{pemdes.filter((item) => (item.status || "").toLowerCase() === "aktif").length}</span>
 					</button>
 					<button
 						onClick={() => setTab("bpd")}
@@ -130,7 +130,7 @@ const AparaturDesaList = ({ aparatur = [] }) => {
 						BPD
 						<span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${
 							tab === "bpd" ? "bg-slate-200 text-slate-700" : "bg-slate-100 text-slate-500"
-						}`}>{bpd.length}</span>
+						}`}>{bpd.filter((item) => (item.status || "").toLowerCase() === "aktif").length}</span>
 					</button>
 				</div>
 

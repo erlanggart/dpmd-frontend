@@ -24,10 +24,6 @@ export const updateAparaturDesa = (id, data) => {
 	});
 };
 
-export const deleteAparaturDesa = (id) => {
-	return api.delete(`/desa/aparatur-desa/${id}`);
-};
-
 // Rekonsiliasi arsip Dapur Desa: daftar konflik + orang yang belum ada di data desa.
 export const getRekonsiliasiDapurDesa = () => {
 	return api.get("/desa/aparatur-desa/dapur-desa");

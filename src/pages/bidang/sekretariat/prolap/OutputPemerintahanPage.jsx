@@ -130,7 +130,7 @@ const OutputPemerintahanPage = () => {
 								icon={Users}
 								label="Aparatur Aktif"
 								value={fmt(ringkasan.aparatur_aktif)}
-								caption={`dari ${fmt(aparatur.total)} tercatat`}
+								caption={`dari ${fmt(aparatur.tercatat)} tercatat`}
 								tone={PRIMARY}
 							/>
 							<StatTile

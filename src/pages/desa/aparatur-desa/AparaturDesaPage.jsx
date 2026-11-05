@@ -137,7 +137,6 @@ const AparaturDesaPage = () => {
 				stats={
 					!isFormOpen && !loading && aparatur.length > 0
 						? [
-								{ label: "Total aparatur", value: aparatur.length, hint: "seluruh data terinput" },
 								{ label: "Aktif", value: totalAktif, hint: "sedang menjabat" },
 								{
 									label: "Nonaktif",

@@ -180,7 +180,7 @@ const DesaDashboardPage = () => {
 			id: "aparatur",
 			label: "Aparatur",
 			value: formatNumber(aparatur.total),
-			hint: `${formatNumber(aparatur.aktif)} aktif`,
+			hint: `${formatNumber(aparatur.nonaktif)} nonaktif`,
 		},
 		{
 			id: "kelembagaan",

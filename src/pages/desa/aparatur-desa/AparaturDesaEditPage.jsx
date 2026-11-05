@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import toast from "react-hot-toast";
 import AparaturDesaForm from "../../../components/aparatur-desa/AparaturDesaForm";
 import {
@@ -10,6 +10,7 @@ import {
 
 const AparaturDesaEditPage = () => {
 	const { id } = useParams();
+	const [searchParams] = useSearchParams();
 	const nav = useNavigate();
 	const [initialData, setInitialData] = useState(null);
 	const [produkHukum, setProdukHukum] = useState([]);
@@ -148,6 +149,7 @@ const AparaturDesaEditPage = () => {
 				</div>
 			)}
 			<AparaturDesaForm
+				sorotKolom={searchParams.get("lengkapi")}
 				onSubmit={handleSubmit}
 				initialData={initialData}
 				produkHukumList={produkHukum}

@@ -1268,6 +1268,7 @@ const PanelIsianAparatur = ({ desa: desaAwal, aparatur, onTutup, onTersimpan }) 
 											<AparaturDesaForm
 												// Ganti desa = formulir baru; isian desa sebelumnya tidak terbawa.
 												key={desaTujuanId}
+												bolehUbahStatus
 												onSubmit={simpan}
 												initialData={aparatur || null}
 												produkHukumList={produkHukum}
@@ -2256,7 +2257,7 @@ const useDesaKecamatan = (idKecamatan, kecamatanList) => {
 const namaWilayahTunggal = (ids, opsi) =>
 	ids.length === 1 ? opsi.find((o) => String(o.value) === String(ids[0]))?.label || '' : '';
 
-const EMPTY_FILTERS = { search: '', kecamatan_id: [], desa_id: [], jabatan: '', jenis_kelamin: '', status: '', pendidikan: '', verifikasi: '' };
+const EMPTY_FILTERS = { search: '', kecamatan_id: [], desa_id: [], jabatan: '', jenis_kelamin: '', status: 'Aktif', pendidikan: '', verifikasi: '' };
 const LABEL_SARING_VERIFIKASI = { belum: 'Belum diverifikasi', terverifikasi: 'Terverifikasi', ditolak: 'Dikembalikan ke desa' };
 
 // ============================================================
@@ -2613,14 +2614,12 @@ const RingkasanAparatur = ({ jenis, stats: statsKabupaten, statsLoading: loading
 										</>
 									)}
 									<StatCard
-										label="Aparatur Aktif"
-										value={fmt(stats.aktif)}
-										hint={`${fmt(stats.tidak_aktif)} tidak aktif`}
-										icon={CheckCircle2}
-										iconClass="bg-emerald-50 text-emerald-600"
-										share={pct(stats.aktif, total)}
-										barClass="bg-emerald-500"
-										onClick={onBuka && (() => onBuka({ status: 'Aktif' }, 'Aparatur aktif'))}
+										label="Tidak Aktif"
+										value={fmt(stats.tidak_aktif)}
+										hint="Tidak ikut dihitung"
+										icon={XCircle}
+										iconClass="bg-slate-100 text-slate-500"
+										onClick={onBuka && (() => onBuka({ status: 'Tidak_Aktif' }, 'Aparatur tidak aktif'))}
 									/>
 								</div>
 
@@ -3212,8 +3211,9 @@ const DatabaseTab = ({ refreshKey = 0, jenis, stats, statsLoading, detailBasePat
 		[kecamatanList, pilihanDesa, pendidikanFilterOptions]
 	);
 
+	// Status 'Aktif' adalah bawaan tabel, bukan filter yang dipilih pengguna.
 	const activeFilters = useMemo(
-		() => Object.entries(filters).filter(([, value]) => terisi(value)),
+		() => Object.entries(filters).filter(([key, value]) => terisi(value) && !(key === 'status' && value === 'Aktif')),
 		[filters]
 	);
 
@@ -3229,7 +3229,7 @@ const DatabaseTab = ({ refreshKey = 0, jenis, stats, statsLoading, detailBasePat
 			params: keParamSemua(filters),
 			jenis,
 			format,
-			penyaring: activeFilters.map(([key, value]) => labelFor(key, value)),
+			penyaring: Object.entries(filters).filter(([, value]) => terisi(value)).map(([key, value]) => labelFor(key, value)),
 			wilayah: namaWilayahTunggal(filters.desa_id, pilihanDesa) || namaWilayahTunggal(filters.kecamatan_id, kecamatanList.map((k) => ({ value: String(k.id || k.id_kecamatan), label: k.nama || k.name }))),
 		});
 
@@ -4227,6 +4227,7 @@ const MejaVerifikasi = ({ refreshKey = 0, jenis, stats, saring, setSaring, detai
 			try {
 				const params = new URLSearchParams(keParamSemua(saring));
 				if (jenis) params.append('jenis', jenis);
+				params.set('status', 'Aktif');
 				params.append('page', page);
 				params.append('limit', 30);
 				const response = await api.get(`/pemdes/aparatur-desa?${params.toString()}`);
@@ -5060,10 +5061,10 @@ const WilayahTab = ({ refreshKey = 0, jenis, detailBasePath, onLoadingChange, on
 	// Angka kabupaten dihitung dari data mentah — tidak ikut berubah oleh saringan.
 	const ringkasan = useMemo(() => {
 		const semuaDesa = data.flatMap((kecamatan) => kecamatan.desa);
-		const orang = semuaDesa.reduce((total, desa) => total + desa.total, 0);
+		const orang = semuaDesa.reduce((total, desa) => total + desa.aktif, 0);
 		const terverifikasi = semuaDesa.reduce((total, desa) => total + (desa.terverifikasi || 0), 0);
-		const terisi = semuaDesa.filter((desa) => desa.total > 0).length;
-		const tanpaPimpinan = semuaDesa.filter((desa) => desa.total > 0 && !pimpinanDesa(desa, jenis)).length;
+		const terisi = semuaDesa.filter((desa) => desa.aktif > 0).length;
+		const tanpaPimpinan = semuaDesa.filter((desa) => desa.aktif > 0 && !pimpinanDesa(desa, jenis)).length;
 		return { desa: semuaDesa.length, terisi, kosong: semuaDesa.length - terisi, orang, terverifikasi, tanpaPimpinan };
 	}, [data, jenis]);
 
@@ -5681,7 +5682,8 @@ const AparaturDesaPage = ({
 
 	// Pop-up data di balik grafik: { filter, judul }.
 	const [popup, setPopup] = useState(null);
-	const bukaPopup = useCallback((filter, judul) => setPopup({ filter, judul }), []);
+	// Rincian di balik angka harus memakai populasi yang sama dengan angkanya (hanya Aktif).
+	const bukaPopup = useCallback((filter, judul) => setPopup({ filter: { status: 'Aktif', ...filter }, judul }), []);
 	const tutupPopup = useCallback(() => setPopup(null), []);
 	const bukaTambah = useCallback((desa) => setPanel({ desa: desa || null }), []);
 	// Baris per wilayah hanya membawa kolom ringkas; formulir butuh baris utuh
