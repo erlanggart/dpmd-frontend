@@ -464,7 +464,8 @@ const PengurusEditPage = () => {
 			let detailMessage = errorMessage;
 			
 			if (statusCode === 400) {
-				detailMessage = "Data yang Anda masukkan tidak valid. Periksa kembali formulir.";
+				// Server selalu menyebut kolom yang salah (mis. tahun tanggal di luar rentang) — jangan ditutup pesan umum.
+				detailMessage = error?.response?.data?.message || "Data yang Anda masukkan tidak valid. Periksa kembali formulir.";
 			} else if (statusCode === 403) {
 				// 403 punya banyak sumber (izin fitur desa, desa_id, IP diblokir, WAF) — tampilkan alasan dari server.
 				detailMessage = error?.response?.data?.message || "Anda tidak memiliki izin untuk mengubah data ini.";

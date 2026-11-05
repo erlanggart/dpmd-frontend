@@ -6,6 +6,7 @@ import {
   LuTrendingUp,
   LuUserCheck,
   LuMapPin,
+  LuBuilding2,
   LuLoader,
   LuShieldCheck,
   LuTriangleAlert,
@@ -16,18 +17,22 @@ import useStatistikTahunan from "../../../hooks/useStatistikTahunan";
 import TrenVerifikasiHarian from "../../../components/kelembagaan/capaian/TrenVerifikasiHarian";
 import AktivitasVerifikator from "../../../components/kelembagaan/capaian/AktivitasVerifikator";
 import CapaianPerDesa from "../../../components/kelembagaan/capaian/CapaianPerDesa";
+import CapaianPerKecamatan from "../../../components/kelembagaan/capaian/CapaianPerKecamatan";
 import PermasalahanDesa from "../../../components/kelembagaan/capaian/PermasalahanDesa";
 import CapaianDataMasuk from "../../../components/kelembagaan/capaian/CapaianDataMasuk";
 import TombolEkspor from "../../../components/shared/TombolEkspor";
-import { WARNA_LEMBAGA, persen } from "../../../components/kelembagaan/capaian/warnaLembaga";
+import BarCapaian from "../../../components/kelembagaan/capaian/BarCapaian";
+import ToggleMode from "../../../components/kelembagaan/capaian/ToggleMode";
+import { MODE, WARNA_LEMBAGA, angkaCapaian, persen } from "../../../components/kelembagaan/capaian/warnaLembaga";
 
 const TABS = [
   { key: "lembaga", label: "Capaian per Lembaga", icon: LuChartBar },
-  { key: "tren", label: "Tren Harian", icon: LuTrendingUp },
-  { key: "verifikator", label: "Aktivitas Verifikator", icon: LuUserCheck },
+  { key: "kecamatan", label: "Capaian per Kecamatan", icon: LuBuilding2 },
   { key: "desa", label: "Capaian per Desa", icon: LuMapPin },
-  { key: "permasalahan", label: "Permasalahan Desa", icon: LuTriangleAlert },
+  { key: "tren", label: "Tren Harian", icon: LuTrendingUp },
   { key: "data-masuk", label: "Capaian Data Masuk", icon: LuDatabase },
+  { key: "permasalahan", label: "Permasalahan Desa", icon: LuTriangleAlert },
+  { key: "verifikator", label: "Aktivitas Verifikator", icon: LuUserCheck },
 ];
 
 const KartuAngka = ({ label, nilai, keterangan, kelas = "text-slate-900" }) => (
@@ -49,12 +54,12 @@ const Galat = ({ teks }) => (
   <div className="bg-red-50 border border-red-200 rounded-xl p-6 text-center text-sm text-red-600">{teks}</div>
 );
 
-// Jumlah desa yang lembaganya (seluruhnya atau satu jenis) sudah terverifikasi semua
-const hitungDesaTuntas = (desa, key) => {
+// Jumlah desa yang datanya (seluruhnya atau satu jenis lembaga) sudah terverifikasi semua
+const hitungDesaTuntas = (desa, key, mode = "lembaga") => {
   let punya = 0;
   let tuntas = 0;
   desa.forEach((d) => {
-    const { verified, total } = key ? d.lembaga[key] : d;
+    const { verified, total } = angkaCapaian(d, mode, key);
     if (total > 0) {
       punya++;
       if (verified === total) tuntas++;
@@ -63,37 +68,78 @@ const hitungDesaTuntas = (desa, key) => {
   return { punya, tuntas };
 };
 
-const CapaianPerLembaga = ({ statistik, perDesa }) => {
-  const keys = Object.keys(WARNA_LEMBAGA);
-  const { per_lembaga, grand_totals } = statistik;
-  const tuntasTotal = perDesa ? hitungDesaTuntas(perDesa.desa) : null;
+// Total pengurus aktif per jenis lembaga, dijumlahkan dari data per desa: statistik
+// tahunan hanya menghitung lembaga, bukan pengurusnya.
+const totalPengurus = (desa, key) =>
+  desa.reduce(
+    (a, d) => {
+      const v = angkaCapaian(d, "pengurus", key);
+      a.total += v.total;
+      a.verified += v.verified;
+      a.ditolak += v.ditolak;
+      return a;
+    },
+    { total: 0, verified: 0, ditolak: 0 }
+  );
 
-  // Baris "Total" di tabel tidak diikutkan ke berkas: di Excel baris jumlah
-  // yang ikut tersaring atau terurut justru merusak hitungan penerimanya.
-  const barisEkspor = keys.map((key) => {
-    const t = per_lembaga[key]?.totals || {};
-    const tuntas = perDesa ? hitungDesaTuntas(perDesa.desa, key) : null;
+const CapaianPerLembaga = ({ statistik, perDesa }) => {
+  const [mode, setMode] = useState("lembaga");
+  const keys = Object.keys(WARNA_LEMBAGA);
+  const { per_lembaga } = statistik;
+  const pengurus = mode === "pengurus";
+  const satuan = MODE[mode].satuan;
+  const siap = !pengurus || !!perDesa;
+
+  // Satu bentuk baris untuk tabel sekaligus ekspor: angka lembaga dari statistik
+  // tahunan, angka pengurus dijumlahkan dari capaian per desa.
+  const baris = keys.map((key) => {
+    const t = pengurus ? totalPengurus(perDesa?.desa || [], key) : per_lembaga[key]?.totals || {};
+    const total = t.total || 0;
+    const verified = t.verified || 0;
+    const ditolak = t.ditolak || 0;
+    const tuntas = perDesa ? hitungDesaTuntas(perDesa.desa, key, mode) : null;
     return {
+      key,
       label: per_lembaga[key]?.label || key,
-      total: t.total || 0,
-      verified: t.verified || 0,
-      unverified: t.unverified || 0,
-      ditolak: t.ditolak || 0,
-      persen: persen(t.verified || 0, t.total || 0),
+      total,
+      verified,
+      unverified: pengurus ? total - verified - ditolak : t.unverified || 0,
+      ditolak,
+      persen: persen(verified, total),
       tuntas: tuntas?.tuntas ?? "",
       punya: tuntas?.punya ?? "",
     };
   });
 
+  const grand = pengurus
+    ? (() => {
+        const g = baris.reduce(
+          (a, b) => {
+            a.total += b.total;
+            a.verified += b.verified;
+            a.unverified += b.unverified;
+            a.ditolak += b.ditolak;
+            return a;
+          },
+          { total: 0, verified: 0, unverified: 0, ditolak: 0 }
+        );
+        return { ...g, persentase_verifikasi: persen(g.verified, g.total) };
+      })()
+    : statistik.grand_totals;
+
+  const tuntasTotal = perDesa ? hitungDesaTuntas(perDesa.desa, null, mode) : null;
+
+  // Baris "Total" di tabel tidak diikutkan ke berkas: di Excel baris jumlah
+  // yang ikut tersaring atau terurut justru merusak hitungan penerimanya.
   const kolomEkspor = [
-    { label: "Lembaga", nilai: (b) => b.label },
+    { label: MODE[mode].label, nilai: (b) => b.label },
     { label: "Total", nilai: (b) => b.total },
     { label: "Terverifikasi", nilai: (b) => b.verified },
     { label: "Belum", nilai: (b) => b.unverified },
     { label: "Ditolak", nilai: (b) => b.ditolak },
     { label: "Capaian (%)", nilai: (b) => b.persen },
     { label: "Desa Tuntas", nilai: (b) => b.tuntas },
-    { label: "Desa Punya Lembaga", nilai: (b) => b.punya },
+    { label: "Desa Ada Data", nilai: (b) => b.punya },
   ];
 
   return (
@@ -102,85 +148,94 @@ const CapaianPerLembaga = ({ statistik, perDesa }) => {
         <div>
           <h3 className="text-lg font-bold text-slate-900">Capaian Verifikasi per Lembaga</h3>
           <p className="text-sm text-slate-500">
-            Rincian status verifikasi tiap jenis lembaga dan jumlah desa yang lembaganya sudah terverifikasi semua
+            Rincian status verifikasi {satuan} tiap jenis lembaga dan jumlah desa yang sudah terverifikasi semua
           </p>
         </div>
-        <TombolEkspor
-          kolom={kolomEkspor}
-          baris={barisEkspor}
-          namaBerkas="capaian-verifikasi-per-lembaga"
-          judul="Capaian Verifikasi per Lembaga"
-          subjudul={`Total ${grand_totals.total.toLocaleString("id-ID")} lembaga · ${grand_totals.persentase_verifikasi}% terverifikasi`}
-          keterangan={false}
-        />
+        <div className="flex flex-wrap items-center gap-2">
+          <ToggleMode mode={mode} onChange={setMode} />
+          <TombolEkspor
+            kolom={kolomEkspor}
+            baris={baris}
+            namaBerkas={`capaian-verifikasi-${mode}-per-lembaga`}
+            judul={`Capaian Verifikasi ${MODE[mode].label} per Lembaga`}
+            subjudul={`Total ${grand.total.toLocaleString("id-ID")} ${satuan} · ${grand.persentase_verifikasi}% terverifikasi`}
+            keterangan={false}
+          />
+        </div>
       </div>
-      <div className="overflow-x-auto">
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="text-xs text-slate-500 border-b border-slate-200">
-              <th className="text-left font-medium py-2 pr-3">Lembaga</th>
-              <th className="text-right font-medium py-2 px-2">Total</th>
-              <th className="text-right font-medium py-2 px-2">Terverifikasi</th>
-              <th className="text-right font-medium py-2 px-2">Belum</th>
-              <th className="text-right font-medium py-2 px-2">Ditolak</th>
-              <th className="text-left font-medium py-2 px-3 min-w-[200px]">Capaian</th>
-              <th className="text-right font-medium py-2 pl-2">Desa tuntas</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-slate-100">
-            {keys.map((key) => {
-              const t = per_lembaga[key]?.totals || {};
-              const pct = persen(t.verified || 0, t.total || 0);
-              const tuntas = perDesa ? hitungDesaTuntas(perDesa.desa, key) : null;
-              return (
-                <tr key={key}>
+      {!siap ? (
+        <Memuat teks="Memuat capaian pengurus..." />
+      ) : (
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="text-xs text-slate-500 border-b border-slate-200">
+                <th className="text-left font-medium py-2 pr-3">Lembaga</th>
+                <th className="text-right font-medium py-2 px-2">Total</th>
+                <th className="text-right font-medium py-2 px-2">Terverifikasi</th>
+                <th className="text-right font-medium py-2 px-2">Belum</th>
+                <th className="text-right font-medium py-2 px-2">Ditolak</th>
+                <th className="text-left font-medium py-2 px-3 min-w-[200px]">Capaian</th>
+                <th className="text-right font-medium py-2 pl-2">Desa tuntas</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100">
+              {baris.map((b) => (
+                <tr key={b.key}>
                   <td className="py-3 pr-3 font-medium text-slate-800">
-                    <span className="inline-block w-2.5 h-2.5 rounded-full mr-2" style={{ backgroundColor: WARNA_LEMBAGA[key] }} />
-                    {per_lembaga[key]?.label || key}
+                    <span
+                      className="inline-block w-2.5 h-2.5 rounded-full mr-2"
+                      style={{ backgroundColor: WARNA_LEMBAGA[b.key] }}
+                    />
+                    {b.label}
                   </td>
-                  <td className="py-3 px-2 text-right">{(t.total || 0).toLocaleString("id-ID")}</td>
-                  <td className="py-3 px-2 text-right font-semibold text-green-700">{(t.verified || 0).toLocaleString("id-ID")}</td>
-                  <td className="py-3 px-2 text-right text-amber-700">{(t.unverified || 0).toLocaleString("id-ID")}</td>
-                  <td className="py-3 px-2 text-right text-red-600">{(t.ditolak || 0).toLocaleString("id-ID")}</td>
+                  <td className="py-3 px-2 text-right">{b.total.toLocaleString("id-ID")}</td>
+                  <td className="py-3 px-2 text-right font-semibold text-green-700">
+                    {b.verified.toLocaleString("id-ID")}
+                  </td>
+                  <td className="py-3 px-2 text-right text-amber-700">{b.unverified.toLocaleString("id-ID")}</td>
+                  <td className="py-3 px-2 text-right text-red-600">{b.ditolak.toLocaleString("id-ID")}</td>
                   <td className="py-3 px-3">
                     <div className="flex items-center gap-2">
-                      <div className="flex-1 bg-slate-100 rounded-full h-2.5 overflow-hidden">
-                        <div className="h-full rounded-full" style={{ width: `${pct}%`, backgroundColor: WARNA_LEMBAGA[key] }} />
-                      </div>
-                      <span className="w-10 text-right text-xs font-semibold" style={{ color: WARNA_LEMBAGA[key] }}>
-                        {pct}%
+                      <BarCapaian persen={b.persen} warna={WARNA_LEMBAGA[b.key]} />
+                      <span
+                        className="w-10 text-right text-xs font-semibold"
+                        style={{ color: WARNA_LEMBAGA[b.key] }}
+                      >
+                        {b.persen}%
                       </span>
                     </div>
                   </td>
                   <td className="py-3 pl-2 text-right text-slate-700">
-                    {tuntas ? `${tuntas.tuntas} / ${tuntas.punya}` : "-"}
+                    {b.tuntas === "" ? "-" : `${b.tuntas} / ${b.punya}`}
                   </td>
                 </tr>
-              );
-            })}
-            <tr className="border-t-2 border-slate-200 font-bold text-slate-900">
-              <td className="py-3 pr-3">Total</td>
-              <td className="py-3 px-2 text-right">{grand_totals.total.toLocaleString("id-ID")}</td>
-              <td className="py-3 px-2 text-right text-green-700">{grand_totals.verified.toLocaleString("id-ID")}</td>
-              <td className="py-3 px-2 text-right text-amber-700">{grand_totals.unverified.toLocaleString("id-ID")}</td>
-              <td className="py-3 px-2 text-right text-red-600">{grand_totals.ditolak.toLocaleString("id-ID")}</td>
-              <td className="py-3 px-3">
-                <div className="flex items-center gap-2">
-                  <div className="flex-1 bg-slate-100 rounded-full h-2.5 overflow-hidden">
-                    <div className="h-full rounded-full bg-slate-700" style={{ width: `${grand_totals.persentase_verifikasi}%` }} />
+              ))}
+              <tr className="border-t-2 border-slate-200 font-bold text-slate-900">
+                <td className="py-3 pr-3">Total</td>
+                <td className="py-3 px-2 text-right">{grand.total.toLocaleString("id-ID")}</td>
+                <td className="py-3 px-2 text-right text-green-700">{grand.verified.toLocaleString("id-ID")}</td>
+                <td className="py-3 px-2 text-right text-amber-700">{grand.unverified.toLocaleString("id-ID")}</td>
+                <td className="py-3 px-2 text-right text-red-600">{grand.ditolak.toLocaleString("id-ID")}</td>
+                <td className="py-3 px-3">
+                  <div className="flex items-center gap-2">
+                    <BarCapaian persen={grand.persentase_verifikasi} warna="#334155" />
+                    <span className="w-10 text-right text-xs">{grand.persentase_verifikasi}%</span>
                   </div>
-                  <span className="w-10 text-right text-xs">{grand_totals.persentase_verifikasi}%</span>
-                </div>
-              </td>
-              <td className="py-3 pl-2 text-right">
-                {tuntasTotal ? `${tuntasTotal.tuntas} / ${tuntasTotal.punya}` : "-"}
-              </td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
+                </td>
+                <td className="py-3 pl-2 text-right">
+                  {tuntasTotal ? `${tuntasTotal.tuntas} / ${tuntasTotal.punya}` : "-"}
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      )}
       <p className="text-xs text-slate-400 mt-3">
-        Desa tuntas = desa yang punya lembaga jenis tersebut dan semuanya sudah terverifikasi.
+        Desa tuntas = desa yang punya {satuan} jenis tersebut dan semuanya sudah terverifikasi.
+        {pengurus
+          ? " Mode Pengurus hanya menghitung pengurus berstatus aktif pada lembaga aktif."
+          : " Angka lembaga mencakup lembaga aktif maupun nonaktif, sesuai statistik tahunan."}
       </p>
     </div>
   );
@@ -283,6 +338,15 @@ const CapaianVerifikasiPage = () => {
           <Galat teks={statistikError || "Data tidak tersedia"} />
         ) : (
           <CapaianPerLembaga statistik={statistik} perDesa={perDesa} />
+        ))}
+
+      {tab === "kecamatan" &&
+        (perDesaError ? (
+          <Galat teks={perDesaError} />
+        ) : !perDesa ? (
+          <Memuat teks="Memuat capaian per kecamatan..." />
+        ) : (
+          <CapaianPerKecamatan data={perDesa} />
         ))}
 
       {tab === "tren" && <TrenVerifikasiHarian />}
