@@ -68,6 +68,7 @@ import { klakson, suara } from "./suaraPancing";
 import { FASILITAS_TOKO } from "./scene/layout";
 import Joystick from "./ui/Joystick";
 import LayarAwal from "./ui/LayarAwal";
+import LayarMemuat from "./ui/LayarMemuat";
 import Denah2D from "./ui/Denah2D";
 import PetaKecamatan from "./ui/PetaKecamatan";
 import { jumlahPerhatian } from "./bangunWilayah";
@@ -136,15 +137,6 @@ class PenjagaScene extends Component {
 	}
 }
 
-function Memuat() {
-	return (
-		<div className="absolute inset-0 flex flex-col items-center justify-center gap-4 bg-[rgb(var(--color-primary))] text-white">
-			<div className="h-12 w-12 animate-spin rounded-full border-4 border-white/20 border-t-[rgb(var(--color-secondary))]" />
-			<p className="text-sm text-white/80">Menyiapkan kantor…</p>
-		</div>
-	);
-}
-
 function TombolIkon({ label, aktif, onClick, children }) {
 	return (
 		<button
@@ -200,6 +192,8 @@ export default function JelajahPage() {
 	const [panel, setPanel] = useState(null);
 	// dunia kecamatan yang sedang dikunjungi (dunia terpisah dari kantor DPMD)
 	const [dunia, setDunia] = useState(null);
+	// bingkai pertama kantor sudah tergambar
+	const [siap3D, setSiap3D] = useState(false);
 	const posisiKantor = useRef(null);
 	const [menu, setMenu] = useState(null);
 	// kas BUMDes & hasil panen yang menunggu, dihitung ulang tiap menu/dunia berganti
@@ -621,8 +615,8 @@ export default function JelajahPage() {
 				? { id: dekat, label: aksiGerak[0], tombol: aksiGerak[1], warna: aksiGerak[2] }
 				: null;
 	const berkendara = ["mobil", "motor", "perahu", "penumpang"].includes(modeMain);
-	const tipJalan = useTutorial("jalan", mode === "3d" && !dunia && !jeda && area === "luar" && !berkendara && modeMain !== "mancing" && !sasaran);
-	const tipKendara = useTutorial(`kendara:${modeMain}`, mode === "3d" && !dunia && !jeda && berkendara);
+	const tipJalan = useTutorial("jalan", mode === "3d" && siap3D && !dunia && !jeda && area === "luar" && !berkendara && modeMain !== "mancing" && !sasaran);
+	const tipKendara = useTutorial(`kendara:${modeMain}`, mode === "3d" && siap3D && !dunia && !jeda && berkendara);
 	const petunjukKendara = {
 		mobil: "W/S gas & mundur · A/D belok · Shift turbo · H klakson · E keluar",
 		motor: "W/S gas & mundur · A/D belok · Shift turbo · Spasi lompat · H klakson · E turun",
@@ -654,7 +648,7 @@ export default function JelajahPage() {
 			)}
 
 			{mode === "3d" && dunia && (
-				<Suspense fallback={<Memuat />}>
+				<Suspense fallback={<LayarMemuat />}>
 					<DuniaWilayah
 						key={dunia.kecamatan}
 						wilayah={dunia}
@@ -678,10 +672,12 @@ export default function JelajahPage() {
 							setMode("2d");
 						}}
 					>
-						<Suspense fallback={<Memuat />}>
-							<KantorScene statistik={statistik} dikunjungi={dikunjungi} jeda={jeda} penghuni={penghuni} penampilan={penampilan} />
+						<Suspense fallback={null}>
+							<KantorScene statistik={statistik} dikunjungi={dikunjungi} jeda={jeda} penghuni={penghuni} penampilan={penampilan} onSiap={setSiap3D} />
 						</Suspense>
 					</PenjagaScene>
+					{/* jeda menghentikan loop render, penanda siap tak akan datang: jangan tutupi panelnya */}
+					<LayarMemuat selesai={siap3D || jeda} />
 
 					{/* --- HUD atas: di HP ringkas (kembali, lokasi, progres, menu) --- */}
 					<div className={`pointer-events-none absolute inset-x-0 top-0 flex items-start justify-between gap-2 px-3 pb-3 sm:px-4 ${sentuh ? "pt-[max(0.75rem,env(safe-area-inset-top))]" : "pt-[max(2rem,env(safe-area-inset-top))]"}`}>

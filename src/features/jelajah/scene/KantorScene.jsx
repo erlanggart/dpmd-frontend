@@ -1,4 +1,4 @@
-import { useRef } from "react";
+import { useEffect, useRef } from "react";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import Fasad from "./Fasad";
 import Gedung, { GrupLantai } from "./Gedung";
@@ -47,11 +47,23 @@ function KualitasOtomatis() {
 	return null;
 }
 
+// useFrame jalan sebelum render, jadi panggilan ke-2 berarti render pertama (termasuk
+// kompilasi shader) sudah selesai dan adegan benar-benar terlihat.
+function PenandaSiap({ onSiap }) {
+	const n = useRef(0);
+	useFrame(() => {
+		if (++n.current === 2) onSiap(true);
+	});
+	return null;
+}
+
 // Seluruh adegan 3D. Berkas ini (beserta three.js) hanya dimuat saat pengunjung
 // membuka /jelajah, jadi landing page biasa tidak ikut menanggung bobotnya.
-export default function KantorScene({ statistik, dikunjungi, jeda, penghuni, penampilan }) {
+export default function KantorScene({ statistik, dikunjungi, jeda, penghuni, penampilan, onSiap }) {
 	// Dinding per lantai yang bisa dipudarkan saat menghalangi kamera.
 	const daftarDinding = useRef({ 0: [], 1: [] });
+	// kembali dari dunia kecamatan, adegan disusun ulang dari nol
+	useEffect(() => () => onSiap(false), [onSiap]);
 
 	return (
 		<Canvas
@@ -72,6 +84,7 @@ export default function KantorScene({ statistik, dikunjungi, jeda, penghuni, pen
 			<Cuaca />
 
 			<KualitasOtomatis />
+			<PenandaSiap onSiap={onSiap} />
 			<Lingkungan daftarDinding={daftarDinding} />
 			<Gedung daftarDinding={daftarDinding} statistik={statistik} />
 			<Fasad statistik={statistik} />
