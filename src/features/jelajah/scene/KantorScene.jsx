@@ -11,6 +11,7 @@ import PemainLain from "./PemainLain";
 import SiangMalam from "./SiangMalam";
 import Cuaca from "./Cuaca";
 import Petugas from "./Petugas";
+import AcaraKawasan, { PapanAntrean } from "./AcaraKawasan";
 
 const DPR_MAKS = Math.min(typeof window === "undefined" ? 1 : window.devicePixelRatio || 1, 1.5);
 
@@ -98,6 +99,8 @@ export default function KantorScene({ statistik, dikunjungi, jeda, penghuni, pen
 			<Pemain daftarDinding={daftarDinding} penghuni={penghuni} penampilan={penampilan} />
 			<PemainLain />
 			<Pancingan />
+			<AcaraKawasan />
+			<PapanAntrean />
 		</Canvas>
 	);
 }

@@ -33,6 +33,8 @@ export const POOL_MISI = [
 	{ id: "kunjungKec", teks: "Kunjungi sebuah kecamatan lewat Peta kecamatan", jenis: "wilayah", target: 1, koin: 30, xp: 30 },
 	{ id: "pesananKab", teks: "Penuhi 1 pesanan kabupaten", jenis: "pesananKab", target: 1, koin: 100, xp: 90 },
 	{ id: "motor", teks: "Kendarai motor sejauh 500 meter", jenis: "motor", target: 500, koin: 35, xp: 35 },
+	{ id: "urusan", teks: "Selesaikan 2 urusan di ruang bidang", jenis: "urusan", target: 2, koin: 60, xp: 60 },
+	{ id: "acaraKawasan", teks: "Ikut acara harian di kawasan", jenis: "acaraKawasan", target: 1, koin: 60, xp: 60 },
 ];
 export const MISI_PER_ID = Object.fromEntries(POOL_MISI.map((m) => [m.id, m]));
 

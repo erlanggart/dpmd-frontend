@@ -36,6 +36,10 @@ import PanelAtm from "./ui/PanelAtm";
 import { bayarKoin, useSedangTarik } from "./pancing";
 import { ubahTenaga } from "./tenaga";
 import HudLomba from "./ui/HudLomba";
+import { KartuKantor, PerayaanKantor } from "./ui/HudKantor";
+import PanelAcara from "./ui/PanelAcara";
+import { catatKantor, mulaiLomba, stempelBazar } from "./kantorHidup";
+import { TENDA_BAZAR } from "./scene/acaraData";
 import PanelEtalaseBumdes from "./ui/PanelEtalaseBumdes";
 import PanelShowroom from "./ui/PanelShowroom";
 import { modelDariId } from "./scene/modelKendaraan";
@@ -209,7 +213,6 @@ export default function JelajahPage() {
 	const [kabarArea, setKabarArea] = useState(null);
 	const [gagal3D, setGagal3D] = useState(false);
 	const [pesan, setPesan] = useState(null);
-	const [antrean, setAntrean] = useState(null);
 	const [dataPegawai, setDataPegawai] = useState(null);
 	// Pegawai DPMD sungguhan ditempatkan ke kursi, ruang rapat, pos jaga, dst.
 	const penghuni = useMemo(() => susunPenghuni(dataPegawai), [dataPegawai]);
@@ -360,6 +363,7 @@ export default function JelajahPage() {
 			return;
 		}
 		if (id === "pasar:etalase") {
+			catatKantor("etalase");
 			setMenu("etalase");
 			return;
 		}
@@ -412,6 +416,8 @@ export default function JelajahPage() {
 			kendali.aksi = id;
 			return;
 		}
+		if (id.startsWith("bazar:")) return void stempelBazar(id.slice(6));
+		if (id === "lomba:panitia") return void setMenu("acara");
 		const benda = BENDA_PER_ID[id];
 		if (benda) {
 			if (benda.aksi.jenis === "pindah") setMenu("pindah");
@@ -421,6 +427,7 @@ export default function JelajahPage() {
 		setMenu(null);
 		setPanel(id);
 		catat("sapa");
+		catatKantor("sapa", { id });
 		if (id === "lobi") return;
 		setDikunjungi((lama) => {
 			if (lama.has(id)) return lama;
@@ -576,6 +583,10 @@ export default function JelajahPage() {
 				? ["Sales showroom — beli motor 🏍️", "Lihat", "#dc2626"]
 			: dekat === "pasar:etalase"
 				? ["Etalase produk asli BUM Desa 🛍️", "Lihat", "#16a34a"]
+			: dekat.startsWith("bazar:")
+				? [`Minta stempel ${TENDA_BAZAR.find((x) => x.id === dekat.slice(6))?.nama} 🎟️`, "Stempel", "#b45309"]
+			: dekat === "lomba:panitia"
+				? ["Daftar Lomba Jetski 🏁", "Daftar", "#e11d48"]
 			: dekat === "capit"
 				? ["Main mesin capit", "Capit", "#db2777"]
 			: dekat === "cendol"
@@ -626,7 +637,6 @@ export default function JelajahPage() {
 		perahu: posisiPemain.kend?.bermesin ? "W/S gas · A/D belok · Shift turbo · berhenti lalu E mancing · R terjun berenang" : "W/S dayung · A/D belok · Shift dayung cepat · E mancing / naik ke dermaga · R terjun berenang",
 		penumpang: "Anda penumpang — duduk manis · E turun",
 	}[modeMain];
-	const ambilAntrean = () => setAntrean((n) => (n ?? 23) + 1);
 
 	return (
 		<>
@@ -818,6 +828,12 @@ export default function JelajahPage() {
 
 					{!jeda && <BarTenaga onTas={() => setMenu("tas")} onAlbum={modeMain === "mancing" ? null : () => setMenu("album")} onGaya={() => setMenu("gaya")} onMisi={() => setMenu("misi")} onPeringkat={() => setMenu("peringkat")} onPancing={modeMain === "mancing" ? null : () => setMenu("pancing")} ringkas={modeMain === "mancing"} sentuh={sentuh} />}
 					{!jeda && <HudLomba mancing={modeMain === "mancing"} />}
+					{!jeda && (
+						<div className={sentuh ? "absolute right-3 top-[18rem] w-[10.5rem] [@media(max-height:520px)]:right-[9rem] [@media(max-height:520px)]:top-[3.5rem]" : "absolute right-4 top-[4.5rem] w-[16.5rem]"}>
+							<KartuKantor sentuh={sentuh} onAntar={pindahCepat} />
+						</div>
+					)}
+					<PerayaanKantor />
 					{modeMain === "mancing" && !jeda && <GamePancing sentuh={sentuh} bersama={statusMp === "tersambung"} onSelesai={() => (kendali.aksi = "berhenti")} />}
 
 					{tipKendara && !sentuh && (
@@ -1148,6 +1164,16 @@ export default function JelajahPage() {
 					<PanelEtalaseBumdes />
 				</Lembar>
 			)}
+			{menu === "acara" && (
+				<Lembar judul="🏁 Lomba Jetski" onTutup={() => setMenu(null)}>
+					<PanelAcara
+						onMulai={() => {
+							setMenu(null);
+							kendali.aksi = mulaiLomba();
+						}}
+					/>
+				</Lembar>
+			)}
 			{menu === "capit" && (
 				<Lembar judul="🕹️ Mesin Capit" onTutup={() => setMenu(null)}>
 					<PanelCapit />
@@ -1247,6 +1273,8 @@ export default function JelajahPage() {
 									["Mobil berempat", "dekati mobil/motor/perahu yang dikemudikan tamu lain untuk ikut naik"],
 									["Situ Pemda", "naik perahu di dermaga; di panggung dermaga atau dari perahu tekan Mancing"],
 									["Toko Perahu", "kios biru di tiap dermaga, seberang Toko Pancing: beli kano, sampan, speedboat, jetski; panggil dari ☰ → Garasi saya"],
+									["Urusan kantor", "ambil nomor di resepsionis, tebak bidang yang tepat, serahkan berkas sebelum waktunya habis"],
+									["Acara harian", "bazar atau lomba jetski bergantian tiap hari; lihat kartu misi di kanan atas"],
 									["Memancing", "tahan 🎣 lalu lepas untuk melempar; saat adu tarik KETUK 🎣 berulang untuk menggulung, berhenti saat ikan lari"],
 									["AUTO & kamera", "🤖 AUTO memancing sendiri (joran Kapal Samudra / Perak Maestro / Garuda Sakti, koin 75%); 🎥 ganti sudut: Standar, Dekat, Atas, Sinematik"],
 									["Kolam Monster", "kolam berbayar di barat kantor: tiket 🪙 2.000 / 10 menit, isinya ikan Monster & Legenda; daftar Lomba Galatama di loket"],
@@ -1267,6 +1295,8 @@ export default function JelajahPage() {
 									["Mobil berempat", "E di dekat kendaraan yang dikemudikan tamu lain = ikut naik"],
 									["Situ Pemda", "E di dermaga: naik perahu · E di panggung / perahu: memancing"],
 									["Toko Perahu", "E di kios biru dermaga (seberang Toko Pancing): beli perahu bermesin & jetski; panggil dari ☰ → Garasi saya"],
+									["Urusan kantor", "E di resepsionis = ambil nomor, tebak bidang yang tepat, lalu E di ruangnya = serahkan berkas sebelum waktunya habis"],
+									["Acara harian", "bazar atau lomba jetski bergantian tiap hari; lihat kartu misi di kanan atas"],
 									["Memancing", "tahan Spasi lalu lepas = lempar; KETUK Spasi berulang = gulung (jangan ditahan), arahkan mouse (atau A/D) melawan arah ikan, F = Tarikan Sakti saat meteran ⚡ penuh"],
 									["AUTO & kamera", "O = AUTO memancing (joran Kapal Samudra / Perak Maestro / Garuda Sakti, koin 75%) · C = ganti sudut kamera: Standar, Dekat, Atas, Sinematik"],
 									["Kolam Monster", "kolam berbayar di barat kantor: E di loket = tiket 🪙 2.000 / 10 menit & Lomba Galatama (juara = ikan terberat)"],
@@ -1300,8 +1330,6 @@ export default function JelajahPage() {
 					onTutup={tutupPanel}
 					onPindah={pindahCepat}
 					labelPindah={mode === "3d" ? "Antar ke sana" : "Lihat"}
-					antrean={antrean}
-					onAmbilAntrean={ambilAntrean}
 					petugasData={penghuni.petugas[areaPanel.id]}
 				/>
 			)}

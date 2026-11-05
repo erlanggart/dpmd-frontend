@@ -2,7 +2,8 @@ import { useEffect, useRef } from "react";
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import { FiArrowRight, FiCheck, FiLock, FiLogIn, FiNavigation, FiX } from "react-icons/fi";
-import { RUANGAN } from "../kantorConfig";
+import { AREA_PER_ID, RUANGAN } from "../kantorConfig";
+import { ambilAntrean, formatNomor, kantor, serahkanBerkas, useKantor } from "../kantorHidup";
 
 const WARNA_UNTUK = {
 	Umum: "bg-emerald-50 text-emerald-700 ring-emerald-200",
@@ -36,10 +37,10 @@ export default function InfoPanel({
 	onTutup,
 	onPindah,
 	labelPindah = "Antar ke sana",
-	antrean,
-	onAmbilAntrean,
 	petugasData,
 }) {
+	useKantor();
+	const tiket = kantor.tiket;
 	const tombolTutup = useRef(null);
 	const lobi = area.id === "lobi";
 	const adaPerluAkun = area.layanan?.some((l) => l.perluAkun);
@@ -102,6 +103,34 @@ export default function InfoPanel({
 						</div>
 					</div>
 
+					{!lobi && tiket && (
+						<div className="rounded-2xl border border-dashed border-amber-300 bg-amber-50/60 px-4 py-3">
+							<div className="flex items-center gap-3">
+								<div className="rounded-xl bg-white px-3 py-2 text-center shadow-sm ring-1 ring-amber-200">
+									<p className="text-[10px] font-semibold uppercase tracking-wider text-slate-500">Nomor antrean</p>
+									<p className="text-2xl font-bold tabular-nums text-slate-900">{formatNomor(tiket.nomor)}</p>
+								</div>
+								<div className="min-w-0 flex-1">
+									<p className="text-sm font-semibold text-slate-900">{tiket.judul}</p>
+									<p className="mt-0.5 text-xs leading-relaxed text-slate-600">{tiket.uraian}</p>
+								</div>
+							</div>
+							{tiket.salah && area.id !== tiket.area && (
+								<p className="mt-2 text-sm font-semibold text-red-600">
+									Bukan di sini. Coba ke {AREA_PER_ID[tiket.area].singkatan}, Lt. {AREA_PER_ID[tiket.area].lantai + 1}.
+								</p>
+							)}
+							<button
+								onClick={() => serahkanBerkas(area.id)}
+								disabled={tiket.fase === "tunggu"}
+								className="mt-3 w-full rounded-xl px-4 py-2.5 text-sm font-semibold text-white hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-60"
+								style={{ background: area.warna }}
+							>
+								{tiket.fase === "tunggu" ? "Menunggu panggilan" : "Serahkan berkas"}
+							</button>
+						</div>
+					)}
+
 					<div>
 						<h3 className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">
 							{lobi ? "Tentang DPMD" : "Tugas bidang"}
@@ -112,19 +141,25 @@ export default function InfoPanel({
 					{lobi ? (
 						<>
 							<div className="flex items-center gap-3 rounded-2xl border border-dashed border-amber-300 bg-amber-50/60 px-4 py-3">
-								{antrean ? (
+								{tiket ? (
 									<>
 										<div className="rounded-xl bg-white px-3 py-2 text-center shadow-sm ring-1 ring-amber-200">
 											<p className="text-[10px] font-semibold uppercase tracking-wider text-slate-500">Nomor antrean</p>
-											<p className="text-2xl font-bold tabular-nums text-slate-900">A-{String(antrean).padStart(3, "0")}</p>
+											<p className="text-2xl font-bold tabular-nums text-slate-900">{formatNomor(tiket.nomor)}</p>
 										</div>
-										<p className="text-sm text-slate-600">Silakan menuju ruang bidang yang Anda tuju. Nomor Anda akan dipanggil petugas.</p>
+										<div className="min-w-0 flex-1 text-sm text-slate-600">
+											<p className="font-semibold text-slate-900">{tiket.judul}</p>
+											<p className="mt-0.5 text-xs leading-relaxed">{tiket.uraian}</p>
+											<p className="mt-1 font-medium text-amber-800">
+												{tiket.fase === "tunggu" ? "Menunggu panggilan" : `Dipanggil, sisa ${Math.max(0, Math.ceil((tiket.batas - Date.now()) / 1000))} dtk`}
+											</p>
+										</div>
 									</>
 								) : (
 									<>
 										<p className="flex-1 text-sm text-slate-600">Ambil nomor antrean sebelum menuju ruang bidang.</p>
 										<button
-											onClick={onAmbilAntrean}
+											onClick={ambilAntrean}
 											className="shrink-0 rounded-xl bg-[#b8862b] px-4 py-2 text-sm font-semibold text-white hover:brightness-110"
 										>
 											Ambil nomor

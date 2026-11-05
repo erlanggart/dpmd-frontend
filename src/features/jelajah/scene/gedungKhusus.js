@@ -244,4 +244,6 @@ export const PADAT_KHUSUS = [
 export const TIBA_KHUSUS = {
 	mcd: { x: (MCD.pintu.x0 + MCD.pintu.x1) / 2, z: MCD.z1 + 5, lantai: 0, rot: Math.PI, yaw: 0 },
 	ccm: { x: (A.pintu.x0 + A.pintu.x1) / 2, z: A.z0 - 7, lantai: 0, rot: 0, yaw: Math.PI },
+	bazar: { x: 5, z: 65.5, lantai: 0, rot: 0, yaw: Math.PI },
+	jetski: { x: -66.5, z: 8.5, lantai: 0, rot: -Math.PI / 2, yaw: Math.PI / 2 },
 };

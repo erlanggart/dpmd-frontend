@@ -38,6 +38,8 @@ function permukaanDi(x, z, y, renang) {
 }
 import { lemari, selesaiCoba } from "../lemari";
 import { catat } from "../progres";
+import { acaraKini, kantor, stempelSudah } from "../kantorHidup";
+import { TENDA_BAZAR, TITIK_PANITIA } from "./acaraData";
 import KeranjangTangan from "./KeranjangTangan";
 import Tokoh from "./Tokoh";
 
@@ -861,6 +863,7 @@ export default function Pemain({ daftarDinding, penghuni, penampilan = PENAMPILA
 		posisi.udara = gr.udara;
 		posisi.lari = lari && besar > 0.05;
 		posisi.kend = mk.k || null;
+		posisi.yaw = kamera.current.yaw;
 		const em = diriSendiri.emote;
 		// mengambil barang dari rak: hadap ke rak, tangan menjangkau, lalu barang masuk keranjang
 		const ab = belanja.ambil;
@@ -999,6 +1002,10 @@ export default function Pemain({ daftarDinding, penghuni, penampilan = PENAMPILA
 				coba("showroom:mobil", Math.hypot(TITIK_SALES_MOBIL.x - p.x, TITIK_SALES_MOBIL.z - p.z), 1.9);
 				coba("showroom:motor", Math.hypot(TITIK_SALES_MOTOR.x - p.x, TITIK_SALES_MOTOR.z - p.z), 1.9);
 				coba("pesan:mcd", Math.hypot(TITIK_PESAN_MCD.x - p.x, TITIK_PESAN_MCD.z - p.z), 1.8);
+				// acara harian kawasan: stempel bazar atau pendaftaran lomba jetski
+				const acara = acaraKini();
+				if (acara === "bazar") for (const t of TENDA_BAZAR) if (!stempelSudah(t.id)) coba(`bazar:${t.id}`, Math.hypot(t.titik.x - p.x, t.titik.z - p.z), 1.7);
+				if (acara === "jetski" && !kantor.lomba) coba("lomba:panitia", Math.hypot(TITIK_PANITIA.x - p.x, TITIK_PANITIA.z - p.z), 2.2);
 				// Cibinong City Mall: kedai kopi (Lt 1), butik (Lt 2), food court (Lt 3), loket bioskop (Lt 4), lift
 				const diLt = (t) => t.lantaiMal === undefined || (dalamLahanCcm(p.x, p.z) && t.lantaiMal === malAktif.lantai);
 				if (diLt(TITIK_PESAN_KOPI)) coba("pesan:kopi", Math.hypot(TITIK_PESAN_KOPI.x - p.x, TITIK_PESAN_KOPI.z - p.z), 1.8);
