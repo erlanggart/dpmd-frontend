@@ -182,7 +182,7 @@ export default function HudBasket({ sentuh }) {
 	const detik = Math.ceil(b.sisa);
 	const seri = b.sisa <= 0 && b.skor.pemain === b.skor.lawan;
 	const adaKawan = lomba && lomba.peserta.some((p) => p.tim === lomba.saya?.tim && p.pid !== lomba.saya?.pid && !p.keluar);
-	const petunjuk = b.pegang === "pemain" ? `Tahan klik kiri, lepas di zona hijau = tembak · dekat ring = layup/dunk${adaKawan ? " · klik kanan oper" : ""} · Spasi kecoh · Shift lari` : b.pegang === "lawan" ? "Klik kiri rebut bola · Spasi loncat blok" : b.pegang === "kawan" ? "Cari ruang kosong, rekan Anda memegang bola" : "Kejar bolanya!";
+	const petunjuk = b.pegang === "pemain" ? `Tahan klik kiri, lepas di zona hijau = tembak · dekat ring = layup/dunk${adaKawan ? " · klik kanan oper" : ""} · Spasi kecoh · Shift lari` : b.pegang === "lawan" ? "Klik kiri rebut bola · Spasi loncat blok" : b.pegang === "kawan" ? "Cari ruang kosong, rekan Anda memegang bola" : b.hak === "pemain" ? "Ambil bola di bawah ring Anda" : b.hak === "lawan" ? "Bola milik lawan, kembali bertahan" : "Kejar bolanya!";
 	return (
 		<>
 			{/* HP: di kiri bawah bilah tenaga, supaya tidak menimpa peta bundar di kanan atas */}

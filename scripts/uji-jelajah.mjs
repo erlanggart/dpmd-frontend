@@ -175,7 +175,14 @@ const lagaBot = (kerja) => {
 	let t = 0;
 	while (K.basket.fase !== "selesai" && t < 400) {
 		kerja(K.basket);
+		const faseLama = K.basket.fase;
 		K.majukanBasket(1 / 30);
+		// sesudah gol bola tidak melompat ke tangan siapa pun, ia menunggu di bawah ring
+		if (faseLama === "skor" && K.basket.fase === "main") {
+			assert.equal(K.basket.pegang, null, "bola tidak pindah ke tangan sesudah gol");
+			assert.ok(K.basket.hak, "tim yang kebobolan berhak mengambil");
+			assert.ok(Math.min(...K.RIM.map((r) => Math.hypot(K.basket.bola.x - r.x, K.basket.bola.z - r.z))) < 1, "bola di bawah ring");
+		}
 		t += 1 / 30;
 	}
 	assert.equal(K.basket.fase, "selesai", "laga berakhir");
@@ -240,6 +247,7 @@ assert.ok(menangBiasa >= 3 && menangBiasa <= 27, `pemain biasa harus bisa menang
 // bot diam: lawan harus mengambil bola dan menang
 const hasilDiam = lagaBot(() => {});
 assert.ok(!hasilDiam.menang && hasilDiam.koin === 0, "diam saja = kalah tanpa koin");
+assert.ok(hasilDiam.lawan > 3, "bola yang tidak diambil kembali bebas, laga tidak bisa ditahan");
 console.log(`basket: bot rajin menang ${menangRajin}/30, contoh skor ${hasilRajin[0].pemain}:${hasilRajin[0].lawan}, koin ${hasilRajin[0].koin}; diam ${hasilDiam.pemain}:${hasilDiam.lawan}`);
 
 // --- payung & jas hujan: kuras tenaga dan pembelian ---

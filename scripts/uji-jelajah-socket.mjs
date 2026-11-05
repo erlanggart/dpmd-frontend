@@ -303,10 +303,20 @@ tes("basket: rebut bola loncat, oper, cetak angka dengan asis, aksi tidak sah di
 	const cetak = r[0].p.ev.find((e) => e.k === "skor");
 	assert.equal(cetak.tim, 0);
 	if (coba === 1) assert.equal(cetak.asisten, pa, "operan langsung jadi angka = asis");
-	// setelah kebobolan, bola untuk tim 1
-	const lanjut = await r[0].p.sampai((k) => k?.fase === "main" && k.pemegang);
-	assert.equal(lanjut.peserta.find((p) => p.pid === lanjut.pemegang).tim, 1);
+	// setelah gol bola menunggu di bawah ring: tidak melompat ke tangan tim 1 yang masih jauh
+	const lanjut = await r[0].p.sampai((k) => k?.fase === "main" && k.hak === 1);
+	assert.equal(lanjut.pemegang, null, "bola tidak pindah ke tangan");
+	assert.ok(Math.hypot(lanjut.bola.x + 58, lanjut.bola.z - 11.45) < 1, "bola di bawah ring");
+	// tim pencetak tidak boleh menyerobot
+	gerakKe(b.s, lanjut.bola.x, lanjut.bola.z);
+	await jeda(400);
+	assert.equal(r[0].p.kini.pemegang, null, "tim pencetak tidak bisa mengambil");
+	gerakKe(b.s, -63, 20);
 	clearInterval(jaga);
+	await jeda(100);
+	gerakKe(c.s, lanjut.bola.x, lanjut.bola.z);
+	const ambil = await r[0].p.sampai((k) => k?.pemegang);
+	assert.equal(ambil.peserta.find((p) => p.pid === ambil.pemegang).tim, 1, "tim yang kebobolan mengambil bola sendiri");
 	c.s.emit("basket:keluar");
 	d.s.emit("basket:keluar");
 	const usai = await r[0].p.sampai((k) => k?.fase === "selesai");

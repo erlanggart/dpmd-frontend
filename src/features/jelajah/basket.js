@@ -19,6 +19,8 @@ export const KOIN = { dua: 10, tiga: 20, perfect: 5, menang: 50 };
 export const KOIN_LOMBA = { menang: 200, mvp: 100 };
 export const JARAK_TIGA = 6;
 export const JARAK_DEKAT = 1.8;
+// Setelah gol bola tetap di bawah ring; selama ini hanya tim yang kebobolan boleh mengambilnya.
+const LAMA_HAK = 5;
 // bilah tembakan: isi 0..1 dalam LAMA_BIDIK detik; lepas di dalam zona = PERFECT
 export const LAMA_BIDIK = 0.85;
 export const ZONA = { dari: 0.7, sampai: 0.88 };
@@ -150,6 +152,7 @@ export const basket = {
 	koinLaga: 0,
 	pemenang: null,
 	pegang: "pemain", // pemain | lawan | kawan (lomba: satu tim) | null
+	hak: null, // pemain | lawan: yang boleh mengambil bola di lantai sesudah gol
 	bidik: false,
 	isi: 0,
 	gaya: gayaBaru(),
@@ -174,8 +177,8 @@ export const basket = {
 };
 
 // waktu & jeda aksi: disimpan terpisah dari state yang dibaca UI
-const w = { kebal: 0, rebut: 0, rebutT: 0, kecoh: 0, kebut: 0, lajuPelan: 0, tembakT: 0, operT: 0, melepas: 0, transisi: 0, jedaBatal: 0, beruntun: 0, lawanRebut: 0, lawanRebutT: 0, lawanTembakT: 0, lawanGoyah: 0, lawanBidik: 0, lawanGiring: 0, ax: 0, az: 0, kabarId: 0 };
-const TIMER = ["kebal", "rebut", "rebutT", "kecoh", "kebut", "lajuPelan", "tembakT", "operT", "melepas", "transisi", "jedaBatal", "lawanRebut", "lawanRebutT", "lawanTembakT", "lawanGoyah"];
+const w = { hak: 0, kebal: 0, rebut: 0, rebutT: 0, kecoh: 0, kebut: 0, lajuPelan: 0, tembakT: 0, operT: 0, melepas: 0, transisi: 0, jedaBatal: 0, beruntun: 0, lawanRebut: 0, lawanRebutT: 0, lawanTembakT: 0, lawanGoyah: 0, lawanBidik: 0, lawanGiring: 0, ax: 0, az: 0, kabarId: 0 };
+const TIMER = ["hak", "kebal", "rebut", "rebutT", "kecoh", "kebut", "lajuPelan", "tembakT", "operT", "melepas", "transisi", "jedaBatal", "lawanRebut", "lawanRebutT", "lawanTembakT", "lawanGoyah"];
 
 const pendengar = new Set();
 let versi = 0;
@@ -205,12 +208,12 @@ export const timDari = (sid) => (sedangTanding() ? (basket.online.peserta.find((
 export const timSaya = () => timDari(idSocket());
 export const seragamTim = (penampilan, tim) => (tim === null ? penampilan : { ...penampilan, seragam: "warga", jasHujan: false, baju: WARNA_TIM[tim], celana: "#111827" });
 
-const muatGiliran = () => Object.assign(w, { kebal: 0, rebut: 0, rebutT: 0, kecoh: 0, kebut: 0, lajuPelan: 0, tembakT: 0, operT: 0, melepas: 0, transisi: 0, beruntun: 0 });
+const muatGiliran = () => Object.assign(w, { hak: 0, kebal: 0, rebut: 0, rebutT: 0, kecoh: 0, kebut: 0, lajuPelan: 0, tembakT: 0, operT: 0, melepas: 0, transisi: 0, beruntun: 0 });
 
 export function mulaiBasket() {
 	const b = basket;
 	if (b.online?.fase === "selesai") b.online = null;
-	Object.assign(b, { aktif: true, ikutOnline: false, jeda: false, fase: "mulai", tunggu: 3, sisa: LAMA_LAGA, koinLaga: 0, pemenang: null, pegang: "pemain", bidik: false, isi: 0, panas: false, isyaratPemain: null, hadap: null, tembakan: null, kabar: null, sasaranOper: null });
+	Object.assign(b, { aktif: true, ikutOnline: false, jeda: false, fase: "mulai", tunggu: 3, sisa: LAMA_LAGA, koinLaga: 0, pemenang: null, pegang: "pemain", hak: null, bidik: false, isi: 0, panas: false, isyaratPemain: null, hadap: null, tembakan: null, kabar: null, sasaranOper: null });
 	b.skor = { pemain: 0, lawan: 0 };
 	b.bola.mode = "pegang";
 	b.gaya = gayaBaru();
@@ -368,6 +371,7 @@ function cobaRebut() {
 function pindahBola(ke) {
 	const b = basket;
 	b.pegang = ke;
+	b.hak = null;
 	b.bola.mode = "pegang";
 	b.tembakan = null;
 	w.lawanBidik = 0;
@@ -673,7 +677,9 @@ function majukanLawan(dt) {
 		// bola lepas (atau sedang terbang): mengejar titik jatuhnya
 		hadapX = b.bola.x;
 		hadapZ = b.bola.z;
-		if (b.bola.mode === "bebas") laju = gerakLawan(b.bola.x, b.bola.z, LAJU_LAWAN.bola, dt);
+		// bola hak pemain sesudah gol: lawan mundur ke tengah, tidak menyerobot
+		if (b.hak === "pemain") laju = gerakLawan(RIM[0].x, (RIM[0].z + RIM[1].z) / 2, LAJU_LAWAN.jaga, dt);
+		else if (b.bola.mode === "bebas") laju = gerakLawan(b.bola.x, b.bola.z, LAJU_LAWAN.bola, dt);
 		else if (b.tembakan) laju = gerakLawan(RIM[b.tembakan.ring].x, RIM[b.tembakan.ring].z + (b.tembakan.ring ? -1.5 : 1.5), LAJU_LAWAN.jaga, dt);
 	}
 
@@ -704,11 +710,11 @@ function ambilBolaLepas() {
 	if (o.mode !== "bebas" || o.y > 1.9) return;
 	const dP = Math.hypot(o.x - posisi.x, o.z - posisi.z);
 	const dL = Math.hypot(o.x - b.lawan.x, o.z - b.lawan.z);
-	if (dP < 0.85 && dP <= dL) {
+	if (dP < 0.85 && b.hak !== "lawan" && (dP <= dL || b.hak === "pemain")) {
 		pindahBola("pemain");
 		w.kebal = 0.7;
 		beri();
-	} else if (dL < 0.75) {
+	} else if (dL < 0.75 && b.hak !== "pemain") {
 		pindahBola("lawan");
 		w.lawanRebut = 0.5;
 		beri();
@@ -798,6 +804,7 @@ function terapkanEv(ev, m) {
 		const bantu = ev.asisten ? ` · asis ${namaPeserta(ev.asisten)}` : "";
 		kabar(`${panas ? "🔥 " : ""}${judul}! ${nama()} +${ev.poin}${bantu}`, kawan() ? "#fde047" : "#fca5a5");
 	} else if (ev.k === "hangus") kabar("Waktu serang habis!", "#fca5a5");
+	else if (ev.k === "lanjut" && m.hak === saya?.tim) kabar("Ambil bola di bawah ring Anda!", "#fde047");
 	else if (ev.k === "selesai") suara(m.menang === saya?.tim ? "jaya" : "peluit");
 	else if (ev.k === "ambil" && milikku) suara("pantul");
 }
@@ -848,6 +855,7 @@ function terimaOnline(m) {
 	b.fase = m.fase;
 	b.skor = { pemain: m.skor[t], lawan: m.skor[1 - t] };
 	b.jam = m.jam / 1000;
+	b.hak = m.hak == null ? null : m.hak === t ? "pemain" : "lawan";
 	if (m.fase === "mulai") b.tunggu = m.sisa / 1000;
 	else b.sisa = m.sisa / 1000;
 	b.panas = !!m.peserta.find((p) => p.pid === (m.pemegang ?? m.ev?.pid))?.panas;
@@ -1026,6 +1034,10 @@ export function majukanBasket(dtMentah) {
 	}
 	if (b.fase === "selesai") return;
 	for (const k of TIMER) w[k] = Math.max(0, w[k] - dt);
+	if (b.hak && w.hak <= 0) {
+		b.hak = null; // tidak diambil: bola bebas supaya laga tidak bisa ditahan
+		beri();
+	}
 
 	const lajuPemain = Math.hypot(posisi.x - w.ax, posisi.z - w.az) / Math.max(dt, 1e-3);
 
@@ -1043,10 +1055,11 @@ export function majukanBasket(dtMentah) {
 		if (b.tunggu <= 0) {
 			if (b.skor.pemain >= SKOR_MENANG || b.skor.lawan >= SKOR_MENANG || (b.sisa <= 0 && b.skor.pemain !== b.skor.lawan)) akhiri();
 			else {
-				// yang kebobolan mendapat bola
-				pindahBola(b.bola.z < 19 ? "lawan" : "pemain");
-				w.kebal = 1.2;
+				// yang kebobolan mengambil bola sendiri di bawah ring yang dijaganya
+				b.hak = b.bola.z < 19 ? "lawan" : "pemain";
+				w.hak = LAMA_HAK;
 				b.fase = "main";
+				if (b.hak === "pemain") kabar("Ambil bola di bawah ring Anda!", "#fde047");
 				beri();
 			}
 		}
