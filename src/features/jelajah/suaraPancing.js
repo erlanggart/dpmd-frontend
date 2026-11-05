@@ -248,6 +248,44 @@ export function aturHujan(vol) {
 	}
 }
 
+// Dengung senar kencang: nada & volume naik mengikuti kuat 0..1. Berhenti sendiri bila tak lagi
+// dipanggil, supaya tidak tertinggal saat adegan dijeda atau pemain berhenti memancing.
+let senarSuara = null;
+let volSenar = 0;
+let henti = 0;
+export function aturSenar(kuat) {
+	const v = suaraMati.nilai ? 0 : Math.max(0, Math.min(1, kuat));
+	if (v === 0 && volSenar === 0) return;
+	clearTimeout(henti);
+	henti = setTimeout(() => {
+		volSenar = 0;
+		senarSuara?.g.gain.setTargetAtTime(0, ctx.currentTime, 0.05);
+	}, 250);
+	if (Math.abs(v - volSenar) < 0.02 && v > 0) return;
+	volSenar = v;
+	try {
+		if (!siapkan()) return;
+		if (!senarSuara) {
+			const o = ctx.createOscillator();
+			o.type = "sawtooth";
+			const f = ctx.createBiquadFilter();
+			f.type = "bandpass";
+			f.Q.value = 6;
+			const g = ctx.createGain();
+			g.gain.value = 0;
+			o.connect(f).connect(g).connect(keluar);
+			o.start();
+			senarSuara = { o, f, g };
+		}
+		const kini = ctx.currentTime;
+		senarSuara.o.frequency.setTargetAtTime(170 + v * 560, kini, 0.08);
+		senarSuara.f.frequency.setTargetAtTime(500 + v * 1300, kini, 0.08);
+		senarSuara.g.gain.setTargetAtTime(v * v * 0.11, kini, 0.06);
+	} catch {
+		/* audio tidak tersedia */
+	}
+}
+
 export function suara(nama) {
 	if (suaraMati.nilai || !RESEP[nama]) return;
 	try {

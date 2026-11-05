@@ -1,6 +1,6 @@
 import { useEffect, useLayoutEffect, useMemo, useRef } from "react";
 import { useFrame } from "@react-three/fiber";
-import { BoxGeometry, BufferGeometry, CanvasTexture, CircleGeometry, CylinderGeometry, ExtrudeGeometry, Float32BufferAttribute, MeshBasicMaterial, MeshStandardMaterial, Object3D, Path, PlaneGeometry, SRGBColorSpace, Shape, ShapeGeometry, SpriteMaterial } from "three";
+import { BoxGeometry, BufferGeometry, CanvasTexture, CircleGeometry, CylinderGeometry, ExtrudeGeometry, Float32BufferAttribute, MeshBasicMaterial, MeshStandardMaterial, Object3D, Path, PlaneGeometry, SRGBColorSpace, Shape, ShapeGeometry, SpriteMaterial, Vector3 } from "three";
 import { IKAN_PER_ID, pancing } from "../pancing";
 import { posisi } from "../jelajahStore";
 import Gabung from "./Gabung";
@@ -26,6 +26,8 @@ function Dermaga({ d, daftarDinding }) {
 		const m = atapRef.current;
 		if (!daftarDinding || !m) return;
 		m.userData.bahan = [m.material];
+		m.updateWorldMatrix(true, false);
+		m.userData.atapSaung = m.getWorldPosition(new Vector3());
 		const daftar = daftarDinding.current[0];
 		daftar.push(m);
 		return () => daftar.splice(daftar.indexOf(m), 1);

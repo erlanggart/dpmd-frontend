@@ -2,14 +2,15 @@ import { useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { FiBookOpen, FiX } from "react-icons/fi";
 import { kirimUcap } from "../multipemain";
-import { IKAN, KELAS, MODE_KAMERA, aturOtomatis, bolehOtomatis, gantiKamera, jamLapar, joranKini, ketuk, lanjutPancing, pancing, senarKini, tarikanSakti, useKoleksi, usePancing, zonaKini } from "../pancing";
+import { IKAN, KELAS, MODE_KAMERA, aturOtomatis, bolehOtomatis, gantiKamera, jamLapar, joranKini, ketuk, lanjutPancing, pancing, senarKini, tarikanSakti, useKoleksi, usePancing } from "../pancing";
 import PanelJoran from "./PanelJoran";
 import AlbumIkan from "./AlbumIkan";
 import IkonIkan from "./IkonIkan";
 import { useTutorial } from "../tutorial";
 
 // HUD permainan memancing di atas kanvas 3D. Fase & pesan memicu render React;
-// batang tenaga/tegangan/stamina diperbarui langsung ke DOM tiap frame.
+// batang tenaga/stamina diperbarui langsung ke DOM tiap frame. Tegangan senar sengaja tanpa
+// meteran: pemain membacanya dari joran & senar di 3D (lihat Pancingan.jsx).
 
 const angka = (n) => n.toLocaleString("id-ID", { maximumFractionDigits: 2 });
 // kartu hasil tangkapan baru bisa ditutup setelah sekian detik (ketukan gulung sering terlanjur)
@@ -22,38 +23,6 @@ const WARNA_PESAN = {
 	buruk: "bg-rose-600/90 text-white",
 	besar: "bg-amber-400 text-slate-950 text-base sm:text-lg font-black tracking-wide",
 };
-
-// Pengukur tegangan setengah lingkaran: zona biru (kendor), hijau (pas), kuning (tegang),
-// merah (putus). Jarum diputar langsung lewat atribut transform tiap frame.
-function titikBusur(v) {
-	const a = Math.PI - (Math.min(1.1, Math.max(0, v)) / 1.1) * Math.PI;
-	return [100 + 78 * Math.cos(a), 96 - 78 * Math.sin(a)];
-}
-const busur = (v0, v1) => {
-	const [x0, y0] = titikBusur(v0);
-	const [x1, y1] = titikBusur(v1);
-	return `M ${x0} ${y0} A 78 78 0 0 1 ${x1} ${y1}`;
-};
-function Pengukur({ zona, refJarum, refTeks }) {
-	const [zb, za] = zona;
-	return (
-		<div className="relative mx-auto w-full max-w-[10rem] sm:w-48 sm:max-w-none">
-			<svg viewBox="0 0 200 108" className="w-full">
-				<path d={busur(0, 1.1)} stroke="rgba(0,0,0,.45)" strokeWidth="20" fill="none" strokeLinecap="round" />
-				<path d={busur(0, zb)} stroke="#3b82f6" strokeWidth="14" fill="none" strokeLinecap="round" />
-				<path d={busur(zb, za)} stroke="#22c55e" strokeWidth="14" fill="none" />
-				<path d={busur(za, 1)} stroke="#f59e0b" strokeWidth="14" fill="none" />
-				<path d={busur(1, 1.1)} stroke="#ef4444" strokeWidth="14" fill="none" strokeLinecap="round" />
-				<g ref={refJarum} transform="rotate(-90 100 96)">
-					<line x1="100" y1="96" x2="100" y2="28" stroke="#fff" strokeWidth="4" strokeLinecap="round" style={{ filter: "drop-shadow(0 0 4px rgba(255,255,255,.9))" }} />
-				</g>
-				<circle cx="100" cy="96" r="8" fill="#0f172a" stroke="#fff" strokeWidth="3" />
-			</svg>
-			<p ref={refTeks} className="absolute inset-x-0 top-[36%] text-center text-sm font-black sm:text-base" />
-			<p className="mt-0.5 text-center text-[9px] font-bold uppercase tracking-widest text-white/55">Tegangan senar</p>
-		</div>
-	);
-}
 
 // Angka koin yang naik pelan dari 0 (kartu hasil).
 function AngkaNaik({ nilai, tunda = 0 }) {
@@ -127,11 +96,7 @@ export default function GamePancing({ sentuh, bersama, onSelesai }) {
 	const ikan = pancing.ikan;
 
 	const tenagaIsi = useRef();
-	const tegangJarum = useRef();
-	const gulungIsi = useRef();
 	const lariTanda = useRef();
-	const pulihTanda = useRef();
-	const tegangTeks = useRef();
 	const senarIsi = useRef();
 	const senarTeks = useRef();
 	const staminaIsi = useRef();
@@ -205,17 +170,8 @@ export default function GamePancing({ sentuh, bersama, onSelesai }) {
 				tenagaIsi.current.style.width = `${p.tenaga * 100}%`;
 				tenagaIsi.current.style.background = p.tenaga > 0.93 ? "linear-gradient(90deg,#f59e0b,#fde047)" : "linear-gradient(90deg,#22c55e,#a3e635)";
 			}
-			if (p.fase === "tarik" && tegangJarum.current) {
-				// jarum ikut bergetar mengikuti kepala ikan yang menggeleng
-				const t = Math.max(0, Math.min(1.1, p.tegang + (p.geleng || 0)));
-				const [zb, za] = zonaKini(p.ikan.kelas);
-				tegangJarum.current.setAttribute("transform", `rotate(${-90 + (t / 1.1) * 180} 100 96)`);
-				tegangTeks.current.textContent = p.bahaya > 0 ? "BAHAYA!" : t < zb ? "Kendor" : t <= za ? "Pas" : t < 1 ? "Tegang" : "AKAN PUTUS";
-				tegangTeks.current.style.color = p.bahaya > 0 || t >= 1 ? "#fb7185" : t < zb ? "#93c5fd" : t <= za ? "#86efac" : "#fcd34d";
-				gulungIsi.current.style.width = `${Math.min(1, p.gulung) * 100}%`;
-				gulungIsi.current.style.background = "linear-gradient(90deg,#14b8a6,#fbbf24)";
+			if (p.fase === "tarik" && lariTanda.current) {
 				lariTanda.current.style.display = p.lari > 0 ? "flex" : "none";
-				pulihTanda.current.style.opacity = p.pulih ? 1 : 0;
 				const panjang = senarKini().panjang - 3;
 				const sisa = Math.max(0, Math.min(1, (panjang - p.jarak) / panjang));
 				senarIsi.current.style.width = `${(1 - sisa) * 100}%`;
@@ -287,6 +243,7 @@ export default function GamePancing({ sentuh, bersama, onSelesai }) {
 	};
 	const tipLempar = useTutorial("lempar", fase === "siap");
 	const tipTunggu = useTutorial("tunggu", fase === "tunggu");
+	const tipBaca = useTutorial("baca-joran", fase === "tarik", 9000);
 	const labelTombol = fase === "siap" ? "Tahan untuk melempar" : fase === "gigit" ? "TARIK!" : fase === "tarik" ? "KETUK berulang!" : "Gulung";
 	const k = ikan ? KELAS[ikan.kelas] : null;
 	const jumlahJenis = IKAN.filter((i) => koleksi[i.id]).length;
@@ -400,6 +357,11 @@ export default function GamePancing({ sentuh, bersama, onSelesai }) {
 						Pelampung mengapung… ketuk saat <b>tenggelam</b> · {sentuh ? "analog" : "geser mouse"} = seret pelampung · tahan {sentuh ? "tombol" : "SPASI"} = gulung pelan-pelan
 					</motion.p>
 				)}
+				{tipBaca && (
+					<motion.p initial={{ y: 16, opacity: 0 }} animate={{ y: 0, opacity: 1 }} className="max-w-md rounded-2xl bg-slate-950/60 px-4 py-2 text-center text-xs text-white/85 backdrop-blur">
+						Baca joran &amp; senar: <b>senar melendut</b> = ketuk lebih cepat · <b>senar lurus</b> = pas · <b>joran gemetar &amp; senar mendengung</b> = berhenti sebentar
+					</motion.p>
+				)}
 			</div>
 
 			{/* panel tarik: di HP tegak kartu lebar di atas; di tablet / HP mendatar di kanan joystick; di desktop pojok kiri bawah */}
@@ -432,21 +394,11 @@ export default function GamePancing({ sentuh, bersama, onSelesai }) {
 								</div>
 							</div>
 						</div>
-						<div className="max-sm:flex max-sm:items-center max-sm:gap-3 sm:space-y-2.5">
-							<div className="max-sm:w-[7.25rem] max-sm:shrink-0">
-								<Pengukur zona={zonaKini(ikan.kelas)} refJarum={tegangJarum} refTeks={tegangTeks} />
+						<div className="grid grid-cols-2 gap-2.5 sm:grid-cols-1 [@media(max-height:520px)]:grid-cols-1">
+							<div className="[@media(max-height:520px)]:hidden">
+								<Batang label="Senar terulur" kanan={senarTeks} refIsi={senarIsi} />
 							</div>
-							<div className="min-w-0 flex-1 space-y-1.5 sm:space-y-2.5">
-								<Batang label={sentuh ? "Laju gulung" : "Laju gulung — ketuk SPASI berulang"} refIsi={gulungIsi}>
-									<span ref={pulihTanda} className="absolute inset-0 flex items-center justify-center whitespace-nowrap text-[8px] font-black uppercase leading-none tracking-wide text-sky-200 opacity-0 transition-opacity">
-										Ikan pulih — beri tekanan!
-									</span>
-								</Batang>
-								<div className="[@media(max-height:520px)]:hidden">
-									<Batang label="Senar terulur" kanan={senarTeks} refIsi={senarIsi} />
-								</div>
-								<Batang label="⚡ Tarikan sakti" kanan={kuasaTeks} refIsi={kuasaIsi} />
-							</div>
+							<Batang label="⚡ Tarikan sakti" kanan={kuasaTeks} refIsi={kuasaIsi} />
 						</div>
 						<div>
 							<div className="flex items-center gap-2">

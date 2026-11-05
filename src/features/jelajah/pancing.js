@@ -353,7 +353,7 @@ export const pancing = {
 	peristiwa: null, // { jenis: "lompat" | "setrum", t, dur, lepas }
 	ikanPos: { x: 0, z: 0 },
 	getar: 0,
-	// tarikan sakti: terisi selama tegangan dijaga di zona hijau; penuh = satu hentakan besar
+	// tarikan sakti: terisi selama tegangan dijaga di rentang pas; penuh = satu hentakan besar
 	kuasa: 0,
 	habisi: false, // ikan sudah lemas (<20% tenaga): gulungan jauh lebih kuat
 	detakLagi: 0,
@@ -433,7 +433,7 @@ export function aturOtomatis(nyala) {
 
 // ---------- auto pilot ----------
 // Meniru pemancing ahli: lempar mendekati tenaga penuh, abaikan colekan, sentak cepat,
-// gulung menjaga tegangan di zona hijau, berhenti saat ikan lari/melompat, lawan arah
+// gulung menjaga tegangan di rentang pas, berhenti saat ikan lari/melompat, lawan arah
 // lari ikan, pakai tarikan sakti begitu siap, lalu lanjut memancing sendiri.
 const oto = { tunda: 0, target: 0.95, faseLalu: null, reaksi: 0, jedaKetuk: 0 };
 function kendaliOtomatis(dt) {
@@ -986,7 +986,7 @@ function tarik(dt, o, ketukBaru) {
 	if (menggulung && tegangan >= zonaBawah) {
 		const diZona = tegangan <= zonaAtas;
 		p.stamina -= (diZona ? 1 : 1.25) * (lawan ? 1 + 0.6 * kuatArah : 1) * (0.4 + 0.6 * gl) * dt;
-		// meteran tarikan sakti terisi selama tegangan dijaga di zona hijau (±9 detik)
+		// meteran tarikan sakti terisi selama tegangan dijaga di rentang pas (±9 detik)
 		if (diZona && p.kuasa < 1) {
 			p.kuasa = Math.min(1, p.kuasa + dt * 0.11);
 			if (p.kuasa >= 1) {
@@ -1011,6 +1011,7 @@ function tarik(dt, o, ketukBaru) {
 	p.detakLagi -= dt;
 	if ((tegangan >= 1 || p.bahaya > 0.2) && p.detakLagi <= 0) {
 		suara("detak");
+		getarHp(35);
 		p.detakLagi = Math.max(0.42, 0.75 - p.bahaya * 0.4);
 	}
 

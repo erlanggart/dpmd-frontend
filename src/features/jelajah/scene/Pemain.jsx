@@ -58,6 +58,8 @@ const JARAK_KERANJANG = 1.6;
 const JARAK_KASIR = 1.4;
 const JARAK_GEROBAK = 1.5;
 const JARAK_PETI = 1.3;
+const SUDUT_LIHAT_JORAN = 0.75;
+const JARAK_ATAP_SAUNG = 14;
 // tenaga berkurang per detik: diam/jalan, tambahan saat berlari, tambahan saat adu tarik ikan
 const KURAS = { dasar: 1 / 25, lari: 1 / 4, tarik: 1 / 6, renang: 1 / 7 };
 const KECEPATAN = { jalan: 3.8, lari: 6.8, renang: 1.9, renangCepat: 3.0, jongkok: 1.8 };
@@ -684,7 +686,8 @@ export default function Pemain({ daftarDinding, penghuni, penampilan = PENAMPILA
 			}
 			g.rotation.y = arahJoran() + Math.PI * pancing.gaya.balik;
 			// kamera mengikuti arah bidikan saja (bukan ayunan joran) supaya ayunannya terlihat
-			const ke = pancing.asal.rot + pancing.aim + Math.PI;
+			// saat adu tarik kamera standar bergeser ke samping: dari belakang persis, lengkung joran (tanda tegangan) tak terlihat
+			const ke = pancing.asal.rot + pancing.aim + Math.PI + (pancing.kamera === "standar" && (pancing.fase === "tarik" || pancing.fase === "gigit") ? SUDUT_LIHAT_JORAN : 0);
 			k.yaw += (sudutDekat(k.yaw, ke) - k.yaw) * (1 - Math.exp(-3 * dt));
 			if (!pancing.aktif) {
 				pancing.arah = 0;
@@ -1059,7 +1062,7 @@ export default function Pemain({ daftarDinding, penghuni, penampilan = PENAMPILA
 		k.luar += ((area === "luar" && !diToko ? 1 : 0) - k.luar) * (1 - Math.exp(-3 * dt));
 		const jarakKamera = diToko
 			? Math.min(k.jarak, 5)
-			: k.jarak + (mk.jenis === "kemudi" && mk.k.jenis === "mobil" ? 2.5 : 0) + (mk.jenis === "mancing" ? (pancing.fase === "dapat" ? -4.5 : pancing.fase === "tarik" ? 0.5 : 1.5) : 0);
+			: k.jarak + (mk.jenis === "kemudi" && mk.k.jenis === "mobil" ? 2.5 : 0) + (mk.jenis === "mancing" ? (pancing.fase === "dapat" ? -4.5 : pancing.fase === "tarik" ? -3 : 1.5) : 0);
 		const pitch = Math.max(0.12, k.pitch - 0.27 * k.luar);
 		const sy = Math.sin(k.yaw);
 		const cy = Math.cos(k.yaw);
@@ -1186,7 +1189,9 @@ export default function Pemain({ daftarDinding, penghuni, penampilan = PENAMPILA
 				bantu.ray.far = jauh;
 			}
 			for (const md of dinding) {
-				const target = atas?.has(md) ? 0 : kena?.has(md) ? 0.15 : 1;
+				// atap saung tempat memancing hilang total: dekat kamera, sisa 15% pun menutupi separuh langit
+				const saung = mk.jenis === "mancing" && md.userData.atapSaung && Math.hypot(md.userData.atapSaung.x - p.x, md.userData.atapSaung.z - p.z) < JARAK_ATAP_SAUNG;
+				const target = saung || atas?.has(md) ? 0 : kena?.has(md) ? 0.15 : 1;
 				for (const bahan of md.userData.bahan) {
 					if (bahan.opacity === target) continue;
 					bahan.opacity = Math.abs(target - bahan.opacity) < 0.01 ? target : bahan.opacity + (target - bahan.opacity) * f;
