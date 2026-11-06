@@ -11,7 +11,7 @@ const BATAS_LEBAR_HP = 700;
 
 const LENCANA = {
 	menyambung: ["Menyambung…", "bg-amber-100 text-amber-700"],
-	menunggu: ["Tidak membuka aplikasi", "bg-slate-100 text-slate-600"],
+	menunggu: ["Belum bisa ditonton", "bg-slate-100 text-slate-600"],
 	tersambung: ["Siaran langsung", "bg-emerald-100 text-emerald-700"],
 	ditolak: ["Ditolak", "bg-rose-100 text-rose-700"],
 	putus: ["Sambungan terputus", "bg-rose-100 text-rose-700"],
@@ -114,6 +114,8 @@ export default function CerminLayarPanel({ user }) {
 	}, [skala, keadaan, ukuran]);
 
 	const [teks, warna] = LENCANA[keadaan];
+	// soket tersambung tapi tab di latar: rrweb sengaja tidak jalan, jadi tidak akan ada bingkai
+	const tabDiLatar = keadaan === "menyambung" && tabTerlihat === false;
 	const Ikon = hp ? LuSmartphone : LuMonitor;
 	const layarGaya = ukuran ? { width: ukuran.lebar * skala, height: ukuran.tinggi * skala } : hp ? { width: 220, height: 420 } : { width: "100%", height: 340 };
 
@@ -138,8 +140,13 @@ export default function CerminLayarPanel({ user }) {
 					{keadaan !== "tersambung" && (
 						<div className="absolute inset-0 flex flex-col items-center justify-center gap-2 p-4 text-center text-slate-400">
 							<Ikon className="h-9 w-9" />
-							<p className="m-0 text-sm font-medium">{keadaan === "ditolak" && alasan ? alasan : teks}</p>
-							{keadaan === "menunggu" && <p className="m-0 text-xs">Layar muncul sendiri begitu pengguna membuka aplikasi.</p>}
+							<p className="m-0 text-sm font-medium">{tabDiLatar ? "Aplikasi sedang di latar" : keadaan === "ditolak" && alasan ? alasan : teks}</p>
+							{tabDiLatar && <p className="m-0 text-xs">Layar muncul begitu pengguna kembali ke tab aplikasi.</p>}
+							{keadaan === "menunggu" && (
+								<p className="m-0 max-w-sm text-xs">
+									Aplikasi di perangkatnya belum versi terbaru, atau sedang tidak dibuka. Layar muncul sendiri setelah ia memperbarui lewat banner update atau memuat ulang halaman.
+								</p>
+							)}
 						</div>
 					)}
 				</div>

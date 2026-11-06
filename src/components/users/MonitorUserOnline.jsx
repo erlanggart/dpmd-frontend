@@ -132,6 +132,7 @@ export default function MonitorUserOnline({ awal = null, onTutup }) {
 	}, [onTutup]);
 
 	const daftarPeran = useMemo(() => [...new Set(users.map((u) => u.role))].sort(), [users]);
+	const jumlahBisaDitonton = users.filter((u) => u.bisa_ditonton).length;
 	const tampil = useMemo(() => {
 		const q = cari.trim().toLowerCase();
 		return users.filter(
@@ -166,7 +167,7 @@ export default function MonitorUserOnline({ awal = null, onTutup }) {
 							<h2 className="m-0 truncate text-base font-bold text-slate-900">Monitor User Online</h2>
 							<p className="m-0 flex items-center gap-1.5 text-xs text-slate-500">
 								<span className="h-2 w-2 animate-pulse rounded-full bg-emerald-500" />
-								{users.length} pengguna online · diperbarui langsung
+								{users.length} pengguna online · {jumlahBisaDitonton} bisa ditonton
 							</p>
 						</div>
 					</div>
@@ -244,7 +245,10 @@ export default function MonitorUserOnline({ awal = null, onTutup }) {
 										<Avatar user={u} />
 										<span className="min-w-0 flex-1">
 											<span className="flex items-center justify-between gap-2">
-												<span className="truncate text-sm font-semibold">{u.name}</span>
+												<span className="flex min-w-0 items-center gap-1.5">
+													<span className="truncate text-sm font-semibold">{u.name}</span>
+													{u.bisa_ditonton && <LuMonitor className={`h-3.5 w-3.5 shrink-0 ${pilihId === u.id ? "text-emerald-300" : "text-emerald-600"}`} title="Layar bisa ditonton" aria-label="Layar bisa ditonton" />}
+												</span>
 												<span className={`shrink-0 text-[11px] ${pilihId === u.id ? "text-white/60" : "text-slate-400"}`}>{timeAgo(u.last_active_at)}</span>
 											</span>
 											<span className="mt-0.5 flex items-center gap-1.5">
