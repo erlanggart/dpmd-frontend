@@ -1,9 +1,12 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { LuActivity, LuFileText, LuGlobe, LuLogIn, LuMapPin, LuMonitor, LuPencil, LuSearch, LuSmartphone, LuTablet, LuUser, LuWifi, LuX } from "react-icons/lu";
 import api from "../../api";
 import { getAvatarUrl } from "../../utils/avatarUtils";
 import { ROLE_COLORS, ROLE_LABELS, timeAgo } from "./peranPengguna";
+
+// rrweb hanya diunduh saat superadmin benar-benar menonton
+const CerminLayarPanel = lazy(() => import("./CerminLayarPanel"));
 
 const SELANG_AKTIVITAS_MS = 3000;
 const SELANG_USER_MS = 15000;
@@ -67,6 +70,7 @@ export default function MonitorUserOnline({ awal = null, onTutup }) {
 	const [peran, setPeran] = useState("");
 	const [saring, setSaring] = useState("semua");
 	const [tab, setTab] = useState(awal ? "aktivitas" : "online");
+	const [tonton, setTonton] = useState(false);
 	const terakhir = useRef(0);
 	const tutupRef = useRef(null);
 	const pilihId = pilih?.id || null;
@@ -140,6 +144,7 @@ export default function MonitorUserOnline({ awal = null, onTutup }) {
 
 	const pilihUser = (u) => {
 		setPilih(pilihId === u.id ? null : u);
+		setTonton(false);
 		setTab("aktivitas");
 	};
 
@@ -150,7 +155,7 @@ export default function MonitorUserOnline({ awal = null, onTutup }) {
 				aria-modal="true"
 				aria-label="Monitor user online"
 				onClick={(e) => e.stopPropagation()}
-				className="flex h-full w-full max-w-6xl flex-col overflow-hidden bg-white shadow-2xl sm:h-[88vh] sm:rounded-3xl"
+				className="flex h-full w-full max-w-7xl flex-col overflow-hidden bg-white shadow-2xl sm:h-[88vh] sm:rounded-3xl"
 			>
 				<header className="flex shrink-0 items-center justify-between gap-3 border-b border-slate-100 px-4 py-3 sm:px-5">
 					<div className="flex min-w-0 items-center gap-3">
@@ -275,11 +280,24 @@ export default function MonitorUserOnline({ awal = null, onTutup }) {
 										)}
 									</div>
 								</div>
-								<button type="button" onClick={() => setPilih(null)} className="shrink-0 rounded-lg px-2 py-1 text-xs font-semibold text-slate-600 hover:bg-slate-200">
-									Semua user
-								</button>
+								<div className="flex shrink-0 flex-wrap items-center justify-end gap-1">
+									{dipilih.role !== "superadmin" && (
+										<button type="button" onClick={() => setTonton((v) => !v)} aria-pressed={tonton} className={`flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-semibold ${tonton ? "bg-slate-200 text-slate-800" : "bg-slate-900 text-white hover:bg-slate-700"}`}>
+											<LuMonitor className="h-3.5 w-3.5" /> {tonton ? "Tutup layar" : "Tonton layar"}
+										</button>
+									)}
+									<button type="button" onClick={() => { setPilih(null); setTonton(false); }} className="rounded-lg px-2 py-1.5 text-xs font-semibold text-slate-600 hover:bg-slate-200">
+										Semua user
+									</button>
+								</div>
 							</div>
 						)}
+						{tonton && dipilih ? (
+							<Suspense fallback={<p className="p-8 text-center text-sm text-slate-400">Memuat…</p>}>
+								<CerminLayarPanel key={dipilih.id} user={dipilih} />
+							</Suspense>
+						) : (
+						<>
 						<div className="flex shrink-0 flex-wrap items-center justify-between gap-2 p-3">
 							<h3 className="m-0 flex items-center gap-2 text-sm font-bold text-slate-900">
 								<LuActivity className="h-4 w-4 text-emerald-600" /> Aktivitas langsung
@@ -329,6 +347,8 @@ export default function MonitorUserOnline({ awal = null, onTutup }) {
 								})
 							)}
 						</ol>
+						</>
+						)}
 					</div>
 				</div>
 			</section>

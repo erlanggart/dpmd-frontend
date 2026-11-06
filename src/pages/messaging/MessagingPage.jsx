@@ -988,7 +988,7 @@ export default function MessagingPage() {
 	   RENDER
 	   ════════════════════════════════════════ */
 	return (
-		<div className="relative flex h-[100dvh] md:h-[calc(100vh-80px)] bg-white md:rounded-2xl overflow-hidden md:shadow-sm md:border md:border-slate-200/80">
+		<div className="rahasia-cermin relative flex h-[100dvh] md:h-[calc(100vh-80px)] bg-white md:rounded-2xl overflow-hidden md:shadow-sm md:border md:border-slate-200/80">
 
 			{/* ── LEFT PANEL ── */}
 			<div className={`w-full md:w-[360px] lg:w-[400px] flex-shrink-0 bg-white md:border-r border-slate-100 flex flex-col ${mobileChat ? 'hidden md:flex' : 'flex'}`}>

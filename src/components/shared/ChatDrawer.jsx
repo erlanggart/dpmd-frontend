@@ -571,7 +571,7 @@ export default function ChatDrawer({ referenceType, referenceId, targetUserId, t
               animate={{ x: 0, opacity: 1 }}
               exit={{ x: '100%', opacity: 0.5 }}
               transition={{ type: 'spring', damping: 30, stiffness: 300 }}
-              className="fixed right-0 top-0 h-full w-full sm:w-[420px] z-50 flex flex-col overflow-hidden bg-white sm:rounded-l-2xl shadow-2xl shadow-slate-900/20"
+              className="rahasia-cermin fixed right-0 top-0 h-full w-full sm:w-[420px] z-50 flex flex-col overflow-hidden bg-white sm:rounded-l-2xl shadow-2xl shadow-slate-900/20"
             >
               {/* ── Header ── */}
               <div className="flex items-center gap-3 px-4 h-[64px] bg-white border-b border-slate-100 flex-shrink-0">

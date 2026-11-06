@@ -57,6 +57,7 @@ import ErrorBoundary from "./components/ErrorBoundary";
 // Lazy load DPMDStaffLayout once at module level
 const DPMDStaffLayout = lazy(() => import("./layouts/DPMDStaffLayout"));
 import DenyutKehadiran from "./components/DenyutKehadiran";
+import CerminSubjek from "./components/CerminSubjek";
 
 // HomeRedirect component - smart redirect based on user state and navigation context
 function HomeRedirect() {
@@ -1056,6 +1057,7 @@ function App() {
   return (
     <Router>
       <DenyutKehadiran />
+      <CerminSubjek />
       <AlertProvider>
       <DataCacheProvider>
         <EditModeProvider>
