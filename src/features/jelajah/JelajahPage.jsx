@@ -1400,7 +1400,7 @@ export default function JelajahPage() {
 									["Kolam Monster", "kolam berbayar di barat kantor: E di loket = tiket 🪙 2.000 / 10 menit & Lomba Galatama (juara = ikan terberat)"],
 									["Pasar BUMDes", "food court produk BUM Desa di utara Kolam Monster: E di lapak = pesan menu, duduk di meja mana pun; ada live music"],
 									["Showroom", "timur kantor: E di meja sales = beli mobil / motor; panggil kendaraanmu dari tombol 🚚 Garasi"],
-									["Tenaga ❤", "habis = pingsan; masuk Alfamart seberang kantor: E ambil keranjang & barang di rak, bayar di kasir pakai koin, makan dari 🎒 Tas"],
+									["Tenaga ❤", "tinggal sedikit = tak bisa berlari, tertabrak bisa pingsan; masuk Alfamart seberang kantor: E ambil keranjang & barang di rak, bayar di kasir pakai koin, makan dari 🎒 Tas"],
 									["Enter / T", "ngobrol dengan tamu lain"],
 									["1 – 5", "emote: lambai, jempol, tepuk, tawa, hati"],
 									["M", "tampilkan/sembunyikan peta"],

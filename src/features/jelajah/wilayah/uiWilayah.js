@@ -3,7 +3,7 @@ import { useSyncExternalStore } from "react";
 /* Keadaan UI dunia kecamatan yang dihitung di dalam loop 3D (tombol aksi terdekat). */
 export const uiWilayah = { dekat: null, depan: null };
 // posisi pemain (dibaca warga & hewan untuk menoleh / kabur), ditulis tiap frame
-export const pemainWilayah = { x: 0, z: 0, rot: 0, pingsan: false };
+export const pemainWilayah = { x: 0, z: 0, rot: 0 };
 const pendengar = new Set();
 let versi = 0;
 

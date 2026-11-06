@@ -2,7 +2,8 @@ import { useSyncExternalStore } from "react";
 
 // Tenaga (nyawa) pengunjung 0–100: berkurang perlahan seiring waktu, lebih cepat saat
 // berlari & adu tarik dengan ikan, dan banyak saat tertabrak kendaraan. Diisi ulang dengan
-// makan/minum dari minimarket. Habis = pingsan, lalu bangun di depan lobi.
+// makan/minum dari minimarket. Lelah saja tidak membuat pingsan: tenaga berhenti di 1,
+// pemain lemas dan tak bisa berlari tapi tetap bisa bekerja. Hanya tabrakan yang bisa menjatuhkan.
 
 const KUNCI = "jelajah-tenaga-v1";
 export const TENAGA_MAKS = 100;
@@ -40,8 +41,8 @@ function beritahu(paksa = false) {
 	}
 }
 
-export function ubahTenaga(delta, kabar) {
-	tenaga.nilai = Math.max(0, Math.min(TENAGA_MAKS, tenaga.nilai + delta));
+export function ubahTenaga(delta, kabar, bolehHabis = false) {
+	tenaga.nilai = Math.max(bolehHabis ? 0 : Math.min(1, tenaga.nilai), Math.min(TENAGA_MAKS, tenaga.nilai + delta));
 	if (kabar) tenaga.kabar = { ...kabar, id: performance.now() };
 	beritahu(!!kabar);
 }
@@ -61,7 +62,7 @@ export function laporTabrak({ vx, vz, laju, jenis }) {
 	const kurang = Math.round((jenis === "motor" ? 14 : 24) * (0.6 + kuat * 0.6));
 	const pj = Math.hypot(vx, vz) || 1;
 	tenaga.tabrak = { vx: vx / pj, vz: vz / pj, kuat, jenis };
-	ubahTenaga(-kurang, { teks: `Tertabrak ${jenis}! Tenaga −${kurang}`, jenis: "buruk" });
+	ubahTenaga(-kurang, { teks: `Tertabrak ${jenis}! Tenaga −${kurang}`, jenis: "buruk" }, true);
 }
 
 export const useTenaga = () =>

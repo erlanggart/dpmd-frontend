@@ -163,7 +163,8 @@ export function terapkanTata(kecamatan, utaraTertutup = false) {
 	// gerbang, jalan kampung, gapura
 	const gx = pilih([-13, -9, -5, 2, 6, 10, 14]);
 	Object.assign(GERBANG_KEBUN, { x: gx, z: KEBUN.z0 });
-	Object.assign(PAPAN_KEBUN, { x: gx + (gx > 0 ? -8 : 8), z: KEBUN.z0 - 0.3 });
+	// di seberang pengepul supaya mejanya langsung terlihat dari jalan masuk
+	Object.assign(PAPAN_KEBUN, { x: gx + (gx > 0 ? 8 : -8), z: KEBUN.z0 - 0.3 });
 	JALAN_NS.x = gx;
 	JALAN_NS.z1 = KEBUN.z0;
 	GAPURA_DESA.x = gx;
@@ -177,9 +178,11 @@ export function terapkanTata(kecamatan, utaraTertutup = false) {
 	const fx0 = KEBUN.x0 + 1.5, fx1 = KEBUN.x1 - 1.5, fz0 = KEBUN.z0 + 1.5, fz1 = KEBUN.z1 - 1.5;
 	const coba = (lx, lz) => () => kotak(antara(fx0 + lx / 2, fx1 - lx / 2), antara(fz0 + lz / 2, fz1 - lz / 2), lx, lz);
 
-	// meja pengepul di tepi selatan: pemain berdiri di antara meja dan pagar
+	// meja pengepul di samping gerbang supaya hasil bisa dijual tanpa menyeberangi kebun;
+	// pemain berdiri di antara meja dan pagar
 	const zMeja = KEBUN.z0 + 3.6;
-	const meja = taruh(() => kotak(antara(fx0 + 3.4, fx1 - 3.4), zMeja, 6.2, 1.8), terpakai, 0.8, kotak(gx + (gx > 0 ? -9 : 9), zMeja, 6.2, 1.8));
+	const meja = kotak(gx + (gx > 0 ? -6.5 : 6.5), zMeja, 6.2, 1.8);
+	terpakai.push(meja);
 	const px = pusat(meja).x - 0.4;
 	Object.assign(PENGEPUL_KEBUN, { x: px, z: zMeja });
 	Object.assign(TITIK_PENGEPUL, { x: px, z: zMeja - 1.5 });

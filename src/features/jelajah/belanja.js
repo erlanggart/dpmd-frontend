@@ -1,7 +1,7 @@
 import { useSyncExternalStore } from "react";
 import { bayarKoin } from "./pancing";
 import { TENAGA_MAKS, tenaga, ubahTenaga } from "./tenaga";
-import { BARANG } from "./toko";
+import { BARANG, BEKAL_WARUNG } from "./toko";
 import { catat, tambahXp } from "./progres";
 
 // Belanja di minimarket: ambil keranjang di dekat pintu, ambil barang dari rak satu per
@@ -12,7 +12,7 @@ const KUNCI_TAS = "jelajah-tas-v1";
 export const MAKS_KERANJANG = 12;
 // lama gerak tangan mengambil barang dari rak sampai masuk keranjang (detik)
 export const LAMA_AMBIL = 0.8;
-export const BARANG_PER_ID = Object.fromEntries(BARANG.map((b) => [b.id, b]));
+export const BARANG_PER_ID = Object.fromEntries([...BARANG, ...BEKAL_WARUNG].map((b) => [b.id, b]));
 
 function bacaTas() {
 	try {
@@ -109,6 +109,12 @@ export function kembalikanKeranjang() {
 	belanja.toko = null;
 	belanja.keranjang = [];
 	belanja.ambil = null;
+	beritahu();
+}
+
+export function tambahTas(id) {
+	belanja.tas[id] = (belanja.tas[id] || 0) + 1;
+	simpanTas();
 	beritahu();
 }
 

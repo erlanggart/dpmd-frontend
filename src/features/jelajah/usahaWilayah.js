@@ -5,7 +5,8 @@
  * dan obrolan warganya sendiri. Berkas ini data murni, tanpa impor.
  *
  * `tahan` (opsional): laju = pengali habisnya perawatan, batas = detik tanpa perawatan sampai mati.
- * `hujan`: isi = wadah terisi per detik, hemat = perawatan tidak berkurang,
+ * `hujan`: dalam = usaha di dalam ruangan, cuaca tidak pernah hujan; isi = wadah terisi per detik,
+ * hemat = perawatan tidak berkurang,
  * laju = pengali pertumbuhan, gangguan2 = pengali gangguan kedua saat hujan.
  */
 
@@ -190,7 +191,7 @@ export const USAHA = {
 		pupuk: { nama: "bahan premium", satuan: "paket", ikon: "🧵" },
 		pembeli: { peran: "Distributor", papan: "DISTRIBUTOR", ikon: "🧑‍💼", ajak: "Kirim barang lewat Pak Sobari 🚚", kosong: "Belum ada barang? Kemas dulu atuh. Mutu bintang tiga dicari toko.", ada: "Barangnya rapi! Sini saya hitung.", judul: "🚚 Distributor", kembali: "Kembali bekerja" },
 		peran: { karta: "Ketua koperasi perajin", dadang: "Penjaga gudang bahan" },
-		hujan: { teks: "🌧️ Hujan di luar, kerja di dalam tetap jalan", laju: 1, gangguan2: 1 },
+		hujan: { dalam: true, laju: 1, gangguan2: 1 },
 		demam: "PRODUKSI NGEBUT!", rezeki: ["Sisa bahan bisa dijual", "Toko besar memesan ulang", "Produk dipesan untuk ekspor!"],
 		tabIsi: "🧵 Pola & bahan", katBenih: "Pola", pekerja: "perajin",
 		lomba: { judul: "Lomba Produksi Cepat", teks: "Kemas 6 meja sebelum waktu habis!", juara: "🏆 JUARA PRODUKSI CEPAT!" },

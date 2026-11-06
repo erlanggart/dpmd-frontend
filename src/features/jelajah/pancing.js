@@ -21,9 +21,9 @@ import { tutorialBaru } from "./tutorial";
 // zona = rentang tegangan "pas" (makin sempit makin sulit); regen = tenaga ikan pulih per
 // detik saat senar kendor; lari = peluang per detik ikan kabur menarik senar.
 export const KELAS = [
-	{ nama: "Biasa", warna: "#94a3b8", bobot: 72, tenaga: 0.55, stamina: 6.5, sentak: 0.18, reaksi: 0.85, poin: 10, zona: [0.34, 0.9], regen: 0.1, lari: 0.06, colek: 3 },
-	{ nama: "Langka", warna: "#3b82f6", bobot: 20, tenaga: 0.8, stamina: 12, sentak: 0.28, reaksi: 0.72, poin: 25, zona: [0.4, 0.88], regen: 0.35, lari: 0.13, colek: 4 },
-	{ nama: "Epik", warna: "#a855f7", bobot: 6.5, tenaga: 1.02, stamina: 19, sentak: 0.36, reaksi: 0.58, poin: 60, zona: [0.46, 0.85], regen: 0.6, lari: 0.19, colek: 5 },
+	{ nama: "Biasa", warna: "#94a3b8", bobot: 85, tenaga: 0.55, stamina: 6.5, sentak: 0.18, reaksi: 0.85, poin: 10, zona: [0.34, 0.9], regen: 0.1, lari: 0.06, colek: 3 },
+	{ nama: "Langka", warna: "#3b82f6", bobot: 9, tenaga: 0.8, stamina: 12, sentak: 0.28, reaksi: 0.72, poin: 25, zona: [0.4, 0.88], regen: 0.35, lari: 0.13, colek: 4 },
+	{ nama: "Epik", warna: "#a855f7", bobot: 4, tenaga: 1.02, stamina: 19, sentak: 0.36, reaksi: 0.58, poin: 60, zona: [0.46, 0.85], regen: 0.6, lari: 0.19, colek: 5 },
 	{ nama: "Monster", warna: "#ef4444", bobot: 1.3, tenaga: 1.22, stamina: 27, sentak: 0.45, reaksi: 0.48, poin: 120, zona: [0.52, 0.82], regen: 0.9, lari: 0.25, colek: 6 },
 	{ nama: "Legenda", warna: "#f59e0b", bobot: 0.2, tenaga: 1.42, stamina: 31, sentak: 0.5, reaksi: 0.4, poin: 300, zona: [0.56, 0.8], regen: 0.9, lari: 0.27, colek: 7 },
 ];
@@ -635,15 +635,16 @@ export function pilihIkan(jauh) {
 	if (pancing.perahu) kalikan([1, 1, 1.1, 1.3, 1.5]);
 	if (pancing.sempurna) kalikan([1, 1, 1.25, 1.5, 1.6]);
 	if (jamLapar().aktif) kalikan([1, 1, 1.3, 1.6, 1.8]);
-	const hoki = joranKini().hoki * pelampungKini().hoki;
-	kalikan([1, 1, Math.sqrt(hoki), hoki, hoki * 1.1]);
-	// pengali bonus dibatasi supaya ikan langka tetap jarang (kelas Biasa/Langka boleh turun, tidak naik)
+	// bonus tempat & waktu dibatasi supaya ikan premium tetap jarang (kelas Biasa/Langka boleh turun, tidak naik)
 	const BATAS_BONUS = [1, 1, 3, 3.5, 4];
+	// joran & pelampung di luar batas itu: kalau ikut dibatasi, joran mahal tak terasa bedanya
+	const hoki = joranKini().hoki * pelampungKini().hoki;
+	const BONUS_ALAT = [1, 1, Math.sqrt(hoki), hoki ** 1.5, hoki ** 2];
 	const layak = (ikan) => {
 		const s = ikan.syarat || {};
 		return !ikan.kolam && (!s.malam || m) && (!s.perahu || pancing.perahu) && (!s.jauh || jauh >= s.jauh) && (!s.sempurna || pancing.sempurna);
 	};
-	const bobot = KELAS.map((k, i) => (IKAN.some((f) => f.kelas === i && layak(f)) ? k.bobot * Math.min(kali[i], BATAS_BONUS[i]) * (pancing.otomatis ? PELUANG_AUTO[i] : 1) : 0));
+	const bobot = KELAS.map((k, i) => (IKAN.some((f) => f.kelas === i && layak(f)) ? k.bobot * Math.min(kali[i], BATAS_BONUS[i]) * BONUS_ALAT[i] * (pancing.otomatis ? PELUANG_AUTO[i] : 1) : 0));
 	let r = Math.random() * bobot.reduce((a, b) => a + b, 0);
 	let kelas = 0;
 	for (let i = 0; i < bobot.length; i++) {

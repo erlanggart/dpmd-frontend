@@ -3,6 +3,8 @@ import { PETAK_KEBUN } from "./scene/kebunDesaData";
 import { ambilKoleksi, bayarKoin, tambahKoin } from "./pancing";
 import { nadaKombo, suara } from "./suaraPancing";
 import { tenaga, ubahTenaga } from "./tenaga";
+import { tambahTas } from "./belanja";
+import { BEKAL_WARUNG } from "./toko";
 import { hariIni, tambahXp } from "./progres";
 import { pengaliBumdes, periksaPencapaian, pesananHariIni, selesaikanPesanan } from "./bangunWilayah";
 import { catatRekor, infoGame, tambahXpGame } from "./rekorWilayah";
@@ -29,16 +31,14 @@ export const peningkatanKebun = () => peningkatanUsaha(usahaKini());
 
 // Barang di Warung Bu Imas. jenis: makan (isi tenaga), habis (stok), alat (sekali beli, permanen)
 export const BARANG_WARUNG = [
-	{ id: "kopi", jenis: "makan", nama: "Kopi tubruk", ikon: "☕", harga: 4, tenaga: 15 },
-	{ id: "gorengan", jenis: "makan", nama: "Bala-bala & gehu", ikon: "🍤", harga: 6, tenaga: 22 },
-	{ id: "kelapa", jenis: "makan", nama: "Es kelapa muda", ikon: "🥥", harga: 10, tenaga: 35 },
-	{ id: "timbel", jenis: "makan", nama: "Nasi timbel komplit", ikon: "🍱", harga: 18, tenaga: 70 },
+	...BEKAL_WARUNG.map((b) => ({ ...b, id: b.id.slice(5), jenis: "makan" })),
 	{ id: "pupuk", jenis: "habis", nama: "Pupuk kompos (3 karung)", ikon: "🟫", harga: 15, isi: 3, teks: "Dipakai otomatis saat menanam: tumbuh 40% lebih cepat & kualitas naik." },
 	{ id: "gembor", jenis: "alat", nama: "Gembor jumbo", ikon: "🪣", harga: 60, teks: "Muat 6 siraman lebih banyak." },
 	{ id: "caping", jenis: "alat", nama: "Caping anyaman", ikon: "👒", harga: 35, teks: "Tidak cepat lelah di bawah terik: tenaga 35% lebih awet." },
 	{ id: "orangan", jenis: "alat", nama: "Orang-orangan sawah", ikon: "🧍", harga: 70, teks: "Burung pipit 70% lebih jarang datang." },
 	{ id: "cangkul", jenis: "alat", nama: "Cangkul baja", ikon: "⛏️", harga: 90, teks: "Semua pekerjaan 35% lebih cepat." },
 	{ id: "penyiram", jenis: "alat", nama: "Penyiram bambu otomatis", ikon: "💦", harga: 160, teks: "Menyemprot semua petak tiap 30 detik." },
+	{ id: "asisten", jenis: "alat", nama: "Asisten BUMDes", ikon: "🧑‍🔧", harga: 300, teks: "Merawat semua tempat usaha dan mengatasi gangguan, jadi tidak ada yang mati walau Anda sibuk." },
 ];
 export const BARANG_PER_ID = Object.fromEntries(BARANG_WARUNG.map((b) => [b.id, b]));
 /** Barang warung dengan nama & keterangan sesuai usaha kecamatan ini. */
@@ -47,7 +47,7 @@ export const barangUsaha = (b) => ({ ...b, ...usahaKini().barang[b.id] });
 /** Benih komoditas lain (selain komoditas kecamatan yang gratis), sebungkus 4. */
 export const hargaBenih = (kom) => Math.round(KOMODITAS[kom].harga * KOMODITAS[kom].hasil * 1.5);
 
-export const LAMA_AKSI = { cangkul: 0.9, tanam: 0.8, siram: 1.0, usir: 0.7, panen: 0.8, timba: 1.2, bersih: 0.9, gali: 0.7 };
+export const LAMA_AKSI = { cangkul: 0.6, tanam: 0.5, siram: 0.6, usir: 0.45, panen: 0.5, timba: 0.8, bersih: 0.6, gali: 0.7 };
 const TENAGA_AKSI = { cangkul: 1.25, bersih: 1.25, tanam: 0.3, siram: 0.5, usir: 0.3, panen: 0.5, timba: 0.75, gali: 0.75 };
 
 const KUNCI = "jelajah:kebun:v2";
@@ -92,6 +92,7 @@ export const kebun = {
 	cuaca: { jenis: "cerah", sisa: 70 + Math.random() * 40, hujan: 0, pelangi: 0 },
 	semprot: 0, // performance.now() sampai penyiram berhenti menyemprot
 	jedaSemprot: 30,
+	jedaAsisten: 0,
 	efek: [], // teks melayang { id, x, y, z, teks, warna, besar, mulai }
 	terbang: [], // kawanan pipit yang kabur { x, z, mulai }
 	sembur: [], // ledakan butir saat panen { x, z, warna, n }
@@ -168,6 +169,10 @@ export function bersihkanEfek(kini = performance.now()) {
 // --- cuaca: cerah ↔ mendung → hujan (menyiram semua petak) → pelangi ---
 function majukanCuaca(dt) {
 	const c = kebun.cuaca;
+	if (usahaKini().hujan.dalam) {
+		Object.assign(c, { jenis: "cerah", hujan: 0 });
+		return;
+	}
 	c.sisa -= dt;
 	const target = c.jenis === "hujan" ? 1 : 0;
 	c.hujan += (target - c.hujan) * Math.min(1, dt * 0.35);
@@ -215,6 +220,19 @@ export function tumbuhkan(dt) {
 		for (const p of kebun.petak) if (p.tahap === "tanam") { p.air = Math.min(1, p.air + 0.5); p.kering = 0; }
 		suara("cebur");
 		ubah = true;
+	}
+
+	// asisten: jedanya di bawah batas lapar, jadi yang dirawatnya tidak pernah sampai mati
+	if (punyaAlat("asisten") && (kebun.jedaAsisten -= dt) <= 0) {
+		kebun.jedaAsisten = 15;
+		kebun.petak.forEach((p, i) => {
+			const rawat = p.tahap === "tanam" && p.air < 0.6;
+			if (!rawat && !p.hama && !p.burung) return;
+			if (p.tahap === "tanam") Object.assign(p, { air: 1, kering: 0 });
+			Object.assign(p, { hama: false, burung: false });
+			efekTeks(PETAK_KEBUN[i].x, PETAK_KEBUN[i].z, "🧑‍🔧 Dirawat", "#86efac", 0.8, 2);
+			ubah = true;
+		});
 	}
 
 	for (const p of kebun.petak) {
@@ -562,12 +580,17 @@ export function kirimPesananKab(id) {
 }
 
 /** Beli barang warung. Mengembalikan { ok, pesan }. */
-export function beliDiWarung(id) {
+export function beliDiWarung(id, bawa = false) {
 	if (!BARANG_PER_ID[id]) return { ok: false, pesan: "Barang tidak ada" };
 	const b = barangUsaha(BARANG_PER_ID[id]);
 	if (b.jenis === "alat" && punyaAlat(id)) return { ok: false, pesan: "Sudah punya" };
-	if (b.jenis === "makan" && tenaga.nilai >= 99) return { ok: false, pesan: "Masih kenyang, tenaga penuh" };
+	if (b.jenis === "makan" && !bawa && tenaga.nilai >= 99) return { ok: false, pesan: "Masih kenyang, tenaga penuh" };
 	if (!bayarKoin(b.harga)) return { ok: false, pesan: `Koin kurang (perlu 🪙 ${b.harga})` };
+	if (bawa) {
+		tambahTas(`desa-${id}`);
+		suara("klik");
+		return { ok: true, pesan: `${b.ikon} ${b.nama} masuk tas 🎒` };
+	}
 	if (b.jenis === "makan") {
 		ubahTenaga(b.tenaga, { teks: `${b.ikon} Nikmat! Tenaga +${b.tenaga}`, jenis: "baik" });
 		suara("dapat");

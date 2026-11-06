@@ -17,16 +17,22 @@ export default function PanelWarungDesa() {
 	const [pesan, setPesan] = useState(null);
 	const lapor = (h) => setPesan({ ...h, id: Date.now() });
 
-	const kartu = ({ kunci, ikon, nama, teks, harga, punya, onBeli, info }) => (
+	const kartu = ({ kunci, ikon, nama, teks, harga, punya, onBeli, onBawa, info }) => (
 		<li key={kunci} className="flex items-center gap-3 rounded-2xl bg-slate-50 p-2.5 ring-1 ring-slate-200">
 			<span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-white text-2xl shadow-sm">{ikon}</span>
 			<span className="min-w-0 flex-1">
 				<span className="block text-[14px] font-bold text-slate-900">{nama}</span>
 				{(teks || info) && <span className="block text-[12px] leading-snug text-slate-500">{info ? <b className="text-emerald-700">{info} </b> : null}{teks}</span>}
 			</span>
+			{onBawa && (
+				<button type="button" disabled={koin < harga} onClick={onBawa} title="Simpan di tas, makan kapan saja"
+					className="shrink-0 rounded-xl bg-slate-200 px-2.5 py-2 text-[13px] font-bold text-slate-800 hover:bg-slate-300 disabled:text-slate-400">
+					🎒 Bawa
+				</button>
+			)}
 			<button type="button" disabled={punya || koin < harga} onClick={onBeli}
 				className="shrink-0 rounded-xl bg-amber-400 px-3 py-2 text-[13px] font-extrabold text-slate-900 hover:bg-amber-300 disabled:bg-slate-200 disabled:text-slate-500">
-				{punya ? "Dimiliki" : `🪙 ${harga}`}
+				{punya ? "Dimiliki" : `${onBawa ? "Makan " : ""}🪙 ${harga}`}
 			</button>
 		</li>
 	);
@@ -38,7 +44,7 @@ export default function PanelWarungDesa() {
 			<div className="mb-3 flex items-start gap-3 rounded-2xl bg-rose-50 p-3">
 				<span className="text-3xl">🧕</span>
 				<p className="m-0 text-[13px] leading-snug text-rose-900">
-					<b>Bu Imas:</b> {tenaga < 30 ? "Aduh, pucat pisan! Makan dulu atuh, nanti pingsan." : `Mangga, silakan dipilih. Semuanya buat ${u.pekerja} rajin!`}
+					<b>Bu Imas:</b> {tenaga < 30 ? "Aduh, pucat pisan! Makan dulu atuh, nanti lemas." : `Mangga, silakan dipilih. Semuanya buat ${u.pekerja} rajin!`}
 				</p>
 			</div>
 			<div className="mb-3 flex items-center justify-between text-[13px]">
@@ -58,7 +64,7 @@ export default function PanelWarungDesa() {
 			)}
 			<ul className="m-0 list-none space-y-2 p-0">
 				{tab === "makan" && barang.filter((b) => b.jenis === "makan").map((b) => kartu({
-					kunci: b.id, ikon: b.ikon, nama: b.nama, info: `+${b.tenaga} tenaga`, harga: b.harga, onBeli: () => lapor(beliDiWarung(b.id)),
+					kunci: b.id, ikon: b.ikon, nama: b.nama, info: `+${b.tenaga} tenaga`, harga: b.harga, onBeli: () => lapor(beliDiWarung(b.id)), onBawa: () => lapor(beliDiWarung(b.id, true)),
 				}))}
 				{tab === "tani" && (
 					<>

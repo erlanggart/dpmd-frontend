@@ -109,7 +109,7 @@ function SatuWarga({ w }) {
 		}
 
 		// melambai sekali tiap kali pemain datang mendekat
-		if (jarak < 5 && !s.sudahLambai && !pemainWilayah.pingsan) { s.sudahLambai = true; s.lambai = 1.6; }
+		if (jarak < 5 && !s.sudahLambai) { s.sudahLambai = true; s.lambai = 1.6; }
 		if (jarak > 8) s.sudahLambai = false;
 		if (s.lambai > 0) s.lambai -= dt;
 

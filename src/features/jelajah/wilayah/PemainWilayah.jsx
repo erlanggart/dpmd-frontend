@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef } from "react";
 import { useFrame, useThree } from "@react-three/fiber";
 import { kendali } from "../jelajahStore";
 import { aksiPetak, animasiKebun, demamAktif, jumlahPetakAktif, kebun, mulaiAksiPetak, panenKilat, punyaAlat, timbaSumur, useKebun, usirDariPetak } from "../kebun";
-import { setTenaga, tenaga, TENAGA_LARI, ubahTenaga } from "../tenaga";
+import { tenaga, TENAGA_LARI, ubahTenaga } from "../tenaga";
 import { suara } from "../suaraPancing";
 import { langkahKaki } from "../suasanaSuara";
 import Tokoh from "../scene/Tokoh";
@@ -20,8 +20,8 @@ import { bolehTidur, desa } from "./desaHidup";
 /*
  * Tokoh pemain di dunia kecamatan: jalan (WASD/joystick) relatif kamera, lari
  * (Shift), loncat (Spasi), kamera orang ketiga (seret untuk memutar, gulir
- * untuk zoom), tabrakan dengan bangunan, tenaga yang terkuras (habis = pingsan
- * lalu siuman di saung kebun, tetap di dunia ini), aksi bertani di petak di
+ * untuk zoom), tabrakan dengan bangunan, tenaga yang terkuras (habis = lemas,
+ * tetap bisa bekerja), aksi bertani di petak di
  * depannya, dan menyapa warga / belanja di warung.
  */
 
@@ -42,7 +42,6 @@ export default function PemainWilayah({ penampilan }) {
 	const gerak = useRef({ laju: 0, fase: 0, isyarat: null, taniU: 0, udara: false });
 	const tombol = useRef(new Set());
 	const loncat = useRef({ h: 0, vy: 0 });
-	const pingsan = useRef(0);
 	const panjat = useRef(null);
 	const kamera = useRef({ yaw: TIBA_KEBUN.rot + Math.PI, pitch: 0.36, jarak: typeof window !== "undefined" && window.innerWidth < 640 ? 11.5 : 9 });
 	const { gl } = useThree();
@@ -126,38 +125,21 @@ export default function PemainWilayah({ penampilan }) {
 			k.yaw = t.yaw ?? (t.rot ?? 0) + Math.PI;
 		}
 
-		// --- tenaga: terkuras perlahan, lebih cepat saat berlari; habis = pingsan ---
+		// --- tenaga: terkuras perlahan, lebih cepat saat berlari; tinggal sedikit = tak bisa berlari, tetap bisa bekerja ---
 		const lariMau = kendali.lari || kendali.lariAnalog || tb.has("ShiftLeft") || tb.has("ShiftRight");
 		const lari = lariMau && tenaga.nilai >= TENAGA_LARI && !kendali.jongkok;
-		if (!pingsan.current) {
-			const bergerak = Math.hypot(kendali.arah.x, kendali.arah.y) > 0.05 || ["KeyW", "KeyA", "KeyS", "KeyD", "ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"].some((c) => tb.has(c));
-			ubahTenaga(-(KURAS.dasar * (punyaAlat("caping") ? 0.65 : 1) + (lari && bergerak && !demam ? KURAS.lari : 0) + langkahHujan(kebun.cuaca.hujan, teduhDesa(p.x, p.z), !!an || !!panjat.current, gr, dt, petunjukDesa)) * dt);
-			if (tenaga.nilai <= 0) {
-				pingsan.current = kini;
-				tenaga.pingsan = kini;
-				pemainWilayah.pingsan = true;
-				ubahTenaga(0, { teks: "😵 Anda pingsan kehabisan tenaga…", jenis: "buruk" });
-			}
-		} else if (kini - pingsan.current > 3200) {
-			// siuman di saung kebun, digotong warga; tetap di dunia kecamatan ini
-			pingsan.current = 0;
-			tenaga.pingsan = false;
-			pemainWilayah.pingsan = false;
-			setTenaga(40);
-			p.set(TITIK_SIUMAN.x, 0, TITIK_SIUMAN.z);
-			g.rotation.y = TITIK_SIUMAN.rot;
-			k.yaw = TITIK_SIUMAN.rot + Math.PI;
-			ubahTenaga(0, { teks: "Anda siuman di saung, digotong warga. Isi tenaga di Warung Bu Imas!", jenis: "info" });
-			posWarga.get("karta").ngobrol = kini + 4000;
-		}
-		const lemas = !!pingsan.current;
+		const bergerak = Math.hypot(kendali.arah.x, kendali.arah.y) > 0.05 || ["KeyW", "KeyA", "KeyS", "KeyD", "ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"].some((c) => tb.has(c));
+		ubahTenaga(-(KURAS.dasar * (punyaAlat("caping") ? 0.65 : 1) + (lari && bergerak && !demam ? KURAS.lari : 0) + langkahHujan(kebun.cuaca.hujan, teduhDesa(p.x, p.z), !!an || !!panjat.current, gr, dt, petunjukDesa)) * dt);
 
 		// --- aksi dari tombol / E ---
-		if (kendali.aksi) {
+		// tekanan selagi kerja berjalan ditahan satu dan dijalankan begitu selesai, supaya tidak hilang.
+		// gali dikecualikan: tiap ketukan menambah risiko runtuh, jadi harus disengaja.
+		const antre = an && an.jenis !== "gali" && kendali.aksi?.startsWith("tani:");
+		if (kendali.aksi && !antre) {
 			const aksi = kendali.aksi;
 			kendali.aksi = null;
 			const hadap = (tx, tz) => { g.rotation.y = Math.atan2(tx - p.x, tz - p.z); };
-			if (lemas || l.h > 0 || panjat.current) { /* tidak bisa bekerja saat pingsan / melayang / memanjat */ }
+			if (l.h > 0 || panjat.current) { /* tidak bisa bekerja saat melayang / memanjat */ }
 			else if (aksi === "tani:sumur") { if (timbaSumur()) hadap(SUMUR_KEBUN.x, SUMUR_KEBUN.z); }
 			else if (aksi.startsWith("tani:angkut:")) {
 					const i = +aksi.slice(12);
@@ -173,10 +155,10 @@ export default function PemainWilayah({ penampilan }) {
 			}
 		}
 
-		// --- gerak relatif kamera; dikunci selama aksi bertani & pingsan ---
+		// --- gerak relatif kamera; dikunci selama aksi bertani ---
 		if (tb.has("KeyQ")) k.yaw += 1.8 * dt;
 		if (tb.has("KeyR")) k.yaw -= 1.8 * dt;
-		const kunci = an || lemas || !!desa.tidur || !!panjat.current;
+		const kunci = an || !!desa.tidur || !!panjat.current;
 		const maju = kunci ? 0 : kendali.arah.y + (tb.has("KeyW") || tb.has("ArrowUp") ? 1 : 0) - (tb.has("KeyS") || tb.has("ArrowDown") ? 1 : 0);
 		const samping = kunci ? 0 : kendali.arah.x + (tb.has("KeyD") || tb.has("ArrowRight") ? 1 : 0) - (tb.has("KeyA") || tb.has("ArrowLeft") ? 1 : 0);
 		const fx = -Math.sin(k.yaw), fz = -Math.cos(k.yaw);
@@ -186,7 +168,7 @@ export default function PemainWilayah({ penampilan }) {
 		let laju = 0;
 		if (besar > 0.05) {
 			dx /= Math.max(1, besar); dz /= Math.max(1, besar);
-			const v = (kendali.jongkok ? 1.8 : lari ? 6.2 : 3.6) * (demam ? 1.3 : 1) * Math.min(1, besar);
+			const v = (kendali.jongkok ? 2.4 : lari ? 8.6 : 5.2) * (demam ? 1.3 : 1) * Math.min(1, besar);
 			const nx = Math.min(BATAS_DUNIA.x1, Math.max(BATAS_DUNIA.x0, p.x + dx * v * dt));
 			const nz = Math.min(BATAS_DUNIA.z1, Math.max(BATAS_DUNIA.z0, p.z + dz * v * dt));
 			const kotak = PENGHALANG_KEBUN;
@@ -216,34 +198,27 @@ export default function PemainWilayah({ penampilan }) {
 		}
 		gr.udara = l.h > 0.05;
 		if (panjat.current) {
-			if (lemas) {
+			const md = panjat.current;
+			const a = akarPanjat(md, dt);
+			p.set(a.x, a.y, a.z);
+			let beda = md.rot - g.rotation.y;
+			beda = Math.atan2(Math.sin(beda), Math.cos(beda));
+			g.rotation.y += beda * (1 - Math.exp(-14 * dt));
+			if (a.u >= 1) {
 				panjat.current = null;
 				p.y = 0;
-			}
-			else {
-				const md = panjat.current;
-				const a = akarPanjat(md, dt);
-				p.set(a.x, a.y, a.z);
-				let beda = md.rot - g.rotation.y;
-				beda = Math.atan2(Math.sin(beda), Math.cos(beda));
-				g.rotation.y += beda * (1 - Math.exp(-14 * dt));
-				if (a.u >= 1) {
-					panjat.current = null;
-					p.y = 0;
-					langkahKaki(permukaanWilayah(p.x, p.z), false);
-				}
+				langkahKaki(permukaanWilayah(p.x, p.z), false);
 			}
 		}
 		gr.panjatU = panjat.current ? Math.min(1, panjat.current.t / LAMA_PANJAT) : -1;
 		gr.panjatT = panjat.current?.tinggi ?? 0;
 		// jongkok ditunda selama aksi bertani yang punya pose sendiri
-		gr.jongkok = (gr.jongkok ?? 0) + ((kendali.jongkok && !an && !lemas ? 1 : 0) - (gr.jongkok ?? 0)) * (1 - Math.exp(-10 * dt));
-		badan.current.position.y = l.h + (lemas ? 0.15 : 0);
-		badan.current.rotation.x += ((lemas ? -1.5 : 0) - badan.current.rotation.x) * (1 - Math.exp(-6 * dt));
+		gr.jongkok = (gr.jongkok ?? 0) + ((kendali.jongkok && !an ? 1 : 0) - (gr.jongkok ?? 0)) * (1 - Math.exp(-10 * dt));
+		badan.current.position.y = l.h;
 
 		const tapak = Math.floor(gr.fase / Math.PI);
 		gr.laju += (laju - gr.laju) * (1 - Math.exp(-10 * dt));
-		gr.fase += dt * (lari ? 12 : kendali.jongkok ? 6.5 : 8.5) * gr.laju;
+		gr.fase += dt * (lari ? 15 : kendali.jongkok ? 7.5 : 11.5) * gr.laju;
 		if (laju && !gr.udara && !kendali.jongkok && Math.floor(gr.fase / Math.PI) !== tapak) langkahKaki(permukaanWilayah(p.x, p.z), lari);
 		gr.isyarat = an ? (an.jenis === "gali" ? "cangkul" : an.jenis) : null;
 		gr.taniU = an ? (kini - an.mulai) / (an.sampai - an.mulai) : 0;
@@ -269,7 +244,7 @@ export default function PemainWilayah({ penampilan }) {
 		}
 
 		// Demam: yang siap langsung terpanen saat diterjang
-		if (demam && !lemas) {
+		if (demam) {
 			const aktif = jumlahPetakAktif();
 			for (let i = 0; i < aktif; i++) {
 				const pk = PETAK_KEBUN[i];
@@ -307,13 +282,16 @@ export default function PemainWilayah({ penampilan }) {
 
 		// --- tombol aksi terdekat: warga & tempat lebih dulu, lalu petak di depan ---
 		let dekat = null, depan = null;
-		if (!an && !lemas && !desa.tidur) {
+		// selama kerja tombolnya tetap ada; kalau hilang, tekanan berikutnya jatuh ke tombol yang tak ada
+		if (an?.petak != null && aksiPetak(an.petak)?.jenis) dekat = `tani:petak:${an.petak}`;
+		else if (an?.jenis === "timba") dekat = "tani:sumur";
+		if (!an && !desa.tidur) {
 			let ayam = -1, jarakAyam = 1.6;
 			desa.ayam.forEach((a, i) => { const d = Math.hypot(a.x - p.x, a.z - p.z); if (!a.tertangkap && d < jarakAyam) { jarakAyam = d; ayam = i; } });
 			if (ayam >= 0) dekat = `ayam:${ayam}`;
 			else if (bolehTidur() && Math.hypot(TITIK_SIUMAN.x - p.x, TITIK_SIUMAN.z - p.z) < 3) dekat = "tidur";
 			else if (Math.hypot(SUMUR_KEBUN.x - p.x, SUMUR_KEBUN.z - p.z) < 2.4) dekat = "tani:sumur";
-			else if (Math.hypot(TITIK_PENGEPUL.x - p.x, TITIK_PENGEPUL.z - p.z) < 1.9) dekat = "tani:jual";
+			else if (Math.hypot(TITIK_PENGEPUL.x - p.x, TITIK_PENGEPUL.z - p.z) < 2.9) dekat = "tani:jual";
 			else if (titikAbangDesa().tiba && Math.hypot(titikAbangDesa().x - p.x, titikAbangDesa().z - p.z) < 2.2) dekat = "abang";
 			else if (Math.hypot(TITIK_WARUNG.x - p.x, TITIK_WARUNG.z - p.z) < 2) dekat = "warung";
 			else {

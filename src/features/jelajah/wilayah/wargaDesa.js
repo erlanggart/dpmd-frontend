@@ -125,7 +125,7 @@ export function kalimatWarga(id, giliran = 0) {
 	const u = usahaKini();
 	const umum = {
 		imas: [
-			"Mangga, mau jajan apa? Kalau lemas, makan dulu atuh, jangan sampai pingsan di sawah.",
+			"Mangga, mau jajan apa? Kalau lemas, makan dulu atuh, jangan sampai lemas di sawah.",
 			"Caping di warung ibu bikin nggak cepat capek kepanasan. Murah, kualitas mah juara!",
 			"Pupuk kompos ibu bikin padi cepat gede. Petani sini mah pakai semua.",
 		],
@@ -158,7 +158,7 @@ export function kalimatWarga(id, giliran = 0) {
 		],
 		lilis: [
 			"Mau ke warung Bu Imas, beli kopi buat bapak di sawah.",
-			"Hati-hati, kalau tenaga habis nanti pingsan. Tadi juga ada yang digotong ke saung.",
+			"Kalau tenaga tinggal sedikit, tak bisa lari. Bawa bekal di tas, biar kerja tetap enak.",
 		],
 		rafi: ["Ayo main bola! Eh, tapi Kakak lagi bertani ya?", "Nanti kalau sudah besar, Rafi mau jadi petani milenial!"],
 		nengsih: ["Golll! Hehe, Nengsih yang cetak gol.", "Kakak, di kolam sana ada ikan mas besar loh."],
@@ -167,7 +167,7 @@ export function kalimatWarga(id, giliran = 0) {
 	};
 	const darurat = [];
 	if (id === "karta" || id === "ujang" || id === "darsa") {
-		if (tenaga.nilai < 25) darurat.push("Kamu pucat, Jang. Makan dulu di warung Bu Imas, nanti pingsan!");
+		if (tenaga.nilai < 25) darurat.push("Kamu pucat, Jang. Makan dulu di warung Bu Imas, nanti lemas!");
 		if (burung) darurat.push(`Itu ada ${burung} ${u.unit} ${u.ganggu2.kabar}! Cepat atasi!`);
 		if (kering) darurat.push(`${kering} ${u.unit} kamu butuh perawatan. ${u.rawat.kata}, isi ulang di ${u.sumber.tempat}.`);
 		if (siap >= 3) darurat.push(`Sudah ${siap} ${u.unit} siap. ${u.panen.kata} beruntun biar dapat kombo!`);

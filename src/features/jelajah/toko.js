@@ -8,6 +8,14 @@ export const INFO_TOKO = {
 // Barang di toko depan kantor, dibayar dengan koin hasil memancing (lihat belanja.js).
 // bentuk & warna dipakai model 3D di rak, di tangan, dan di keranjang. olah = bahan
 // sembako yang dimasak dulu sebelum dimakan (hanya beda label tombol di tas).
+// Bekal dari Warung Bu Imas: tidak ada di rak minimarket, masuk tas lewat warung desa.
+export const BEKAL_WARUNG = [
+	{ id: "desa-kopi", nama: "Kopi tubruk", ikon: "☕", harga: 4, tenaga: 15, ket: "Bekal dari Bu Imas" },
+	{ id: "desa-gorengan", nama: "Bala-bala & gehu", ikon: "🍤", harga: 6, tenaga: 22, ket: "Bekal dari Bu Imas" },
+	{ id: "desa-kelapa", nama: "Es kelapa muda", ikon: "🥥", harga: 10, tenaga: 35, ket: "Bekal dari Bu Imas" },
+	{ id: "desa-timbel", nama: "Nasi timbel komplit", ikon: "🍱", harga: 18, tenaga: 70, ket: "Bekal dari Bu Imas" },
+];
+
 export const BARANG = [
 	{ id: "air", nama: "Air Mineral", ikon: "💧", harga: 15, tenaga: 10, ket: "Segar, pelepas dahaga", bentuk: "botol", warna: "#7dd3fc" },
 	{ id: "esteh", nama: "Es Teh Manis", ikon: "🧋", harga: 25, tenaga: 15, ket: "Manis dingin, bikin semangat", bentuk: "botol", warna: "#b45309" },

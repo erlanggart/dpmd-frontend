@@ -310,7 +310,7 @@ export default function Pemain({ daftarDinding, penghuni, penampilan = PENAMPILA
 		const jongkok = kendali.jongkok;
 		const lari = lariMau && tenaga.nilai >= TENAGA_LARI && !jongkok;
 
-		// --- tenaga terkuras; habis = pingsan, lalu bangun di depan lobi ---
+		// --- tenaga terkuras; habis karena tabrakan = pingsan, lalu bangun di depan lobi ---
 		{
 			const md0 = mode.current;
 			const kuras =

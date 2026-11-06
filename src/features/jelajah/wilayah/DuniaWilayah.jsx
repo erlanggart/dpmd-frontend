@@ -8,7 +8,7 @@ import { kirimUcap, pindahDunia, useMultipemain } from "../multipemain";
 import { useKoleksi } from "../pancing";
 import { aturHujan } from "../suaraPancing";
 import { aturSuasanaSuara, senyapkanSuasana } from "../suasanaSuara";
-import { ubahTenaga, useKabarTenaga, useTenaga } from "../tenaga";
+import { ubahTenaga, useKabarTenaga } from "../tenaga";
 import { KOMODITAS, aksiPetak, animasiKebun, aturKebun, benihDipegang, catat, daftarBenih, hadiahWarga, kebun, pilihBenih, tinggalkanKebun, useKebun } from "../kebun";
 import { terapkanTata, titikAbangDesa } from "../scene/kebunDesaData";
 import PedagangHujan from "../scene/PedagangHujan";
@@ -43,7 +43,7 @@ import { pemainWilayah, uiWilayah, useUiWilayah } from "./uiWilayah";
  * potensi wilayahnya: tata letak dari nama kecamatan, usaha dari potensinya
  * (bertani, ikan, ternak, wisata, produksi, tambang) yang dikerjakan tokoh
  * pemain sendiri, warga yang bisa diajak ngobrol, warung, pembeli, cuaca, dan
- * tenaga (pingsan = siuman di saung, tetap di desa).
+ * tenaga (habis = lemas, tetap bisa bekerja).
  */
 
 // abang payung ada selama cuaca tidak cerah
@@ -92,7 +92,6 @@ export default function DuniaWilayah({ wilayah, penampilan, sentuh, onKeluar, on
 	useUiWilayah();
 	useDesa();
 	const koin = useKoleksi().poin;
-	const tenaga = useTenaga();
 	const kabar = useKabarTenaga();
 	const [panel, setPanel] = useState(null);
 	const [obrolan, setObrolan] = useState(null); // { id, teks, hadiah }
@@ -156,7 +155,7 @@ export default function DuniaWilayah({ wilayah, penampilan, sentuh, onKeluar, on
 		return () => { clearInterval(t); senyapkanSuasana(); aturHujan(0); };
 	}, []);
 
-	// kabar (panen, cuaca, pingsan, belanja) sebagai tumpukan toast singkat
+	// kabar (panen, cuaca, belanja) sebagai tumpukan toast singkat
 	useEffect(() => {
 		if (!kabar || kabar.id < masukPada.current) return;
 		setToast((d) => (d.some((x) => x.id === kabar.id) ? d : [...d.slice(-2), kabar]));
@@ -242,7 +241,6 @@ export default function DuniaWilayah({ wilayah, penampilan, sentuh, onKeluar, on
 	const cuaca = CUACA[kebun.cuaca.jenis];
 	const benih = daftarBenih();
 	const pegang = benihDipegang();
-	const pingsan = tenaga <= 0;
 
 	return (
 		<div className="fixed inset-0 z-[60] select-none overflow-hidden bg-[#cfe6f5]">
@@ -401,18 +399,6 @@ export default function DuniaWilayah({ wilayah, penampilan, sentuh, onKeluar, on
 					</button>
 				</>
 			)}
-
-			<AnimatePresence>
-				{pingsan && (
-					<motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="pointer-events-none absolute inset-0 z-[65] flex items-center justify-center bg-slate-950/85">
-						<p className="m-0 text-center text-lg font-black text-white">
-							😵 Pingsan…
-							<br />
-							<span className="text-sm font-medium text-slate-300">Tenaga habis. Warga menggotong Anda ke saung kebun.</span>
-						</p>
-					</motion.div>
-				)}
-			</AnimatePresence>
 
 			{panel && (
 				<div className="fixed inset-0 z-[70] flex items-end justify-center bg-slate-900/40 sm:items-center sm:p-4" onClick={() => setPanel(null)}>
