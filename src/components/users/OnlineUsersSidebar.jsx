@@ -17,32 +17,7 @@ import {
 } from 'react-icons/lu';
 import api from '../../api';
 import { getAvatarUrl } from '../../utils/avatarUtils';
-
-const ROLE_COLORS = {
-  superadmin: 'bg-rose-100 text-rose-700',
-  kepala_dinas: 'bg-blue-100 text-blue-700',
-  sekretaris_dinas: 'bg-indigo-100 text-indigo-700',
-  kepala_bidang: 'bg-emerald-100 text-emerald-700',
-  ketua_tim: 'bg-teal-100 text-teal-700',
-  pegawai: 'bg-slate-100 text-slate-700',
-  desa: 'bg-green-100 text-green-700',
-  kecamatan: 'bg-violet-100 text-violet-700',
-  dinas_terkait: 'bg-amber-100 text-amber-700',
-  verifikator_dinas: 'bg-orange-100 text-orange-700',
-};
-
-const ROLE_LABELS = {
-  superadmin: 'Super Admin',
-  kepala_dinas: 'Kepala Dinas',
-  sekretaris_dinas: 'Sekretaris',
-  kepala_bidang: 'Kabid',
-  ketua_tim: 'Ketua Tim',
-  pegawai: 'Pegawai',
-  desa: 'Desa',
-  kecamatan: 'Kecamatan',
-  dinas_terkait: 'Dinas',
-  verifikator_dinas: 'Verifikator',
-};
+import { ROLE_COLORS, ROLE_LABELS, timeAgo } from './peranPengguna';
 
 const deviceIcons = {
   desktop: LuMonitor,
@@ -50,20 +25,9 @@ const deviceIcons = {
   tablet: LuTablet,
 };
 
-const timeAgo = (dateStr) => {
-  if (!dateStr) return '';
-  const diffMs = Date.now() - new Date(dateStr).getTime();
-  const diffSec = Math.floor(diffMs / 1000);
-  if (diffSec < 60) return 'Baru saja';
-  const diffMin = Math.floor(diffSec / 60);
-  if (diffMin < 60) return `${diffMin}m lalu`;
-  const diffHour = Math.floor(diffMin / 60);
-  return `${diffHour}j lalu`;
-};
-
 const ITEMS_PER_PAGE = 15;
 
-export default function OnlineUsersSidebar() {
+export default function OnlineUsersSidebar({ onBuka }) {
   const [users, setUsers] = useState([]);
   const [pagination, setPagination] = useState({ page: 1, total: 0, total_pages: 1 });
   const [page, setPage] = useState(1);
@@ -165,9 +129,14 @@ export default function OnlineUsersSidebar() {
           >
             <LuChevronLeft className="w-4 h-4" />
           </button>
-          <div className="w-8 h-8 rounded-lg bg-emerald-500 text-white flex items-center justify-center text-xs font-bold">
+          <button
+            type="button"
+            onClick={() => onBuka()}
+            className="w-8 h-8 rounded-lg bg-emerald-500 text-white flex items-center justify-center text-xs font-bold hover:bg-emerald-600 transition-colors"
+            title="Buka monitor user online"
+          >
             {pagination.total}
-          </div>
+          </button>
           <LuWifi className="w-4 h-4 text-emerald-500" />
         </div>
       </div>
@@ -180,16 +149,21 @@ export default function OnlineUsersSidebar() {
         {/* Header */}
         <div className="px-4 py-3 bg-gradient-to-r from-emerald-500 to-teal-500 text-white flex-shrink-0">
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => onBuka()}
+              className="flex items-center gap-2 text-left rounded-lg hover:opacity-90 transition-opacity"
+              title="Buka monitor user online"
+            >
               <div className="relative">
                 <LuWifi className="w-5 h-5" />
                 <span className="absolute -top-1 -right-1 w-2 h-2 bg-green-300 rounded-full animate-ping" />
               </div>
               <div>
                 <h3 className="font-bold text-sm">User Online</h3>
-                <p className="text-[11px] text-white/70">{pagination.total} pengguna aktif</p>
+                <p className="text-[11px] text-white/70">{pagination.total} pengguna aktif · klik untuk monitor</p>
               </div>
-            </div>
+            </button>
             <div className="flex items-center gap-1">
               <button
                 onClick={() => { errorCountRef.current = 0; lastFetchRef.current = 0; setPage(1); fetchOnline(1); }}
@@ -238,7 +212,7 @@ export default function OnlineUsersSidebar() {
                 const roleLabel = ROLE_LABELS[user.role] || user.role;
 
                 return (
-                  <div key={`${user.id}-${idx}`} className="px-4 py-2.5 hover:bg-gray-50/80 transition-colors">
+                  <button type="button" onClick={() => onBuka(user)} key={`${user.id}-${idx}`} className="block w-full text-left px-4 py-2.5 hover:bg-gray-50/80 transition-colors">
                     <div className="flex items-start gap-3">
                       {/* Avatar */}
                       <div className="relative flex-shrink-0 mt-0.5">
@@ -313,7 +287,7 @@ export default function OnlineUsersSidebar() {
                         </span>
                       </div>
                     </div>
-                  </div>
+                  </button>
                 );
               })}
             </div>

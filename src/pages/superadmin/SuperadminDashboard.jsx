@@ -41,6 +41,7 @@ import {
 import { useAuth } from "../../context/AuthContext";
 import api from "../../api";
 import OnlineUsersSidebar from "../../components/users/OnlineUsersSidebar";
+import MonitorUserOnline from "../../components/users/MonitorUserOnline";
 
 /* ───────────────────────────── Helper ───────────────────────────── */
 
@@ -215,6 +216,9 @@ const SuperadminDashboard = () => {
 	const [memuat, setMemuat] = useState(true);
 	const [diperbarui, setDiperbarui] = useState(null);
 	const [kini, setKini] = useState(new Date());
+	// undefined = monitor tertutup, null = terbuka untuk semua user, objek = fokus ke satu user
+	const [monitor, setMonitor] = useState(undefined);
+	const tutupMonitor = useCallback(() => setMonitor(undefined), []);
 
 	useEffect(() => {
 		const t = setInterval(() => setKini(new Date()), 1000);
@@ -287,6 +291,14 @@ const SuperadminDashboard = () => {
 		<div className="min-h-screen bg-[radial-gradient(ellipse_at_top_left,_#eef2ff_0%,_transparent_45%)] p-4 md:p-6 lg:p-8">
 			<div className="mx-auto flex max-w-[1600px] gap-6">
 				<div className="min-w-0 flex-1 space-y-6">
+					{/* sidebar online hanya ada di layar lebar; di layar lain monitor dibuka dari sini */}
+					<button
+						type="button"
+						onClick={() => setMonitor(null)}
+						className="flex w-full items-center justify-center gap-2 rounded-2xl bg-emerald-500 px-4 py-3 text-sm font-bold text-white shadow-sm hover:bg-emerald-600 xl:hidden"
+					>
+						<span className="h-2 w-2 animate-pulse rounded-full bg-white" /> Monitor User Online
+					</button>
 					{/* ── Hero ── */}
 					<motion.section
 						{...muncul(0)}
@@ -664,9 +676,10 @@ const SuperadminDashboard = () => {
 
 				{/* Pengguna online — hanya di layar lebar */}
 				<div className="hidden xl:block">
-					<OnlineUsersSidebar />
+					<OnlineUsersSidebar onBuka={(u = null) => setMonitor(u)} />
 				</div>
 			</div>
+			{monitor !== undefined && <MonitorUserOnline awal={monitor} onTutup={tutupMonitor} />}
 		</div>
 	);
 };
