@@ -23,7 +23,7 @@ export const RADIUS_GERBANG = 9;
 export const BATAS_LOMBA = 120; // detik, sejak melewati garis start
 
 export const MEDALI_JETSKI = [
-	{ id: "emas", ikon: "🥇", nama: "Emas", batas: 34, koin: 800 },
-	{ id: "perak", ikon: "🥈", nama: "Perak", batas: 44, koin: 500 },
-	{ id: "perunggu", ikon: "🥉", nama: "Perunggu", batas: 60, koin: 250 },
+	{ id: "emas", ikon: "🥇", nama: "Emas", batas: 23, koin: 800 },
+	{ id: "perak", ikon: "🥈", nama: "Perak", batas: 30, koin: 500 },
+	{ id: "perunggu", ikon: "🥉", nama: "Perunggu", batas: 40, koin: 250 },
 ];

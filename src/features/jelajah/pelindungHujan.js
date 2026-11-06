@@ -29,8 +29,8 @@ export const PELINDUNG = {
 	},
 };
 
-// tenaga per detik saat kehujanan (100 habis ±3 menit)
-export const KURAS_HUJAN = 0.5;
+// tenaga per detik saat kehujanan (100 habis ±8 menit)
+export const KURAS_HUJAN = 0.2;
 
 function baca() {
 	try {

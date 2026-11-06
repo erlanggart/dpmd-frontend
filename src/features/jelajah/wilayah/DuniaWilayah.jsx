@@ -26,6 +26,7 @@ import PanelGali from "../ui/PanelGali";
 import PanelPengepul from "../ui/PanelPengepul";
 import PetaKecamatan from "../ui/PetaKecamatan";
 import PanelWarungDesa from "../ui/PanelWarungDesa";
+import { PanelTas } from "../ui/PanelKasir";
 import Joystick from "../ui/Joystick";
 import LingkunganDesa from "./LingkunganDesa";
 import PemainWilayah from "./PemainWilayah";
@@ -294,6 +295,10 @@ export default function DuniaWilayah({ wilayah, penampilan, sentuh, onKeluar, on
 						className="pointer-events-auto flex items-center gap-2 rounded-xl bg-white/90 px-3 py-2 text-[13px] font-bold text-slate-800 shadow-lg backdrop-blur hover:bg-white">
 						🗺️ <span className="hidden sm:inline">Peta</span>
 					</button>
+					<button type="button" onClick={() => setPanel("tas")} title="Tas: makan & minum bekal" aria-label="Buka tas"
+						className="pointer-events-auto flex items-center gap-2 rounded-xl bg-white/90 px-3 py-2 text-[13px] font-bold text-slate-800 shadow-lg backdrop-blur hover:bg-white">
+						🎒 <span className="hidden sm:inline">Tas</span>
+					</button>
 					<TombolSuara />
 					{statusMp === "tersambung" && (
 						<button type="button" onClick={() => setKetik("")} aria-label="Ngobrol dengan teman di kecamatan ini" title="Ngobrol dengan teman di kecamatan ini"
@@ -411,13 +416,13 @@ export default function DuniaWilayah({ wilayah, penampilan, sentuh, onKeluar, on
 
 			{panel && (
 				<div className="fixed inset-0 z-[70] flex items-end justify-center bg-slate-900/40 sm:items-center sm:p-4" onClick={() => setPanel(null)}>
-					<section role="dialog" aria-modal="true" aria-label={panel === "warung" ? "Warung Bu Imas" : panel === "abang" ? "Abang Payung" : panel === "peta" ? "Bangun Kabupaten" : usahaKini().pembeli.peran} onClick={(e) => e.stopPropagation()}
+					<section role="dialog" aria-modal="true" aria-label={panel === "tas" ? "Tas belanjaan" : panel === "warung" ? "Warung Bu Imas" : panel === "abang" ? "Abang Payung" : panel === "peta" ? "Bangun Kabupaten" : usahaKini().pembeli.peran} onClick={(e) => e.stopPropagation()}
 						className={`max-h-[88vh] w-full overflow-y-auto rounded-t-3xl bg-white p-5 shadow-2xl sm:rounded-3xl ${panel === "peta" ? "sm:max-w-3xl" : "sm:max-w-md"}`}>
 						<div className="mb-4 flex items-center justify-between">
-							<h2 className="m-0 text-lg font-bold text-slate-900">{panel === "warung" ? "🏪 Warung Bu Imas" : panel === "abang" ? "☂️ Abang Payung" : panel === "peta" ? "🗺️ Bangun Kabupaten" : usahaKini().pembeli.judul}</h2>
+							<h2 className="m-0 text-lg font-bold text-slate-900">{panel === "tas" ? "🎒 Tas belanjaan" : panel === "warung" ? "🏪 Warung Bu Imas" : panel === "abang" ? "☂️ Abang Payung" : panel === "peta" ? "🗺️ Bangun Kabupaten" : usahaKini().pembeli.judul}</h2>
 							<button type="button" onClick={() => setPanel(null)} aria-label="Tutup" className="flex h-9 w-9 items-center justify-center rounded-full bg-slate-100 text-slate-600 hover:bg-slate-200"><FiX /></button>
 						</div>
-						{panel === "warung" ? <PanelWarungDesa /> : panel === "abang" ? <PanelPelindung /> : panel === "peta"
+						{panel === "tas" ? <PanelTas /> : panel === "warung" ? <PanelWarungDesa /> : panel === "abang" ? <PanelPelindung /> : panel === "peta"
 							? <PetaKecamatan kiniDi={wilayah.kecamatan} onMain={(p) => { setPanel(null); onPindah(p); }} />
 							: <PanelPengepul onTutup={() => setPanel(null)} />}
 					</section>

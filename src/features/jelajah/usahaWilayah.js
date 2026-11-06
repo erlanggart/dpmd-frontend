@@ -4,6 +4,7 @@
  * berkas ini memberi tiap usaha komoditas, kata, gangguan, barang warung, acara,
  * dan obrolan warganya sendiri. Berkas ini data murni, tanpa impor.
  *
+ * `tahan` (opsional): laju = pengali habisnya perawatan, batas = detik tanpa perawatan sampai mati.
  * `hujan`: isi = wadah terisi per detik, hemat = perawatan tidak berkurang,
  * laju = pengali pertumbuhan, gangguan2 = pengali gangguan kedua saat hujan.
  */
@@ -115,7 +116,9 @@ export const USAHA = {
 		pupuk: { nama: "konsentrat", satuan: "karung", ikon: "🌽" },
 		pembeli: { peran: "Koperasi susu", papan: "KOPERASI SUSU", ikon: "🧑‍🌾", ajak: "Setor susu ke Pak Sobari 🥛", kosong: "Belum ada susu? Perah dulu atuh. Kambing sehat susunya banyak.", ada: "Susunya segar! Sini saya ukur.", judul: "🥛 Koperasi susu", kembali: "Kembali ke kandang" },
 		peran: { karta: "Ketua kelompok ternak", dadang: "Penjaga lumbung pakan" },
-		hujan: { teks: "🌧️ Hujan turun! Kambing berteduh, tikus ikut bersembunyi", laju: 1, gangguan2: 0 },
+		// modal cempe mahal: kambing lebih tahan lapar dari tanaman, dan hujan tidak mengurangi pakannya
+		tahan: { laju: 0.5, batas: 120 },
+		hujan: { teks: "🌧️ Hujan turun! Kambing berteduh, tikus ikut bersembunyi", hemat: true, laju: 1, gangguan2: 0 },
 		demam: "SUSU MELIMPAH!", rezeki: ["Kambing lagi subur susunya", "Pembeli langganan memberi tip", "Kambing kontes menang lomba!"],
 		tabIsi: "🌽 Cempe & konsentrat", katBenih: "Cempe", pekerja: "peternak",
 		lomba: { judul: "Lomba Perah Desa", teks: "Perah 6 kandang sebelum waktu habis!", juara: "🏆 JUARA LOMBA PERAH DESA!" },

@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
-import { FiArrowLeft, FiBox, FiGrid, FiUser, FiUsers } from "react-icons/fi";
+import { FiArrowLeft, FiArrowRight, FiGrid, FiUser, FiUsers } from "react-icons/fi";
 import { AVATAR, WARNA_KULIT, bacaProfil, penampilanAvatar, rapikanNama, simpanProfil } from "../avatar";
 
 // Pratinjau avatar sederhana (SVG) supaya layar pembuka tidak perlu memuat three.js.
@@ -51,6 +51,32 @@ function GambarAvatar({ profil, className }) {
 	);
 }
 
+const FOKUS = "outline-none focus-visible:ring-2 focus-visible:ring-[rgb(var(--color-primary))] focus-visible:ring-offset-2";
+const TOMBOL_UTAMA = `inline-flex h-12 w-full items-center justify-center gap-2 whitespace-nowrap rounded-xl bg-[rgb(var(--color-secondary))] px-4 text-base font-bold text-slate-950 transition hover:brightness-110 ${FOKUS}`;
+const LABEL = "text-xs font-medium text-slate-500";
+
+function Segmen({ label, nilai, opsi, onPilih }) {
+	return (
+		<div role="radiogroup" aria-label={label} className="grid grid-cols-2 gap-1 rounded-xl bg-slate-100 p-1">
+			{opsi.map(([kode, teks, Ikon]) => (
+				<button
+					type="button"
+					key={kode}
+					role="radio"
+					aria-checked={nilai === kode}
+					onClick={() => onPilih(kode)}
+					className={`flex h-9 items-center justify-center gap-2 whitespace-nowrap rounded-lg text-xs font-semibold transition min-[360px]:text-sm ${FOKUS} ${
+						nilai === kode ? "bg-white text-slate-900 shadow-sm" : "text-slate-500 hover:text-slate-900"
+					}`}
+				>
+					{Ikon && <Ikon className="h-4 w-4" />}
+					{teks}
+				</button>
+			))}
+		</div>
+	);
+}
+
 const KONTROL_DESKTOP = [
 	["W A S D / panah", "berjalan"],
 	["Shift", "berlari"],
@@ -75,6 +101,7 @@ export default function LayarAwal({ webglOk, sentuh, sarankan2D, onMulai3D, onMu
 	const bersama = profil.mode !== "sendiri";
 	// Nama wajib bila bermain bersama (tampil di atas kepala bagi tamu lain).
 	const namaOk = !bersama || nama.length >= 2;
+	const namaSalah = cobaKirim && !namaOk;
 	const ubah = (patch) => setProfil((p) => ({ ...p, ...patch }));
 
 	const mulai = (e) => {
@@ -88,204 +115,185 @@ export default function LayarAwal({ webglOk, sentuh, sarankan2D, onMulai3D, onMu
 
 	return (
 		<main className="relative min-h-[100svh] overflow-hidden bg-[rgb(var(--color-primary))] text-white">
+			{/* kisi tipis bernuansa denah kantor */}
 			<div
-				className="pointer-events-none absolute inset-0 opacity-60"
+				className="pointer-events-none absolute inset-0"
 				style={{
-					background:
-						"radial-gradient(60vmax 40vmax at 15% -10%, rgba(255,255,255,.12), transparent 60%), radial-gradient(50vmax 40vmax at 95% 110%, rgba(245,180,60,.22), transparent 60%)",
+					backgroundImage:
+						"linear-gradient(rgba(255,255,255,.05) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.05) 1px, transparent 1px)",
+					backgroundSize: "48px 48px",
+					maskImage: "radial-gradient(90vmax 70vmax at 0% 0%, #000, transparent 75%)",
+					WebkitMaskImage: "radial-gradient(90vmax 70vmax at 0% 0%, #000, transparent 75%)",
 				}}
 			/>
-			<div className="relative mx-auto flex min-h-[100svh] max-w-3xl flex-col px-4 py-6 sm:px-8">
-				<Link
-					to="/"
-					className="inline-flex w-fit items-center gap-2 rounded-full bg-white/10 px-4 py-2 text-sm font-medium hover:bg-white/20"
-				>
-					<FiArrowLeft /> Beranda
-				</Link>
-
-				<div className="flex flex-1 flex-col justify-center py-10">
-					<div className="mb-6 flex items-center gap-3">
-						<img src="/logo-bogor.png" alt="" className="h-12 w-auto" />
+			<div className="relative mx-auto flex min-h-[100svh] max-w-6xl flex-col lg:max-w-[84rem] px-4 py-5 sm:px-8 lg:py-7">
+				<header className="flex items-center justify-between gap-4">
+					<div className="flex items-center gap-3">
+						<img src="/logo-bogor.png" alt="" className="h-10 w-auto" />
 						<div className="leading-tight">
-							<p className="text-sm font-bold tracking-wide">DPMD</p>
-							<p className="text-xs text-white/70">Kabupaten Bogor</p>
+							<p className="text-sm font-bold">DPMD</p>
+							<p className="text-xs text-white/60">Kabupaten Bogor</p>
 						</div>
 					</div>
+					<Link to="/" className="inline-flex items-center gap-2 rounded-lg px-2 py-1 text-sm font-medium text-white/70 transition hover:text-white">
+						<FiArrowLeft /> Beranda
+					</Link>
+				</header>
 
-					<p className="text-xs font-semibold uppercase tracking-[0.18em] text-[rgb(var(--color-secondary))]">
-						Tur interaktif
-					</p>
-					<h1 className="mt-2 text-4xl font-bold leading-tight sm:text-5xl">Jelajah Kantor DPMD</h1>
-					<p className="mt-4 max-w-xl text-base leading-relaxed text-white/75 sm:text-lg">
-						Masuk ke kantor DPMD Kabupaten Bogor, naik-turun dua lantai, berkeliling ke tujuh ruang bidang, dan tanyakan langsung kepada
-						petugasnya layanan apa saja yang tersedia.
-					</p>
+				<div className="grid flex-1 content-center gap-x-16 gap-y-8 py-8 lg:grid-cols-[minmax(0,1fr)_31rem] lg:gap-y-10">
+					<section className="lg:self-end">
+						<p className="text-sm font-medium text-white/60">Tur interaktif</p>
+						<h1 className="mt-2 text-4xl font-bold leading-[1.05] min-[360px]:text-[2.75rem] tracking-tight sm:text-6xl lg:text-7xl xl:text-8xl">
+							Jelajah Kantor <span className="text-[rgb(var(--color-secondary))]">DPMD</span>
+						</h1>
+						<p className="mt-4 max-w-xl text-base leading-relaxed text-white/70 lg:text-lg">
+							Naik-turun dua lantai, berkeliling ke tujuh ruang bidang, dan tanyakan langsung kepada petugasnya layanan apa saja yang tersedia.
+						</p>
+					</section>
 
-					{webglOk && (
-						<form onSubmit={mulai} className="mt-8 rounded-3xl bg-white/10 p-4 ring-1 ring-white/15 backdrop-blur sm:p-5" noValidate>
-							<div role="radiogroup" aria-label="Mode jelajah" className="mb-4 grid grid-cols-2 gap-2 rounded-2xl bg-black/15 p-1">
-								{[
-									["bersama", FiUsers, "Bersama", "Multiplayer dengan tamu lain"],
-									["sendiri", FiUser, "Sendiri", "Single player, tanpa server"],
-								].map(([kode, Ikon, judul, ket]) => (
-									<button
-										type="button"
-										key={kode}
-										role="radio"
-										aria-checked={(kode === "sendiri") === !bersama}
-										onClick={() => ubah({ mode: kode })}
-										className={`flex items-center gap-2.5 rounded-xl px-3 py-2.5 text-left transition ${
-											(kode === "sendiri") === !bersama ? "bg-white text-slate-900 shadow" : "text-white hover:bg-white/10"
-										}`}
-									>
-										<Ikon className="h-5 w-5 shrink-0" />
-										<span className="min-w-0">
-											<span className="block text-sm font-bold">{judul}</span>
-											<span className={`block truncate text-[11px] ${(kode === "sendiri") === !bersama ? "text-slate-500" : "text-white/60"}`}>{ket}</span>
-										</span>
-									</button>
-								))}
-							</div>
-							<div className="flex items-start gap-4">
-								<div className="flex h-28 w-20 shrink-0 items-end justify-center rounded-2xl bg-white/90 pb-1 sm:h-32 sm:w-24">
-									<GambarAvatar profil={profil} className="h-24 w-16 sm:h-28 sm:w-20" />
-								</div>
-								<div className="min-w-0 flex-1 space-y-3">
-									<div>
-										<label htmlFor="nama-tamu" className="text-xs font-semibold uppercase tracking-[0.14em] text-white/70">
-											Nama tamu{!bersama && <span className="normal-case tracking-normal text-white/45"> (opsional)</span>}
-										</label>
-										<input
-											id="nama-tamu"
-											value={profil.nama}
-											onChange={(e) => ubah({ nama: e.target.value.slice(0, 24) })}
-											maxLength={24}
-											autoComplete="nickname"
-											placeholder="Tulis nama Anda"
-											aria-invalid={cobaKirim && !namaOk}
-											aria-describedby="nama-tamu-ket"
-											className="mt-1 w-full rounded-xl border-0 bg-white px-3.5 py-2.5 text-base font-semibold text-slate-900 shadow-inner outline-none ring-2 ring-transparent placeholder:font-normal placeholder:text-slate-400 focus:ring-[rgb(var(--color-secondary))]"
-										/>
-										<p id="nama-tamu-ket" className={`mt-1 text-xs ${cobaKirim && !namaOk ? "font-semibold text-amber-300" : "text-white/55"}`}>
-											{cobaKirim && !namaOk ? "Isi nama minimal 2 huruf dulu ya." : bersama ? "Tampil di atas kepala avatar Anda, terlihat tamu lain." : "Mode sendiri: tidak terhubung ke tamu lain."}
-										</p>
+					<section className="rounded-3xl bg-white p-4 text-slate-900 shadow-2xl shadow-black/30 sm:p-6 lg:col-start-2 lg:row-span-2 lg:row-start-1 lg:self-center">
+						{webglOk ? (
+							<form onSubmit={mulai} className="space-y-4" noValidate>
+								<Segmen
+									label="Mode jelajah"
+									nilai={bersama ? "bersama" : "sendiri"}
+									opsi={[
+										["bersama", "Bersama", FiUsers],
+										["sendiri", "Sendiri", FiUser],
+									]}
+									onPilih={(mode) => ubah({ mode })}
+								/>
+
+								<div className="flex gap-3 sm:gap-4">
+									<div className="flex w-20 shrink-0 items-end min-[360px]:w-24 justify-center rounded-2xl bg-slate-100 pb-1.5 sm:w-28">
+										<GambarAvatar profil={profil} className="h-32 w-20 sm:h-36 sm:w-[5.5rem]" />
 									</div>
-									<div role="radiogroup" aria-label="Jenis kelamin" className="grid grid-cols-2 gap-2">
-										{[
-											["L", "Laki-laki"],
-											["P", "Perempuan"],
-										].map(([kode, label]) => (
+									<div className="min-w-0 flex-1 space-y-3">
+										<div>
+											<label htmlFor="nama-tamu" className={LABEL}>
+												Nama tamu{!bersama && " (opsional)"}
+											</label>
+											<input
+												id="nama-tamu"
+												value={profil.nama}
+												onChange={(e) => ubah({ nama: e.target.value.slice(0, 24) })}
+												maxLength={24}
+												autoComplete="nickname"
+												placeholder="Tulis nama Anda"
+												aria-invalid={namaSalah}
+												aria-describedby={namaSalah ? "nama-tamu-ket" : undefined}
+												className={`mt-1 h-11 w-full rounded-xl bg-slate-100 px-3.5 text-base font-semibold text-slate-900 outline-none ring-2 transition placeholder:font-normal placeholder:text-slate-400 focus:bg-white ${
+													namaSalah ? "ring-red-500" : "ring-transparent focus:ring-[rgb(var(--color-primary))]"
+												}`}
+											/>
+											{namaSalah && (
+												<p id="nama-tamu-ket" role="alert" className="mt-1 text-xs font-medium text-red-600">
+													Isi nama minimal 2 huruf dulu ya.
+												</p>
+											)}
+										</div>
+										<Segmen
+											label="Jenis kelamin"
+											nilai={profil.jk}
+											opsi={[
+												["L", "Laki-laki"],
+												["P", "Perempuan"],
+											]}
+											onPilih={(jk) => ubah({ jk, avatar: 0 })}
+										/>
+									</div>
+								</div>
+
+								<div>
+									<p className={LABEL}>Pilih avatar</p>
+									<div role="radiogroup" aria-label="Avatar" className="mt-1.5 grid grid-cols-4 gap-2">
+										{AVATAR[profil.jk].map((a, i) => (
 											<button
 												type="button"
-												key={kode}
+												key={a.nama}
 												role="radio"
-												aria-checked={profil.jk === kode}
-												onClick={() => ubah({ jk: kode, avatar: 0 })}
-												className={`rounded-xl px-3 py-2 text-sm font-bold transition ${
-													profil.jk === kode ? "bg-white text-slate-900 shadow" : "bg-white/10 text-white hover:bg-white/20"
+												aria-checked={profil.avatar === i}
+												aria-label={a.nama}
+												title={a.nama}
+												onClick={() => ubah({ avatar: i })}
+												className={`flex h-[4.5rem] items-end justify-center rounded-xl pb-1 ring-2 transition ${FOKUS} ${
+													profil.avatar === i ? "bg-white ring-[rgb(var(--color-primary))]" : "bg-slate-100 ring-transparent hover:bg-slate-200"
 												}`}
 											>
-												{label}
+												<GambarAvatar profil={{ ...profil, avatar: i }} className="h-16 w-10" />
 											</button>
 										))}
 									</div>
 								</div>
-							</div>
 
-							<p className="mt-4 text-xs font-semibold uppercase tracking-[0.14em] text-white/70">Pilih avatar</p>
-							<div role="radiogroup" aria-label="Avatar" className="mt-2 grid grid-cols-4 gap-2">
-								{AVATAR[profil.jk].map((a, i) => (
-									<button
-										type="button"
-										key={a.nama}
-										role="radio"
-										aria-checked={profil.avatar === i}
-										aria-label={a.nama}
-										title={a.nama}
-										onClick={() => ubah({ avatar: i })}
-										className={`flex h-20 items-end justify-center rounded-2xl pb-1 transition ${
-											profil.avatar === i ? "bg-white ring-4 ring-[rgb(var(--color-secondary))]" : "bg-white/75 hover:bg-white/90"
-										}`}
-									>
-										<GambarAvatar profil={{ ...profil, avatar: i }} className="h-[4.25rem] w-11" />
-									</button>
-								))}
-							</div>
-							<div className="mt-3 flex items-center gap-3">
-								<span className="text-xs font-semibold uppercase tracking-[0.14em] text-white/70">Warna kulit</span>
-								<div role="radiogroup" aria-label="Warna kulit" className="flex gap-2">
-									{WARNA_KULIT.map((w, i) => (
-										<button
-											type="button"
-											key={w}
-											role="radio"
-											aria-checked={profil.kulit === i}
-											aria-label={`Warna kulit ${i + 1}`}
-											onClick={() => ubah({ kulit: i })}
-											className={`h-8 w-8 rounded-full ring-2 transition ${profil.kulit === i ? "scale-110 ring-white" : "ring-white/30"}`}
-											style={{ background: w }}
-										/>
-									))}
+								<div className="flex items-center justify-between gap-3">
+									<span className={LABEL}>Warna kulit</span>
+									<div role="radiogroup" aria-label="Warna kulit" className="flex gap-2.5">
+										{WARNA_KULIT.map((w, i) => (
+											<button
+												type="button"
+												key={w}
+												role="radio"
+												aria-checked={profil.kulit === i}
+												aria-label={`Warna kulit ${i + 1}`}
+												onClick={() => ubah({ kulit: i })}
+												className={`h-11 w-11 rounded-full ring-offset-2 transition ${FOKUS} ${profil.kulit === i ? "ring-2 ring-[rgb(var(--color-primary))]" : ""}`}
+												style={{ background: w }}
+											/>
+										))}
+									</div>
 								</div>
-							</div>
 
-							<button
-								type="submit"
-								className="mt-5 inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-[rgb(var(--color-secondary))] to-amber-500 px-7 py-4 text-base font-bold shadow-lg shadow-amber-500/25 transition-transform hover:-translate-y-0.5"
-							>
-								<FiBox className="h-5 w-5" /> {bersama ? "Mulai jelajah bersama" : "Mulai jelajah sendiri"}
-							</button>
-							<p className="mt-2 flex items-center justify-center gap-1.5 text-xs text-white/60">
-								{bersama ? <FiUsers /> : <FiUser />}
-								{bersama
-									? "Tamu lain yang sedang membuka halaman ini akan ikut terlihat dan bisa diajak ngobrol."
-									: "Hanya Anda di kantor bersama para pegawai; tidak ada data yang dikirim ke server multiplayer."}
+								<div>
+									<button type="submit" className={TOMBOL_UTAMA}>
+										{bersama ? "Mulai jelajah bersama" : "Mulai jelajah sendiri"} <FiArrowRight className="h-5 w-5" />
+									</button>
+									<p className="mt-2 text-balance text-center text-xs leading-relaxed text-slate-500">
+										{bersama ? "Nama Anda terlihat oleh tamu lain, dan Anda bisa saling ngobrol." : "Hanya Anda bersama para pegawai, tanpa terhubung ke server multiplayer."}
+									</p>
+								</div>
+							</form>
+						) : (
+							<p className="rounded-xl bg-amber-50 px-4 py-3 text-sm leading-relaxed text-amber-900">
+								Peramban atau perangkat ini belum mendukung grafis 3D (WebGL 2). Denah 2D berisi informasi yang sama.
 							</p>
-						</form>
-					)}
+						)}
 
-					<div className="mt-4 flex flex-col gap-3 sm:flex-row">
-						<button
-							onClick={onMulai2D}
-							className="inline-flex items-center justify-center gap-2 rounded-2xl border border-white/25 bg-white/10 px-7 py-4 text-base font-bold hover:bg-white/20"
-						>
-							<FiGrid className="h-5 w-5" /> Lihat denah 2D
-							{(sarankan2D || !webglOk) && (
-								<span className="rounded-full bg-white/20 px-2 py-0.5 text-[11px] font-semibold">disarankan</span>
+						{webglOk && sarankan2D && (
+							<p className="mt-4 text-xs leading-relaxed text-slate-500">
+								Perangkat Anda mengurangi animasi atau tergolong ringan, jadi denah 2D mungkin lebih nyaman. Versi 3D tetap bisa dicoba.
+							</p>
+						)}
+
+						<div className={`mt-4 flex flex-wrap items-center justify-between gap-x-4 gap-y-2 text-sm font-semibold ${webglOk ? "border-t border-slate-100 pt-4" : ""}`}>
+							<button
+								type="button"
+								onClick={onMulai2D}
+								className={webglOk ? `inline-flex items-center gap-2 rounded-lg text-slate-700 transition hover:text-slate-950 ${FOKUS}` : TOMBOL_UTAMA}
+							>
+								<FiGrid className="h-4 w-4" /> Lihat denah 2D
+								{webglOk && sarankan2D && <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-semibold text-amber-800">disarankan</span>}
+							</button>
+							{onKodeSimpan && (
+								<button type="button" onClick={onKodeSimpan} className={`rounded-lg font-medium text-slate-500 transition hover:text-slate-900 ${FOKUS}`}>
+									Punya kode simpan?
+								</button>
 							)}
-						</button>
-					</div>
-
-					{onKodeSimpan && (
-						<button onClick={onKodeSimpan} className="mt-3 self-start text-sm text-white/70 underline underline-offset-2 hover:text-white">
-							Punya kode simpan?
-						</button>
-					)}
-
-					{!webglOk && (
-						<p className="mt-4 max-w-xl rounded-xl bg-black/20 px-4 py-3 text-sm text-white/80">
-							Peramban atau perangkat ini belum mendukung grafis 3D (WebGL 2). Denah 2D berisi informasi yang sama.
-						</p>
-					)}
-					{webglOk && sarankan2D && (
-						<p className="mt-4 max-w-xl text-sm text-white/70">
-							Perangkat Anda mengurangi animasi atau tergolong ringan, jadi denah 2D mungkin lebih nyaman. Versi 3D tetap
-							bisa dicoba.
-						</p>
-					)}
+						</div>
+					</section>
 
 					{webglOk && (
-						<div className="mt-10">
-							<p className="text-xs font-semibold uppercase tracking-[0.14em] text-white/60">Cara bermain</p>
-							<dl className="mt-3 grid gap-x-6 gap-y-2 text-sm sm:grid-cols-2">
+						<section className="lg:self-start">
+							<h2 className="text-sm font-medium text-white/60">Cara bermain</h2>
+							<dl className="mt-3 grid grid-cols-[auto_minmax(0,1fr)] items-baseline gap-x-4 gap-y-2 text-sm">
 								{kontrol.map(([tombol, aksi]) => (
-									<div key={tombol} className="flex items-baseline gap-3">
-										<dt className="shrink-0 rounded-md bg-white/15 px-2 py-0.5 font-mono text-xs">{tombol}</dt>
-										<dd className="text-white/75">{aksi}</dd>
+									<div key={tombol} className="contents">
+										<dt className="w-fit rounded-md border border-white/15 bg-white/5 px-2 py-0.5 font-mono text-xs text-white/90">{tombol}</dt>
+										<dd className="text-white/70">{aksi}</dd>
 									</div>
 								))}
 							</dl>
-						</div>
+						</section>
 					)}
 				</div>
 			</div>

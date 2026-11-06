@@ -28,7 +28,7 @@ import { bolehTidur, desa } from "./desaHidup";
 const JARI = 0.35;
 const GRAVITASI = 13;
 const LONCAT = 4.8;
-const KURAS = { dasar: 1 / 30, lari: 1 / 5 };
+const KURAS = { dasar: 1 / 60, lari: 1 / 10 };
 // berteduh di dunia kecamatan: di bawah atap saung kebun / warung, atau di depan warung
 const dalamKotak = (x, z, k) => x > k.x0 && x < k.x1 && z > k.z0 && z < k.z1;
 const teduhDesa = (x, z) => dalamKotak(x, z, SAUNG_KEBUN) || dalamKotak(x, z, WARUNG) || Math.hypot(TITIK_WARUNG.x - x, TITIK_WARUNG.z - z) < 2;
@@ -206,7 +206,7 @@ export default function PemainWilayah({ penampilan }) {
 			const pagar = !kendali.jongkok && cariPagar(PAGAR_KEBUN, p.x, 0, p.z, g.rotation.y, bisa);
 			if (kendali.jongkok) kendali.jongkok = false; // Spasi saat jongkok = berdiri dulu
 			else if (pagar) panjat.current = pagar;
-			else { l.vy = LONCAT; suara("lompat"); ubahTenaga(-0.4); }
+			else { l.vy = LONCAT; suara("lompat"); ubahTenaga(-0.2); }
 		}
 		kendali.loncat = false;
 		if (l.vy !== 0 || l.h > 0) {

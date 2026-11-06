@@ -48,7 +48,7 @@ export const barangUsaha = (b) => ({ ...b, ...usahaKini().barang[b.id] });
 export const hargaBenih = (kom) => Math.round(KOMODITAS[kom].harga * KOMODITAS[kom].hasil * 1.5);
 
 export const LAMA_AKSI = { cangkul: 0.9, tanam: 0.8, siram: 1.0, usir: 0.7, panen: 0.8, timba: 1.2, bersih: 0.9, gali: 0.7 };
-const TENAGA_AKSI = { cangkul: 2.5, bersih: 2.5, tanam: 0.6, siram: 1, usir: 0.6, panen: 1, timba: 1.5, gali: 1.5 };
+const TENAGA_AKSI = { cangkul: 1.25, bersih: 1.25, tanam: 0.3, siram: 0.5, usir: 0.3, panen: 0.5, timba: 0.75, gali: 0.75 };
 
 const KUNCI = "jelajah:kebun:v2";
 const KUNCI_LAMA = "jelajah:kebun:v1";
@@ -200,9 +200,11 @@ export function tumbuhkan(dt) {
 	majukanCuaca(dt);
 	const t = tingkatKebun();
 	const hujan = kebun.cuaca.hujan > 0.4;
-	const h = usahaKini().hujan;
+	const u = usahaKini();
+	const h = u.hujan;
+	const tahan = u.tahan || { laju: 1, batas: 40 };
 	const laju = lajuTumbuh(t) * (hujan ? h.laju : 1);
-	const kering = (1 / 50) * (t >= 6 ? 0.6 : 1);
+	const kering = (1 / 50) * (t >= 6 ? 0.6 : 1) * tahan.laju;
 	const pipit = (punyaAlat("orangan") ? 0.3 : 1) * 0.012 * (hujan ? h.gangguan2 : 1);
 	let ubah = false;
 
@@ -242,7 +244,7 @@ export function tumbuhkan(dt) {
 			} else if (Math.floor(lama * 20) !== Math.floor(p.tumbuh * 20)) ubah = true;
 		} else {
 			p.mutu = Math.max(0, p.mutu - dt / 45);
-			if ((p.kering += dt) > 40) {
+			if ((p.kering += dt) > tahan.batas) {
 				p.tahap = "layu";
 				p.hama = false;
 				p.burung = false;

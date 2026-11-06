@@ -62,19 +62,16 @@ const JARAK_KERANJANG = 1.6;
 const JARAK_KASIR = 1.4;
 const JARAK_GEROBAK = 1.5;
 const JARAK_PETI = 1.3;
-const SUDUT_LIHAT_JORAN = 0.75;
 // Ujung senar selama terentang di air, untuk kamera standar memancing.
 function ujungSenar() {
 	const f = pancing.fase;
 	if (!pancing.aktif || pancing.kamera !== "standar") return null;
-	return f === "tarik" || f === "gigit" ? pancing.ikanPos : f === "tunggu" || f === "lempar" ? pancing.pelampung : null;
+	// ikanPos baru diisi saat sentakan, jadi selama "gigit" ujung senar masih di pelampung
+	return f === "tarik" ? pancing.ikanPos : f === "gigit" || f === "tunggu" || f === "lempar" ? pancing.pelampung : null;
 }
-// Geser samping saat adu tarik, sebatas pemain & ikan masih di bingkai. 0,37 = 80% dari tan(fov 50 / 2):
-// layar HP tegak hanya selebar ±12°, jadi geser penuh 43° melempar senar dan ikan keluar layar.
-const sudutSamping = (aspek, jarak, jarakSenar) => Math.min(SUDUT_LIHAT_JORAN, Math.asin(Math.min(1, (0.37 * aspek * jarak) / Math.max(jarakSenar / 2, 1))));
 const JARAK_ATAP_SAUNG = 14;
 // tenaga berkurang per detik: diam/jalan, tambahan saat berlari, tambahan saat adu tarik ikan
-const KURAS = { dasar: 1 / 25, lari: 1 / 4, tarik: 1 / 6, renang: 1 / 7 };
+const KURAS = { dasar: 1 / 50, lari: 1 / 8, tarik: 1 / 12, renang: 1 / 14 };
 // teguran saat mulai kehujanan: tunjuk abang payung terdekat
 function petunjukAbang() {
 	let dekat = ABANG_HUJAN[0];
@@ -679,7 +676,8 @@ export default function Pemain({ daftarDinding, penghuni, penampilan = PENAMPILA
 			const kend = mode.current.k;
 			const c = kend.kemudi || KEMUDI.perahu;
 			kendali.loncat = false;
-			const target = maju > 0.05 ? maju * (lari ? c.turbo : c.maju) : maju < -0.05 ? maju * c.mundur : 0;
+			// turbo bermesin tidak memakai tenaga pemain, jadi tetap menyala walau pemain lemas
+			const target = maju > 0.05 ? maju * ((kend.bermesin ? lariMau : lari) ? c.turbo : c.maju) : maju < -0.05 ? maju * c.mundur : 0;
 			const batas = (Math.abs(target) > Math.abs(kend.laju) ? c.gas : c.rem) * dt;
 			kend.laju += Math.max(-batas, Math.min(batas, target - kend.laju));
 			if (Math.abs(maju) < 0.05) kend.laju *= Math.exp(-0.6 * dt);
@@ -723,8 +721,7 @@ export default function Pemain({ daftarDinding, penghuni, penampilan = PENAMPILA
 			const jarakSenar = senar ? Math.hypot(senar.x - p.x, senar.z - p.z) : 0;
 			const arahBidik = pancing.asal.rot + pancing.aim;
 			const arahKamera = jarakSenar > 1.5 ? Math.atan2(senar.x - p.x, senar.z - p.z) + arahJoran() - arahBidik : arahBidik;
-			// saat adu tarik kamera standar bergeser ke samping: dari belakang persis, lengkung joran (tanda tegangan) tak terlihat
-			const ke = arahKamera + Math.PI + (pancing.kamera === "standar" && (pancing.fase === "tarik" || pancing.fase === "gigit") ? sudutSamping(camera.aspect, k.jarak - 3, jarakSenar) : 0);
+			const ke = arahKamera + Math.PI;
 			k.yaw += (sudutDekat(k.yaw, ke) - k.yaw) * (1 - Math.exp(-3 * dt));
 			if (!pancing.aktif) {
 				pancing.arah = 0;
@@ -1151,7 +1148,7 @@ export default function Pemain({ daftarDinding, penghuni, penampilan = PENAMPILA
 			const hz = -cy; // arah hadap pemancing (kamera standar ada di belakangnya)
 			const yAir = TANAH + (pancing.kolam ? AIR_KOLAM_Y : AIR_Y);
 			const fs = pancing.fase;
-			const sasaran = fs === "tarik" || fs === "gigit" ? pancing.ikanPos : fs === "tunggu" || fs === "lempar" ? pancing.pelampung : null;
+			const sasaran = fs === "tarik" ? pancing.ikanPos : fs === "gigit" || fs === "tunggu" || fs === "lempar" ? pancing.pelampung : null;
 			const sx = sasaran ? sasaran.x : p.x + hx * 6;
 			const sz = sasaran ? sasaran.z : p.z + hz * 6;
 			const kini = performance.now() / 1000;

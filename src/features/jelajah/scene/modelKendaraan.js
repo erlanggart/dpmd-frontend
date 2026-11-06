@@ -385,7 +385,7 @@ export const MODEL_PERAHU = [
 		kursi: 2,
 		bermesin: true,
 		jetski: true,
-		kemudi: { maju: 11, turbo: 17, mundur: 2, gas: 6.5, rem: 5, belok: 1.5 },
+		kemudi: { maju: 16, turbo: 26, mundur: 2, gas: 10, rem: 7, belok: 1.9 },
 	},
 ];
 

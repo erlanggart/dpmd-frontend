@@ -21,16 +21,20 @@ const BAHAN_LAMPU = new MeshStandardMaterial({ color: "#fff7e0", emissive: "#ffc
 function Dermaga({ d, daftarDinding }) {
 	// Atap saung ikut didaftarkan sebagai penghalang pandang (seperti kanopi kantor):
 	// saat memancing kamera ada di belakang pemancing, dan atap akan menutupinya.
+	// Tiangnya ikut hilang: kalau tidak, berdiri tanpa atap dan menutupi pemancing saat kamera mendekat.
 	const atapRef = useRef();
+	const tiangSaungRef = useRef();
 	useEffect(() => {
-		const m = atapRef.current;
-		if (!daftarDinding || !m) return;
-		m.userData.bahan = [m.material];
-		m.updateWorldMatrix(true, false);
-		m.userData.atapSaung = m.getWorldPosition(new Vector3());
+		if (!daftarDinding || !atapRef.current) return;
+		const pudar = [atapRef.current, ...tiangSaungRef.current.children];
+		for (const m of pudar) {
+			m.userData.bahan = [m.material];
+			m.updateWorldMatrix(true, false);
+			m.userData.atapSaung = m.getWorldPosition(new Vector3());
+		}
 		const daftar = daftarDinding.current[0];
-		daftar.push(m);
-		return () => daftar.splice(daftar.indexOf(m), 1);
+		daftar.push(...pudar);
+		return () => pudar.forEach((m) => daftar.splice(daftar.indexOf(m), 1));
 	}, [daftarDinding]);
 	const [titian, panggung] = BAGIAN_DERMAGA;
 	const papan = [];
@@ -86,15 +90,6 @@ function Dermaga({ d, daftarDinding }) {
 						))}
 					</group>
 				))}
-				{/* saung di separuh belakang panggung; bagian depan terbuka untuk melempar */}
-				{[-1, 1].flatMap((sw) =>
-					[panggung.s0 + 0.6, panggung.s0 + 3].map((s) => (
-						<mesh key={`${sw}${s}`} position={[sw * (panggung.w - 0.3), DEK_Y + 1.35, s]}>
-							<boxGeometry args={[0.14, 2.7, 0.14]} />
-							<meshStandardMaterial color="#6e4a2f" />
-						</mesh>
-					)),
-				)}
 				{/* bangku */}
 				{[-1, 1].map((sw) => (
 					<group key={sw} position={[sw * (panggung.w - 0.7), DEK_Y, atap]}>
@@ -125,6 +120,17 @@ function Dermaga({ d, daftarDinding }) {
 					</mesh>
 				))}
 			</Gabung>
+			{/* saung di separuh belakang panggung; bagian depan terbuka untuk melempar */}
+			<group ref={tiangSaungRef}>
+				{[-1, 1].flatMap((sw) =>
+					[panggung.s0 + 0.6, panggung.s0 + 3].map((s) => (
+						<mesh key={`${sw}${s}`} position={[sw * (panggung.w - 0.3), DEK_Y + 1.35, s]}>
+							<boxGeometry args={[0.14, 2.7, 0.14]} />
+							<meshStandardMaterial color="#6e4a2f" />
+						</mesh>
+					)),
+				)}
+			</group>
 			<group position={[0, DEK_Y + 3.05, atap]} scale={[(panggung.w + 0.3) / Math.SQRT1_2, 1, 2.0 / Math.SQRT1_2]}>
 				<mesh ref={atapRef} rotation-y={Math.PI / 4}>
 					<coneGeometry args={[1, 1.2, 4]} />

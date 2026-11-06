@@ -822,7 +822,6 @@ export function tickPancing(dt) {
 			}
 			// tanpa tanda seru: isyaratnya senar menegang & pelampung terseret ikan (Pancingan.jsx)
 			p.getar = Math.max(p.getar, 0.5);
-			p.dorong = Math.max(p.dorong, 0.35);
 			keFase("gigit", { teks: "Senar menegang… sentak sekarang", jenis: "besar" });
 		}
 		return;
@@ -876,8 +875,9 @@ export function tickPancing(dt) {
 						? "Tarikannya kuat sekali! Ketuk berulang untuk menggulung"
 						: "Kena! Ketuk berulang untuk menggulung";
 			if (p.perfect) p.getar = Math.max(p.getar, 0.8);
-			if (p.perfect) sorak("PERFECT STRIKE!", "#38bdf8", 0.8, 1);
-			else sorak("STRIKE!", "#fde047", 0.35, 0.7);
+			// tanpa dorongan: FOV yang melebar terasa kamera mundur, padahal saat strike kamera mendekat
+			if (p.perfect) sorak("PERFECT STRIKE!", "#38bdf8", 0.8, 0);
+			else sorak("STRIKE!", "#fde047", 0.35, 0);
 			return keFase("tarik", { teks, jenis: p.ikan.kelas >= 3 || p.perfect ? "besar" : "baik" });
 		}
 		if (p.t > p.jendela) return lepasTapiTunggu("Kurang cepat — ikannya lepas. Umpan masih di air, tunggu sambaran berikutnya");
