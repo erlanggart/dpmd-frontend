@@ -1,13 +1,3 @@
-// Barrel export - komponen dipecah menjadi file terpisah
-// Gunakan import individual untuk fleksibilitas layout di Kelembagaan.jsx
-
-export { default as ChartVerifikasiTahunan } from "./ChartVerifikasiTahunan";
-export { default as TabelVerifikasiTahunan } from "./TabelVerifikasiTahunan";
-export { default as CapaianVerifikasiLembaga } from "./CapaianVerifikasiLembaga";
-export { default as RingkasanStatusKelembagaan } from "./RingkasanStatusKelembagaan";
-export { default as useStatistikTahunan } from "../../hooks/useStatistikTahunan";
-
-// Default export: composed version (backward compatible)
 import React from "react";
 import useStatistikTahunan from "../../hooks/useStatistikTahunan";
 import ChartVerifikasiTahunan from "./ChartVerifikasiTahunan";
@@ -15,8 +5,9 @@ import TabelVerifikasiTahunan from "./TabelVerifikasiTahunan";
 import CapaianVerifikasiLembaga from "./CapaianVerifikasiLembaga";
 import RingkasanStatusKelembagaan from "./RingkasanStatusKelembagaan";
 
-const StatistikTahunan = () => {
-  const { data, loading, error } = useStatistikTahunan();
+// status: "desa" | "kelurahan"; kosong = gabungan.
+const StatistikTahunan = ({ status }) => {
+  const { data, loading, error } = useStatistikTahunan(status);
 
   return (
     <div className="space-y-6">

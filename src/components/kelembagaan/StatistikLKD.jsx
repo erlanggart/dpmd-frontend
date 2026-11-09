@@ -1,13 +1,7 @@
 import React, { useState } from "react";
-import {
-  LuChevronDown,
-  LuChevronUp,
-} from "react-icons/lu";
 
-// scope: "desa" | "kelurahan" | "semua" dari tab halaman. Tanpa scope (dashboard inti)
-// tampil angka gabungan dengan breakdown desa & kelurahan seperti biasa.
+// scope: "desa" | "kelurahan" | "semua" dari tab halaman; kosong = gabungan.
 const StatistikLKD = ({ summaryData, loading = false, scope }) => {
-  const [showBreakdown, setShowBreakdown] = useState(false);
   const [mode, setMode] = useState("verified");
   const isVerified = mode === "verified";
 
@@ -27,14 +21,6 @@ const StatistikLKD = ({ summaryData, loading = false, scope }) => {
   }
 
   const KEYS = ["rw", "rt", "posyandu", "karangTaruna", "lpm", "pkk"];
-  const LABELS = {
-    rw: "RW",
-    rt: "RT",
-    posyandu: "Posyandu",
-    karangTaruna: "Karang Taruna",
-    lpm: "LPM",
-    pkk: "PKK",
-  };
 
   // Belum terverifikasi = total - terverifikasi
   const pick = (total, verified) =>
@@ -47,9 +33,6 @@ const StatistikLKD = ({ summaryData, loading = false, scope }) => {
     scope === "desa" || scope === "kelurahan"
       ? countByStatus(scope, key)
       : pick(summaryData.total_kelembagaan?.[key], summaryData.verified_kelembagaan?.[key]);
-
-  const sumByStatus = (status) =>
-    KEYS.reduce((acc, key) => acc + countByStatus(status, key), 0);
 
   const wilayah = { kelurahan: "Kelurahan", semua: "Desa & Kelurahan" }[scope] || "Desa";
 
@@ -135,82 +118,6 @@ const StatistikLKD = ({ summaryData, loading = false, scope }) => {
         ))}
       </div>
 
-      {/* Toggle Breakdown Button */}
-      {!scope && (
-      <button
-        onClick={() => setShowBreakdown(!showBreakdown)}
-        className="flex items-center gap-2 text-sm font-medium text-slate-600 hover:text-slate-900 transition-colors mx-auto"
-      >
-        {showBreakdown ? (
-          <>
-            <span>Sembunyikan Breakdown Desa & Kelurahan</span>
-            <LuChevronUp className="w-4 h-4" />
-          </>
-        ) : (
-          <>
-            <span>Lihat Breakdown Desa & Kelurahan</span>
-            <LuChevronDown className="w-4 h-4" />
-          </>
-        )}
-      </button>
-      )}
-
-      {/* Breakdown Section */}
-      {!scope && showBreakdown && (
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {/* Desa */}
-        <div className="bg-white rounded-xl border border-slate-200 p-5">
-          <div className="flex items-center justify-between mb-4">
-            <div>
-              <h3 className="text-lg font-bold text-slate-900">Desa</h3>
-              <p className="text-sm text-slate-500">
-                {summaryData.by_status.desa.count} Desa
-              </p>
-            </div>
-            <div className={`text-3xl font-bold ${isVerified ? "text-brand-700" : "text-amber-600"}`}>
-              {sumByStatus("desa")}
-            </div>
-          </div>
-
-          <div className="space-y-2">
-            {KEYS.map((key) => (
-              <div key={key} className="flex items-center justify-between py-2 border-b border-slate-100 last:border-0">
-                <span className="text-sm font-medium text-slate-700">{LABELS[key]}</span>
-                <span className={`text-sm font-semibold ${isVerified ? "text-brand-700" : "text-amber-600"}`}>
-                  {countByStatus("desa", key)}
-                </span>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* Kelurahan */}
-        <div className="bg-white rounded-xl border border-slate-200 p-5">
-          <div className="flex items-center justify-between mb-4">
-            <div>
-              <h3 className="text-lg font-bold text-slate-900">Kelurahan</h3>
-              <p className="text-sm text-slate-500">
-                {summaryData.by_status.kelurahan.count} Kelurahan
-              </p>
-            </div>
-            <div className={`text-3xl font-bold ${isVerified ? "text-brand-700" : "text-amber-600"}`}>
-              {sumByStatus("kelurahan")}
-            </div>
-          </div>
-
-          <div className="space-y-2">
-            {KEYS.map((key) => (
-              <div key={key} className="flex items-center justify-between py-2 border-b border-slate-100 last:border-0">
-                <span className="text-sm font-medium text-slate-700">{LABELS[key]}</span>
-                <span className={`text-sm font-semibold ${isVerified ? "text-brand-700" : "text-amber-600"}`}>
-                  {countByStatus("kelurahan", key)}
-                </span>
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
-      )}
     </div>
   );
 };

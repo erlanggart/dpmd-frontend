@@ -2,10 +2,11 @@ import React, { useState, useEffect } from "react";
 import { LuUsers, LuLoader, LuX, LuRefreshCw } from "react-icons/lu";
 import StatistikTahunan from "../../components/kelembagaan/StatistikTahunan";
 import StatistikLKD from "../../components/kelembagaan/StatistikLKD";
+import TabDesaKelurahan from "../../components/kelembagaan/TabDesaKelurahan";
 import kelembagaanApi from "../../api/kelembagaan";
 import PageHeader from "../../components/statistik/PageHeader";
 import { useDataCache } from "../../context/DataCacheContext";
-import { LEBAR_CORE } from "./lebarHalaman";
+import JumlahPerKecamatan from "../../components/kelembagaan/JumlahPerKecamatan";
 
 const CACHE_KEY = "statistik-kelembagaan";
 
@@ -13,6 +14,8 @@ const StatistikKelembagaan = () => {
 	const [summaryData, setSummaryData] = useState(null);
 	const [loading, setLoading] = useState(true);
 	const [error, setError] = useState(null);
+	const [tabWilayah, setTabWilayah] = useState("desa");
+	const statusWilayah = tabWilayah === "semua" ? undefined : tabWilayah;
 	const { getCachedData, setCachedData, isCached, clearCache } = useDataCache();
 
 	const fetchSummaryData = async () => {
@@ -45,6 +48,8 @@ const StatistikKelembagaan = () => {
 		} else {
 			fetchSummaryData();
 		}
+		// Sengaja hanya saat mount; isCached/getCachedData berubah tiap cache diperbarui, jadi memasukkannya ke deps memicu efek berulang.
+		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, []);
 
 	const handleRefresh = () => {
@@ -91,7 +96,7 @@ const StatistikKelembagaan = () => {
 
 	return (
 		<div className="min-h-screen bg-slate-50 p-4 pt-20 sm:p-6 lg:p-8 lg:pt-8">
-			<div className={`mx-auto space-y-6 ${LEBAR_CORE}`}>
+			<div className="space-y-6">
 				{/* Header */}
 				<PageHeader
 					icon={LuUsers}
@@ -108,11 +113,19 @@ const StatistikKelembagaan = () => {
 					}
 				/>
 
-				{/* Statistik LKD */}
-				<StatistikLKD summaryData={summaryData} loading={loading} />
+				<TabDesaKelurahan value={tabWilayah} onChange={setTabWilayah} />
 
-				{/* Statistik Tahunan */}
-				<StatistikTahunan />
+				<div className="grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_460px] gap-6 items-start">
+					<div className="min-w-0 space-y-6">
+						{/* Statistik LKD */}
+						<StatistikLKD summaryData={summaryData} loading={loading} scope={tabWilayah} />
+
+						{/* Statistik Tahunan */}
+						<StatistikTahunan status={statusWilayah} />
+					</div>
+
+					<JumlahPerKecamatan status={statusWilayah} />
+				</div>
 			</div>
 		</div>
 	);
