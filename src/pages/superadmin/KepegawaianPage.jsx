@@ -250,6 +250,23 @@ const PegawaiFormModal = ({ isOpen, onClose, onSaved, pegawai, bidangList }) => 
 	);
 };
 
+// Urutan pejabat: Kadis, Sekretaris, Kabid, Kasubag, Katim, lalu pelaksana.
+// Dibaca dari teks jabatan; peran akun hanya cadangan kalau jabatan kosong.
+const getJabatanRank = (p) => {
+	const j = (p.jabatan || "").toLowerCase();
+	if (/kepala\s*dinas|kadis/.test(j)) return 0;
+	if (/sekretaris/.test(j)) return 1;
+	if (/kepala\s*bidang|kabid/.test(j)) return 2;
+	if (/kepala\s*sub\s*bag|kasubag|kasubbag/.test(j)) return 3;
+	if (/ketua\s*tim|katim/.test(j)) return 4;
+	const roleRank = { kepala_dinas: 0, sekretaris_dinas: 1, kepala_bidang: 2, ketua_tim: 4 };
+	return roleRank[p.users?.[0]?.role] ?? 5;
+};
+
+const comparePegawai = (a, b) =>
+	getJabatanRank(a) - getJabatanRank(b) ||
+	(a.nama_pegawai || "").localeCompare(b.nama_pegawai || "", "id-ID", { sensitivity: "base" });
+
 // ===================== Main Page =====================
 const KepegawaianPage = () => {
 	const navigate = useNavigate();
@@ -305,8 +322,14 @@ const KepegawaianPage = () => {
 				p.bidangs?.nama?.toLowerCase().includes(q);
 			const matchBidang = filterBidang === "all" || p.id_bidang === parseInt(filterBidang);
 			return matchSearch && matchBidang;
-		});
+		}).sort(comparePegawai);
 	}, [pegawaiList, searchTerm, filterBidang]);
+
+	const countByBidang = useMemo(() => {
+		const counts = {};
+		pegawaiList.forEach((p) => { counts[p.id_bidang] = (counts[p.id_bidang] || 0) + 1; });
+		return counts;
+	}, [pegawaiList]);
 
 	const totalPages = Math.ceil(filtered.length / itemsPerPage);
 	const paginated = filtered.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
@@ -403,7 +426,7 @@ const KepegawaianPage = () => {
 
 	return (
 		<div className="min-h-screen bg-slate-50">
-			<div className="mx-auto max-w-7xl space-y-5 px-4 py-6 sm:px-6 lg:px-8">
+			<div className="space-y-5 px-4 py-6 sm:px-6 lg:px-8">
 			{/* Header */}
 			<div className="rounded-xl border border-slate-200 bg-white p-5 sm:p-6">
 				<div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
@@ -435,6 +458,27 @@ const KepegawaianPage = () => {
 						</div>
 					</div>
 				</div>
+			</div>
+
+			{/* Bidang cards */}
+			<div className="flex gap-3 overflow-x-auto pb-1">
+				{[{ id: "all", nama: "Semua Bidang", total: pegawaiList.length }, ...bidangList.map((b) => ({ ...b, total: countByBidang[b.id] || 0 }))].map((b) => {
+					const active = filterBidang === String(b.id);
+					return (
+						<button
+							key={b.id}
+							type="button"
+							onClick={() => setFilterBidang(String(b.id))}
+							aria-pressed={active}
+							className={`min-w-[7rem] flex-1 rounded-xl border px-3 py-2.5 text-left transition-colors ${active ? "border-slate-900 bg-slate-900 text-white" : "border-slate-200 bg-white text-slate-900 hover:border-slate-400"}`}
+						>
+							<div className="min-w-0">
+								<p className="text-xl font-semibold leading-none tabular-nums">{b.total}</p>
+								<p className={`mt-1 line-clamp-2 text-[11px] font-medium leading-tight ${active ? "text-slate-300" : "text-slate-500"}`}>{b.nama}</p>
+							</div>
+						</button>
+					);
+				})}
 			</div>
 
 			{/* Filters & Actions */}
