@@ -197,7 +197,7 @@ const DesaBankeuPage = () => {
       {tabAktif === 'pengajuan' && <BankeuProposalPage tahun={selectedYear} />}
       {tabAktif === 'tracking' && <BankeuTrackingTab tahun={selectedYear} />}
       {tabAktif === 'perubahan' && <DesaBankeuPerubahanPage tahun={2026} />}
-      {tabAktif === 'penyaluran' && <DesaBankeuPenyaluranTab />}
+      {tabAktif === 'penyaluran' && <DesaBankeuPenyaluranTab tahun={2026} />}
       {tabAktif === 'lpj' && <DesaBankeuLpjPage tahun={2026} wajibVideo />}
     </div>
   );

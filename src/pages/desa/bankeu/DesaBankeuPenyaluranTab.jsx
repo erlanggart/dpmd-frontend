@@ -26,7 +26,7 @@ const KartuTahap = ({ judul, data }) => {
   );
 };
 
-const DesaBankeuPenyaluranTab = () => {
+const DesaBankeuPenyaluranTab = ({ tahun = 2026 }) => {
   const [bankeu, setBankeu] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -35,14 +35,14 @@ const DesaBankeuPenyaluranTab = () => {
     try {
       setLoading(true);
       setError(null);
-      const response = await api.get('/desa/dashboard/summary');
-      setBankeu(response.data?.data?.keuangan?.bankeu || {});
+      const response = await api.get('/desa/bankeu-penyaluran', { params: { tahun } });
+      setBankeu(response.data?.data || {});
     } catch (err) {
       setError(err.response?.data?.message || 'Gagal memuat data penyaluran');
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [tahun]);
 
   useEffect(() => { muat(); }, [muat]);
 
@@ -78,9 +78,15 @@ const DesaBankeuPenyaluranTab = () => {
       <DesaPageHeader
         icon={LuCoins}
         eyebrow="Bantuan Keuangan"
-        title="Penyaluran Tahap 1 & Tahap 2"
-        description="Status dan realisasi penyaluran bantuan keuangan desa Anda."
+        title={`Penyaluran T1 & T2 TA ${tahun}`}
+        description={`Status dan realisasi penyaluran bantuan keuangan desa Anda untuk TA ${tahun}.`}
       />
+
+      {!bankeu?.tahap1?.hasData && !bankeu?.tahap2?.hasData && (
+        <p className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">
+          Data penyaluran TA {tahun} belum diunggah DPMD.
+        </p>
+      )}
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <KartuTahap judul="Tahap 1" data={bankeu?.tahap1} />

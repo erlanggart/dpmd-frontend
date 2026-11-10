@@ -767,7 +767,7 @@ const SpkedPage = () => {
 											<SubTabs items={SUB_BANKEU_2026} aktif={bankeu2026View} onPilih={setBankeu2026View} />
 											{bankeu2026View === 'proposal' && <DpmdVerificationPage tahunAnggaran={2026} />}
 											{bankeu2026View === 'perubahan' && <DpmdBankeuPerubahanPage tahun={2026} />}
-											{bankeu2026View === 'penyaluran' && <BankeuDashboard />}
+											{bankeu2026View === 'penyaluran' && <BankeuDashboard tahun={2026} />}
 											{bankeu2026View === 'lpj' && <BankeuLpjMonitoringPage tahun={2026} />}
 										</>
 									) : (

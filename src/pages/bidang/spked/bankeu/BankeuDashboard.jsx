@@ -8,7 +8,7 @@ import toast from 'react-hot-toast';
 
 ChartJS.register(ArcElement, Tooltip, Legend, CategoryScale, LinearScale, BarElement);
 
-const BankeuDashboard = () => {
+const BankeuDashboard = ({ tahun = 2025 }) => {
   const [activeTab, setActiveTab] = useState('tahap1');
   const [dataTahap1, setDataTahap1] = useState([]);
   const [dataTahap2, setDataTahap2] = useState([]);
@@ -22,21 +22,31 @@ const BankeuDashboard = () => {
 
   useEffect(() => {
     fetchData();
-  }, []);
+  }, [tahun]);
 
   const fetchData = async () => {
     try {
       setLoading(true);
       
-      // Fetch Tahap 1
-      const response1 = await api.get('/bankeu-t1/data');
-      setDataTahap1(response1.data.data || []);
-      
-      // Fetch Tahap 2
-      const response2 = await api.get('/bankeu-t2/data');
-      setDataTahap2(response2.data.data || []);
-      
-      setError(null);
+      // 404 = berkas tahun itu belum diunggah, dianggap data kosong
+      const ambil = (url) => api.get(url, { params: { tahun } })
+        .then((r) => r.data.data || [])
+        .catch((e) => {
+          if (e.response?.status === 404) return [];
+          throw e;
+        });
+      // Dimuat terpisah: kegagalan satu tahap tidak mengosongkan tahap lain
+      const [r1, r2] = await Promise.allSettled([ambil('/bankeu-t1/data'), ambil('/bankeu-t2/data')]);
+      setDataTahap1(r1.status === 'fulfilled' ? r1.value : []);
+      setDataTahap2(r2.status === 'fulfilled' ? r2.value : []);
+      const gagal = [r1, r2].filter((r) => r.status === 'rejected');
+      gagal.forEach((r) => console.error('Error fetching Bantuan Keuangan data:', r.reason));
+      if (gagal.length === 2) {
+        setError('Gagal memuat data Bantuan Keuangan');
+      } else {
+        setError(null);
+        if (gagal.length === 1) toast.error(`Gagal memuat data Tahap ${r1.status === 'rejected' ? '1' : '2'}`);
+      }
     } catch (err) {
       console.error('Error fetching Bantuan Keuangan data:', err);
       setError('Gagal memuat data Bantuan Keuangan');
@@ -67,7 +77,7 @@ const BankeuDashboard = () => {
       const formData = new FormData();
       formData.append('file', uploadFile);
 
-      const endpoint = activeTab === 'tahap1' ? '/bankeu-t1/upload' : '/bankeu-t2/upload';
+      const endpoint = activeTab === 'tahap1' ? `/bankeu-t1/upload?tahun=${tahun}` : `/bankeu-t2/upload?tahun=${tahun}`;
       await api.post(endpoint, formData, {
         headers: { 'Content-Type': 'multipart/form-data' }
       });
@@ -96,7 +106,7 @@ const BankeuDashboard = () => {
     const ws = XLSX.utils.json_to_sheet(exportData);
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, `Bankeu ${activeTab === 'tahap1' ? 'T1' : 'T2'}`);
-    XLSX.writeFile(wb, `Bantuan_Keuangan_${activeTab === 'tahap1' ? 'Tahap_1' : 'Tahap_2'}_${new Date().toISOString().split('T')[0]}.xlsx`);
+    XLSX.writeFile(wb, `Bantuan_Keuangan_${activeTab === 'tahap1' ? 'Tahap_1' : 'Tahap_2'}_TA${tahun}_${new Date().toISOString().split('T')[0]}.xlsx`);
     toast.success('Data berhasil diekspor ke Excel');
   };
 
@@ -280,9 +290,9 @@ const BankeuDashboard = () => {
         {/* Header - Responsive */}
         <div className="mb-6 sm:mb-8">
           <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold bg-gradient-to-r from-cyan-600 to-blue-600 bg-clip-text text-transparent mb-2">
-            Bantuan Keuangan Infrastruktur Desa
+            Bantuan Keuangan Infrastruktur Desa TA {tahun}
           </h1>
-          <p className="text-sm sm:text-base text-gray-600">Monitoring dan pengelolaan bantuan keuangan infrastruktur desa tahun 2025</p>
+          <p className="text-sm sm:text-base text-gray-600">Monitoring dan pengelolaan bantuan keuangan infrastruktur desa tahun {tahun}</p>
         </div>
 
         {/* Tab Navigation - Responsive */}
