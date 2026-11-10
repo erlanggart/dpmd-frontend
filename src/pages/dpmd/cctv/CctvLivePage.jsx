@@ -79,12 +79,17 @@ const LABEL_SUMBER = { mse: "live", go2rtc: "go2rtc", bingkai: "potret", ai: "de
 const LABEL_PERISTIWA = { known: "Dikenal", unknown: "Tak dikenal", person: "Orang", fall: "Jatuh", fall_warning: "Rawan jatuh", immobility: "Diam lama", other: "Peristiwa" };
 
 const JEDA_DETEKSI_MS = 1500;
-const BASI_DETEKSI_MS = 6000; // hasil analisis lebih tua dari ini tidak digambar
+// Tiap kamera dianalisis ±4–5 dtk sekali (9 kamera bergiliran di CPU). Layanan
+// dianggap diam bila tidak ada analisis/jawaban baru selama ini.
+const BASI_DETEKSI_MS = 15000;
+// Kotak dipertahankan sampai sekian analisis BERTURUT-TURUT tidak menemukan
+// orang, supaya satu bingkai yang meleset tidak membuat kotak berkedip.
+const KOSONG_UNTUK_HAPUS = 2;
 
 /**
  * Kotak deteksi AI (orang/wajah/rebah) digambar di atas video live. Posisinya
- * dari analisis terakhir layanan AI (±1,5–2 dtk sekali), jadi bisa sedikit
- * tertinggal dari gerakan di video. `slice` = video ber-object-cover.
+ * dari analisis terakhir layanan AI, jadi bisa sedikit tertinggal dari gerakan
+ * di video. `slice` = video ber-object-cover.
  */
 const LapisanDeteksi = ({ urlDeteksi, onTokenBasi }) => {
 	const [d, setD] = useState(null);
@@ -92,6 +97,9 @@ const LapisanDeteksi = ({ urlDeteksi, onTokenBasi }) => {
 		if (!urlDeteksi) return undefined;
 		let hidup = true;
 		let segarTerakhir = 0;
+		let analisisTerakhir = 0; // perkiraan waktu analisis yang terakhir dilihat
+		let kosongBeruntun = 0;
+		let jawabanTerakhir = Date.now();
 		const ambil = async () => {
 			if (document.visibilityState !== "visible") return;
 			try {
@@ -100,10 +108,30 @@ const LapisanDeteksi = ({ urlDeteksi, onTokenBasi }) => {
 					segarTerakhir = Date.now();
 					onTokenBasi?.(); // token media kedaluwarsa → minta URL baru
 				}
+				if (r.status === 404) {
+					if (hidup) setD(null); // kamera belum/tidak dianalisis
+					return;
+				}
 				const j = r.ok ? await r.json() : null;
-				if (hidup) setD(j?.success && j.umur_ms <= BASI_DETEKSI_MS ? j : null);
+				if (!hidup || !j?.success) return;
+				if (j.umur_ms > BASI_DETEKSI_MS) {
+					setD(null);
+					return;
+				}
+				jawabanTerakhir = Date.now();
+				const pada = Date.now() - j.umur_ms;
+				const analisisBaru = Math.abs(pada - analisisTerakhir) > 1000;
+				analisisTerakhir = pada;
+				if (j.tanda?.length) {
+					kosongBeruntun = 0;
+					setD(j);
+				} else if (analisisBaru && ++kosongBeruntun >= KOSONG_UNTUK_HAPUS) {
+					setD(null);
+				}
 			} catch {
-				if (hidup) setD(null);
+				// gangguan jaringan sesaat: kotak terakhir dipertahankan
+			} finally {
+				if (hidup && Date.now() - jawabanTerakhir > BASI_DETEKSI_MS) setD(null);
 			}
 		};
 		ambil();
