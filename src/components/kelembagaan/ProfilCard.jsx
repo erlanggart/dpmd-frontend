@@ -307,7 +307,7 @@ const ProfilCard = ({
 
 				{/* SK LEMBAGA — lebih lebar */}
 				<StatCell
-					label="SK Lembaga"
+					label="Dasar Hukum"
 					icon={LuFileText}
 					className="flex-[2]"
 					onClick={sk ? () => navigate(getProdukHukumUrl(profil.produk_hukum_id)) : undefined}
