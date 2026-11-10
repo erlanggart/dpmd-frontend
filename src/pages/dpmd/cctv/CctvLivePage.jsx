@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import {
 	RefreshCw, Radio, Waves, AlertTriangle, Plus, MonitorPlay, CameraOff, Maximize2, Minimize2, X, ChevronLeft, ChevronRight,
@@ -86,12 +86,35 @@ const BASI_DETEKSI_MS = 15000;
 // (lacakOrang di cctv-ai), jadi di sini cukup hapus saat analisis kosong.
 const KOSONG_UNTUK_HAPUS = 1;
 
+// Kelompok kotak AI yang bisa ditampilkan/disembunyikan dari toolbar (tanda.jenis dari cctv-ai).
+const JENIS_TANDA = [
+	{ id: "orang", label: "Orang" },
+	{ id: "wajah", label: "Wajah" },
+	{ id: "kendaraan", label: "Kendaraan" },
+];
+const KUNCI_TANDA = "cctv-tanda-tampil";
+const KonteksTanda = createContext(new Set(JENIS_TANDA.map((j) => j.id)));
+// Ukuran label & garis di LAYAR (px), sama di grid kecil maupun pemutar besar.
+const HURUF_PX = 10;
+const GARIS_PX = 1.5;
+
 /**
- * Kotak deteksi AI (orang/wajah/rebah) digambar di atas video live. Posisinya
- * dari analisis terakhir layanan AI, jadi bisa sedikit tertinggal dari gerakan
- * di video. cocok: "slice" untuk video object-cover, "meet" untuk object-contain.
+ * Kotak deteksi AI (orang/wajah/rebah/kendaraan) digambar di atas video live.
+ * Posisinya dari analisis terakhir layanan AI; tiap objek punya id tetap, jadi
+ * kotaknya meluncur ke posisi baru (mengikuti orang/motor), bukan berganti kotak.
+ * cocok: "slice" untuk video object-cover, "meet" untuk object-contain.
  */
 const LapisanDeteksi = ({ urlDeteksi, onTokenBasi, cocok = "slice" }) => {
+	const tampil = useContext(KonteksTanda);
+	const wadahRef = useRef(null);
+	const [ukuran, setUkuran] = useState(null); // [lebar, tinggi] lapisan di layar
+	useEffect(() => {
+		const el = wadahRef.current;
+		if (!el || typeof ResizeObserver === "undefined") return undefined;
+		const ro = new ResizeObserver(([e]) => setUkuran([e.contentRect.width, e.contentRect.height]));
+		ro.observe(el);
+		return () => ro.disconnect();
+	}, []);
 	const [d, setD] = useState(null);
 	useEffect(() => {
 		if (!urlDeteksi) return undefined;
@@ -142,26 +165,43 @@ const LapisanDeteksi = ({ urlDeteksi, onTokenBasi, cocok = "slice" }) => {
 		};
 	}, [urlDeteksi, onTokenBasi]);
 
-	if (!d?.tanda?.length || !d.lebar || !d.tinggi) return null;
-	const garis = Math.max(2, d.lebar / 320);
-	const huruf = Math.max(12, d.lebar / 45);
+	const ada = d?.tanda?.length && d.lebar && d.tinggi;
+	// Tanda tanpa jenis (layanan AI versi lama) selalu tampil.
+	const daftar = ada ? d.tanda.filter((t) => !t.jenis || tampil.has(t.jenis)) : [];
+	const jumlahOrang = ada ? d.tanda.filter((t) => t.jenis === "orang").length : 0;
+	const jumlahKendaraan = ada ? d.tanda.filter((t) => t.jenis === "kendaraan").length : 0;
+	// Skala gambar → layar, supaya label tetap HURUF_PX berapa pun ukuran tile.
+	const skala = ada && ukuran?.[0]
+		? (cocok === "slice" ? Math.max : Math.min)(ukuran[0] / d.lebar, ukuran[1] / d.tinggi)
+		: 0;
+	const huruf = skala ? HURUF_PX / skala : 0;
+	const garis = skala ? GARIS_PX / skala : 0;
+	const tinggiLabel = huruf * 1.45;
 	return (
-		<svg
-			className="pointer-events-none absolute inset-0 h-full w-full"
-			viewBox={`0 0 ${d.lebar} ${d.tinggi}`}
-			preserveAspectRatio={`xMidYMid ${cocok}`}
-			aria-hidden="true"
-		>
-			{d.tanda.map(({ kotak: [x, y, w, h], label, warna }, i) => (
-				<g key={i}>
-					<rect x={x} y={y} width={w} height={h} fill="none" stroke={warna} strokeWidth={garis} rx={garis} />
-					<rect x={x} y={Math.max(0, y - huruf * 1.35)} width={Math.max(w, label.length * huruf * 0.6)} height={huruf * 1.35} fill={warna} />
-					<text x={x + huruf * 0.3} y={Math.max(0, y - huruf * 1.35) + huruf} fill="#fff" fontSize={huruf} fontWeight="700">
-						{label}
-					</text>
-				</g>
-			))}
-		</svg>
+		<div ref={wadahRef} className="pointer-events-none absolute inset-0" aria-hidden="true">
+			{skala > 0 && daftar.length > 0 && (
+				<svg className="absolute inset-0 h-full w-full" viewBox={`0 0 ${d.lebar} ${d.tinggi}`} preserveAspectRatio={`xMidYMid ${cocok}`}>
+					{daftar.map(({ id, kotak: [x, y, w, h], label, warna }, i) => {
+						// Label di atas kotak; bila kotaknya menempel tepi atas, di dalam kotak.
+						const yLabel = y >= tinggiLabel ? -tinggiLabel : 0;
+						return (
+							<g key={id ?? i} style={{ transform: `translate(${x}px, ${y}px)`, transition: "transform 0.7s ease-out" }}>
+								<rect width={w} height={h} fill="none" stroke={warna} strokeWidth={garis} rx={garis} />
+								<rect y={yLabel} width={label.length * huruf * 0.62 + huruf * 0.7} height={tinggiLabel} fill={warna} fillOpacity={0.85} rx={garis} />
+								<text x={huruf * 0.35} y={yLabel + huruf * 1.08} fill="#fff" fontSize={huruf} fontWeight="600">
+									{label}
+								</text>
+							</g>
+						);
+					})}
+				</svg>
+			)}
+			{(jumlahOrang > 0 || jumlahKendaraan > 0) && (
+				<div className="absolute bottom-1.5 left-1.5 rounded-md bg-black/60 px-1.5 py-0.5 text-[10px] font-semibold text-white backdrop-blur-sm">
+					{[jumlahOrang && `${jumlahOrang} orang`, jumlahKendaraan && `${jumlahKendaraan} kendaraan`].filter(Boolean).join(" · ")}
+				</div>
+			)}
+		</div>
 	);
 };
 
@@ -642,6 +682,29 @@ const CctvLivePage = () => {
 		}
 	});
 	const [dinding, setDinding] = useState(false);
+	// Kelompok kotak AI yang ditampilkan (Orang / Wajah / Kendaraan), diingat per peramban.
+	const [tampilTanda, setTampilTanda] = useState(() => {
+		try {
+			const simpan = JSON.parse(localStorage.getItem(KUNCI_TANDA));
+			if (Array.isArray(simpan)) return new Set(simpan);
+		} catch {
+			/* nilai rusak/penyimpanan tidak tersedia */
+		}
+		return new Set(JENIS_TANDA.map((j) => j.id));
+	});
+	const alihTanda = (id) => {
+		setTampilTanda((lama) => {
+			const baru = new Set(lama);
+			if (baru.has(id)) baru.delete(id);
+			else baru.add(id);
+			try {
+				localStorage.setItem(KUNCI_TANDA, JSON.stringify([...baru]));
+			} catch {
+				/* penyimpanan tidak tersedia */
+			}
+			return baru;
+		});
+	};
 	const dindingRef = useRef(null);
 	const { peristiwa: alertTerbaru } = useCctvAlerts();
 
@@ -697,6 +760,7 @@ const CctvLivePage = () => {
 	const tutupBesar = useCallback(() => setBesar(null), []);
 
 	return (
+		<KonteksTanda.Provider value={tampilTanda}>
 		<div className="rounded-xl border border-slate-200 bg-white p-5">
 			<div className="mb-4 flex flex-wrap items-center justify-between gap-3">
 				<div>
@@ -706,6 +770,23 @@ const CctvLivePage = () => {
 					</p>
 				</div>
 				<div className="flex flex-wrap items-center gap-2">
+					<div className="inline-flex items-center gap-0.5 rounded-lg border border-slate-200 p-0.5" role="group" aria-label="Kotak deteksi AI yang ditampilkan">
+						<ScanSearch className="mx-1.5 h-4 w-4 text-slate-400" />
+						{JENIS_TANDA.map((j) => (
+							<button
+								key={j.id}
+								type="button"
+								onClick={() => alihTanda(j.id)}
+								aria-pressed={tampilTanda.has(j.id)}
+								title={`${tampilTanda.has(j.id) ? "Sembunyikan" : "Tampilkan"} kotak ${j.label.toLowerCase()}`}
+								className={`rounded-md px-2 py-1 text-xs font-semibold transition-colors ${
+									tampilTanda.has(j.id) ? "bg-slate-900 text-white" : "text-slate-400 line-through hover:bg-slate-100 hover:text-slate-700"
+								}`}
+							>
+								{j.label}
+							</button>
+						))}
+					</div>
 					<div className="inline-flex items-center gap-0.5 rounded-lg border border-slate-200 p-0.5" role="group" aria-label="Tata letak grid">
 						<LayoutGrid className="mx-1.5 h-4 w-4 text-slate-400" />
 						{Object.keys(TATA_LETAK).map((k) => (
@@ -794,6 +875,7 @@ const CctvLivePage = () => {
 				<PemutarBesar daftar={kamera} indeks={besar} onGanti={setBesar} onTutup={tutupBesar} />
 			)}
 		</div>
+		</KonteksTanda.Provider>
 	);
 };
 
