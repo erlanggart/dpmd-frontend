@@ -9,15 +9,18 @@
 // Tema diterapkan lewat kelas .kali-ops (lihat kali.css) yang memetakan ulang
 // skala warna Tailwind, jadi tab-tab lama ikut bertema tanpa disunting.
 
-import React, { lazy, Suspense, useCallback, useEffect, useRef, useState } from "react";
+import React, { lazy, Suspense, useCallback, useEffect, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import {
 	FiActivity,
+	FiArchive,
 	FiBarChart2,
+	FiBookOpen,
 	FiBox,
 	FiCheckSquare,
 	FiDatabase,
 	FiFileText,
+	FiGitBranch,
 	FiGlobe,
 	FiHardDrive,
 	FiLayers,
@@ -42,6 +45,9 @@ const SecurityTab = lazy(() => import("./tabs/SecurityTab"));
 const TrafficTab = lazy(() => import("./tabs/TrafficTab"));
 const LogsTab = lazy(() => import("./tabs/LogsTab"));
 const SettingsTab = lazy(() => import("./tabs/SettingsTab"));
+const JournalTab = lazy(() => import("./tabs/JournalTab"));
+const DeployTab = lazy(() => import("./tabs/DeployTab"));
+const BackupTab = lazy(() => import("./tabs/BackupTab"));
 
 // Urutan = nomor pintasan Alt+1…9 (lihat useEffect keyboard di bawah).
 const TABS = [
@@ -51,58 +57,16 @@ const TABS = [
 	{ key: "log", grup: "PANTAU", label: "Log", icon: FiFileText, desc: "Baca log aplikasi, deploy, nginx, dan SSH langsung dari server." },
 	{ key: "keamanan", grup: "PERTAHANAN", label: "Keamanan", icon: FiShield, desc: "Jejak serangan lengkap, IP penyerang teratas, dan daftar blokir." },
 	{ key: "audit", grup: "PERTAHANAN", label: "Audit", icon: FiCheckSquare, desc: "Periksa celah konfigurasi server (SSH, firewall, port, update, TLS) dan dapatkan perintah perbaikannya." },
+	{ key: "jurnal", grup: "PERTAHANAN", label: "Jurnal Tindakan", icon: FiBookOpen, desc: "Semua tindakan mitigasi: blokir otomatis oleh sistem dan aksi manual superadmin, lengkap dengan siapa dan kapan." },
 	{ key: "terminal", grup: "PERTAHANAN", label: "Terminal", icon: FiTerminal, desc: 'Kendalikan server dengan perintah: blokir IP, restart aplikasi, whois, pantau langsung. Ketik "help".' },
 	{ key: "semua-aplikasi", grup: "SISTEM", label: "Semua Aplikasi", icon: FiLayers, desc: "Semua container/VM Proxmox: status, sumber daya, nyalakan/matikan." },
 	{ key: "aplikasi", grup: "SISTEM", label: "Proses & Layanan", icon: FiBox, desc: "Proses PM2, layanan systemd, port, dan monitor uptime." },
+	{ key: "deploy", grup: "SISTEM", label: "Deploy", icon: FiGitBranch, desc: "Versi yang berjalan, riwayat commit, deploy ulang, dan rollback frontend/backend." },
+	{ key: "backup", grup: "SISTEM", label: "Backup", icon: FiArchive, desc: "Snapshot & backup penuh container Proxmox serta cadangan database MySQL." },
 	{ key: "storage", grup: "SISTEM", label: "Storage", icon: FiHardDrive, desc: "Pemakaian disk, kuota unggahan, dan pembersihan berkas." },
 	{ key: "database", grup: "SISTEM", label: "Database", icon: FiDatabase, desc: "Koneksi, query lambat, dan tabel terbesar MySQL." },
 	{ key: "pengaturan", grup: "SISTEM", label: "Pengaturan", icon: FiSettings, desc: "Ambang peringatan, kuota, perlindungan, honeypot, dan blokir negara." },
 ];
-
-/** Hujan karakter ala Matrix di latar header. Ringan: ±20 fps, berhenti saat tersembunyi. */
-const HujanMatriks = () => {
-	const ref = useRef(null);
-	useEffect(() => {
-		const cv = ref.current;
-		if (!cv || window.matchMedia?.("(prefers-reduced-motion: reduce)").matches) return undefined;
-		const ctx = cv.getContext("2d");
-		const huruf = "アイウエオカキクケコサシスセソタチツテト0123456789ABCDEF<>/{}[]$#@";
-		const ukuran = 14;
-		let kolom = [];
-		let id = 0;
-		let aktif = true;
-		const ukur = () => {
-			cv.width = cv.clientWidth;
-			cv.height = cv.clientHeight;
-			kolom = Array.from({ length: Math.ceil(cv.width / ukuran) }, () => Math.random() * -40);
-		};
-		ukur();
-		const ro = new ResizeObserver(ukur);
-		ro.observe(cv);
-		const langkah = () => {
-			if (!aktif) return;
-			if (document.visibilityState === "visible") {
-				ctx.fillStyle = "rgba(2,6,4,0.16)";
-				ctx.fillRect(0, 0, cv.width, cv.height);
-				ctx.font = `${ukuran}px monospace`;
-				kolom.forEach((y, i) => {
-					const c = huruf[Math.floor(Math.random() * huruf.length)];
-					ctx.fillStyle = Math.random() > 0.975 ? "#d6ffe0" : "#00ff41";
-					ctx.fillText(c, i * ukuran, y * ukuran);
-					kolom[i] = y * ukuran > cv.height && Math.random() > 0.975 ? 0 : y + 1;
-				});
-			}
-			id = setTimeout(() => requestAnimationFrame(langkah), 50);
-		};
-		langkah();
-		return () => {
-			aktif = false;
-			clearTimeout(id);
-			ro.disconnect();
-		};
-	}, []);
-	return <canvas ref={ref} className="pointer-events-none absolute inset-0 h-full w-full opacity-[0.22]" aria-hidden="true" />;
-};
 
 /** Meter bersegmen: 24 sel bercahaya, kuning ≥75%, merah ≥90%. */
 const Meter = ({ label, persen, teks }) => {
@@ -113,7 +77,7 @@ const Meter = ({ label, persen, teks }) => {
 		<div className="kali-hud min-w-0 px-3 py-2">
 			<div className="flex items-baseline justify-between gap-2">
 				<span className="kali-hud-label">{label}</span>
-				<span className={`kali-display text-xl font-bold tabular-nums [text-shadow:0_0_12px_currentColor] ${warna}`}>{p === null ? "--" : `${Math.round(p)}%`}</span>
+				<span className={`kali-display text-xl font-bold tabular-nums ${warna}`}>{p === null ? "--" : `${Math.round(p)}%`}</span>
 			</div>
 			<div className={`kali-segmen mt-1.5 ${warna}`} role="meter" aria-label={label} aria-valuenow={p ?? undefined} aria-valuemin={0} aria-valuemax={100}>
 				{Array.from({ length: 24 }, (_, i) => (
@@ -129,20 +93,10 @@ const Meter = ({ label, persen, teks }) => {
 const Angka = ({ label, nilai, teks }) => (
 	<div className="kali-hud min-w-0 px-3 py-2">
 		<span className="kali-hud-label">{label}</span>
-		<p className="kali-display mt-0.5 truncate text-[15px] font-bold text-slate-900 [text-shadow:0_0_10px_rgba(0,255,65,.5)]">{nilai}</p>
+		<p className="kali-display mt-0.5 truncate text-[15px] font-bold text-slate-900">{nilai}</p>
 		<p className="mt-0.5 truncate text-[10.5px] text-slate-500">{teks || " "}</p>
 	</div>
 );
-
-const KetikJudul = ({ teks }) => {
-	const [n, setN] = useState(0);
-	useEffect(() => {
-		setN(0);
-		const id = setInterval(() => setN((x) => (x >= teks.length ? x : x + 1)), 28);
-		return () => clearInterval(id);
-	}, [teks]);
-	return <span className="kali-kursor">{teks.slice(0, n)}</span>;
-};
 
 const ServerManagementPage = () => {
 	const [params, setParams] = useSearchParams();
@@ -210,33 +164,26 @@ const ServerManagementPage = () => {
 	const kritis = peringatan.filter((a) => a.level === "critical").length;
 	const status = galat ? "offline" : kritis ? "kritis" : peringatan.length ? "waspada" : overview ? "sehat" : "memuat";
 	const STATUS = {
-		sehat: { teks: "ALL SYSTEMS NOMINAL", kelas: "text-emerald-600 ring-emerald-200 bg-emerald-50" },
-		waspada: { teks: `${peringatan.length} WARNING`, kelas: "text-amber-600 ring-amber-200 bg-amber-50" },
-		kritis: { teks: `${kritis} CRITICAL`, kelas: "text-red-600 ring-red-200 bg-red-50 animate-pulse" },
-		offline: { teks: "SERVER UNREACHABLE", kelas: "text-red-600 ring-red-200 bg-red-50 animate-pulse" },
-		memuat: { teks: "CONNECTING…", kelas: "text-slate-500 ring-slate-200 bg-slate-50" },
+		sehat: { teks: "Semua sistem normal", kelas: "text-emerald-600 ring-emerald-200 bg-emerald-50" },
+		waspada: { teks: `${peringatan.length} peringatan`, kelas: "text-amber-600 ring-amber-200 bg-amber-50" },
+		kritis: { teks: `${kritis} kritis`, kelas: "text-red-600 ring-red-200 bg-red-50 animate-pulse" },
+		offline: { teks: "Server tidak terjangkau", kelas: "text-red-600 ring-red-200 bg-red-50 animate-pulse" },
+		memuat: { teks: "Menghubungkan…", kelas: "text-slate-500 ring-slate-200 bg-slate-50" },
 	}[status];
 	const sys = overview?.system;
 	const l = overview?.latest;
-	const host = sys?.hostname || "dpmd";
 
 	return (
 		<div className="kali-ops">
 			<div className="mx-auto w-full max-w-[1920px] space-y-4 p-3 pb-10 sm:p-5 lg:p-6">
 				{/* Header */}
-				<div className="relative overflow-hidden border border-slate-200 bg-black">
-					<HujanMatriks />
+				<div className="relative overflow-hidden rounded-2xl border border-slate-200 bg-white">
 					<div className="relative p-4 sm:p-5">
 						<div className="flex flex-wrap items-start justify-between gap-4">
 							<div className="min-w-0">
-								<p className="text-[12px] text-slate-500">
-									┌──(<span className="text-red-600">root㉿{host}</span>)-[<span className="text-blue-600">~/server-ops</span>]
-								</p>
-								<p className="text-[12px] text-slate-500">
-									└─# <span className="text-slate-800">./dpmd-ops --monitor --defend</span>
-								</p>
-								<h1 className="kali-display kali-glitch mt-2 text-2xl font-black text-slate-900 sm:text-4xl" data-teks="MANAJEMEN SERVER">
-									<KetikJudul teks="MANAJEMEN SERVER" />
+								<p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">Super Admin · Infrastruktur</p>
+								<h1 className="kali-display mt-1 text-2xl font-semibold text-slate-900 sm:text-3xl">
+									Manajemen Server
 								</h1>
 								<p className="mt-1 text-[12.5px] text-slate-600">
 									{sys ? (
@@ -249,18 +196,18 @@ const ServerManagementPage = () => {
 								</p>
 							</div>
 							<div className="flex flex-col items-end gap-2">
-								<span className={`inline-flex items-center gap-1.5 px-3 py-1 text-[11.5px] font-bold tracking-wider ring-1 ${STATUS.kelas}`}>
+								<span className={`inline-flex items-center gap-1.5 px-3 py-1 text-[11.5px] rounded-full font-semibold ring-1 ${STATUS.kelas}`}>
 									<span className="h-1.5 w-1.5 rounded-full bg-current" />
 									{STATUS.teks}
 								</span>
-								<p className="kali-display kali-glow text-2xl font-bold tabular-nums text-slate-900">{jam.toLocaleTimeString("id-ID")}</p>
+								<p className="kali-display text-2xl font-bold tabular-nums text-slate-900">{jam.toLocaleTimeString("id-ID")}</p>
 								<p className="-mt-1.5 text-[10.5px] tracking-[0.2em] text-slate-500">
 									{jam.toLocaleDateString("id-ID", { weekday: "long", day: "2-digit", month: "short", year: "numeric" }).toUpperCase()}
 								</p>
 								<button
 									onClick={muat}
 									disabled={memuat}
-									className="inline-flex items-center gap-1.5 border border-slate-300 bg-black/60 px-2.5 py-1 text-[11px] text-slate-700 hover:border-slate-900 hover:text-slate-900 disabled:opacity-60"
+									className="inline-flex items-center gap-1.5 border border-slate-300 rounded-lg bg-slate-50 px-2.5 py-1 text-[11px] text-slate-700 hover:border-slate-900 hover:text-slate-900 disabled:opacity-60"
 									title="Perbarui sekarang"
 								>
 									<FiRefreshCw className={`h-3 w-3 ${memuat ? "animate-spin" : ""}`} />
@@ -284,7 +231,7 @@ const ServerManagementPage = () => {
 					</div>
 
 					{/* Tab — dikelompokkan supaya mudah dicari */}
-					<nav className="relative flex items-stretch overflow-x-auto border-t border-slate-200 bg-black/70 px-2 [scrollbar-width:none]" aria-label="Bagian Manajemen Server">
+					<nav className="relative flex items-stretch overflow-x-auto border-t border-slate-200 bg-slate-50 px-2 [scrollbar-width:none]" aria-label="Bagian Manajemen Server">
 						{TABS.map((t, i) => {
 							const Icon = t.icon;
 							const aktif = t.key === tab;
@@ -346,6 +293,9 @@ const ServerManagementPage = () => {
 					{tab === "trafik" && <TrafficTab />}
 					{tab === "log" && <LogsTab />}
 					{tab === "pengaturan" && <SettingsTab />}
+					{tab === "jurnal" && <JournalTab onNavigate={pilihTab} />}
+					{tab === "deploy" && <DeployTab />}
+					{tab === "backup" && <BackupTab />}
 				</Suspense>
 			</div>
 		</div>

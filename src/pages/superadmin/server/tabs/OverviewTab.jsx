@@ -8,14 +8,19 @@ import {
 	FiAlertTriangle,
 	FiArrowDown,
 	FiArrowUp,
+	FiArchive,
+	FiBookOpen,
 	FiBox,
 	FiCheckCircle,
+	FiCheckSquare,
 	FiClock,
 	FiCpu,
 	FiDatabase,
+	FiGitBranch,
 	FiGlobe,
 	FiInfo,
 	FiServer,
+	FiShield,
 	FiUsers,
 	FiZap,
 } from "react-icons/fi";
@@ -37,6 +42,7 @@ import {
 	formatRate,
 	formatWaktu,
 	sejak,
+	usePolling,
 } from "../serverUi";
 
 const RENTANG = [
@@ -94,9 +100,55 @@ const PanelPeringatan = ({ alerts, onNavigate }) => {
 	);
 };
 
+/** Baris "Postur Server": audit, serangan, tindakan, versi, dan backup dalam satu pandangan. */
+const PosturServer = ({ postur, onNavigate }) => {
+	const { audit, serangan_24j: ser, tindakan_24j: tin, deploy = [], backup = {} } = postur;
+	const be = deploy.find((d) => d.key === "dpmd-fahri-express") || deploy[0];
+	const fe = deploy.find((d) => d.key === "dpmd-frontend") || deploy[1];
+	const bermasalah = deploy.some((d) => d.pinned || d.behind > 0);
+	const mysql = backup.mysql_terakhir;
+	const vzdump = backup.vzdump_terakhir;
+	const terbaru = [mysql, vzdump].filter(Boolean).sort((x, y) => new Date(y) - new Date(x))[0] || null;
+	const umurJam = terbaru ? (Date.now() - new Date(terbaru).getTime()) / 3600000 : null;
+	const toneAudit = !audit ? "slate" : "AB".includes(audit.grade) ? "green" : audit.grade === "C" ? "amber" : "red";
+	const kartu = [
+		{ tujuan: "audit", label: "Nilai audit", value: audit ? `${audit.grade} · ${audit.score}` : "Belum dinilai", hint: audit ? `dinilai ${sejak(audit.at)}` : "Jalankan di tab Audit", tone: toneAudit, icon: FiCheckSquare },
+		{ tujuan: "keamanan", label: "Serangan 24 jam", value: ser?.total ?? 0, hint: `${ser?.ditolak ?? 0} ditolak · ${postur.ip_diblokir ?? 0} IP diblokir`, tone: ser?.total > 0 ? "red" : "green", icon: FiShield },
+		{ tujuan: "jurnal", label: "Tindakan 24 jam", value: (tin?.manual ?? 0) + (tin?.otomatis ?? 0), hint: `${tin?.otomatis ?? 0} otomatis · ${tin?.manual ?? 0} manual`, tone: "blue", icon: FiBookOpen },
+		{
+			tujuan: "deploy",
+			label: "Versi berjalan",
+			value: be?.short || "-",
+			hint: bermasalah ? "Ada repo di-rollback/tertinggal" : `frontend ${fe?.short || "-"} · ${sejak(be?.date)}`,
+			tone: bermasalah ? "amber" : "green",
+			icon: FiGitBranch,
+		},
+		{
+			tujuan: "backup",
+			label: "Backup terakhir",
+			value: terbaru ? sejak(terbaru) : "Belum ada",
+			hint: `MySQL ${mysql ? sejak(mysql) : "-"} · Proxmox ${vzdump ? sejak(vzdump) : "-"}`,
+			tone: umurJam === null ? "red" : umurJam > 36 ? "amber" : "green",
+			icon: FiArchive,
+		},
+	];
+	return (
+		<div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+			{kartu.map((k) => (
+				<button key={k.tujuan} type="button" className="text-left" onClick={() => onNavigate(k.tujuan)}>
+					<Stat label={k.label} value={k.value} hint={k.hint} icon={k.icon} tone={k.tone} />
+				</button>
+			))}
+		</div>
+	);
+};
+
 const OverviewTab = ({ data, galat, onRetry, onNavigate }) => {
 	const [rentang, setRentang] = useState("1h");
 	const [riwayat, setRiwayat] = useState(null);
+	const [postur, setPostur] = useState(null);
+
+	usePolling(() => api.get("/superadmin/server/posture").then((r) => setPostur(r.data?.data || null)).catch(() => {}), 60000);
 
 	useEffect(() => {
 		if (rentang === "1h") {
@@ -130,6 +182,7 @@ const OverviewTab = ({ data, galat, onRetry, onNavigate }) => {
 
 	return (
 		<div className="space-y-4">
+			{postur && <PosturServer postur={postur} onNavigate={onNavigate} />}
 			<PanelPeringatan alerts={data.alerts} onNavigate={onNavigate} />
 
 			{/* Meter */}

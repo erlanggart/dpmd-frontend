@@ -531,7 +531,7 @@ const WARNA_BARIS = {
 	warn: "text-amber-600",
 	err: "text-red-600",
 	dim: "text-slate-500",
-	neon: "text-slate-900 leading-[1.1] [text-shadow:0_0_5px_rgba(0,255,65,.4)]",
+	neon: "text-slate-900 leading-[1.1]",
 };
 
 const sambutan = () => [
@@ -716,7 +716,7 @@ const TerminalTab = ({ onNavigate }) => {
 			<div
 				ref={kotak}
 				onClick={() => !window.getSelection()?.toString() && input.current?.focus()}
-				className="h-[calc(100vh-290px)] min-h-[420px] overflow-auto border border-slate-200 bg-slate-950 p-3 text-[12.5px] leading-[1.55] shadow-[inset_0_0_60px_rgba(0,255,65,0.05)]"
+				className="h-[calc(100vh-290px)] min-h-[420px] overflow-auto border border-slate-200 bg-slate-950 p-3 text-[12.5px] leading-[1.55]"
 			>
 				{baris.map((b, i) => (
 					<pre key={i} className={`whitespace-pre-wrap break-words [font-family:inherit] ${WARNA_BARIS[b.jenis] || WARNA_BARIS.out}`}>

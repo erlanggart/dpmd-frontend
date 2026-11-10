@@ -16,11 +16,11 @@ import { titikDaratan } from "./landMask";
 const RAD = Math.PI / 180;
 
 const WARNA = {
-	critical: [255, 59, 78],
-	high: [255, 140, 51],
-	medium: [255, 191, 31],
-	blocked: [120, 140, 128],
-	visitor: [0, 255, 102],
+	critical: [239, 68, 68],
+	high: [251, 146, 60],
+	medium: [251, 191, 36],
+	blocked: [120, 130, 150],
+	visitor: [110, 231, 183],
 	server: [34, 211, 238],
 };
 
@@ -109,7 +109,7 @@ const HackerGlobe = forwardRef(function HackerGlobe(
 			const sv = lapisanRef.current.sv;
 			k.tembakan.push({
 				busur: buatBusur({ lat, lon }, sv, 36),
-				warna: WARNA[sev] || (sev === "low" ? [0, 255, 102] : WARNA.medium),
+				warna: WARNA[sev] || (sev === "low" ? [110, 231, 183] : WARNA.medium),
 				lat,
 				lon,
 				mulai: performance.now(),
@@ -261,7 +261,7 @@ const HackerGlobe = forwardRef(function HackerGlobe(
 
 			// Bintang latar
 			for (const [bx, by, br, bf] of bintang) {
-				ctx.fillStyle = `rgba(180,255,200,${0.25 + 0.35 * Math.abs(Math.sin(kini / 1400 + bf))})`;
+				ctx.fillStyle = `rgba(200,212,255,${0.25 + 0.35 * Math.abs(Math.sin(kini / 1400 + bf))})`;
 				ctx.fillRect(bx, by, br * dpr, br * dpr);
 			}
 
@@ -269,7 +269,7 @@ const HackerGlobe = forwardRef(function HackerGlobe(
 			{
 				const rc = R * 1.1;
 				const putar = (kini / 1000) * 0.08;
-				ctx.strokeStyle = "rgba(0,255,65,0.16)";
+				ctx.strokeStyle = "rgba(138,164,255,0.16)";
 				ctx.lineWidth = 1 * dpr;
 				ctx.beginPath();
 				ctx.arc(cx, cy, rc, 0, Math.PI * 2);
@@ -277,14 +277,14 @@ const HackerGlobe = forwardRef(function HackerGlobe(
 				for (let d = 0; d < 360; d += 5) {
 					const a = d * RAD + putar;
 					const panjang = d % 30 === 0 ? 9 : 4;
-					ctx.strokeStyle = d % 30 === 0 ? "rgba(0,255,65,0.55)" : "rgba(0,255,65,0.22)";
+					ctx.strokeStyle = d % 30 === 0 ? "rgba(138,164,255,0.55)" : "rgba(138,164,255,0.22)";
 					ctx.beginPath();
 					ctx.moveTo(cx + Math.cos(a) * rc, cy + Math.sin(a) * rc);
 					ctx.lineTo(cx + Math.cos(a) * (rc + panjang * dpr), cy + Math.sin(a) * (rc + panjang * dpr));
 					ctx.stroke();
 				}
 				ctx.font = `${8.5 * dpr}px "JetBrains Mono", monospace`;
-				ctx.fillStyle = "rgba(0,255,65,0.45)";
+				ctx.fillStyle = "rgba(138,164,255,0.45)";
 				ctx.textAlign = "center";
 				ctx.textBaseline = "middle";
 				for (let d = 0; d < 360; d += 30) {
@@ -293,7 +293,7 @@ const HackerGlobe = forwardRef(function HackerGlobe(
 				}
 				ctx.textAlign = "start";
 				ctx.lineWidth = 2.5 * dpr;
-				ctx.strokeStyle = "rgba(0,255,65,0.6)";
+				ctx.strokeStyle = "rgba(138,164,255,0.6)";
 				ctx.beginPath();
 				ctx.arc(cx, cy, rc + 3 * dpr, -putar * 3, -putar * 3 + 0.6);
 				ctx.stroke();
@@ -305,26 +305,26 @@ const HackerGlobe = forwardRef(function HackerGlobe(
 
 			// Atmosfer & bola
 			const atm = ctx.createRadialGradient(cx, cy, R * 0.9, cx, cy, R * 1.28);
-			atm.addColorStop(0, "rgba(0,255,65,0.20)");
-			atm.addColorStop(0.35, "rgba(0,255,65,0.07)");
-			atm.addColorStop(1, "rgba(0,255,65,0)");
+			atm.addColorStop(0, "rgba(138,164,255,0.20)");
+			atm.addColorStop(0.35, "rgba(138,164,255,0.07)");
+			atm.addColorStop(1, "rgba(138,164,255,0)");
 			ctx.fillStyle = atm;
 			ctx.beginPath();
 			ctx.arc(cx, cy, R * 1.28, 0, Math.PI * 2);
 			ctx.fill();
 			const bola = ctx.createRadialGradient(cx - R * 0.35, cy - R * 0.4, R * 0.1, cx, cy, R);
-			bola.addColorStop(0, "#0b2716");
-			bola.addColorStop(1, "#020a05");
+			bola.addColorStop(0, "#172040");
+			bola.addColorStop(1, "#0c111d");
 			ctx.fillStyle = bola;
 			ctx.beginPath();
 			ctx.arc(cx, cy, R, 0, Math.PI * 2);
 			ctx.fill();
-			ctx.strokeStyle = "rgba(0,255,65,0.45)";
+			ctx.strokeStyle = "rgba(138,164,255,0.45)";
 			ctx.lineWidth = 1 * dpr;
 			ctx.stroke();
 
 			// Graticule tiap 30°
-			ctx.strokeStyle = "rgba(0,255,65,0.09)";
+			ctx.strokeStyle = "rgba(138,164,255,0.09)";
 			ctx.lineWidth = 0.8 * dpr;
 			for (let lon = -180; lon < 180; lon += 30) {
 				ctx.beginPath();
@@ -359,7 +359,7 @@ const HackerGlobe = forwardRef(function HackerGlobe(
 				if (z <= 0.02) continue;
 				const x = cosLat[i] * Math.sin(d);
 				const y = cosC * sinLat[i] - sinC * cosLat[i] * cd;
-				ctx.fillStyle = `rgba(0,255,65,${0.18 + z * 0.62})`;
+				ctx.fillStyle = `rgba(138,164,255,${0.18 + z * 0.62})`;
 				ctx.fillRect(cx + R * x - s / 2, cy - R * y - s / 2, s, s);
 			}
 
@@ -458,7 +458,7 @@ const HackerGlobe = forwardRef(function HackerGlobe(
 			for (const tnd of tanda) {
 				if (tnd.jenis !== "attacker" || label >= 6 || tnd.data.blocked) continue;
 				const teks = `${tnd.data.geo?.cc || "??"} ${tnd.data.n}`;
-				ctx.fillStyle = "rgba(2,10,5,0.75)";
+				ctx.fillStyle = "rgba(12,17,29,0.75)";
 				const w = ctx.measureText(teks).width;
 				ctx.fillRect(tnd.x + 9 * dpr, tnd.y - 7 * dpr, w + 8 * dpr, 14 * dpr);
 				ctx.fillStyle = rgba(tnd.data.warna, 1);
@@ -535,7 +535,7 @@ const HackerGlobe = forwardRef(function HackerGlobe(
 				const [x, y, z] = proyeksi(L.sv.lat * RAD, L.sv.lon * RAD);
 				if (z > 0) {
 					const d = (kini - k.dampak) / 700;
-					ctx.strokeStyle = `rgba(255,59,78,${1 - d})`;
+					ctx.strokeStyle = `rgba(239,68,68,${1 - d})`;
 					ctx.lineWidth = 2.5 * dpr;
 					ctx.beginPath();
 					ctx.arc(x, y, (6 + d * 34) * dpr, 0, Math.PI * 2);
@@ -547,7 +547,7 @@ const HackerGlobe = forwardRef(function HackerGlobe(
 			const pindai = ((waktu * 0.25) % 1) * 2 - 1;
 			const yPindai = cy + pindai * R;
 			const lebarPindai = Math.sqrt(Math.max(0, R * R - (yPindai - cy) ** 2));
-			ctx.strokeStyle = "rgba(0,255,65,0.16)";
+			ctx.strokeStyle = "rgba(138,164,255,0.16)";
 			ctx.lineWidth = 1 * dpr;
 			ctx.beginPath();
 			ctx.moveTo(cx - lebarPindai, yPindai);
@@ -666,27 +666,27 @@ const HackerGlobe = forwardRef(function HackerGlobe(
 
 			{tip && tip.x !== undefined && (
 				<div
-					className="pointer-events-none absolute z-10 min-w-[190px] max-w-[260px] rounded border border-[#1d4a2d] bg-[#020a05]/95 px-2.5 py-2 text-[11px] leading-relaxed text-[#b6f5c8] shadow-[0_0_18px_rgba(0,255,65,.18)]"
+					className="pointer-events-none absolute z-10 min-w-[190px] max-w-[260px] rounded border border-[#334062] bg-[#0c111d]/95 px-2.5 py-2 text-[11px] leading-relaxed text-[#dde2ec]"
 					style={{ left: Math.min(tip.x + 14, (wadah.current?.clientWidth || 300) - 270), top: Math.max(4, tip.y - 10) }}
 				>
 					{tip.jenis === "attacker" ? (
 						<>
-							<p className="font-bold text-[#ff6b78]">
+							<p className="font-bold text-[#f87171]">
 								{tip.data.blocked ? "■ DIBLOKIR" : "▲ PENYERANG"} · {tip.data.ip}
 							</p>
 							<p>{[tip.data.geo?.city, tip.data.geo?.country].filter(Boolean).join(", ") || "Lokasi tidak diketahui"}</p>
-							<p className="text-[#5fa577]">{tip.data.geo?.isp || "-"}</p>
+							<p className="text-[#8590aa]">{tip.data.geo?.isp || "-"}</p>
 							<p>
 								{tip.data.n} kejadian · skor {tip.data.score}
 							</p>
-							<p className="text-[#5fa577]">{tip.data.types.slice(0, 3).join(", ")}</p>
-							<p className="mt-1 text-[#00ff41]">klik untuk detail &amp; aksi →</p>
+							<p className="text-[#8590aa]">{tip.data.types.slice(0, 3).join(", ")}</p>
+							<p className="mt-1 text-[#8aa4ff]">klik untuk detail &amp; aksi →</p>
 						</>
 					) : tip.jenis === "visitor" ? (
 						<>
-							<p className="font-bold text-[#00ff66]">● PENGUNJUNG · {tip.data.ip}</p>
+							<p className="font-bold text-[#6ee7b7]">● PENGUNJUNG · {tip.data.ip}</p>
 							<p>{[tip.data.geo?.city, tip.data.geo?.country].filter(Boolean).join(", ")}</p>
-							<p className="text-[#5fa577]">{tip.data.geo?.isp || "-"}</p>
+							<p className="text-[#8590aa]">{tip.data.geo?.isp || "-"}</p>
 							<p>{tip.data.count} request · {tip.data.errors} error</p>
 						</>
 					) : (

@@ -84,7 +84,7 @@ const IntelIp = ({ item, onClose, onChanged }) => {
 			icon: "warning",
 			title: `Blokir ${item.ip}?`,
 			html: item.private
-				? `<p style="font-size:14px"><b style="color:#ff6b78">IP internal/proxy.</b> Memblokirnya bisa memutus akses SEMUA pengguna.</p>`
+				? `<p style="font-size:14px"><b style="color:#f87171">IP internal/proxy.</b> Memblokirnya bisa memutus akses SEMUA pengguna.</p>`
 				: `<p style="font-size:14px">Request anonim dari IP ini ditolak ${label}.</p>`,
 			showCancelButton: true,
 			confirmButtonText: `Blokir ${label}`,
@@ -373,7 +373,7 @@ const UmpanLangsung = ({ onPilihIp, onBaru, onBaris }) => {
 			}
 		>
 			<div className="h-[300px] overflow-auto bg-slate-950 px-3 py-2 text-[11.5px] leading-[1.65]">
-				{!baris.length && <p className="kali-kursor text-slate-500">menunggu kejadian</p>}
+				{!baris.length && <p className="text-slate-500">menunggu kejadian</p>}
 				{baris.map((e) => (
 					<div key={e.id} className={`flex gap-2 whitespace-nowrap ${barisBaru.current.has(e.id) ? "kali-baru" : ""}`}>
 						<span className="text-slate-500">{new Date(e.created_at).toLocaleTimeString("id-ID")}</span>
@@ -531,10 +531,10 @@ const OverlayReplay = ({ r }) => {
 	const tanggal = new Date(r.pos);
 	return (
 		<div className="pointer-events-none absolute inset-x-0 top-[132px] z-10 flex justify-center p-3">
-			<div className="pointer-events-auto w-full max-w-xl border border-red-200 bg-black/85 px-3 py-2 shadow-[0_0_24px_rgba(255,59,78,.25)]">
+			<div className="pointer-events-auto w-full max-w-xl border border-red-200 bg-black/85 px-3 py-2">
 				<div className="flex items-center justify-between gap-3 text-[11.5px]">
 					<span className="font-bold tracking-widest text-red-600">● REPLAY {d.range}</span>
-					<span className="kali-glow text-base font-bold tabular-nums text-slate-900">
+					<span className="text-base font-bold tabular-nums text-slate-900">
 						{tanggal.toLocaleDateString("id-ID", { day: "2-digit", month: "short" })} {tanggal.toLocaleTimeString("id-ID")}
 					</span>
 					<span className="text-slate-500">
@@ -547,7 +547,7 @@ const OverlayReplay = ({ r }) => {
 					max={d.akhir}
 					value={r.pos}
 					onChange={(e) => r.geser(Number(e.target.value))}
-					className="mt-1.5 w-full accent-[#ff3b4e]"
+					className="mt-1.5 w-full accent-[#ef4444]"
 					aria-label="Posisi waktu replay"
 				/>
 				<div className="mt-1 flex flex-wrap items-center gap-1.5 text-[11px]">
@@ -692,7 +692,7 @@ const ThreatMapTab = () => {
 			<div className="flex flex-wrap items-start justify-between gap-3">
 				<div className="kali-hud pointer-events-auto min-w-[200px] px-4 py-3">
 					<p className="kali-hud-label">Threat level</p>
-					<p className={`kali-display mt-1 text-3xl font-black [text-shadow:0_0_18px_currentColor] ${t.kelas}`}>{t.teks}</p>
+					<p className={`kali-display mt-1 text-3xl font-black ${t.kelas}`}>{t.teks}</p>
 					<p className="mt-1 text-[11px] text-slate-600">
 						{ringkas?.last_hour ?? 0} kejadian/jam ·{" "}
 						<span className={live.length ? "font-bold text-red-600" : ""}>{live.length} live 5m</span>
@@ -700,7 +700,7 @@ const ThreatMapTab = () => {
 				</div>
 
 				<div className="hidden flex-col items-center pt-1 text-center xl:flex">
-					<p className="kali-display text-[13px] font-bold tracking-[0.5em] text-slate-900 [text-shadow:0_0_12px_rgba(0,255,65,.6)]">GLOBAL THREAT MAP</p>
+					<p className="kali-display text-[13px] font-bold tracking-[0.5em] text-slate-900">GLOBAL THREAT MAP</p>
 					<p className="mt-1 flex items-center gap-1.5 text-[10.5px] tracking-[0.2em] text-slate-500">
 						<span className="h-1.5 w-1.5 animate-pulse rounded-full bg-red-500" />
 						{replayAktif ? "MODE REPLAY" : "LIVE · DPMD KAB. BOGOR"}
@@ -713,7 +713,7 @@ const ThreatMapTab = () => {
 						<button
 							onClick={() => replay.mulai(rentang)}
 							disabled={replay.memuat || replayAktif}
-							className="inline-flex items-center gap-1 bg-red-100 px-2.5 py-1 text-[11px] font-bold text-red-700 ring-1 ring-red-500 hover:shadow-[0_0_12px_rgba(255,59,78,.5)] disabled:opacity-40"
+							className="inline-flex items-center gap-1 bg-red-100 px-2.5 py-1 text-[11px] font-bold text-red-700 ring-1 ring-red-500 disabled:opacity-40"
 							title="Putar ulang serangan pada rentang ini sebagai time-lapse"
 						>
 							<FiPlay className="h-3 w-3" /> {replay.memuat ? "memuat…" : "REPLAY"}
@@ -762,7 +762,7 @@ const ThreatMapTab = () => {
 							</span>
 							<span className="mt-0.5 block h-1 bg-slate-100">
 								<span
-									className={`block h-full ${c.serius ? "bg-red-500 shadow-[0_0_6px_rgba(255,59,78,.8)]" : "bg-emerald-500"}`}
+									className={`block h-full ${c.serius ? "bg-red-500" : "bg-emerald-500"}`}
 									style={{ width: `${(c.events / maksNegara) * 100}%` }}
 								/>
 							</span>
@@ -777,7 +777,7 @@ const ThreatMapTab = () => {
 							<span className="h-1.5 w-1.5 animate-pulse rounded-full bg-red-500" /> live
 						</span>
 					</p>
-					{!masuk.length && <p className="kali-kursor text-[11px] text-slate-500">menunggu serangan</p>}
+					{!masuk.length && <p className="text-[11px] text-slate-500">menunggu serangan</p>}
 					{masuk.map((e) => (
 						<button key={e.id} onClick={() => pilihIp(e.ip_address)} className="mb-1 block w-full truncate text-left text-[11px] leading-snug hover:bg-slate-50">
 							<span className={`font-bold ${SEV_TEKS[e.severity]}`}>▲</span> <span className="text-slate-500">{new Date(e.created_at).toLocaleTimeString("id-ID")}</span>{" "}
@@ -803,7 +803,7 @@ const ThreatMapTab = () => {
 							<p className="kali-hud-label">{s.k}</p>
 							<p
 								className={`kali-display mt-0.5 truncate text-lg font-bold ${
-									s.merah ? "text-red-600 [text-shadow:0_0_12px_rgba(255,59,78,.6)]" : "text-slate-900 [text-shadow:0_0_10px_rgba(0,255,65,.5)]"
+									s.merah ? "text-red-600" : "text-slate-900"
 								}`}
 							>
 								{s.v}
@@ -842,7 +842,7 @@ const ThreatMapTab = () => {
 
 			{/* Hero: globe penuh dengan HUD */}
 			<section className="kali-kartu relative overflow-hidden rounded-2xl border border-slate-200 bg-black">
-				<div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(0,255,65,.10),transparent_62%)]" />
+				<div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(138,164,255,.10),transparent_62%)]" />
 				<HackerGlobe
 					ref={globe}
 					showStatic={!replayAktif}

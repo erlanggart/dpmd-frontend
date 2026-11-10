@@ -19,14 +19,14 @@ import {
 import { FiAlertOctagon, FiAlertTriangle, FiCheckCircle, FiHelpCircle, FiInfo } from "react-icons/fi";
 
 export const SERI = {
-	biru: "#00ff41", // hijau neon (seri utama)
-	oranye: "#ffb020", // amber
-	aqua: "#2ee6c5", // teal
-	kuning: "#e6ff4d", // lime
-	magenta: "#7dffb0", // mint
-	hijau: "#2cff8a",
-	ungu: "#00d9ff", // cyan
-	merah: "#ff4d5e",
+	biru: "#8aa4ff", // aksen utama tema
+	oranye: "#f59e0b",
+	aqua: "#2dd4bf",
+	kuning: "#facc15",
+	magenta: "#f472b6",
+	hijau: "#34d399",
+	ungu: "#a78bfa",
+	merah: "#f87171",
 };
 
 export const STATUS_WARNA = {
@@ -38,10 +38,10 @@ export const STATUS_WARNA = {
 };
 
 export const SEVERITY = {
-	critical: { label: "Kritis", warna: "#ff3b4e", kelas: "bg-red-100 text-red-800 ring-red-200" },
-	high: { label: "Tinggi", warna: "#ff8c33", kelas: "bg-orange-100 text-orange-800 ring-orange-200" },
-	medium: { label: "Sedang", warna: "#ffbf1f", kelas: "bg-amber-100 text-amber-800 ring-amber-200" },
-	low: { label: "Rendah", warna: "#3d7a53", kelas: "bg-slate-100 text-slate-700 ring-slate-200" },
+	critical: { label: "Kritis", warna: "#ef4444", kelas: "bg-red-100 text-red-800 ring-red-200" },
+	high: { label: "Tinggi", warna: "#fb923c", kelas: "bg-orange-100 text-orange-800 ring-orange-200" },
+	medium: { label: "Sedang", warna: "#fbbf24", kelas: "bg-amber-100 text-amber-800 ring-amber-200" },
+	low: { label: "Rendah", warna: "#5b6886", kelas: "bg-slate-100 text-slate-700 ring-slate-200" },
 };
 
 export const pesanError = (error, cadangan = "Terjadi kesalahan.") =>
@@ -104,8 +104,8 @@ export const tingkatDari = (persen, ambang = 85) => {
 };
 
 /**
- * Kartu bergaya jendela terminal: judul diawali prompt "▸", ikon dalam kotak
- * neon, dan aksen sudut HUD (.kali-kartu di kali.css). Dipakai semua tab,
+ * Kartu panel: ikon dalam kotak lembut beraksen, judul tegas, bayangan halus
+ * (.kali-kartu di kali.css). Dipakai semua tab,
  * jadi tampilan seluruh halaman seragam dari satu tempat ini.
  */
 export const Card = ({ title, subtitle, icon: Icon, actions, children, className = "", bodyClass = "p-4 sm:p-5" }) => {
@@ -113,16 +113,15 @@ export const Card = ({ title, subtitle, icon: Icon, actions, children, className
 	return (
 		<section className={`kali-kartu rounded-2xl border border-slate-200 bg-white ${className}`}>
 			{(title || actions) && (
-				<header className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 bg-gradient-to-r from-slate-100 to-transparent px-4 py-2.5 sm:px-5">
+				<header className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 px-4 py-2.5 sm:px-5">
 					<div className="flex min-w-0 items-center gap-2.5">
 						{Icon && (
-							<span className="grid h-7 w-7 shrink-0 place-items-center rounded border border-slate-300 bg-black text-slate-900">
+							<span className="grid h-7 w-7 shrink-0 place-items-center rounded-lg bg-blue-50 text-blue-600 ring-1 ring-blue-200">
 								<Icon className="h-3.5 w-3.5" />
 							</span>
 						)}
 						<div className="min-w-0">
-							<h3 className="truncate text-[14px] font-bold text-slate-800">
-								<span className="mr-1.5 text-slate-900">▸</span>
+							<h3 className="truncate text-[14px] font-semibold text-slate-800">
 								{judul}
 							</h3>
 							{subtitle && <p className="mt-0.5 text-[11.5px] text-slate-500">{subtitle}</p>}
@@ -156,13 +155,13 @@ export const SeverityBadge = ({ severity }) => {
 export const Gauge = ({ value, label, detail, ambang = 85, warna = SERI.biru }) => {
 	const v = Math.max(0, Math.min(100, Number(value) || 0));
 	const tingkat = tingkatDari(value, ambang);
-	const warnaIsi = tingkat === "kritis" ? "#ff4d5e" : tingkat === "waspada" ? "#ffbf1f" : warna;
+	const warnaIsi = tingkat === "kritis" ? "#f87171" : tingkat === "waspada" ? "#fbbf24" : warna;
 	const r = 52;
 	const keliling = Math.PI * r;
 	return (
 		<div className="flex flex-col items-center text-center">
 			<svg viewBox="0 0 128 74" className="w-full max-w-[170px]" role="img" aria-label={`${label} ${v}%`}>
-				<path d="M12 66 A52 52 0 0 1 116 66" fill="none" stroke="#0b1b11" strokeWidth="11" strokeLinecap="round" />
+				<path d="M12 66 A52 52 0 0 1 116 66" fill="none" stroke="#1b2438" strokeWidth="11" strokeLinecap="round" />
 				<path
 					d="M12 66 A52 52 0 0 1 116 66"
 					fill="none"
@@ -197,13 +196,13 @@ export const Stat = ({ label, value, hint, icon: Icon, tone = "slate" }) => {
 	return (
 		<div className="kali-kartu flex items-start gap-3 rounded-xl border border-slate-200 bg-white p-3">
 			{Icon && (
-				<span className={`grid h-8 w-8 shrink-0 place-items-center rounded ${tones[tone] || tones.slate}`}>
+				<span className={`grid h-8 w-8 shrink-0 place-items-center rounded-lg ${tones[tone] || tones.slate}`}>
 					<Icon className="h-4 w-4" />
 				</span>
 			)}
 			<div className="min-w-0">
 				<p className="truncate text-[10.5px] font-semibold uppercase tracking-[0.16em] text-slate-500">{label}</p>
-				<p className="kali-glow mt-0.5 truncate text-xl font-extrabold text-slate-900">{value}</p>
+				<p className="mt-0.5 truncate text-xl font-extrabold text-slate-900">{value}</p>
 				{hint && <p className="mt-0.5 truncate text-[11px] text-slate-500" title={typeof hint === "string" ? hint : undefined}>{hint}</p>}
 			</div>
 		</div>
@@ -234,7 +233,7 @@ export const Toggle = ({ checked, onChange, label, hint, disabled }) => (
 			disabled={disabled}
 			onClick={() => onChange(!checked)}
 			className={`relative mt-0.5 h-6 w-11 shrink-0 rounded-full border transition ${
-				checked ? "border-emerald-500 bg-emerald-200 shadow-[0_0_10px_rgba(0,255,65,.35)]" : "border-slate-300 bg-slate-100"
+				checked ? "border-emerald-500 bg-emerald-200" : "border-slate-300 bg-slate-100"
 			}`}
 		>
 			<span
@@ -255,7 +254,7 @@ export const Kosong = ({ icon: Icon = FiInfo, title, text }) => (
 export const Memuat = ({ teks = "Memuat data server…" }) => (
 	<div className="flex items-center justify-center gap-2 py-12 text-sm text-slate-500" role="status">
 		<span className="h-4 w-4 animate-spin rounded-full border-2 border-slate-300 border-t-emerald-500" />
-		<span className="kali-kursor">{teks}</span>
+		<span className="">{teks}</span>
 	</div>
 );
 
@@ -318,17 +317,17 @@ export const GrafikArea = ({
 							</linearGradient>
 						))}
 					</defs>
-					<CartesianGrid stroke="#0f2a18" vertical={false} />
+					<CartesianGrid stroke="#222b45" vertical={false} />
 					<XAxis
 						dataKey="t"
 						tickFormatter={tickFormat || jamSaja}
-						tick={{ fontSize: 10.5, fill: "#5fa577" }}
+						tick={{ fontSize: 10.5, fill: "#8590aa" }}
 						axisLine={false}
 						tickLine={false}
 						minTickGap={36}
 					/>
 					<YAxis
-						tick={{ fontSize: 10.5, fill: "#5fa577" }}
+						tick={{ fontSize: 10.5, fill: "#8590aa" }}
 						axisLine={false}
 						tickLine={false}
 						width={52}
@@ -336,7 +335,7 @@ export const GrafikArea = ({
 						tickFormatter={(v) => (format ? format(v) : `${v}${satuan || ""}`)}
 					/>
 					<Tooltip
-						cursor={{ stroke: "#00ff41", strokeDasharray: "3 3" }}
+						cursor={{ stroke: "#8aa4ff", strokeDasharray: "3 3" }}
 						content={<TooltipGrafik format={format} satuan={satuan} labelFormat={labelFormat} />}
 					/>
 					{series.map((s) => (
@@ -351,7 +350,7 @@ export const GrafikArea = ({
 							stackId={stacked ? "1" : undefined}
 							isAnimationActive={false}
 							dot={false}
-							activeDot={{ r: 4, strokeWidth: 2, stroke: "#020604" }}
+							activeDot={{ r: 4, strokeWidth: 2, stroke: "#0c111d" }}
 							connectNulls
 						/>
 					))}
@@ -380,7 +379,7 @@ export const PilihRentang = ({ value, onChange, opsi }) => (
 				onClick={() => onChange(o.value)}
 				aria-pressed={value === o.value}
 				className={`rounded-sm px-2.5 py-1 text-xs font-semibold transition ${
-					value === o.value ? "bg-slate-900 text-white shadow-[0_0_10px_rgba(0,255,65,.35)]" : "text-slate-500 hover:bg-slate-100 hover:text-slate-800"
+					value === o.value ? "bg-slate-900 text-white" : "text-slate-500 hover:bg-slate-100 hover:text-slate-800"
 				}`}
 			>
 				{o.label}
@@ -413,10 +412,10 @@ export const usePolling = (fn, intervalMs, deps = []) => {
 
 export const Tombol = ({ children, onClick, variant = "light", disabled, icon: Icon, className = "", type = "button", title }) => {
 	const v = {
-		light: "bg-black text-slate-700 ring-1 ring-slate-300 hover:text-slate-900 hover:ring-slate-900",
-		dark: "bg-slate-900 text-white hover:shadow-[0_0_14px_rgba(0,255,65,.45)]",
-		primary: "bg-emerald-500 text-white hover:shadow-[0_0_14px_rgba(0,255,65,.45)]",
-		danger: "bg-red-600 text-white hover:shadow-[0_0_14px_rgba(255,59,78,.45)]",
+		light: "bg-slate-50 text-slate-700 ring-1 ring-slate-300 hover:bg-slate-100 hover:text-slate-900",
+		dark: "bg-slate-900 text-white hover:opacity-90",
+		primary: "bg-blue-500 text-white hover:opacity-90",
+		danger: "bg-red-600 text-white",
 		dangerLight: "bg-red-50 text-red-700 ring-1 ring-red-200 hover:bg-red-100",
 		ghost: "text-slate-600 hover:bg-slate-100 hover:text-slate-900",
 	};
@@ -426,7 +425,7 @@ export const Tombol = ({ children, onClick, variant = "light", disabled, icon: I
 			title={title}
 			onClick={onClick}
 			disabled={disabled}
-			className={`inline-flex items-center justify-center gap-1.5 rounded px-3 py-1.5 text-xs font-bold transition disabled:cursor-not-allowed disabled:opacity-50 ${v[variant]} ${className}`}
+			className={`inline-flex items-center justify-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold transition disabled:cursor-not-allowed disabled:opacity-50 ${v[variant]} ${className}`}
 		>
 			{Icon && <Icon className="h-3.5 w-3.5" />}
 			{children}

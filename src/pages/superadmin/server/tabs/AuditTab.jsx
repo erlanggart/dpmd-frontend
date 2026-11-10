@@ -18,11 +18,11 @@ const STATUS = {
 };
 
 const NILAI = {
-	A: { warna: "#00ff41", teks: "Sangat baik" },
-	B: { warna: "#7dff9f", teks: "Baik" },
-	C: { warna: "#ffbf1f", teks: "Perlu perhatian" },
-	D: { warna: "#ff8c33", teks: "Lemah" },
-	F: { warna: "#ff3b4e", teks: "Berbahaya" },
+	A: { warna: "#34d399", teks: "Sangat baik" },
+	B: { warna: "#6ee7b7", teks: "Baik" },
+	C: { warna: "#fbbf24", teks: "Perlu perhatian" },
+	D: { warna: "#fb923c", teks: "Lemah" },
+	F: { warna: "#ef4444", teks: "Berbahaya" },
 };
 
 const FILTER = [
@@ -44,10 +44,10 @@ const salin = async (teks) => {
 const CincinSkor = ({ skor, nilai }) => {
 	const r = 54;
 	const k = 2 * Math.PI * r;
-	const w = NILAI[nilai]?.warna || "#00ff41";
+	const w = NILAI[nilai]?.warna || "#34d399";
 	return (
 		<svg viewBox="0 0 140 140" className="h-36 w-36 shrink-0" role="img" aria-label={`Skor ${skor}, nilai ${nilai}`}>
-			<circle cx="70" cy="70" r={r} fill="none" stroke="#0b1b11" strokeWidth="10" />
+			<circle cx="70" cy="70" r={r} fill="none" stroke="#1b2438" strokeWidth="10" />
 			<circle
 				cx="70"
 				cy="70"
@@ -63,7 +63,7 @@ const CincinSkor = ({ skor, nilai }) => {
 			<text x="70" y="68" textAnchor="middle" fill={w} style={{ fontSize: 40, fontWeight: 800 }}>
 				{nilai}
 			</text>
-			<text x="70" y="92" textAnchor="middle" fill="#7fc497" style={{ fontSize: 13 }}>
+			<text x="70" y="92" textAnchor="middle" fill="#a3adc2" style={{ fontSize: 13 }}>
 				{skor}/100
 			</text>
 		</svg>

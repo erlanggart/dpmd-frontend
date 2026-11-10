@@ -51,10 +51,10 @@ const RENTANG = [
 ];
 
 const TINGKAT = {
-	aman: { judul: "Aman", teks: "Tidak ada aktivitas mencurigakan yang berarti dalam 1 jam terakhir.", kelas: "from-emerald-100 via-black to-black border-emerald-500 text-emerald-700 shadow-[0_0_30px_-8px_rgba(0,255,65,.5)]", icon: FiCheckCircle },
-	waspada: { judul: "Waspada", teks: "Ada aktivitas mencurigakan ringan (pemindaian/login gagal). Sistem terus memantau.", kelas: "from-amber-100 via-black to-black border-amber-500 text-amber-700 shadow-[0_0_30px_-8px_rgba(255,176,0,.5)]", icon: FiEye },
-	tinggi: { judul: "Ancaman Tinggi", teks: "Beberapa serangan serius terdeteksi dalam 1 jam terakhir. Periksa IP penyerang di bawah.", kelas: "from-orange-100 via-black to-black border-orange-500 text-orange-700 shadow-[0_0_30px_-8px_rgba(255,127,31,.5)]", icon: FiAlertTriangle },
-	kritis: { judul: "Kritis — Sedang Diserang", teks: "Serangan intens sedang berlangsung. Pertimbangkan memblokir IP penyerang dan memperketat ambang auto-block.", kelas: "from-red-100 via-black to-black border-red-500 text-red-700 shadow-[0_0_36px_-6px_rgba(255,59,78,.6)]", icon: FiAlertOctagon },
+	aman: { judul: "Aman", teks: "Tidak ada aktivitas mencurigakan yang berarti dalam 1 jam terakhir.", kelas: "from-emerald-100 via-black to-black border-emerald-500 text-emerald-700", icon: FiCheckCircle },
+	waspada: { judul: "Waspada", teks: "Ada aktivitas mencurigakan ringan (pemindaian/login gagal). Sistem terus memantau.", kelas: "from-amber-100 via-black to-black border-amber-500 text-amber-700", icon: FiEye },
+	tinggi: { judul: "Ancaman Tinggi", teks: "Beberapa serangan serius terdeteksi dalam 1 jam terakhir. Periksa IP penyerang di bawah.", kelas: "from-orange-100 via-black to-black border-orange-500 text-orange-700", icon: FiAlertTriangle },
+	kritis: { judul: "Kritis — Sedang Diserang", teks: "Serangan intens sedang berlangsung. Pertimbangkan memblokir IP penyerang dan memperketat ambang auto-block.", kelas: "from-red-100 via-black to-black border-red-500 text-red-700", icon: FiAlertOctagon },
 };
 
 const SUMBER = { app: "Aplikasi", nginx: "Nginx", ssh: "SSH" };
@@ -263,7 +263,7 @@ const SecurityTab = () => {
 					</span>
 					<div>
 						<p className="text-xs font-semibold uppercase tracking-wider opacity-80">Tingkat ancaman saat ini</p>
-						<p className="kali-display text-2xl font-extrabold [text-shadow:0_0_14px_currentColor]">{t.judul}</p>
+						<p className="kali-display text-2xl font-extrabold">{t.judul}</p>
 						<p className="mt-0.5 max-w-2xl text-sm text-slate-700">{t.teks}</p>
 					</div>
 				</div>
@@ -295,24 +295,24 @@ const SecurityTab = () => {
 					<div style={{ height: 240 }}>
 						<ResponsiveContainer width="100%" height="100%">
 							<BarChart data={ringkas.timeline} margin={{ top: 6, right: 8, left: -14, bottom: 0 }}>
-								<CartesianGrid stroke="#0f2a18" vertical={false} />
+								<CartesianGrid stroke="#222b45" vertical={false} />
 								<XAxis
 									dataKey="t"
 									tickFormatter={(v) => (harian ? new Date(v).toLocaleDateString("id-ID", { day: "2-digit", month: "short" }) : new Date(v).toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" }))}
-									tick={{ fontSize: 10.5, fill: "#5fa577" }}
+									tick={{ fontSize: 10.5, fill: "#8590aa" }}
 									axisLine={false}
 									tickLine={false}
 									minTickGap={30}
 								/>
-								<YAxis allowDecimals={false} tick={{ fontSize: 10.5, fill: "#5fa577" }} axisLine={false} tickLine={false} width={44} />
-								<Tooltip cursor={{ fill: "rgba(0,255,65,0.06)" }} content={<TooltipSerangan harian={harian} />} />
+								<YAxis allowDecimals={false} tick={{ fontSize: 10.5, fill: "#8590aa" }} axisLine={false} tickLine={false} width={44} />
+								<Tooltip cursor={{ fill: "rgba(138,164,255,0.06)" }} content={<TooltipSerangan harian={harian} />} />
 								{["low", "medium", "high", "critical"].map((k, i, arr) => (
 									<BarRc
 										key={k}
 										dataKey={k}
 										stackId="s"
 										fill={SEVERITY[k].warna}
-										stroke="#020604"
+										stroke="#0c111d"
 										strokeWidth={1}
 										radius={i === arr.length - 1 ? [4, 4, 0, 0] : 0}
 										maxBarSize={28}

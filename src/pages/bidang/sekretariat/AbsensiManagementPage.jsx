@@ -1269,7 +1269,7 @@ const AbsensiManagementPage = () => {
     <div className="min-h-screen bg-slate-50">
       {/* ═══ Header ═════════════════════════════════════════ */}
       <header className="sticky top-0 z-30 border-b border-slate-200 bg-white">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6">
+        <div className="max-w-[1800px] mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between gap-3 py-4">
             <div className="min-w-0">
               <h1 className="text-xl font-bold text-slate-900">Kelola Absensi</h1>
@@ -1313,7 +1313,7 @@ const AbsensiManagementPage = () => {
       </header>
 
       {/* ═══ Main Content ═══════════════════════════════════ */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6">
+      <div className="max-w-[1800px] mx-auto px-4 sm:px-6 lg:px-8 py-6">
 
         {/* ─── TAB: DASHBOARD ──────────────────────────────── */}
         {activeTab === "dashboard" && (
