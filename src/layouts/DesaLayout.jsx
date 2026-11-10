@@ -112,6 +112,14 @@ const menuItems = [
     path: "/desa/pesan",
     icon: "chatbot",
   },
+  {
+    // Tur 3D kantor (halaman publik /jelajah), sama seperti di layout pegawai.
+    id: "jelajah",
+    section: "Lainnya",
+    label: "Jelajah 3D",
+    path: "/jelajah",
+    icon: "building",
+  },
 ];
 
 // Responsive hook
