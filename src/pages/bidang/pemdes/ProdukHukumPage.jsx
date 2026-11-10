@@ -55,6 +55,7 @@ const JENIS_OPTIONS = [
 	{ value: 'Peraturan Desa', label: 'Peraturan Desa', singkatan: 'PERDES' },
 	{ value: 'Peraturan Kepala Desa', label: 'Peraturan Kepala Desa', singkatan: 'PERKADES' },
 	{ value: 'Keputusan Kepala Desa', label: 'Keputusan Kepala Desa', singkatan: 'SK_KADES' },
+	{ value: 'Keputusan Camat', label: 'Keputusan Camat', singkatan: 'SK_CAMAT' },
 ];
 
 const EMPTY_FORM = {
@@ -584,8 +585,8 @@ const ProdukHukumPage = ({ detailBasePath = '/pemdes/produk-hukum', tersemat = f
 		setPagination(p => ({ ...p, page: 1 }));
 	};
 
-	const getJenisLabel = (s) => ({ PERDES: 'Peraturan Desa', PERKADES: 'Peraturan Kepala Desa', SK_KADES: 'SK Kepala Desa' }[s] || s);
-	const getJenisBadgeColor = (s) => ({ PERDES: 'bg-slate-100 text-slate-700', PERKADES: 'bg-amber-100 text-amber-700', SK_KADES: 'bg-green-100 text-green-700' }[s] || 'bg-slate-100 text-slate-700');
+	const getJenisLabel = (s) => ({ PERDES: 'Peraturan Desa', PERKADES: 'Peraturan Kepala Desa', SK_KADES: 'SK Kepala Desa', SK_CAMAT: 'SK Camat' }[s] || s);
+	const getJenisBadgeColor = (s) => ({ PERDES: 'bg-slate-100 text-slate-700', PERKADES: 'bg-amber-100 text-amber-700', SK_KADES: 'bg-green-100 text-green-700', SK_CAMAT: 'bg-emerald-100 text-emerald-700' }[s] || 'bg-slate-100 text-slate-700');
 
 	return (
 		<div className={tersemat ? '' : 'min-h-screen bg-slate-50 p-4 pt-20 sm:p-6 lg:p-8 lg:pt-8'}>
@@ -759,6 +760,7 @@ const ProdukHukumPage = ({ detailBasePath = '/pemdes/produk-hukum', tersemat = f
 								{ value: 'PERDES', label: 'PERDES' },
 								{ value: 'PERKADES', label: 'PERKADES' },
 								{ value: 'SK_KADES', label: 'SK KADES' },
+								{ value: 'SK_CAMAT', label: 'SK CAMAT' },
 							]}
 						/>
 						<SelectBox

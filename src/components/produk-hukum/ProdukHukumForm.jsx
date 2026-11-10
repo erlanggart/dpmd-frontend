@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from "react";
 import { useDropzone } from "react-dropzone";
 import { z } from "zod";
 import { LuFileText, LuCalendar, LuMapPin, LuUpload, LuFile } from "react-icons/lu";
+import { useUserProfile } from "../../hooks/useUserProfile";
 
 // Skema validasi menggunakan Zod
 const produkHukumSchema = z.object({
@@ -25,8 +26,9 @@ const produkHukumSchema = z.object({
 		"Peraturan Desa",
 		"Peraturan Kepala Desa",
 		"Keputusan Kepala Desa",
+		"Keputusan Camat",
 	]),
-	singkatan_jenis: z.enum(["PERDES", "PERKADES", "SK KADES"]),
+	singkatan_jenis: z.enum(["PERDES", "PERKADES", "SK KADES", "SK CAMAT"]),
 	tempat_penetapan: z.string().min(1, "Tempat penetapan tidak boleh kosong"),
 	tanggal_penetapan: z.string().min(1, "Tanggal penetapan tidak boleh kosong"),
 	sumber: z.string().optional(),
@@ -55,6 +57,12 @@ const getTodayDateString = () => {
 };
 
 const ProdukHukumForm = ({ onSubmit, initialData }) => {
+	// SK Camat hanya untuk kelurahan (pembentukan RT/RW & pengurus di kelurahan
+	// ditetapkan camat). Data lama tetap bisa disunting walau bukan kelurahan.
+	const user = useUserProfile();
+	const bolehSkCamat =
+		user?.desa?.status_pemerintahan === "kelurahan" ||
+		initialData?.jenis === "Keputusan Camat";
 	const [formData, setFormData] = useState({
 		judul: "",
 		nomor: "",
@@ -136,7 +144,8 @@ const ProdukHukumForm = ({ onSubmit, initialData }) => {
 		const jenisToSingkatan = {
 			"Peraturan Desa": "PERDES",
 			"Peraturan Kepala Desa": "PERKADES",
-			"Keputusan Kepala Desa": "SK KADES"
+			"Keputusan Kepala Desa": "SK KADES",
+			"Keputusan Camat": "SK CAMAT"
 		};
 		
 		const newSingkatan = jenisToSingkatan[formData.jenis];
@@ -282,6 +291,7 @@ const ProdukHukumForm = ({ onSubmit, initialData }) => {
 							<option value="Peraturan Desa">Peraturan Desa</option>
 							<option value="Peraturan Kepala Desa">Peraturan Kepala Desa</option>
 							<option value="Keputusan Kepala Desa">Keputusan Kepala Desa</option>
+							{bolehSkCamat && <option value="Keputusan Camat">Keputusan Camat</option>}
 						</select>
 					</div>
 

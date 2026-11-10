@@ -44,15 +44,18 @@ const JENIS_BADGE_COLOR = {
 	PERDES: 'bg-slate-100 text-slate-700',
 	PERKADES: 'bg-amber-100 text-amber-700',
 	SK_KADES: 'bg-green-100 text-green-700',
+	SK_CAMAT: 'bg-emerald-100 text-emerald-700',
 	'Peraturan Desa': 'bg-slate-100 text-slate-700',
 	'Peraturan Kepala Desa': 'bg-amber-100 text-amber-700',
 	'Keputusan Kepala Desa': 'bg-green-100 text-green-700',
+	'Keputusan Camat': 'bg-emerald-100 text-emerald-700',
 };
 
 const JENIS_TO_SINGKATAN = {
 	'Peraturan Desa': 'PERDES',
 	'Peraturan Kepala Desa': 'PERKADES',
 	'Keputusan Kepala Desa': 'SK KADES',
+	'Keputusan Camat': 'SK CAMAT',
 };
 
 const getJenisLabel = (key) => {
@@ -60,6 +63,7 @@ const getJenisLabel = (key) => {
 		PERDES: 'Peraturan Desa',
 		PERKADES: 'Peraturan Kepala Desa',
 		SK_KADES: 'SK Kepala Desa',
+		SK_CAMAT: 'SK Camat',
 	};
 	return map[key] || key;
 };
@@ -436,6 +440,7 @@ const ProdukHukumDetailPage = ({
 												{ value: 'Peraturan Desa', label: 'Peraturan Desa' },
 												{ value: 'Peraturan Kepala Desa', label: 'Peraturan Kepala Desa' },
 												{ value: 'Keputusan Kepala Desa', label: 'Keputusan Kepala Desa' },
+												{ value: 'Keputusan Camat', label: 'Keputusan Camat' },
 											]}
 										/>
 									</FormRow>
