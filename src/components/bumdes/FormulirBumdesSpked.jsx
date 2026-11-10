@@ -163,6 +163,7 @@ const FormulirBumdesSpked = ({ awal = null, onSelesai }) => {
 			try {
 				await api.post('/bumdes/upload-file', fd, {
 					headers: { 'Content-Type': 'multipart/form-data' },
+					timeout: 600000, // LPJ bisa sampai 100 MB
 				});
 			} catch (e) {
 				gagal.push(`${kunci}: ${e.response?.data?.message || 'gagal'}`);

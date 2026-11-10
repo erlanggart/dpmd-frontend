@@ -7,6 +7,7 @@ import {
 	lengkapiDaftarDariKolomLama,
 	DEF_LAPORAN_PERTANGGUNGJAWABAN,
 	DOKUMEN_KETAHANAN_PANGAN,
+	MAKS_LPJ_MB,
 } from '../../../components/bumdes/skemaBumdes';
 import { useAuth } from "../../../context/AuthContext";
 import Swal from "sweetalert2";
@@ -231,8 +232,10 @@ const BumdesDesaPage = () => {
 	};
 
 	const pilihBerkas = (field, file) => {
-		if (file && file.size > 5 * 1024 * 1024) {
-			Swal.fire('Error', 'Ukuran file maksimal 5MB', 'error');
+		// LPJ 2021–2024 boleh sampai MAKS_LPJ_MB; dokumen lain 5 MB.
+		const maksMb = /^LaporanKeuangan\d{4}$/.test(field) ? MAKS_LPJ_MB : 5;
+		if (file && file.size > maksMb * 1024 * 1024) {
+			Swal.fire('Error', `Ukuran file maksimal ${maksMb} MB`, 'error');
 			return;
 		}
 		setFileUploads((prev) => ({ ...prev, [field]: file }));
@@ -249,7 +252,8 @@ const BumdesDesaPage = () => {
 				fileData.append('field_name', fieldName);
 
 				await api.post('/desa/bumdes/upload-file', fileData, {
-					headers: { 'Content-Type': 'multipart/form-data' }
+					headers: { 'Content-Type': 'multipart/form-data' },
+					timeout: 600000, // LPJ bisa sampai 100 MB
 				});
 			} catch (fileError) {
 				console.error(`Failed to upload ${fieldName}:`, fileError);

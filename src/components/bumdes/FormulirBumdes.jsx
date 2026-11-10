@@ -218,7 +218,7 @@ const IsianBaris = ({ def, nilai, onUbah, unggah }) => {
 				<div className="flex flex-wrap items-center gap-2">
 					<label className="inline-flex cursor-pointer items-center gap-2 rounded-xl border border-dashed border-slate-300 bg-white px-3.5 py-2.5 text-xs font-semibold text-slate-700 transition-colors hover:border-slate-400 hover:bg-slate-50">
 						{mengunggah ? <FiLoader className="h-4 w-4 animate-spin" /> : <FiUpload className="h-4 w-4" />}
-						{mengunggah ? 'Mengunggah…' : nilai ? 'Ganti berkas' : 'Pilih berkas (PDF / foto, maks. 5 MB)'}
+						{mengunggah ? 'Mengunggah…' : nilai ? 'Ganti berkas' : `Pilih berkas (PDF / foto, maks. ${def.maksMb || 5} MB)`}
 						<input
 							type="file"
 							accept=".pdf,.doc,.docx,.xls,.xlsx,image/*"
@@ -228,11 +228,11 @@ const IsianBaris = ({ def, nilai, onUbah, unggah }) => {
 								const file = e.target.files?.[0];
 								e.target.value = '';
 								if (!file) return;
-								if (file.size > 5 * 1024 * 1024) { setGalat('Ukuran berkas maksimal 5 MB'); return; }
+								if (file.size > (def.maksMb || 5) * 1024 * 1024) { setGalat(`Ukuran berkas maksimal ${def.maksMb || 5} MB`); return; }
 								setGalat(null);
 								setMengunggah(true);
 								try {
-									onUbah(await unggah(file));
+									onUbah(await unggah(file, def));
 								} catch (err) {
 									setGalat(err.response?.data?.message || 'Gagal mengunggah berkas');
 								} finally {
@@ -288,10 +288,14 @@ export const DaftarTahunan = ({ def, nilai, onUbah, mati }) => {
 	const [indeksUbah, setIndeksUbah] = useState(null);
 	const [galat, setGalat] = useState(null);
 
-	const unggah = async (file) => {
+	const unggah = async (file, kolom) => {
 		const fd = new FormData();
 		fd.append('file', file);
-		const res = await api.post('/desa/bumdes/lampiran', fd, { headers: { 'Content-Type': 'multipart/form-data' } });
+		// Berkas besar (LPJ hingga 100 MB) butuh waktu lebih dari batas bawaan 30 detik.
+		const res = await api.post(`/desa/bumdes/lampiran${kolom?.jenisUnggah ? `?jenis=${kolom.jenisUnggah}` : ''}`, fd, {
+			headers: { 'Content-Type': 'multipart/form-data' },
+			timeout: kolom?.maksMb > 5 ? 600000 : undefined,
+		});
 		return res.data?.data?.path;
 	};
 
@@ -561,7 +565,7 @@ const PemilihBerkas = ({ def, nilaiLama, fileBaru, onPilih, mati }) => {
 							const f = e.target.files?.[0];
 							e.target.value = '';
 							if (!f) return;
-							if (f.size > 5 * 1024 * 1024) { window.alert('Ukuran berkas maksimal 5 MB'); return; }
+							if (f.size > (def.maksMb || 5) * 1024 * 1024) { window.alert(`Ukuran berkas maksimal ${def.maksMb || 5} MB`); return; }
 							onPilih(def.kunci, f);
 						}}
 					/>

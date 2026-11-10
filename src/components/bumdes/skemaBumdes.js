@@ -462,10 +462,14 @@ export const DOKUMEN_BADAN_HUKUM = [
 	{ kunci: 'SK_BUM_Desa', label: 'SK Pendirian BUM Desa' },
 ];
 
+/** Batas ukuran berkas LPJ (MB); dokumen BUM Desa lain tetap 5 MB. Samakan dengan backend. */
+export const MAKS_LPJ_MB = 100;
+
 /** Laporan keuangan tahun lama (kolom tetap). Tahun baru lewat LaporanPertanggungjawaban. */
 export const DOKUMEN_LAPORAN_KEUANGAN = ['2021', '2022', '2023', '2024'].map((th) => ({
 	kunci: `LaporanKeuangan${th}`,
 	label: `Laporan Pertanggungjawaban ${th}`,
+	maksMb: MAKS_LPJ_MB,
 }));
 
 /**
@@ -480,7 +484,7 @@ export const DEF_LAPORAN_PERTANGGUNGJAWABAN = {
 	tombolTambah: 'Tambah Laporan Pertanggungjawaban',
 	kolom: [
 		{ kunci: 'tahun', label: 'Tahun', jenis: 'tahun', wajib: true },
-		{ kunci: 'berkas', label: 'Berkas Laporan', jenis: 'berkas', wajib: true },
+		{ kunci: 'berkas', label: 'Berkas Laporan', jenis: 'berkas', wajib: true, maksMb: MAKS_LPJ_MB, jenisUnggah: 'lpj' },
 	],
 };
 
