@@ -78,6 +78,65 @@ const JEDA_BINGKAI_MS = 3000;
 const LABEL_SUMBER = { mse: "live", go2rtc: "go2rtc", bingkai: "potret", ai: "deteksi AI" };
 const LABEL_PERISTIWA = { known: "Dikenal", unknown: "Tak dikenal", person: "Orang", fall: "Jatuh", fall_warning: "Rawan jatuh", immobility: "Diam lama", other: "Peristiwa" };
 
+const JEDA_DETEKSI_MS = 1500;
+const BASI_DETEKSI_MS = 6000; // hasil analisis lebih tua dari ini tidak digambar
+
+/**
+ * Kotak deteksi AI (orang/wajah/rebah) digambar di atas video live. Posisinya
+ * dari analisis terakhir layanan AI (±1,5–2 dtk sekali), jadi bisa sedikit
+ * tertinggal dari gerakan di video. `slice` = video ber-object-cover.
+ */
+const LapisanDeteksi = ({ urlDeteksi, onTokenBasi }) => {
+	const [d, setD] = useState(null);
+	useEffect(() => {
+		if (!urlDeteksi) return undefined;
+		let hidup = true;
+		let segarTerakhir = 0;
+		const ambil = async () => {
+			if (document.visibilityState !== "visible") return;
+			try {
+				const r = await fetch(urlDeteksi, { cache: "no-store" });
+				if (r.status === 403 && Date.now() - segarTerakhir > 60000) {
+					segarTerakhir = Date.now();
+					onTokenBasi?.(); // token media kedaluwarsa → minta URL baru
+				}
+				const j = r.ok ? await r.json() : null;
+				if (hidup) setD(j?.success && j.umur_ms <= BASI_DETEKSI_MS ? j : null);
+			} catch {
+				if (hidup) setD(null);
+			}
+		};
+		ambil();
+		const id = setInterval(ambil, JEDA_DETEKSI_MS);
+		return () => {
+			hidup = false;
+			clearInterval(id);
+		};
+	}, [urlDeteksi, onTokenBasi]);
+
+	if (!d?.tanda?.length || !d.lebar || !d.tinggi) return null;
+	const garis = Math.max(2, d.lebar / 320);
+	const huruf = Math.max(12, d.lebar / 45);
+	return (
+		<svg
+			className="pointer-events-none absolute inset-0 h-full w-full"
+			viewBox={`0 0 ${d.lebar} ${d.tinggi}`}
+			preserveAspectRatio="xMidYMid slice"
+			aria-hidden="true"
+		>
+			{d.tanda.map(({ kotak: [x, y, w, h], label, warna }, i) => (
+				<g key={i}>
+					<rect x={x} y={y} width={w} height={h} fill="none" stroke={warna} strokeWidth={garis} rx={garis} />
+					<rect x={x} y={Math.max(0, y - huruf * 1.35)} width={Math.max(w, label.length * huruf * 0.6)} height={huruf * 1.35} fill={warna} />
+					<text x={x + huruf * 0.3} y={Math.max(0, y - huruf * 1.35) + huruf} fill="#fff" fontSize={huruf} fontWeight="700">
+						{label}
+					</text>
+				</g>
+			))}
+		</svg>
+	);
+};
+
 /** Tile kamera. `ringkas` = mode dinding (nama di atas gambar, tanpa kaki). */
 const KartuKamera = ({ kamera, peristiwaTerbaru, dasar, ringkas = false, onPerbesar }) => {
 	const [mode, setMode] = useState("mse"); // mse | go2rtc | bingkai | ai | webrtc | mati
@@ -236,6 +295,10 @@ const KartuKamera = ({ kamera, peristiwaTerbaru, dasar, ringkas = false, onPerbe
 						className="h-full w-full bg-slate-900 object-cover"
 						onLoadedData={() => setSelesaiMuat(true)}
 					/>
+				)}
+				{/* Mode "ai" sudah bergambar kotak sendiri; mode lain diberi lapisan kotak. */}
+				{!nonaktif && selesaiMuat && mode !== "ai" && mode !== "mati" && (
+					<LapisanDeteksi urlDeteksi={url?.ai_deteksi_url} onTokenBasi={muatUrl} />
 				)}
 				{nonaktif && url?.go2rtc_frame_url && (
 					<img src={url.go2rtc_frame_url} alt={`Potret kamera ${kamera.name}`} className="h-full w-full object-cover opacity-50" />
