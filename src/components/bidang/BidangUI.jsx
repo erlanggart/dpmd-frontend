@@ -107,8 +107,9 @@ export const TabBar = ({ tabs, aktif, onPilih }) => (
 );
 
 /** Tab tingkat dua di dalam sebuah panel. */
-export const SubTabs = ({ items, aktif, onPilih }) => (
-	<div className="flex flex-wrap gap-1 border-b border-slate-100 bg-slate-50/70 p-3">
+export const SubTabs = ({ items, aktif, onPilih, awalan }) => (
+	<div className="flex flex-wrap items-center gap-1 border-b border-slate-100 bg-slate-50/70 p-3">
+		{awalan}
 		{items.map((item) => {
 			const dipilih = aktif === item.id;
 			return (

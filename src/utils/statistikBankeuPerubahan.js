@@ -5,6 +5,8 @@
 // pelihat (DLH). Grafiknya pun sama (StatisticsTab & PartisipasiTab milik
 // halaman SPKED), jadi angka di kedua halaman tidak bisa menyimpang.
 
+import { persen } from './persen';
+
 export const KATEGORI_KEYS_PERUBAHAN = ['wajib', 'pilihan_infrastruktur', 'pilihan_non_infrastruktur'];
 
 /** Desa sudah/belum mengajukan, per kecamatan. */
@@ -23,10 +25,10 @@ export const hitungPartisipasi = (allDesa = [], allKecamatan = [], trackingData 
   const kecStats = Object.entries(byKec).map(([nama, v]) => {
     const sudah = v.sudah.length, belum = v.belum.length, total = sudah + belum;
     totalSudah += sudah; totalBelum += belum;
-    return { nama, sudah, belum, total, pct: total ? Math.round((sudah / total) * 100) : 0 };
+    return { nama, sudah, belum, total, pct: persen(sudah, total) };
   });
   const total = totalSudah + totalBelum;
-  const pct = total ? Math.round((totalSudah / total) * 100) : 0;
+  const pct = persen(totalSudah, total);
   const kecTuntas = kecStats.filter(k => k.total > 0 && k.belum === 0).length;
   return { byKec, totalSudah, totalBelum, total, pct, kecStats, kecTuntas, totalKec: kecStats.length };
 };

@@ -8,10 +8,12 @@ import {
   LuClipboardCheck, LuHistory, LuRoute, LuFolder, LuActivity, LuUsers,
   LuDownload, LuChartColumn, LuFileText, LuStamp, LuRotateCcw, LuWrench,
   LuPencil, LuSave, LuHouse, LuBuilding2, LuShield, LuCircleCheck, LuCircleX,
-  LuChevronUp, LuClock,
+  LuChevronUp, LuClock, LuSettings,
 } from 'react-icons/lu';
 import BankeuRevisionHistoryModal from '../../../../components/shared/BankeuRevisionHistoryModal';
 import BankeuPerubahanTrackingModal from '../../../../components/shared/BankeuPerubahanTrackingModal';
+import DpmdBankeuPerubahanSettingsPage from './DpmdBankeuPerubahanSettingsPage';
+import { persen, fmtPersen } from '../../../../utils/persen';
 import {
   hitungFunnel, hitungPartisipasi, hitungPerKategori, hitungPerKecamatan, hitungPerKegiatan,
 } from '../../../../utils/statistikBankeuPerubahan';
@@ -71,6 +73,8 @@ const TABS = [
   { key: 'tracking', icon: LuActivity, label: 'Tracking Status' },
   { key: 'partisipasi', icon: LuUsers, label: 'Partisipasi Desa' },
   { key: 'statistics', icon: LuChartColumn, label: 'Statistik Dashboard' },
+  // Dulu bar tab tersendiri di atas halaman ini; digabung agar navigasinya satu baris.
+  { key: 'settings', icon: LuSettings, label: 'Pengaturan' },
 ];
 
 const fmtDate = (d) =>
@@ -618,7 +622,7 @@ const DpmdBankeuPerubahanVerificationPage = ({ tahun }) => {
               </button>
             );
           })}
-          <div className="ml-auto flex items-center gap-1.5">
+          {activeTab !== 'settings' && <div className="ml-auto flex items-center gap-1.5">
             <button onClick={refreshAll}
               className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm font-semibold text-slate-500 hover:text-slate-800 hover:bg-slate-100 transition-colors">
               <LuRefreshCw className="w-4 h-4" /> <span className="hidden md:inline">Refresh</span>
@@ -627,7 +631,7 @@ const DpmdBankeuPerubahanVerificationPage = ({ tahun }) => {
               className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm font-semibold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 transition-colors disabled:opacity-60">
               <LuDownload className="w-4 h-4" /> <span className="hidden md:inline">Export Excel</span>
             </button>
-          </div>
+          </div>}
         </div>
 
         {activeTab === 'archive' && (
@@ -667,6 +671,8 @@ const DpmdBankeuPerubahanVerificationPage = ({ tahun }) => {
         {activeTab === 'statistics' && (
           <StatisticsTab stats={stats} funnel={funnel} perKategori={perKategori} perKecamatan={perKecamatan} perKegiatan={perKegiatan} partisipasi={partisipasiData} tahun={tahun} />
         )}
+
+        {activeTab === 'settings' && <DpmdBankeuPerubahanSettingsPage />}
       </div>
 
       {editModal && (
@@ -1206,7 +1212,7 @@ const TrackingTab = ({
     { label: 'Di Desa', count: summary.diDesa, sub: 'draft / revisi', icon: LuMapPin, gradient: 'from-slate-600 to-slate-700', ring: 'ring-slate-400/20', barColor: 'bg-slate-300' },
     { label: 'Di Kecamatan', count: summary.diKec, sub: 'menunggu / diproses', icon: LuBuilding2, gradient: 'from-blue-500 to-indigo-600', ring: 'ring-blue-400/20', barColor: 'bg-blue-300' },
     { label: 'Selesai', count: summary.selesai, sub: 'diterima DPMD', icon: LuCircleCheck, gradient: 'from-emerald-500 to-green-600', ring: 'ring-emerald-400/20', barColor: 'bg-emerald-300' },
-  ].map(c => ({ ...c, percent: Math.round((c.count / summary.totalAll) * 100) }));
+  ].map(c => ({ ...c, percent: persen(c.count, summary.totalAll) }));
 
   return (
     <div className="space-y-6">
@@ -1246,7 +1252,7 @@ const TrackingTab = ({
                 <div className={`h-10 w-10 rounded-xl bg-white/15 backdrop-blur-sm flex items-center justify-center ring-1 ${card.ring}`}>
                   <card.icon className="h-5 w-5 text-white" />
                 </div>
-                <span className="text-xs font-bold bg-white/20 backdrop-blur-sm px-2.5 py-1 rounded-lg">{card.percent}%</span>
+                <span className="text-xs font-bold bg-white/20 backdrop-blur-sm px-2.5 py-1 rounded-lg">{fmtPersen(card.percent)}</span>
               </div>
               <p className="text-xl sm:text-3xl font-extrabold tracking-tight">{card.count}</p>
               <p className="text-white/90 text-sm font-semibold mt-0.5">{card.label}</p>
@@ -1484,7 +1490,7 @@ const TrackingTab = ({
 // Gauge radial persentase partisipasi (dipakai di tab Partisipasi & dashboard Statistik).
 const ParticipationGauge = ({ sudah = 0, belum = 0, height = 200 }) => {
   const total = sudah + belum;
-  const pct = total ? Math.round((sudah / total) * 100) : 0;
+  const pct = persen(sudah, total);
   const data = [{ name: 'Sudah', value: pct, fill: '#10b981' }];
   return (
     <div className="relative w-full" style={{ height }}>
@@ -1495,7 +1501,7 @@ const ParticipationGauge = ({ sudah = 0, belum = 0, height = 200 }) => {
         </RadialBarChart>
       </ResponsiveContainer>
       <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-        <span className="text-4xl font-extrabold text-emerald-600 tabular-nums leading-none">{pct}%</span>
+        <span className="text-4xl font-extrabold text-emerald-600 tabular-nums leading-none">{fmtPersen(pct)}</span>
         <span className="text-[11px] text-slate-400 font-semibold mt-1">desa sudah</span>
       </div>
     </div>
@@ -1536,7 +1542,7 @@ export const PartisipasiTab = ({ loading, data }) => {
   if (loading) return <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-12 text-center text-slate-500">Memuat partisipasi...</div>;
 
   const { totalSudah = 0, totalBelum = 0, total = 0, pct = 0, kecTuntas = 0, totalKec = 0 } = data;
-  const belumPct = total ? Math.round((totalBelum / total) * 100) : 0;
+  const belumPct = persen(totalBelum, total);
 
   // Urut kecamatan: yang paling banyak BELUM di atas (paling perlu perhatian).
   const kecBar = [...(data.kecStats || [])]
@@ -1563,8 +1569,8 @@ export const PartisipasiTab = ({ loading, data }) => {
 
         <div className="lg:col-span-2 grid grid-cols-2 gap-3">
           <KpiTile label="Total Desa" value={total} sub={`tersebar di ${totalKec} kecamatan`} icon={LuMapPin} accent="slate" />
-          <KpiTile label="Sudah Mengajukan" value={totalSudah} sub={`${pct}% dari total desa`} icon={LuCheck} accent="emerald" pct={pct} />
-          <KpiTile label="Belum Mengajukan" value={totalBelum} sub={`${belumPct}% masih perlu didorong`} icon={LuX} accent="rose" pct={belumPct} />
+          <KpiTile label="Sudah Mengajukan" value={totalSudah} sub={`${fmtPersen(pct)} dari total desa`} icon={LuCheck} accent="emerald" pct={pct} />
+          <KpiTile label="Belum Mengajukan" value={totalBelum} sub={`${fmtPersen(belumPct)} masih perlu didorong`} icon={LuX} accent="rose" pct={belumPct} />
           <KpiTile label="Kecamatan Tuntas" value={kecTuntas} sub={`dari ${totalKec} kecamatan (100% desa)`} icon={LuClipboardCheck} accent="indigo" />
         </div>
       </div>
@@ -1584,7 +1590,7 @@ export const PartisipasiTab = ({ loading, data }) => {
                 if (!active || !payload?.length) return null;
                 const d = payload[0].payload;
                 return <TipBox label={d.nama} rows={[
-                  { name: 'Sudah', value: `${d.sudah} (${d.pct}%)`, color: '#10b981' },
+                  { name: 'Sudah', value: `${d.sudah} (${fmtPersen(d.pct)})`, color: '#10b981' },
                   { name: 'Belum', value: d.belum, color: '#fb7185' },
                   { name: 'Total desa', value: d.total },
                 ]} />;
@@ -1619,7 +1625,7 @@ export const PartisipasiTab = ({ loading, data }) => {
             const items = tab === 'sudah' ? kec.sudah : kec.belum;
             const isOpen = expanded[kec.nama];
             const totalDesa = kec.sudah.length + kec.belum.length;
-            const kpct = totalDesa ? Math.round((kec.sudah.length / totalDesa) * 100) : 0;
+            const kpct = persen(kec.sudah.length, totalDesa);
             return (
               <div key={kec.nama} className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
                 <button onClick={() => setExpanded(e => ({ ...e, [kec.nama]: !e[kec.nama] }))}
@@ -1633,7 +1639,7 @@ export const PartisipasiTab = ({ loading, data }) => {
                       <div className="w-24 h-1.5 bg-slate-100 rounded-full overflow-hidden">
                         <div className="h-full bg-emerald-500 rounded-full" style={{ width: `${kpct}%` }} />
                       </div>
-                      <span className="text-[11px] text-slate-400 tabular-nums w-8 text-right">{kpct}%</span>
+                      <span className="text-[11px] text-slate-400 tabular-nums w-10 text-right">{fmtPersen(kpct)}</span>
                     </div>
                     <span className="px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 font-semibold text-[11px]">{kec.sudah.length} sudah</span>
                     <span className="px-2 py-0.5 rounded-full bg-rose-50 text-rose-600 font-semibold text-[11px]">{kec.belum.length} belum</span>
@@ -1745,7 +1751,7 @@ export const StatisticsTab = ({ stats, funnel, perKategori, perKecamatan, perKeg
         <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
           {KPI_META.map(m => {
             const val = Number(stats[m.key]) || 0;
-            const pct = totalMasuk ? Math.round((val / totalMasuk) * 100) : 0;
+            const pct = persen(val, totalMasuk);
             const Icon = m.icon;
             return (
               <div key={m.key} className={`relative overflow-hidden rounded-2xl border border-slate-100 bg-gradient-to-br ${m.bg} to-white p-4`}>
@@ -1761,7 +1767,7 @@ export const StatisticsTab = ({ stats, funnel, perKategori, perKecamatan, perKeg
                     <div className="h-1.5 w-full bg-slate-100 rounded-full overflow-hidden">
                       <div className={`h-full ${m.bar} rounded-full transition-all`} style={{ width: `${pct}%` }} />
                     </div>
-                    <span className="text-[10px] text-slate-400 mt-1 inline-block">{pct}% dari total</span>
+                    <span className="text-[10px] text-slate-400 mt-1 inline-block">{fmtPersen(pct)} dari total</span>
                   </div>
                 )}
               </div>
@@ -1777,15 +1783,15 @@ export const StatisticsTab = ({ stats, funnel, perKategori, perKecamatan, perKeg
       {/* Partisipasi Desa — sinkron dgn tab Partisipasi (gauge % sudah/belum mengajukan) */}
       {partisipasi && partisipasi.total > 0 && (
         <ChartCard title="Partisipasi Desa — Pengajuan ke Kecamatan" icon={LuUsers} iconColor="text-indigo-600"
-          subtitle={`${partisipasi.totalSudah} dari ${partisipasi.total} desa sudah mengajukan · ${partisipasi.pct}%`}>
+          subtitle={`${partisipasi.totalSudah} dari ${partisipasi.total} desa sudah mengajukan · ${fmtPersen(partisipasi.pct)}`}>
           <div className="flex flex-col sm:flex-row items-center gap-5">
             <div className="w-full sm:w-1/3 max-w-[220px]">
               <ParticipationGauge sudah={partisipasi.totalSudah} belum={partisipasi.totalBelum} height={190} />
             </div>
             <div className="flex-1 grid grid-cols-2 sm:grid-cols-4 gap-3 w-full">
               <KpiTile label="Total Desa" value={partisipasi.total} sub={`${partisipasi.totalKec} kecamatan`} icon={LuMapPin} accent="slate" />
-              <KpiTile label="Sudah" value={partisipasi.totalSudah} sub={`${partisipasi.pct}% dari total`} icon={LuCheck} accent="emerald" pct={partisipasi.pct} />
-              <KpiTile label="Belum" value={partisipasi.totalBelum} sub={`${partisipasi.total ? Math.round((partisipasi.totalBelum / partisipasi.total) * 100) : 0}% perlu didorong`} icon={LuX} accent="rose" pct={partisipasi.total ? Math.round((partisipasi.totalBelum / partisipasi.total) * 100) : 0} />
+              <KpiTile label="Sudah" value={partisipasi.totalSudah} sub={`${fmtPersen(partisipasi.pct)} dari total`} icon={LuCheck} accent="emerald" pct={partisipasi.pct} />
+              <KpiTile label="Belum" value={partisipasi.totalBelum} sub={`${fmtPersen(persen(partisipasi.totalBelum, partisipasi.total))} perlu didorong`} icon={LuX} accent="rose" pct={persen(partisipasi.totalBelum, partisipasi.total)} />
               <KpiTile label="Kec. Tuntas" value={partisipasi.kecTuntas} sub={`dari ${partisipasi.totalKec} kecamatan`} icon={LuClipboardCheck} accent="indigo" />
             </div>
           </div>
@@ -1811,8 +1817,8 @@ export const StatisticsTab = ({ stats, funnel, perKategori, perKecamatan, perKeg
                     <RTooltip content={({ active, payload }) => {
                       if (!active || !payload?.length) return null;
                       const d = payload[0].payload;
-                      const pct = totalMasuk ? Math.round((d.value / totalMasuk) * 100) : 0;
-                      return <TipBox rows={[{ name: d.name, value: `${d.value} (${pct}%)`, color: d.color }]} />;
+                      const pct = persen(d.value, totalMasuk);
+                      return <TipBox rows={[{ name: d.name, value: `${d.value} (${fmtPersen(pct)})`, color: d.color }]} />;
                     }} />
                   </PieChart>
                 </ResponsiveContainer>
@@ -1823,13 +1829,13 @@ export const StatisticsTab = ({ stats, funnel, perKategori, perKecamatan, perKeg
               </div>
               <div className="flex-1 w-full space-y-2.5">
                 {statusData.map(d => {
-                  const pct = totalMasuk ? Math.round((d.value / totalMasuk) * 100) : 0;
+                  const pct = persen(d.value, totalMasuk);
                   return (
                     <div key={d.name} className="flex items-center gap-2">
                       <span className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ background: d.color }} />
                       <span className="text-xs text-slate-600 flex-1">{d.name}</span>
                       <span className="text-sm font-bold text-slate-800 tabular-nums">{d.value}</span>
-                      <span className="text-[10px] text-slate-400 w-9 text-right tabular-nums">{pct}%</span>
+                      <span className="text-[10px] text-slate-400 w-10 text-right tabular-nums">{fmtPersen(pct)}</span>
                     </div>
                   );
                 })}
@@ -1849,8 +1855,8 @@ export const StatisticsTab = ({ stats, funnel, perKategori, perKecamatan, perKeg
               <RTooltip cursor={{ fill: '#f8fafc' }} content={({ active, payload }) => {
                 if (!active || !payload?.length) return null;
                 const d = payload[0].payload;
-                const pct = funnel.total ? Math.round((d.value / funnel.total) * 100) : 0;
-                return <TipBox label={d.name} rows={[{ name: 'Jumlah', value: `${d.value} (${pct}%)`, color: d.color }]} />;
+                const pct = persen(d.value, funnel.total);
+                return <TipBox label={d.name} rows={[{ name: 'Jumlah', value: `${d.value} (${fmtPersen(pct)})`, color: d.color }]} />;
               }} />
               <Bar dataKey="value" radius={[0, 8, 8, 0]} barSize={26}>
                 {tahapData.map((d, i) => <Cell key={i} fill={d.color} />)}

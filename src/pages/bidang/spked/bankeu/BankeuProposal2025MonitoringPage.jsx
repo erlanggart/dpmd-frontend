@@ -8,6 +8,7 @@ import toast from 'react-hot-toast';
 import Swal from 'sweetalert2';
 import * as XLSX from 'xlsx';
 import ChatDrawer from '../../../../components/shared/ChatDrawer';
+import { persen as hitungPersen, fmtPersen, persenTeks } from '../../../../utils/persen';
 
 /**
  * Rekap Proposal Bantuan Keuangan TA 2025 untuk DPMD/SPKED.
@@ -230,7 +231,7 @@ const BankeuProposal2025MonitoringPage = ({ tahun = 2025 }) => {
               <BarChart3 className="h-5 w-5 text-slate-600" />
             </div>
             <div>
-              <p className="text-2xl font-bold text-slate-900">{summary.persentase}%</p>
+              <p className="text-2xl font-bold text-slate-900">{persenTeks(summary.total_uploaded, summary.total_desa)}</p>
               <p className="text-xs text-slate-500">{summary.total_berkas || 0} berkas masuk</p>
             </div>
           </div>
@@ -279,7 +280,7 @@ const BankeuProposal2025MonitoringPage = ({ tahun = 2025 }) => {
           const terbuka = expandedKecamatan[kec.kecamatan_id];
           const sudah = kec.desa_list.filter(d => d.has_proposal).length;
           const total = kec.desa_list.length;
-          const persen = total > 0 ? Math.round((sudah / total) * 100) : 0;
+          const persen = hitungPersen(sudah, total);
 
           return (
             <div key={kec.kecamatan_id} className="overflow-hidden rounded-xl border border-slate-200 bg-white">
@@ -302,7 +303,7 @@ const BankeuProposal2025MonitoringPage = ({ tahun = 2025 }) => {
                       <div className="h-full rounded-full bg-emerald-500 transition-all" style={{ width: `${persen}%` }} />
                     </div>
                   </div>
-                  <span className="text-sm font-bold text-slate-600">{persen}%</span>
+                  <span className="text-sm font-bold text-slate-600">{fmtPersen(persen)}</span>
                   {terbuka ? <ChevronUp className="h-5 w-5 text-slate-400" /> : <ChevronDown className="h-5 w-5 text-slate-400" />}
                 </div>
               </button>

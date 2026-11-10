@@ -114,7 +114,7 @@ const DpmdBankeuPerubahanSettingsPage = () => {
   const inputCls = 'px-3 py-2 border border-slate-300 rounded-lg text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500/40 focus:border-indigo-500 transition-shadow';
 
   return (
-    <div className="min-h-screen bg-slate-50 p-4 md:p-6">
+    <div>
       <div className="max-w-3xl mx-auto space-y-4">
         {/* Header */}
         <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5">

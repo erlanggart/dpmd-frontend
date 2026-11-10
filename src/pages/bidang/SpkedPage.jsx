@@ -25,7 +25,6 @@ import { useBidangPath } from '../../hooks/useBidangPath';
 import {
 	Building2,
 	Activity,
-	ArrowLeft,
 	ArrowRight,
 	ChevronRight,
 	FileText,
@@ -61,7 +60,7 @@ const DpmdVerificationPage = lazy(() => import('./spked/bankeu/DpmdVerificationP
 const BankeuLpjMonitoringPage = lazy(() => import('./spked/bankeu/BankeuLpjMonitoringPage'));
 const BankeuProposal2025MonitoringPage = lazy(() => import('./spked/bankeu/BankeuProposal2025MonitoringPage'));
 // Bankeu Perubahan 2026 (DPMD final verification)
-const DpmdBankeuPerubahanPage = lazy(() => import('./spked/bankeu-perubahan/DpmdBankeuPerubahanPage'));
+const DpmdBankeuPerubahanVerificationPage = lazy(() => import('./spked/bankeu-perubahan/DpmdBankeuPerubahanVerificationPage'));
 // Pengelolaan hari libur (tanggal merah) untuk blokir BA & Surat Pengantar
 const HariLiburManager = lazy(() => import('./spked/HariLiburManager'));
 // Akun operator desa. Satu komponen yang sama dipakai PMD dan Pemdes; yang
@@ -125,15 +124,6 @@ const TABS = [
 	{ id: 'activity', label: 'Aktivitas', icon: Activity },
 ];
 
-// Dua pintu di dalam tab Bantuan Keuangan: berkas bankeu-nya sendiri, dan
-// akun petugas desa yang mengunggahnya. Keduanya pekerjaan bidang ini, tapi
-// yang kedua tidak terikat tahun anggaran — jadi ia duduk di atas pemilih tahun,
-// bukan di dalamnya.
-const SUB_BANKEU = [
-	{ id: 'berkas', label: 'Tahun Anggaran' },
-	{ id: 'akun', label: 'Akun Operator' },
-];
-
 const SUB_BUMDES = [
 	{ id: 'data', label: 'Data BUMDes' },
 	{ id: 'akun', label: 'Akun Operator' },
@@ -144,18 +134,29 @@ const SUB_KERJASAMA = [
 	{ id: 'akun', label: 'Akun Operator' },
 ];
 
-const SUB_BANKEU_2025 = [
-	{ id: 'penyaluran', label: 'Penyaluran T1 & T2' },
-	{ id: 'proposal', label: 'Proposal Bantuan Keuangan' },
-	{ id: 'lpj', label: 'LPJ Bantuan Keuangan' },
-];
+// Satu baris navigasi untuk tab Bantuan Keuangan: pemilih tahun di kiri, menu
+// tahun itu di kanannya. Akun petugas desa tidak terikat tahun, tapi ikut di
+// baris yang sama supaya tidak perlu lapis tab tersendiri.
+const AKUN_BANKEU = { id: 'akun', label: 'Akun Operator' };
 
-const SUB_BANKEU_2026 = [
-	{ id: 'proposal', label: 'Verifikasi Proposal' },
-	{ id: 'perubahan', label: 'Bankeu Perubahan' },
-	{ id: 'penyaluran', label: 'Penyaluran T1 & T2' },
-	{ id: 'lpj', label: 'LPJ Bantuan Keuangan' },
-];
+const SUB_BANKEU_PER_TAHUN = {
+	2025: [
+		{ id: 'penyaluran', label: 'Penyaluran T1 & T2' },
+		{ id: 'proposal', label: 'Proposal Bantuan Keuangan' },
+		{ id: 'lpj', label: 'LPJ Bantuan Keuangan' },
+		AKUN_BANKEU,
+	],
+	2026: [
+		{ id: 'proposal', label: 'Verifikasi Proposal' },
+		{ id: 'perubahan', label: 'Bankeu Perubahan' },
+		{ id: 'penyaluran', label: 'Penyaluran T1 & T2' },
+		{ id: 'lpj', label: 'LPJ Bantuan Keuangan' },
+		AKUN_BANKEU,
+	],
+	2027: [{ id: 'proposal', label: 'Verifikasi Proposal' }, AKUN_BANKEU],
+};
+
+const TAHUN_BANKEU_AWAL = 2026;
 
 const OPSI_AKTIVITAS = [
 	{ value: 'all', label: 'Semua Aktivitas' },
@@ -207,7 +208,7 @@ const Angka = ({ label, nilai, keterangan, tekan }) => (
 );
 
 /**
- * Tiga tahun anggaran dalam satu panel bergaris — dipakai ikhtisar maupun tab.
+ * Tiga tahun anggaran dalam satu panel bergaris — dipakai ikhtisar sebagai pintu ke tab Bantuan Keuangan.
  *
  * Didefinisikan di lingkup modul, bukan di dalam badan SpkedPage: komponen yang
  * dibuat ulang setiap render adalah tipe baru bagi React, sehingga seluruh
@@ -275,10 +276,8 @@ const SpkedPage = () => {
 	const [data, setData] = useState(null);
 	const [ikhtisar, setIkhtisar] = useState(null);
 	const [activeTab, setActiveTab] = useState('overview');
-	const [bankeuYear, setBankeuYear] = useState(null); // null = layar pilih tahun
-	const [bankeu2025View, setBankeu2025View] = useState('penyaluran');
-	const [bankeu2026View, setBankeu2026View] = useState('proposal');
-	const [bankeuView, setBankeuView] = useState('berkas');
+	const [bankeuYear, setBankeuYear] = useState(TAHUN_BANKEU_AWAL);
+	const [bankeuSub, setBankeuSub] = useState(SUB_BANKEU_PER_TAHUN[TAHUN_BANKEU_AWAL][0].id);
 	const [bumdesView, setBumdesView] = useState('data');
 	const [kerjasamaView, setKerjasamaView] = useState('monitor');
 
@@ -332,12 +331,19 @@ const SpkedPage = () => {
 		if (activeTab === 'activity') fetchActivityLogs();
 	}, [activeTab, fetchActivityLogs]);
 
-	const bukaBankeu = (tahun = null) => {
+	const bukaBankeu = (tahun, sub) => {
+		const t = SUB_BANKEU_PER_TAHUN[tahun] ? tahun : TAHUN_BANKEU_AWAL;
 		setActiveTab('bankeu');
-		setBankeuView('berkas');
-		setBankeu2025View('penyaluran');
-		setBankeu2026View('proposal');
+		setBankeuYear(t);
+		setBankeuSub(sub || SUB_BANKEU_PER_TAHUN[t][0].id);
+	};
+
+	// Ganti tahun tanpa kehilangan menu yang sedang dibuka bila tahun itu juga punya.
+	const pilihTahunBankeu = (tahun) => {
 		setBankeuYear(tahun);
+		setBankeuSub((s) =>
+			SUB_BANKEU_PER_TAHUN[tahun].some((i) => i.id === s) ? s : SUB_BANKEU_PER_TAHUN[tahun][0].id
+		);
 	};
 
 	if (loading) {
@@ -403,10 +409,7 @@ const SpkedPage = () => {
 			judul: 'Akun Operator Bankeu',
 			deskripsi: 'Buatkan akun petugas desa untuk mengurus Bantuan Keuangan',
 			icon: UserPlus,
-			aksi: () => {
-				setActiveTab('bankeu');
-				setBankeuView('akun');
-			},
+			aksi: () => bukaBankeu(TAHUN_BANKEU_AWAL, 'akun'),
 		},
 		{
 			id: 'akun-bumdes',
@@ -477,11 +480,7 @@ const SpkedPage = () => {
 					aktif={activeTab}
 					onPilih={(id) => {
 						setActiveTab(id);
-						if (id === 'bankeu') {
-							setBankeuYear(null);
-							setBankeu2025View('penyaluran');
-							setBankeuView('berkas');
-						}
+						if (id === 'bankeu') bukaBankeu();
 						if (id === 'bumdes') setBumdesView('data');
 						if (id === 'kerjasama') setKerjasamaView('monitor');
 					}}
@@ -728,54 +727,52 @@ const SpkedPage = () => {
 
 				{/* ---------- Bantuan Keuangan ---------- */}
 				{activeTab === 'bankeu' && (
-					<div key="bankeu" className="animate-fadeIn space-y-5">
-						<div className={PANEL}>
-							<SubTabs items={SUB_BANKEU} aktif={bankeuView} onPilih={setBankeuView} />
-						</div>
-
-						{bankeuView === 'akun' ? (
-							<PanelModul>
-								<ManajemenAkunDesaPage tersemat modul="bankeu" />
-							</PanelModul>
-						) : !bankeuYear ? (
-							<PanelTahun
-								stats={stats}
-								judul="Pilih tahun anggaran"
-								keterangan="Penanda titik menunjukkan berkas data yang sudah diunggah"
-								onPilih={setBankeuYear}
+					<div key="bankeu" className="animate-fadeIn">
+						<PanelModul>
+							<SubTabs
+								items={SUB_BANKEU_PER_TAHUN[bankeuYear]}
+								aktif={bankeuSub}
+								onPilih={setBankeuSub}
+								awalan={
+									<label className="mr-2 flex items-center gap-2 text-sm font-medium text-slate-500">
+										Tahun
+										<select
+											value={bankeuYear}
+											onChange={(e) => pilihTahunBankeu(Number(e.target.value))}
+											className="rounded-lg border border-slate-200 bg-white px-2.5 py-2 text-sm font-bold text-slate-900 focus:border-slate-900 focus:outline-none"
+										>
+											{TAHUN_BANKEU.map((t) => (
+												<option key={t.tahun} value={t.tahun}>
+													{t.tahun}
+												</option>
+											))}
+										</select>
+									</label>
+								}
 							/>
-						) : (
-							<div className="space-y-4">
-								<button
-									onClick={() => setBankeuYear(null)}
-									className="group inline-flex items-center gap-2 text-sm font-medium text-slate-500 transition-colors hover:text-slate-900"
-								>
-									<ArrowLeft className="h-4 w-4 transition-transform group-hover:-translate-x-0.5" />
-									Kembali ke pilihan tahun
-								</button>
 
-								<PanelModul>
-									{bankeuYear === 2025 ? (
-										<>
-											<SubTabs items={SUB_BANKEU_2025} aktif={bankeu2025View} onPilih={setBankeu2025View} />
-											{bankeu2025View === 'penyaluran' && <BankeuDashboard />}
-											{bankeu2025View === 'proposal' && <BankeuProposal2025MonitoringPage tahun={2025} />}
-											{bankeu2025View === 'lpj' && <BankeuLpjMonitoringPage tahun={2025} />}
-										</>
-									) : bankeuYear === 2026 ? (
-										<>
-											<SubTabs items={SUB_BANKEU_2026} aktif={bankeu2026View} onPilih={setBankeu2026View} />
-											{bankeu2026View === 'proposal' && <DpmdVerificationPage tahunAnggaran={2026} />}
-											{bankeu2026View === 'perubahan' && <DpmdBankeuPerubahanPage tahun={2026} />}
-											{bankeu2026View === 'penyaluran' && <BankeuDashboard tahun={2026} />}
-											{bankeu2026View === 'lpj' && <BankeuLpjMonitoringPage tahun={2026} />}
-										</>
-									) : (
-										<DpmdVerificationPage tahunAnggaran={bankeuYear} />
-									)}
-								</PanelModul>
+							{/* key: ganti tahun = pasang ulang, agar data tahun lama tidak terbawa */}
+							<div key={bankeuYear}>
+								{bankeuSub === 'akun' ? (
+									<ManajemenAkunDesaPage tersemat modul="bankeu" />
+								) : bankeuYear === 2025 ? (
+									<>
+										{bankeuSub === 'penyaluran' && <BankeuDashboard />}
+										{bankeuSub === 'proposal' && <BankeuProposal2025MonitoringPage tahun={2025} />}
+										{bankeuSub === 'lpj' && <BankeuLpjMonitoringPage tahun={2025} />}
+									</>
+								) : bankeuYear === 2026 ? (
+									<>
+										{bankeuSub === 'proposal' && <DpmdVerificationPage tahunAnggaran={2026} />}
+										{bankeuSub === 'perubahan' && <DpmdBankeuPerubahanVerificationPage tahun={2026} />}
+										{bankeuSub === 'penyaluran' && <BankeuDashboard tahun={2026} />}
+										{bankeuSub === 'lpj' && <BankeuLpjMonitoringPage tahun={2026} />}
+									</>
+								) : (
+									<DpmdVerificationPage tahunAnggaran={bankeuYear} />
+								)}
 							</div>
-						)}
+						</PanelModul>
 					</div>
 				)}
 

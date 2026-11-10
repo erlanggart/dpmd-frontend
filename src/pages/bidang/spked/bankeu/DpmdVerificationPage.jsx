@@ -64,6 +64,7 @@ import * as XLSX from 'xlsx';
 import api from '../../../../api';
 import Swal from 'sweetalert2';
 import BankeuFormatSuratTab from './BankeuFormatSuratTab';
+import { persen, fmtPersen, persenTeks } from '../../../../utils/persen';
 
 const MAX_ANGGARAN_PER_DESA = 1_500_000_000; // 1.5 Miliar per desa
 
@@ -2339,10 +2340,10 @@ const DpmdVerificationPage = ({ tahunAnggaran = 2027 }) => {
               const selesaiCount = trackingProposals.filter(p => getProposalStage(p) === 'selesai').length;
               const totalAll = trackingProposals.length || 1;
               const stageCards = [
-                { label: 'Di Desa', count: diDesaCount, sub: 'draft/revisi/troubleshoot', icon: MapPin, gradient: 'from-slate-600 to-slate-700', ring: 'ring-slate-400/20', barColor: 'bg-slate-400', percent: Math.round((diDesaCount / totalAll) * 100) },
-                { label: 'Di Dinas', count: diDinasCount, sub: 'menunggu review', icon: Building, gradient: 'from-amber-500 to-orange-600', ring: 'ring-amber-400/20', barColor: 'bg-amber-400', percent: Math.round((diDinasCount / totalAll) * 100) },
-                { label: 'Di Kecamatan', count: diKecamatanCount, sub: 'diproses', icon: Building2, gradient: 'from-blue-500 to-indigo-600', ring: 'ring-blue-400/20', barColor: 'bg-blue-400', percent: Math.round((diKecamatanCount / totalAll) * 100) },
-                { label: 'Selesai', count: selesaiCount, sub: 'diterima DPMD', icon: CheckCircle, gradient: 'from-emerald-500 to-green-600', ring: 'ring-emerald-400/20', barColor: 'bg-emerald-400', percent: Math.round((selesaiCount / totalAll) * 100) },
+                { label: 'Di Desa', count: diDesaCount, sub: 'draft/revisi/troubleshoot', icon: MapPin, gradient: 'from-slate-600 to-slate-700', ring: 'ring-slate-400/20', barColor: 'bg-slate-400', percent: persen(diDesaCount, totalAll) },
+                { label: 'Di Dinas', count: diDinasCount, sub: 'menunggu review', icon: Building, gradient: 'from-amber-500 to-orange-600', ring: 'ring-amber-400/20', barColor: 'bg-amber-400', percent: persen(diDinasCount, totalAll) },
+                { label: 'Di Kecamatan', count: diKecamatanCount, sub: 'diproses', icon: Building2, gradient: 'from-blue-500 to-indigo-600', ring: 'ring-blue-400/20', barColor: 'bg-blue-400', percent: persen(diKecamatanCount, totalAll) },
+                { label: 'Selesai', count: selesaiCount, sub: 'diterima DPMD', icon: CheckCircle, gradient: 'from-emerald-500 to-green-600', ring: 'ring-emerald-400/20', barColor: 'bg-emerald-400', percent: persen(selesaiCount, totalAll) },
               ];
               return (
                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2 sm:gap-4">
@@ -2355,7 +2356,7 @@ const DpmdVerificationPage = ({ tahunAnggaran = 2027 }) => {
                           <div className={`h-10 w-10 rounded-xl bg-white/15 backdrop-blur-sm flex items-center justify-center ring-1 ${card.ring}`}>
                             <card.icon className="h-5 w-5 text-white" />
                           </div>
-                          <span className="text-xs font-bold bg-white/20 backdrop-blur-sm px-2.5 py-1 rounded-lg">{card.percent}%</span>
+                          <span className="text-xs font-bold bg-white/20 backdrop-blur-sm px-2.5 py-1 rounded-lg">{fmtPersen(card.percent)}</span>
                         </div>
                         <p className="text-xl sm:text-3xl font-extrabold tracking-tight">{card.count}</p>
                         <p className="text-white/90 text-sm font-semibold mt-0.5">{card.label}</p>
@@ -3132,7 +3133,7 @@ const DpmdVerificationPage = ({ tahunAnggaran = 2027 }) => {
                   { 
                     label: 'Desa Mengajukan', 
                     value: statsData.totalDesaMengajukan, 
-                    sub: `${((statsData.totalDesaMengajukan / statsData.totalDesa) * 100).toFixed(1)}% dari ${statsData.totalDesa} desa`,
+                    sub: `${persenTeks(statsData.totalDesaMengajukan, statsData.totalDesa)} dari ${statsData.totalDesa} desa`,
                     icon: MapPin,
                     bgColor: 'bg-emerald-600',
                     lightBg: 'bg-emerald-500/20'
@@ -3140,7 +3141,7 @@ const DpmdVerificationPage = ({ tahunAnggaran = 2027 }) => {
                   { 
                     label: 'Belum Mengajukan', 
                     value: statsData.totalDesaTidakMengajukan, 
-                    sub: `${((statsData.totalDesaTidakMengajukan / statsData.totalDesa) * 100).toFixed(1)}% belum berpartisipasi`,
+                    sub: `${persenTeks(statsData.totalDesaTidakMengajukan, statsData.totalDesa)} belum berpartisipasi`,
                     icon: AlertCircle,
                     bgColor: 'bg-amber-600',
                     lightBg: 'bg-amber-500/20'
@@ -3223,7 +3224,7 @@ const DpmdVerificationPage = ({ tahunAnggaran = 2027 }) => {
                         {statsData.perKecamatan.map((k) => {
                           const totalDesaInKecamatan = k.jumlahDesa + (k.desaBelumMengajukan?.length || 0);
                           const participationRate = totalDesaInKecamatan > 0 
-                            ? ((k.jumlahDesa / totalDesaInKecamatan) * 100).toFixed(0) 
+                            ? persen(k.jumlahDesa, totalDesaInKecamatan)
                             : 0;
                           return (
                             <tr key={k.nama} className="border-b border-slate-100 hover:bg-slate-50 transition-colors">
@@ -3262,7 +3263,7 @@ const DpmdVerificationPage = ({ tahunAnggaran = 2027 }) => {
                                     participationRate >= 80 ? 'text-emerald-600' :
                                     participationRate >= 50 ? 'text-amber-600' : 'text-red-600'
                                   }`}>
-                                    {participationRate}%
+                                    {fmtPersen(participationRate)}
                                   </span>
                                 </div>
                               </td>
@@ -3283,7 +3284,7 @@ const DpmdVerificationPage = ({ tahunAnggaran = 2027 }) => {
                             {statsData.totalDesaTidakMengajukan}
                           </td>
                           <td className="px-4 py-3 text-sm text-right text-slate-700">
-                            {((statsData.totalDesaMengajukan / statsData.totalDesa) * 100).toFixed(1)}%
+                            {persenTeks(statsData.totalDesaMengajukan, statsData.totalDesa)}
                           </td>
                         </tr>
                       </tfoot>
@@ -3315,10 +3316,10 @@ const DpmdVerificationPage = ({ tahunAnggaran = 2027 }) => {
                       const selesaiCount = tp.filter(p => getProposalStage(p) === 'selesai').length;
                       const totalAll = tp.length || 1;
                       const stages = [
-                        { label: 'Di Desa', count: diDesaCount, sub: 'draft/revisi/troubleshoot', icon: MapPin, gradient: 'from-slate-600 to-slate-700', ring: 'ring-slate-400/20', barColor: 'bg-slate-400', percent: Math.round((diDesaCount / totalAll) * 100) },
-                        { label: 'Di Dinas', count: diDinasCount, sub: 'menunggu review', icon: Building, gradient: 'from-amber-500 to-orange-600', ring: 'ring-amber-400/20', barColor: 'bg-amber-400', percent: Math.round((diDinasCount / totalAll) * 100) },
-                        { label: 'Di Kecamatan', count: diKecamatanCount, sub: 'diproses', icon: Building2, gradient: 'from-blue-500 to-indigo-600', ring: 'ring-blue-400/20', barColor: 'bg-blue-400', percent: Math.round((diKecamatanCount / totalAll) * 100) },
-                        { label: 'Selesai', count: selesaiCount, sub: 'diterima DPMD', icon: CheckCircle, gradient: 'from-emerald-500 to-green-600', ring: 'ring-emerald-400/20', barColor: 'bg-emerald-400', percent: Math.round((selesaiCount / totalAll) * 100) },
+                        { label: 'Di Desa', count: diDesaCount, sub: 'draft/revisi/troubleshoot', icon: MapPin, gradient: 'from-slate-600 to-slate-700', ring: 'ring-slate-400/20', barColor: 'bg-slate-400', percent: persen(diDesaCount, totalAll) },
+                        { label: 'Di Dinas', count: diDinasCount, sub: 'menunggu review', icon: Building, gradient: 'from-amber-500 to-orange-600', ring: 'ring-amber-400/20', barColor: 'bg-amber-400', percent: persen(diDinasCount, totalAll) },
+                        { label: 'Di Kecamatan', count: diKecamatanCount, sub: 'diproses', icon: Building2, gradient: 'from-blue-500 to-indigo-600', ring: 'ring-blue-400/20', barColor: 'bg-blue-400', percent: persen(diKecamatanCount, totalAll) },
+                        { label: 'Selesai', count: selesaiCount, sub: 'diterima DPMD', icon: CheckCircle, gradient: 'from-emerald-500 to-green-600', ring: 'ring-emerald-400/20', barColor: 'bg-emerald-400', percent: persen(selesaiCount, totalAll) },
                       ];
                       return (
                         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
@@ -3330,7 +3331,7 @@ const DpmdVerificationPage = ({ tahunAnggaran = 2027 }) => {
                                   <div className={`h-9 w-9 rounded-xl bg-white/15 backdrop-blur-sm flex items-center justify-center ring-1 ${card.ring}`}>
                                     <card.icon className="h-4 w-4 text-white" />
                                   </div>
-                                  <span className="text-xs font-bold bg-white/20 backdrop-blur-sm px-2 py-0.5 rounded-lg">{card.percent}%</span>
+                                  <span className="text-xs font-bold bg-white/20 backdrop-blur-sm px-2 py-0.5 rounded-lg">{fmtPersen(card.percent)}</span>
                                 </div>
                                 <p className="text-2xl font-extrabold tracking-tight">{card.count}</p>
                                 <p className="text-white/90 text-sm font-semibold mt-0.5">{card.label}</p>
@@ -4475,7 +4476,7 @@ const DesaBelumMengajukanModal = ({ statsData, onClose }) => {
             </div>
             <div className="bg-white/10 rounded-lg p-3 text-center">
               <p className="text-white/70 text-xs">Partisipasi</p>
-              <p className="text-white text-2xl font-bold">{(((statsData.totalDesa - statsData.desaTidakMengajukan.length) / statsData.totalDesa) * 100).toFixed(1)}%</p>
+              <p className="text-white text-2xl font-bold">{persenTeks(statsData.totalDesa - statsData.desaTidakMengajukan.length, statsData.totalDesa)}</p>
             </div>
           </div>
         </div>

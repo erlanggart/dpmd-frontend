@@ -5,6 +5,7 @@ import toast from 'react-hot-toast';
 import Swal from 'sweetalert2';
 import * as XLSX from 'xlsx';
 import ChatDrawer from '../../../../components/shared/ChatDrawer';
+import { persenTeks } from '../../../../utils/persen';
 
 const STATUS_CONFIG = {
   pending: { label: 'Menunggu', color: 'amber', bgBadge: 'bg-amber-100 text-amber-700', icon: Clock },
@@ -450,7 +451,7 @@ const BankeuLpjMonitoringPage = ({
                     </div>
                   </div>
                   <span className="text-sm font-bold text-gray-600">
-                    {totalFiltered > 0 ? Math.round((uploadedCount / totalFiltered) * 100) : 0}%
+                    {persenTeks(uploadedCount, totalFiltered)}
                   </span>
                   {isExpanded ? (
                     <ChevronUp className="h-5 w-5 text-gray-400" />
