@@ -205,7 +205,8 @@ export default function PengurusForm({
 			try {
 				const response = await getProdukHukums({
 					all: true,
-					jenis: "Keputusan Kepala Desa",
+					// ponytail: SK Camat hanya dibuat oleh kelurahan, jadi otomatis cuma muncul di sana
+					jenis: "Keputusan Kepala Desa,Keputusan Camat",
 					status_peraturan: "berlaku",
 				});
 				if (mounted) {

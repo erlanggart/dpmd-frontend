@@ -116,7 +116,8 @@ const PengurusEditPage = () => {
 			const response = await getProdukHukums({
 				all: true,
 				desa_id: desaId,
-				jenis: "Keputusan Kepala Desa",
+				// ponytail: SK Camat hanya dibuat oleh kelurahan, jadi otomatis cuma muncul di sana
+				jenis: "Keputusan Kepala Desa,Keputusan Camat",
 			});
 			setProdukHukumList(Array.isArray(response?.data?.data) ? response.data.data : []);
 		} catch (error) {

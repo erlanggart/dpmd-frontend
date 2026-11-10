@@ -6,6 +6,7 @@ import ProdukHukumForm from "../../../components/produk-hukum/ProdukHukumForm";
 import {
 	LuArrowUpRight,
 	LuBan,
+	LuBuilding,
 	LuCalendarDays,
 	LuCircleCheck,
 	LuFileText,
@@ -53,6 +54,15 @@ const JENIS = [
 		solid: "bg-amber-500",
 		soft: "from-amber-50 via-white to-white",
 		text: "text-amber-600",
+	},
+	{
+		value: "Keputusan Camat",
+		label: "SK CAMAT",
+		icon: LuBuilding,
+		badge: "bg-emerald-50 text-emerald-700 ring-emerald-200",
+		solid: "bg-emerald-600",
+		soft: "from-emerald-50 via-white to-white",
+		text: "text-emerald-600",
 	},
 ];
 
