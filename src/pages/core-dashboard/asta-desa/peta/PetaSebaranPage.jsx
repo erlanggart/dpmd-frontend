@@ -264,7 +264,9 @@ const PetaSebaranPage = ({ basePath = '/core-dashboard/asta-desa' }) => {
   }, [belumSiap]);
 
   // ── State tampilan ─────────────────────────────────────────────────────────
-  const [panelTerbuka, setPanelTerbuka] = useState(true);
+  // Tertutup saat dibuka: panel menutupi sepertiga peta. Terbuka sendiri saat
+  // titik diklik (tab Info), atau lewat tombol menu.
+  const [panelTerbuka, setPanelTerbuka] = useState(false);
   const [tab, setTab] = useState('layer');
   const [basemapAktif, setBasemapAktif] = useState('osm');
   const [menuBasemap, setMenuBasemap] = useState(false);

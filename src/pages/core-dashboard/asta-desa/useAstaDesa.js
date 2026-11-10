@@ -50,7 +50,13 @@ const kunciAwet = (kunci) => {
   return `${AWALAN_AWET}${pemilik}:${kunci}`;
 };
 
-const bolehAwet = (jalur, params) => AWET.has(jalur) && Object.keys(params || {}).length === 0;
+// Endpoint berparameter yang parameternya selalu sama (satu varian), jadi tetap
+// boleh disimpan: capaian target KK lambat dihitung di ASTA DESA, dan tanpa
+// cadangan ini tiap pembukaan halaman menunggunya dari nol.
+const AWET_BERPARAM = new Set(['/target-kk']);
+
+const bolehAwet = (jalur, params) =>
+  AWET_BERPARAM.has(jalur) || (AWET.has(jalur) && Object.keys(params || {}).length === 0);
 
 const bacaAwet = (jalur, params, kunci) => {
   if (!bolehAwet(jalur, params)) return null;
