@@ -299,14 +299,12 @@ const PanelPeta = ({
   cuaca,
   filter,
   setFilter,
-  daftarKecamatan,
-  daftarDesa,
   daftarEnumerator,
   koordinatRef,
   onBersihkanFilter,
   onBukaDetail
 }) => {
-  const adaFilter = Boolean(filter.search || filter.kecamatan || filter.desa || filter.user);
+  const adaFilter = Boolean(filter.search || filter.kecamatan.length || filter.desa.length || filter.user);
 
   return (
     <section
@@ -411,45 +409,10 @@ const PanelPeta = ({
       {/* Tab Filter */}
       {tab === 'filter' && (
         <div className="custom-scrollbar flex-1 space-y-6 overflow-y-auto px-8 pb-8">
-          <div>
-            <label htmlFor="f-kecamatan" className="mb-3 block text-[10px] font-black uppercase tracking-widest text-slate-400">
-              Kecamatan
-            </label>
-            <select
-              id="f-kecamatan"
-              value={filter.kecamatan}
-              onChange={(e) => setFilter({ ...filter, kecamatan: e.target.value, desa: '' })}
-              className={GAYA_SELECT}
-            >
-              <option value="">Semua Kecamatan</option>
-              {daftarKecamatan.map((k) => (
-                <option key={k} value={k}>
-                  {k}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          {filter.kecamatan && (
-            <div>
-              <label htmlFor="f-desa" className="mb-3 block text-[10px] font-black uppercase tracking-widest text-slate-400">
-                Kelurahan/Desa
-              </label>
-              <select
-                id="f-desa"
-                value={filter.desa}
-                onChange={(e) => setFilter({ ...filter, desa: e.target.value })}
-                className={GAYA_SELECT}
-              >
-                <option value="">Semua Kelurahan/Desa</option>
-                {daftarDesa.map((d) => (
-                  <option key={d} value={d}>
-                    {d}
-                  </option>
-                ))}
-              </select>
-            </div>
-          )}
+          {/* Kecamatan dan desa (bisa lebih dari satu) dipilih di bilah atas peta. */}
+          <p className="text-[11px] leading-relaxed text-slate-400">
+            Kecamatan dan desa dipilih di bilah atas peta, bisa lebih dari satu.
+          </p>
 
           <div>
             <label htmlFor="f-enumerator" className="mb-3 block text-[10px] font-black uppercase tracking-widest text-slate-400">

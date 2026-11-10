@@ -13,9 +13,9 @@
  * state yang ikut siklus render.
  */
 
-import { useMemo } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import api from '../../../../api';
-import { useAstaDesa } from '../useAstaDesa';
+import { ambilSekali, useAstaDesa } from '../useAstaDesa';
 
 /**
  * Cache sesuai-permintaan, seumur tab.
@@ -133,8 +133,20 @@ export const ambilDetailSensus = (id) =>
       })
   );
 
-/** Kunci pencocokan nama wilayah — sama dengan `kunciWilayah` di backend. */
-export const kunciWilayah = (s) => String(s || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+/**
+ * Kunci pencocokan nama wilayah — IDENTIK dengan `kunciWilayah` di backend,
+ * yang menyalin `Wilayah::desaKey`/`kecamatanKey` ASTA DESA: "Ds. Nambo" (baris sensus) = "Nambo"
+ * (berkas batas); "Tapos Satu" = "Tapos 1" = "Taposi".
+ */
+export const kunciWilayah = (s) =>
+  String(s || '')
+    .replace(/^\s*(ds\.|desa\s|kel\.|kelurahan\s|kec\.|kecamatan\s)\s*/i, '')
+    .replace(/\s+satu\s*$/i, 'i')
+    .replace(/\s+dua\s*$/i, 'ii')
+    .replace(/\s*1\s*$/, 'i')
+    .replace(/\s*2\s*$/, 'ii')
+    .toLowerCase()
+    .replace(/[^a-z0-9]/g, '');
 
 /**
  * Titik ternormalisasi dari `/sebaran-peta?kecamatan=` kembali ke bentuk objek
@@ -158,34 +170,86 @@ const bukaTitik = (d, kecamatan) => {
   }));
 };
 
+const TANPA_PILIHAN = [];
+
+/**
+ * Titik beberapa kecamatan sekaligus. Tiap kecamatan diminta sendiri-sendiri
+ * (`/sebaran-peta?kecamatan=`) supaya tetap ter-cache per kecamatan di browser
+ * dan di server, lalu digabung: menambah satu kecamatan tidak mengunduh ulang
+ * yang sudah ada.
+ */
+const useTitikKecamatan = (daftar) => {
+  const [hasil, setHasil] = useState({});
+  const [memuat, setMemuat] = useState(false);
+  const [galat, setGalat] = useState(null);
+  const daftarRef = useRef(daftar);
+  daftarRef.current = daftar;
+  // Jawaban yang datang terlambat (pilihan sudah berubah) dibuang.
+  const giliranRef = useRef(0);
+
+  const ambil = useCallback((cara = 'cache', { diam = false } = {}) => {
+    const sekarang = daftarRef.current;
+    const giliran = ++giliranRef.current;
+    if (!sekarang.length) {
+      setHasil({});
+      setMemuat(false);
+      return Promise.resolve();
+    }
+    if (!diam) {
+      setMemuat(true);
+      setGalat(null);
+    }
+    return Promise.all(
+      sekarang.map((k) => ambilSekali('/sebaran-peta', { kecamatan: k }, cara).then((b) => [k, b?.data ?? null]))
+    )
+      .then((baris) => {
+        if (giliran !== giliranRef.current) return;
+        setHasil(Object.fromEntries(baris));
+        setGalat(null);
+      })
+      .catch((e) => {
+        if (giliran === giliranRef.current && !diam) setGalat(e.message);
+      })
+      .finally(() => {
+        if (giliran === giliranRef.current && !diam) setMemuat(false);
+      });
+  }, []);
+
+  useEffect(() => {
+    ambil('cache');
+  }, [daftar, ambil]);
+
+  // Balasan dicocokkan dengan nama yang diminta supaya sisa pilihan lama tidak
+  // sempat tergambar.
+  const titik = useMemo(
+    () =>
+      daftar.flatMap((k) => {
+        const d = hasil[k];
+        return d && kunciWilayah(d.kecamatan) === kunciWilayah(k) ? bukaTitik(d, k) : [];
+      }),
+    [hasil, daftar]
+  );
+
+  return { titik, memuat, galat, ambil };
+};
+
 /**
  * Sumber data peta, dimuat bertingkat seperti Peta Sebaran ASTA DESA.
  *
  * Dulu `/sebaran-peta` mengirim ±191 ribu titik se-kabupaten (±25 MB JSON) di
  * muka. Sekarang pembukaan halaman hanya mengambil rekap jumlah per kecamatan
  * dan desa (beberapa kilobyte) untuk choropleth; titik baru diminta untuk
- * kecamatan yang dibuka (`kecamatanTerpilih`), ternormalisasi.
+ * kecamatan yang dibuka (`kecamatanTerpilih`, boleh lebih dari satu), ternormalisasi.
  */
-export const useDataPeta = (kecamatanTerpilih = '') => {
+export const useDataPeta = (kecamatanTerpilih = TANPA_PILIHAN) => {
   const ringkasan = useAstaDesa('/sebaran-peta');
-  const paramKecamatan = useMemo(() => ({ kecamatan: kecamatanTerpilih }), [kecamatanTerpilih]);
-  const rinci = useAstaDesa('/sebaran-peta', paramKecamatan, { aktif: Boolean(kecamatanTerpilih) });
+  const rinci = useTitikKecamatan(kecamatanTerpilih);
   const layer = useAstaDesa('/layer');
   const kecamatan = useAstaDesa('/wilayah/kecamatan');
 
   // SETIAP ARRAY DI BAWAH WAJIB DI-useMemo. Array baru tiap render menjadi
   // dependensi efek yang menggambar ulang titik dan memanggil setState — gelung
   // render tanpa akhir, bukan sekadar lambat.
-  //
-  // Balasan kecamatan sebelumnya masih dipegang hook sampai balasan baru tiba;
-  // dicocokkan dulu supaya titik kecamatan lama tidak sempat tergambar.
-  const titik = useMemo(
-    () =>
-      kecamatanTerpilih && kunciWilayah(rinci.data?.kecamatan) === kunciWilayah(kecamatanTerpilih)
-        ? bukaTitik(rinci.data, kecamatanTerpilih)
-        : [],
-    [rinci.data, kecamatanTerpilih]
-  );
 
   // Hanya layer aktif, urut `urutan` — tepat seperti kueri panel:
   // Layer::where('is_active', true)->orderBy('urutan')
@@ -203,24 +267,22 @@ export const useDataPeta = (kecamatanTerpilih = '') => {
     [kecamatan.data]
   );
 
-  const adaPilihan = Boolean(kecamatanTerpilih);
-
   return {
-    titik,
+    titik: rinci.titik,
     // Rekap kelengkapan + `per_kecamatan` (bahan choropleth).
     rekapSebaran: ringkasan.data || null,
     layer: daftarLayer,
     kecamatan: daftarKecamatan,
     memuat: ringkasan.memuat || layer.memuat,
-    memuatTitik: adaPilihan && rinci.memuat,
-    galat: ringkasan.galat || layer.galat || (adaPilihan ? rinci.galat : null),
+    memuatTitik: rinci.memuat,
+    galat: ringkasan.galat || layer.galat || rinci.galat,
     ambil: (paksa) => {
       bersihkanSimpananPeta();
       return Promise.all([
         ringkasan.ambil(paksa),
         layer.ambil(paksa),
         kecamatan.ambil(paksa),
-        ...(adaPilihan ? [rinci.ambil(paksa)] : [])
+        rinci.ambil(paksa)
       ]);
     },
 
@@ -234,7 +296,7 @@ export const useDataPeta = (kecamatanTerpilih = '') => {
     ambilSebaranDiam: () =>
       Promise.all([
         ringkasan.ambil('segar', { diam: true }),
-        ...(adaPilihan ? [rinci.ambil('segar', { diam: true })] : [])
+        rinci.ambil('segar', { diam: true })
       ])
   };
 };

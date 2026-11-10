@@ -60,6 +60,7 @@ import { Galat, Memuat } from '../ui';
 // Aset" di panel super admin pun hanya membuka halaman detail sensus.
 import { PanelDetail } from '../SensusTab';
 import PanelPeta from './PanelPeta';
+import PilihBanyak from './PilihBanyak';
 import { useGeoWilayah } from '../../../../components/landingpage/petaWilayah';
 import { ClusterHemat, LayerClusterHemat } from './klasterHemat';
 import {
@@ -208,12 +209,31 @@ const TombolKontrol = ({ judul, onClick, children, memuat = false }) => (
   </button>
 );
 
+/** Kunci satu desa: nama desa bisa kembar antar-kecamatan. */
+const kunciDesa = (kec, nama) => `${kunciWilayah(kec)}|${kunciWilayah(nama)}`;
+
+/** kunci kecamatan -> Set kunci desa yang dipilih di kecamatan itu. */
+const desaPerKecamatan = (desa) => {
+  const m = new Map();
+  desa.forEach((d) => {
+    const k = kunciWilayah(d.kec);
+    if (!m.has(k)) m.set(k, new Set());
+    m.get(k).add(kunciWilayah(d.nama));
+  });
+  return m;
+};
+
+/** Nama dari `daftar` yang kuncinya sama dengan `nama`, atau `nama` itu sendiri. */
+const cocokNama = (daftar, nama) => daftar.find((d) => kunciWilayah(d) === kunciWilayah(nama)) || nama;
+
 const PetaSebaranPage = ({ basePath = '/core-dashboard/asta-desa' }) => {
   // Filter. `search` dipisah dari `filter` supaya ketikan tidak memicu
   // penghitungan ulang ribuan titik pada setiap huruf — nilainya disalin ke
   // `filter.search` setelah 500 ms, persis seperti debounce di panel.
   const [ketikan, setKetikan] = useState('');
-  const [filter, setFilter] = useState({ search: '', kecamatan: '', desa: '', user: '' });
+  // kecamatan: daftar nama; desa: daftar { kec, nama }. Keduanya boleh banyak.
+  const [filter, setFilter] = useState({ search: '', kecamatan: [], desa: [], user: '' });
+  const [fokusCari, setFokusCari] = useState(false);
 
   // Titik hanya dimuat untuk kecamatan yang dibuka (cara Peta Sebaran ASTA
   // DESA); tanpa pilihan, peta hanya menggambar choropleth per kecamatan.
@@ -319,25 +339,24 @@ const PetaSebaranPage = ({ basePath = '/core-dashboard/asta-desa' }) => {
 
   const titikTersaring = useMemo(() => {
     const cari = filter.search.toLowerCase().trim();
-    const kec = filter.kecamatan.trim();
-    const desa = filter.desa.trim();
     const user = filter.user.trim();
+    const desaPer = desaPerKecamatan(filter.desa);
 
+    // Kecamatan tidak perlu disaring di sini: `titik` memang hanya berisi
+    // kecamatan terpilih. Desa: bila di sebuah kecamatan ada desa yang dipilih,
+    // hanya desa itu; bila tidak, seluruh kecamatannya.
     return titik.filter((t) => {
-      // Pencariannya mengenai tiga kolom, sama dengan panel: nama KK, NIK
-      // (tersamar), dan nama enumerator.
-      const cocokCari =
-        !cari ||
-        String(t.kk_nama || '').toLowerCase().includes(cari) ||
-        String(t.nik || '').toLowerCase().includes(cari) ||
-        String(t.petugas || '').toLowerCase().includes(cari);
-
+      if (user && t.petugas !== user) return false;
+      if (idsSpasial !== null && !idsSpasial.has(t.id)) return false;
+      const desaKec = desaPer.get(kunciWilayah(t.kecamatan));
+      if (desaKec && !desaKec.has(kunciWilayah(t.desa))) return false;
+      // Cari apa pun: nama KK, NIK (tersamar), petugas, desa, kecamatan,
+      // tanggal, atau nomor kuesioner.
       return (
-        cocokCari &&
-        (!kec || String(t.kecamatan || '').trim() === kec) &&
-        (!desa || String(t.desa || '').trim() === desa) &&
-        (!user || t.petugas === user) &&
-        (idsSpasial === null || idsSpasial.has(t.id))
+        !cari ||
+        [t.kk_nama, t.nik, t.petugas, t.desa, t.kecamatan, t.tanggal, t.id].some(
+          (v) => v != null && String(v).toLowerCase().includes(cari)
+        )
       );
     });
   }, [titik, filter, idsSpasial]);
@@ -372,22 +391,59 @@ const PetaSebaranPage = ({ basePath = '/core-dashboard/asta-desa' }) => {
     ]);
   }, [layer]);
 
-  // Klik choropleth → pilih wilayah. Dipasang ulang tiap render karena penangan
-  // klik OpenLayers dipasang sekali dan harus membaca pilihan terbaru. Nama
-  // dicocokkan ke daftar penyaring supaya sama persis dengan pilihan dropdown.
-  // Mengembalikan false bila wilayahnya sudah terpilih: klik itu lalu
-  // diperlakukan seperti biasa (info titik/WMS).
+  // ── Pilihan wilayah (bisa lebih dari satu) ─────────────────────────────────
+  const toggleKecamatan = (nama) =>
+    setFilter((f) => {
+      const k = kunciWilayah(nama);
+      if (!f.kecamatan.some((x) => kunciWilayah(x) === k)) return { ...f, kecamatan: [...f.kecamatan, nama] };
+      return {
+        ...f,
+        kecamatan: f.kecamatan.filter((x) => kunciWilayah(x) !== k),
+        // Desa milik kecamatan yang dilepas ikut dilepas.
+        desa: f.desa.filter((d) => kunciWilayah(d.kec) !== k)
+      };
+    });
+
+  // `hanyaTambah`: dari saran pencarian — memilih yang sudah terpilih tidak melepasnya.
+  const toggleDesa = (d, hanyaTambah = false) =>
+    setFilter((f) => {
+      const kunci = kunciDesa(d.kec, d.nama);
+      const ada = f.desa.some((x) => kunciDesa(x.kec, x.nama) === kunci);
+      if (ada && hanyaTambah) return f;
+      const kecAda = f.kecamatan.some((x) => kunciWilayah(x) === kunciWilayah(d.kec));
+      return {
+        ...f,
+        kecamatan: kecAda ? f.kecamatan : [...f.kecamatan, d.kec],
+        desa: ada ? f.desa.filter((x) => kunciDesa(x.kec, x.nama) !== kunci) : [...f.desa, d]
+      };
+    });
+
+  // Klik choropleth → pilih wilayah. Klik biasa memilih HANYA wilayah itu;
+  // Ctrl/Shift+klik menambah atau melepasnya. Dipasang ulang tiap render karena
+  // penangan klik OpenLayers dipasang sekali. Mengembalikan false bila klik itu
+  // tidak mengubah apa pun, supaya diperlakukan seperti biasa (info titik/WMS).
   const pilihWilayahRef = useRef(() => false);
-  pilihWilayahRef.current = (fitur) => {
-    const cocok = (daftar, nama) => daftar.find((d) => kunciWilayah(d) === kunciWilayah(nama)) || nama;
+  pilihWilayahRef.current = (fitur, tambah) => {
     const nama = fitur.get('nama');
     if (fitur.get('tingkat') === 'desa') {
-      if (kunciWilayah(nama) === kunciWilayah(filter.desa)) return false;
-      setFilter((f) => ({ ...f, desa: cocok(daftarDesa, nama) }));
+      const kec = cocokNama(filter.kecamatan, fitur.get('kecamatan'));
+      const desaKec = daftarDesa.filter((x) => kunciWilayah(x.kec) === kunciWilayah(kec)).map((x) => x.nama);
+      const d = { kec, nama: cocokNama(desaKec, nama) };
+      if (tambah) {
+        toggleDesa(d);
+        return true;
+      }
+      if (filter.desa.length === 1 && kunciDesa(filter.desa[0].kec, filter.desa[0].nama) === kunciDesa(d.kec, d.nama)) return false;
+      setFilter((f) => ({ ...f, desa: [d] }));
       return true;
     }
-    if (kunciWilayah(nama) === kunciWilayah(filter.kecamatan)) return false;
-    setFilter((f) => ({ ...f, kecamatan: cocok(kecamatan, nama), desa: '' }));
+    const namaKec = cocokNama(kecamatan, nama);
+    if (tambah) {
+      toggleKecamatan(namaKec);
+      return true;
+    }
+    if (filter.kecamatan.length === 1 && kunciWilayah(filter.kecamatan[0]) === kunciWilayah(namaKec)) return false;
+    setFilter((f) => ({ ...f, kecamatan: [namaKec], desa: [] }));
     return true;
   };
 
@@ -414,7 +470,8 @@ const PetaSebaranPage = ({ basePath = '/core-dashboard/asta-desa' }) => {
       if (feature.get('features')?.length || feature.get('data')) kenaTitik = true;
       return kenaTitik;
     });
-    if (wilayah && !kenaTitik && pilihWilayahRef.current(wilayah)) return;
+    const tambah = Boolean(evt.originalEvent?.ctrlKey || evt.originalEvent?.shiftKey || evt.originalEvent?.metaKey);
+    if (wilayah && !kenaTitik && pilihWilayahRef.current(wilayah, tambah)) return;
 
     // 1. Koordinat penanda — menempel ke fitur terdekat, bukan titik klik mentah.
     let koordPenanda = evt.coordinate;
@@ -770,94 +827,121 @@ const PetaSebaranPage = ({ basePath = '/core-dashboard/asta-desa' }) => {
   }, [titikTersaring]);
 
   // ── Daftar desa mengikuti kecamatan terpilih ───────────────────────────────
+  // Berpasangan { kec, nama }: nama desa bisa kembar antar-kecamatan.
   useEffect(() => {
-    if (!filter.kecamatan) {
+    if (!filter.kecamatan.length) {
       setDaftarDesa([]);
-      return;
+      return undefined;
     }
     let aktif = true;
-    ambilDesa(filter.kecamatan)
-      .then((d) => {
-        if (aktif) setDaftarDesa(d);
-      })
-      .catch(() => {
-        if (aktif) setDaftarDesa([]);
-      });
+    Promise.all(
+      filter.kecamatan.map((k) =>
+        ambilDesa(k)
+          .then((d) => d.map((nama) => ({ kec: k, nama })))
+          .catch(() => [])
+      )
+    ).then((h) => {
+      if (aktif) setDaftarDesa(h.flat());
+    });
     return () => {
       aktif = false;
     };
   }, [filter.kecamatan]);
 
   // ── Sorot batas wilayah + filter spasial ───────────────────────────────────
+  //
+  // Yang disorot: desa yang dipilih, atau kecamatan utuh bila tak satu pun
+  // desanya dipilih. Titik disaring titik-dalam-poligon pada EPSG:3857, sama
+  // dengan panel; hanya titik yang namanya memang wilayah itu yang diuji, dan
+  // kotak batas lebih dulu, supaya uji poligon ber-ribuan simpul tetap sedikit.
+  // Wilayah yang geometrinya tidak ada di ASTA DESA disaring menurut nama saja.
+  const kunciPilihan = JSON.stringify([
+    filter.kecamatan.map(kunciWilayah).sort(),
+    filter.desa.map((d) => kunciDesa(d.kec, d.nama)).sort()
+  ]);
+  const pilihanTerpasRef = useRef('');
   useEffect(() => {
     const map = mapRef.current;
     const sumber = sumberSorotRef.current;
-    if (!map || !sumber) return;
+    if (!map || !sumber) return undefined;
 
-    if (!filter.kecamatan) {
+    if (!filter.kecamatan.length) {
       sumber.clear();
       setIdsSpasial(null);
-      return;
+      pilihanTerpasRef.current = '';
+      return undefined;
     }
 
+    const wilayah = filter.kecamatan.flatMap((k) => {
+      const dipilih = filter.desa.filter((d) => kunciWilayah(d.kec) === kunciWilayah(k));
+      return dipilih.length ? dipilih.map((d) => ({ kec: k, desa: d.nama })) : [{ kec: k, desa: null }];
+    });
+
     let aktif = true;
-    // Ditunda 500 ms seperti debounce di panel: berganti kecamatan lewat papan
-    // tombol akan melewati beberapa pilihan, dan tiap pilihan yang terlewat
-    // tidak perlu jadi satu permintaan geometri.
+    // Ditunda 500 ms seperti debounce di panel: mencentang beberapa wilayah
+    // berturut-turut tidak perlu jadi permintaan geometri per centangan.
     const jam = setTimeout(() => {
-      ambilGeometriWilayah(filter.kecamatan, filter.desa || null)
-        .then((geo) => {
-          if (!aktif || !geo) {
-            if (aktif) {
-              sumber.clear();
-              setIdsSpasial(null);
-            }
+      Promise.all(
+        wilayah.map((w) =>
+          ambilGeometriWilayah(w.kec, w.desa)
+            .then((geo) => ({ ...w, geo }))
+            .catch(() => ({ ...w, geo: null }))
+        )
+      ).then((daftar) => {
+        if (!aktif) return;
+        sumber.clear();
+        const uji = new Map(); // kunci kecamatan -> [{ desa: kunci|null, geom, kotak }]
+        daftar.forEach((w) => {
+          const k = kunciWilayah(w.kec);
+          if (!uji.has(k)) uji.set(k, []);
+          const desa = w.desa ? kunciWilayah(w.desa) : null;
+          if (!w.geo) {
+            uji.get(k).push({ desa, geom: null });
             return;
           }
-
-          sumber.clear();
-          const fitur = new GeoJSON().readFeature(geo, {
+          const fitur = new GeoJSON().readFeature(w.geo, {
             dataProjection: 'EPSG:4326',
             featureProjection: 'EPSG:3857'
           });
           sumber.addFeature(fitur);
-
-          // Uji titik-dalam-polygon dilakukan pada koordinat EPSG:3857, bukan
-          // pada derajat — sama dengan panel. Hasilnya bisa berbeda di tepi
-          // poligon bila dikerjakan pada proyeksi yang lain.
-          //
-          // Yang diuji hanya titik yang namanya memang kecamatan/desa terpilih:
-          // yang lain toh tersingkir oleh penyaring nama di `titikTersaring`.
-          // Ditambah pemeriksaan kotak batas, ratusan ribu uji terhadap poligon
-          // ber-ribuan simpul (yang membekukan peta) tinggal beberapa ribu.
           const geom = fitur.getGeometry();
-          const kotak = geom.getExtent();
-          const kec = filter.kecamatan.trim();
-          const desa = filter.desa.trim();
-          const ids = new Set();
-          titik.forEach((t) => {
-            if (String(t.kecamatan || '').trim() !== kec) return;
-            if (desa && String(t.desa || '').trim() !== desa) return;
-            const koord = fromLonLat([Number(t.lng), Number(t.lat)]);
-            if (containsCoordinate(kotak, koord) && geom.intersectsCoordinate(koord)) ids.add(t.id);
-          });
-          setIdsSpasial(ids);
+          uji.get(k).push({ desa, geom, kotak: geom.getExtent() });
+        });
 
-          map.getView().fit(sumber.getExtent(), { padding: [50, 50, 50, 50], duration: 1000 });
-        })
-        .catch(() => {
-          if (aktif) {
-            sumber.clear();
-            setIdsSpasial(null);
+        const ids = new Set();
+        titik.forEach((t) => {
+          const daftarUji = uji.get(kunciWilayah(t.kecamatan));
+          if (!daftarUji) return;
+          const kd = kunciWilayah(t.desa);
+          let koord = null;
+          for (const u of daftarUji) {
+            if (u.desa && u.desa !== kd) continue;
+            if (!u.geom) {
+              ids.add(t.id);
+              return;
+            }
+            koord = koord || fromLonLat([Number(t.lng), Number(t.lat)]);
+            if (containsCoordinate(u.kotak, koord) && u.geom.intersectsCoordinate(koord)) {
+              ids.add(t.id);
+              return;
+            }
           }
         });
+        setIdsSpasial(ids);
+
+        // Pas-kan peta hanya saat pilihan berubah, bukan tiap titik bertambah.
+        if (pilihanTerpasRef.current !== kunciPilihan && sumber.getFeatures().length) {
+          map.getView().fit(sumber.getExtent(), { padding: [50, 50, 50, 50], duration: 1000 });
+        }
+        pilihanTerpasRef.current = kunciPilihan;
+      });
     }, 500);
 
     return () => {
       aktif = false;
       clearTimeout(jam);
     };
-  }, [filter.kecamatan, filter.desa, titik]);
+  }, [kunciPilihan, filter.kecamatan, filter.desa, titik]);
 
   // ── Choropleth kecamatan → desa ────────────────────────────────────────────
   //
@@ -870,7 +954,7 @@ const PetaSebaranPage = ({ basePath = '/core-dashboard/asta-desa' }) => {
     if (!geo) return null;
     const buat = (w, tingkat) => {
       const f = new Feature({ geometry: new MultiPolygon(w.poli).transform('EPSG:4326', 'EPSG:3857') });
-      f.setProperties({ tingkat, nama: w.nama });
+      f.setProperties({ tingkat, nama: w.nama, kecamatan: w.kec || w.nama });
       return f;
     };
     const desaPerKecamatan = new Map();
@@ -901,37 +985,91 @@ const PetaSebaranPage = ({ basePath = '/core-dashboard/asta-desa' }) => {
       });
     });
 
-    const kecDipilih = kunciWilayah(filter.kecamatan);
-    const desaDipilih = kunciWilayah(filter.desa);
+    const kecDipilih = new Set(filter.kecamatan.map(kunciWilayah));
+    const desaPer = desaPerKecamatan(filter.desa);
 
     const ambangKec = ambangKuantil([...jumlahKec.values()]);
     fiturWilayah.kecamatan.forEach((f) => {
       const k = kunciWilayah(f.get('nama'));
       const n = jumlahKec.get(k) || 0;
-      f.setProperties({ jumlah: n, kelas: kelasDari(n, ambangKec), terpilih: k === kecDipilih });
+      f.setProperties({ jumlah: n, kelas: kelasDari(n, ambangKec), terpilih: kecDipilih.has(k) });
     });
     if (!sKec.getFeatures().length) sKec.addFeatures(fiturWilayah.kecamatan);
 
     // Ambang desa dihitung sekabupaten, bukan per kecamatan yang dibuka, supaya
     // warna yang sama selalu berarti jumlah yang sama.
     const ambangDesa = ambangKuantil([...jumlahDesa.values()]);
-    const desa = kecDipilih ? fiturWilayah.desaPerKecamatan.get(kecDipilih) || [] : [];
+    const desa = [...kecDipilih].flatMap((kk) => fiturWilayah.desaPerKecamatan.get(kk) || []);
     desa.forEach((f) => {
+      const kk = kunciWilayah(f.get('kecamatan'));
       const k = kunciWilayah(f.get('nama'));
-      const n = jumlahDesa.get(`${kecDipilih}|${k}`) || 0;
-      f.setProperties({ jumlah: n, kelas: kelasDari(n, ambangDesa), terpilih: Boolean(desaDipilih) && k === desaDipilih });
+      const n = jumlahDesa.get(`${kk}|${k}`) || 0;
+      f.setProperties({ jumlah: n, kelas: kelasDari(n, ambangDesa), terpilih: Boolean(desaPer.get(kk)?.has(k)) });
     });
     sDesa.clear(true);
     sDesa.addFeatures(desa);
 
-    // Tampilan sekabupaten saat pertama dibuka dan tiap pilihan kecamatan
-    // dilepas — bukan tiap rekap diperbarui, supaya peta tidak melompat saat
-    // pengguna sedang menggeser. Memperbesar ke kecamatan diurus efek sorot.
-    if (!kecDipilih && tingkatTerakhirRef.current !== '' && map) {
+    // Tampilan sekabupaten saat pertama dibuka dan tiap seluruh pilihan
+    // kecamatan dilepas — bukan tiap rekap diperbarui, supaya peta tidak
+    // melompat saat pengguna sedang menggeser. Memperbesar diurus efek sorot.
+    const tingkat = kecDipilih.size ? 'kecamatan' : '';
+    if (!tingkat && tingkatTerakhirRef.current !== '' && map) {
       map.getView().fit(sKec.getExtent(), { padding: [60, 60, 60, 60] });
     }
-    tingkatTerakhirRef.current = kecDipilih;
+    tingkatTerakhirRef.current = tingkat;
   }, [fiturWilayah, rekapSebaran, filter.kecamatan, filter.desa]);
+
+  // Saran wilayah di kotak cari: mengetik nama kecamatan/desa langsung bisa
+  // memfilternya, meski titiknya belum dimuat.
+  const saranWilayah = useMemo(() => {
+    const q = kunciWilayah(ketikan);
+    if (q.length < 2) return [];
+    const kec = kecamatan
+      .filter((k) => kunciWilayah(k).includes(q))
+      .slice(0, 5)
+      .map((k) => ({ jenis: 'kecamatan', nama: k, kunci: `k:${kunciWilayah(k)}` }));
+    const desa = (geo?.desa || [])
+      .filter((d) => kunciWilayah(d.nama).includes(q))
+      .slice(0, 8)
+      .map((d) => {
+        const kec = cocokNama(kecamatan, d.kec);
+        return { jenis: 'desa', nama: d.nama, kec, kunci: `d:${kunciDesa(kec, d.nama)}` };
+      });
+    return [...kec, ...desa];
+  }, [ketikan, kecamatan, geo]);
+
+  const pilihSaran = (s) => {
+    if (s.jenis === 'kecamatan') {
+      if (!filter.kecamatan.some((k) => kunciWilayah(k) === kunciWilayah(s.nama))) toggleKecamatan(s.nama);
+    } else {
+      toggleDesa({ kec: s.kec, nama: s.nama }, true);
+    }
+    setKetikan('');
+    setFilter((f) => ({ ...f, search: '' }));
+  };
+
+  // Opsi dropdown bilah atas.
+  const opsiKecamatan = useMemo(() => {
+    const jumlah = new Map((rekapSebaran?.per_kecamatan || []).map((k) => [kunciWilayah(k.kecamatan), k.total]));
+    return kecamatan.map((k) => {
+      const n = jumlah.get(kunciWilayah(k));
+      return { kunci: kunciWilayah(k), label: k, nilai: k, sub: n ? `${n.toLocaleString('id-ID')} titik` : '' };
+    });
+  }, [kecamatan, rekapSebaran]);
+  const opsiDesa = useMemo(
+    () =>
+      daftarDesa.map((d) => ({
+        kunci: kunciDesa(d.kec, d.nama),
+        label: d.nama,
+        nilai: d,
+        sub: filter.kecamatan.length > 1 ? d.kec : ''
+      })),
+    [daftarDesa, filter.kecamatan.length]
+  );
+  const kecTerpilihSet = useMemo(() => new Set(filter.kecamatan.map(kunciWilayah)), [filter.kecamatan]);
+  const desaTerpilihSet = useMemo(() => new Set(filter.desa.map((d) => kunciDesa(d.kec, d.nama))), [filter.desa]);
+  const labelPilihan =
+    filter.kecamatan.length > 2 ? `${filter.kecamatan.length} kecamatan` : `Kecamatan ${filter.kecamatan.join(' & ')}`;
 
   // ── Aksi kontrol ───────────────────────────────────────────────────────────
   const gantiBasemap = (id) => {
@@ -1058,7 +1196,7 @@ const PetaSebaranPage = ({ basePath = '/core-dashboard/asta-desa' }) => {
 
   const bersihkanFilter = () => {
     setKetikan('');
-    setFilter({ search: '', kecamatan: '', desa: '', user: '' });
+    setFilter({ search: '', kecamatan: [], desa: [], user: '' });
   };
 
   // ── Keadaan muat & galat ───────────────────────────────────────────────────
@@ -1084,7 +1222,7 @@ const PetaSebaranPage = ({ basePath = '/core-dashboard/asta-desa' }) => {
         />
 
         {/* Bilah atas: kembali, toggle panel, pencarian */}
-        <header className="sembunyi-cetak pointer-events-none absolute left-6 right-6 top-6 z-40 flex items-center gap-3">
+        <header className="sembunyi-cetak pointer-events-none absolute left-6 right-24 top-6 z-40 flex flex-wrap items-center gap-3 lg:right-28">
           <Link
             to={basePath}
             title="Kembali ke halaman Asta Desa"
@@ -1102,19 +1240,64 @@ const PetaSebaranPage = ({ basePath = '/core-dashboard/asta-desa' }) => {
             <Menu className="h-6 w-6" />
           </button>
 
-          <div className="pointer-events-auto flex h-12 max-w-sm flex-1 items-center gap-3 rounded-2xl border border-white bg-white px-5 shadow-2xl transition-all focus-within:ring-2 focus-within:ring-slate-500/20">
+          <div className="pointer-events-auto relative flex h-12 min-w-[12rem] max-w-sm flex-1 items-center gap-3 rounded-2xl border border-white bg-white px-5 shadow-2xl transition-all focus-within:ring-2 focus-within:ring-slate-500/20">
             <Search className="h-4 w-4 flex-shrink-0 text-slate-400" />
             <input
               type="text"
               value={ketikan}
               onChange={(e) => setKetikan(e.target.value)}
-              placeholder={filter.kecamatan ? 'Cari aset...' : 'Pilih kecamatan dulu, lalu cari…'}
-              aria-label="Cari nama KK, NIK, atau enumerator"
+              onFocus={() => setFokusCari(true)}
+              onBlur={() => setFokusCari(false)}
+              placeholder="Cari nama, NIK, petugas, desa, kecamatan…"
+              aria-label="Cari nama KK, NIK, petugas, desa, atau kecamatan"
               className="w-full border-none bg-transparent text-sm text-slate-700 outline-none placeholder:text-slate-400"
             />
+            {fokusCari && saranWilayah.length > 0 && (
+              <ul className="absolute left-0 right-0 top-14 z-50 max-h-80 overflow-y-auto rounded-2xl border border-slate-200 bg-white py-1 shadow-2xl">
+                <li className="px-4 pb-1 pt-2 text-[10px] font-black uppercase tracking-widest text-slate-400">
+                  Wilayah
+                </li>
+                {saranWilayah.map((s) => (
+                  <li key={s.kunci}>
+                    {/* onMouseDown, bukan onClick: klik dijalankan sebelum input kehilangan fokus. */}
+                    <button
+                      type="button"
+                      onMouseDown={(e) => {
+                        e.preventDefault();
+                        pilihSaran(s);
+                      }}
+                      className="flex w-full items-center gap-3 px-4 py-2 text-left text-sm hover:bg-slate-50"
+                    >
+                      <MapPin className="h-3.5 w-3.5 flex-shrink-0 text-sky-500" />
+                      <span className="min-w-0 flex-1 truncate text-slate-700">{s.nama}</span>
+                      <span className="flex-shrink-0 text-[11px] text-slate-400">
+                        {s.jenis === 'kecamatan' ? 'Kecamatan' : `Desa · ${s.kec}`}
+                      </span>
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
           </div>
 
-          {filter.kecamatan && (
+          <PilihBanyak
+            label="Kecamatan"
+            opsi={opsiKecamatan}
+            terpilih={kecTerpilihSet}
+            onToggle={(o) => toggleKecamatan(o.nilai)}
+            onBersihkan={() => setFilter((f) => ({ ...f, kecamatan: [], desa: [] }))}
+          />
+          <PilihBanyak
+            label="Desa"
+            opsi={opsiDesa}
+            terpilih={desaTerpilihSet}
+            onToggle={(o) => toggleDesa(o.nilai)}
+            onBersihkan={() => setFilter((f) => ({ ...f, desa: [] }))}
+            nonaktif={!filter.kecamatan.length}
+            kosong="Memuat daftar desa…"
+          />
+
+          {filter.kecamatan.length > 0 && (
             <button
               type="button"
               onClick={bersihkanFilter}
@@ -1130,7 +1313,7 @@ const PetaSebaranPage = ({ basePath = '/core-dashboard/asta-desa' }) => {
               dari keseluruhan yang sedang ia lihat. */}
           <span className="pointer-events-auto hidden flex-shrink-0 items-center gap-1.5 rounded-2xl border border-white bg-white/90 px-4 py-3 text-[10px] font-black uppercase tracking-widest text-slate-500 shadow-2xl backdrop-blur lg:flex">
             {(memuat || memuatTitik) && <Loader2 className="h-3 w-3 animate-spin" />}
-            {filter.kecamatan
+            {filter.kecamatan.length
               ? `${titikTersaring.length.toLocaleString('id-ID')} / ${titik.length.toLocaleString('id-ID')} titik`
               : `${(rekapSebaran?.total_titik || 0).toLocaleString('id-ID')} titik · pilih kecamatan`}
           </span>
@@ -1151,8 +1334,6 @@ const PetaSebaranPage = ({ basePath = '/core-dashboard/asta-desa' }) => {
             cuaca={cuaca}
             filter={filter}
             setFilter={setFilter}
-            daftarKecamatan={kecamatan}
-            daftarDesa={daftarDesa}
             daftarEnumerator={daftarEnumerator}
             koordinatRef={koordinatRef}
             onBersihkanFilter={bersihkanFilter}
@@ -1375,21 +1556,21 @@ const PetaSebaranPage = ({ basePath = '/core-dashboard/asta-desa' }) => {
         )}
 
         {/* Petunjuk tahap: kecamatan dulu, baru desa dan titiknya. */}
-        {rekapSebaran && !belumSiap && (!filter.kecamatan || (memuatTitik && titik.length === 0)) && (
+        {rekapSebaran && !belumSiap && (!filter.kecamatan.length || (memuatTitik && titik.length === 0)) && (
           <div className="sembunyi-cetak pointer-events-none absolute inset-x-0 bottom-4 z-20 flex justify-center px-4">
             <div
               role="status"
               className="flex items-center gap-2 rounded-2xl border border-slate-200 bg-white/95 px-4 py-3 text-xs font-semibold text-slate-700 shadow-lg backdrop-blur"
             >
-              {filter.kecamatan ? (
+              {filter.kecamatan.length ? (
                 <>
                   <Loader2 className="h-3.5 w-3.5 flex-shrink-0 animate-spin text-sky-500" />
-                  Memuat desa dan titik Kecamatan {filter.kecamatan}…
+                  Memuat desa dan titik {labelPilihan}…
                 </>
               ) : (
                 <>
                   <MapPin className="h-3.5 w-3.5 flex-shrink-0 text-sky-500" />
-                  Klik kecamatan di peta untuk memuat desa dan titik lokasinya
+                  Klik kecamatan di peta (Ctrl+klik untuk lebih dari satu), atau pilih di bilah atas
                 </>
               )}
             </div>
