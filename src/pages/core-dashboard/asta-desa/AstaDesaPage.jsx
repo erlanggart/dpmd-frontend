@@ -20,7 +20,7 @@
  * ringkas selalu kalah begitu ada yang mengklik "buka peta penuh".
  */
 
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { Suspense, lazy, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import {
   ArrowUpRight,
@@ -40,10 +40,21 @@ import { segarkanSemua, useAstaDesa } from './useAstaDesa';
 import { angka, persen } from './warna';
 import RingkasanTab from './RingkasanTab';
 import CapaianTargetKk from './CapaianTargetKk';
-import SensusTab from './SensusTab';
-import DemografiTab from './DemografiTab';
-import PenggunaTab from './PenggunaTab';
-import LayerPesanTab from './LayerPesanTab';
+
+// Tab selain Ringkasan dimuat saat dibuka. Sebagian besar kunjungan hanya membaca
+// Ringkasan, dan tab lain membawa penyusun ekspor serta tabelnya masing-masing.
+const SensusTab = lazy(() => import('./SensusTab'));
+const DemografiTab = lazy(() => import('./DemografiTab'));
+const PenggunaTab = lazy(() => import('./PenggunaTab'));
+const LayerPesanTab = lazy(() => import('./LayerPesanTab'));
+
+/**
+ * Jeda pembaruan untuk data yang lahir dari penyusuran. Isinya hanya berubah tiap
+ * ±30 menit, jadi bertanya tiap 30 detik setelah rinciannya siap hanya mengulang
+ * jawaban yang sama. Selama belum siap, jeda pendek tetap dipakai supaya hasilnya
+ * muncul sendiri begitu penyusuran selesai.
+ */
+const jedaRincian = (data) => (data?.rincian_siap ? 5 * 60 * 1000 : 30 * 1000);
 
 /**
  * Tab halaman.
@@ -104,7 +115,11 @@ const AstaDesaPage = ({ basePath = '/core-dashboard/asta-desa' }) => {
   const [menyegarkan, setMenyegarkan] = useState(false);
 
   const status = useAstaDesa('/status');
-  const siap = status.data?.terkonfigurasi;
+  // Dianggap siap sampai server berkata sebaliknya. Dulu semua pengambilan menunggu
+  // `/status` selesai, jadi tiap pembukaan halaman membayar satu perjalanan
+  // jaringan tambahan untuk jawaban yang hampir selalu "ya". Server yang belum
+  // disetel tetap berakhir di <BelumDisetel />.
+  const siap = status.data?.terkonfigurasi !== false;
 
   // Ringkasan diambil begitu integrasinya siap: selain mengisi tab pertama,
   // daftar kecamatan dan tahap verifikasinya dipakai sebagai isi penyaring di
@@ -121,13 +136,10 @@ const AstaDesaPage = ({ basePath = '/core-dashboard/asta-desa' }) => {
   // Selama rincian dimuat bertahap (`rincian_progres` ada) jedanya dipendekkan
   // ke 15 detik supaya angka sementara terlihat bertambah; server menjawabnya
   // dari baris yang sudah terbaca, tanpa memulai penyusuran baru.
-  const [bertahap, setBertahap] = useState(false);
   const ringkasan = useAstaDesa('/ringkasan', {}, {
-    aktif: Boolean(siap),
-    segarkanTiapMs: bertahap ? 15 * 1000 : 60 * 1000
+    aktif: siap,
+    segarkanTiapMs: (d) => (d?.rincian_progres ? 15 * 1000 : 60 * 1000)
   });
-  const adaProgres = Boolean(ringkasan.data?.rincian_progres);
-  useEffect(() => setBertahap(adaProgres), [adaProgres]);
   // Penyaring wilayah tab Demografi. Params tanpa kunci kosong supaya kunci
   // cache-nya tetap stabil.
   const [filterWilayah, setFilterWilayah] = useState({});
@@ -136,22 +148,22 @@ const AstaDesaPage = ({ basePath = '/core-dashboard/asta-desa' }) => {
     [filterWilayah]
   );
 
-  // Diperbarui diam-diam tiap 30 detik: server menjawab dari cache seketika,
-  // dan begitu penyusuran di latar selesai angkanya muncul sendiri tanpa
-  // pengguna perlu menekan apa pun.
+  // Diperbarui diam-diam (lihat `jedaRincian`): server menjawab dari cache
+  // seketika, dan begitu penyusuran di latar selesai angkanya muncul sendiri
+  // tanpa pengguna perlu menekan apa pun.
   //
   // Penyaring wilayah ikut dikirim. Dulu tidak, karena `/sensus-anggotas` tidak
   // membawa kecamatan/desa; sekarang backend menjembataninya lewat rujukan ke
   // keluarga, dan selama jembatan itu belum siap ia membalas angka kabupaten
   // beserta `per_wilayah_siap: false` — bukan diam-diam mengabaikan penyaring.
   const demografi = useAstaDesa('/demografi', paramsWilayah, {
-    aktif: Boolean(siap) && tab === 'demografi',
-    segarkanTiapMs: 30 * 1000
+    aktif: siap && tab === 'demografi',
+    segarkanTiapMs: jedaRincian
   });
   // Profil keluarga per kategori sensus (rumah, bansos, …), penyaring yang sama.
   const kategoriSensus = useAstaDesa('/demografi/kategori', paramsWilayah, {
-    aktif: Boolean(siap) && tab === 'demografi',
-    segarkanTiapMs: 30 * 1000
+    aktif: siap && tab === 'demografi',
+    segarkanTiapMs: jedaRincian
   });
 
   const muatUlang = async () => {
@@ -216,8 +228,6 @@ const AstaDesaPage = ({ basePath = '/core-dashboard/asta-desa' }) => {
 
         {status.galat ? (
           <Galat pesan={status.galat} onUlang={status.ambil} />
-        ) : status.memuat && !status.data ? (
-          <Memuat pesan="Memeriksa sambungan ke ASTA DESA…" />
         ) : !siap ? (
           <BelumDisetel />
         ) : (
@@ -268,7 +278,7 @@ const AstaDesaPage = ({ basePath = '/core-dashboard/asta-desa' }) => {
                 DESA) sehingga tidak perlu menunggu penyusuran ringkasan. */}
             {tab === 'ringkasan' && (
               <div className="space-y-4">
-                <CapaianTargetKk aktif={Boolean(siap)} />
+                <CapaianTargetKk aktif={siap} />
                 <RingkasanTab
                   data={ringkasan.data}
                   memuat={ringkasan.memuat}
@@ -277,31 +287,35 @@ const AstaDesaPage = ({ basePath = '/core-dashboard/asta-desa' }) => {
                 />
               </div>
             )}
-            {tab === 'sensus' && <SensusTab ringkasan={ringkasan.data} />}
-            {tab === 'demografi' && (
-              <DemografiTab
-                data={demografi.data}
-                memuat={demografi.memuat}
-                galat={demografi.galat}
-                onUlang={demografi.ambil}
-                totalKeluarga={ringkasan.data?.total_sensus}
-                kategori={kategoriSensus}
-                filter={filterWilayah}
-                onFilter={setFilterWilayah}
-              />
-            )}
-            {tab === 'pengguna' && <PenggunaTab ringkasan={ringkasan.data} />}
-            {tab === 'layer' && <LayerPesanTab />}
-
-            <p className="px-1 pb-2 text-[11px] leading-relaxed text-slate-400">
-              Sumber: API super admin ASTA DESA ({status.data?.base_url}). Angka keluarga terdata diperbarui otomatis
-              tiap menit selama halaman ini terbuka; rincian per kecamatan, tren, dan petugas menyusul hingga{' '}
-              {Math.round((status.data?.ttl_ms || 0) / 60000)} menit. Tekan{' '}
-              <span className="font-semibold">Muat ulang</span> bila perlu menarik semuanya sekarang juga.
-              {r?.diambil_pada && (
-                <> Terakhir diambil {new Date(r.diambil_pada).toLocaleString('id-ID')}.</>
+            <Suspense fallback={<Memuat />}>
+              {tab === 'sensus' && <SensusTab ringkasan={ringkasan.data} />}
+              {tab === 'demografi' && (
+                <DemografiTab
+                  data={demografi.data}
+                  memuat={demografi.memuat}
+                  galat={demografi.galat}
+                  onUlang={demografi.ambil}
+                  totalKeluarga={ringkasan.data?.total_sensus}
+                  kategori={kategoriSensus}
+                  filter={filterWilayah}
+                  onFilter={setFilterWilayah}
+                />
               )}
-            </p>
+              {tab === 'pengguna' && <PenggunaTab ringkasan={ringkasan.data} />}
+              {tab === 'layer' && <LayerPesanTab />}
+            </Suspense>
+
+            {status.data && (
+              <p className="px-1 pb-2 text-[11px] leading-relaxed text-slate-400">
+                Sumber: API super admin ASTA DESA ({status.data.base_url}). Angka keluarga terdata diperbarui otomatis
+                tiap menit selama halaman ini terbuka; rincian per kecamatan, tren, dan petugas menyusul hingga{' '}
+                {Math.round((status.data.ttl_ms || 0) / 60000)} menit. Tekan{' '}
+                <span className="font-semibold">Muat ulang</span> bila perlu menarik semuanya sekarang juga.
+                {r?.diambil_pada && (
+                  <> Terakhir diambil {new Date(r.diambil_pada).toLocaleString('id-ID')}.</>
+                )}
+              </p>
+            )}
           </>
         )}
       </div>

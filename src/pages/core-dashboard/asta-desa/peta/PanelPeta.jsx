@@ -302,7 +302,7 @@ const PanelPeta = ({
   daftarKecamatan,
   daftarDesa,
   daftarEnumerator,
-  koordinat,
+  koordinatRef,
   onBersihkanFilter,
   onBukaDetail
 }) => {
@@ -486,7 +486,12 @@ const PanelPeta = ({
       <div className="mt-auto border-t border-slate-100 bg-slate-50/50 p-6">
         <div className="flex items-center justify-between text-[10px] font-black">
           <span className="uppercase tracking-widest text-slate-400">Koordinat</span>
-          <span className="font-mono text-slate-800">{koordinat}</span>
+          {/* Diisi langsung oleh penangan kursor di halaman peta, bukan lewat
+              state: itu berarti merender ulang panel ini berikut ribuan <option>
+              enumerator pada tiap gerakan tetikus. */}
+          <span ref={koordinatRef} className="font-mono text-slate-800">
+            -6.5971, 106.8456
+          </span>
         </div>
       </div>
     </section>

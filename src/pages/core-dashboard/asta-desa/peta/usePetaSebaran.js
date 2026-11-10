@@ -133,28 +133,59 @@ export const ambilDetailSensus = (id) =>
       })
   );
 
+/** Kunci pencocokan nama wilayah — sama dengan `kunciWilayah` di backend. */
+export const kunciWilayah = (s) => String(s || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+
 /**
- * Tiga sumber tetap peta, dalam satu pemanggilan.
- *
- * `/sebaran` dipakai bersama tab Peta Sebaran yang ringkas — kalau pengguna
- * sudah membukanya, titiknya sudah ada di cache dan halaman ini langsung
- * tergambar tanpa menunggu penyusuran ulang di server.
+ * Titik ternormalisasi dari `/sebaran-peta?kecamatan=` kembali ke bentuk objek
+ * yang dipakai seluruh halaman. Urutan kolom = `KOLOM_TITIK` di backend:
+ * [id, lat, lng, nomor desa, nomor petugas (-1 = kosong), kk_nama, nik, tanggal].
  */
-export const useDataPeta = () => {
-  // `/sebaran-peta`, BUKAN `/sebaran`. Yang ini memakai koordinat `rumah_*` —
-  // kolom yang digambar panel super admin — dan karenanya menyusuri endpoint
-  // yang barisnya lebih berat. Tab Peta Sebaran yang ringkas tetap memakai
-  // `/sebaran`; keduanya punya cache sendiri dan tidak saling menimpa.
-  const sebaran = useAstaDesa('/sebaran-peta');
+const bukaTitik = (d, kecamatan) => {
+  if (!Array.isArray(d?.titik)) return [];
+  const desa = d.desa || [];
+  const petugas = d.petugas || [];
+  return d.titik.map(([id, lat, lng, iDesa, iPetugas, kkNama, nik, tanggal]) => ({
+    id,
+    lat,
+    lng,
+    kecamatan,
+    desa: desa[iDesa],
+    petugas: petugas[iPetugas] || undefined,
+    kk_nama: kkNama || undefined,
+    nik: nik || undefined,
+    tanggal: tanggal || undefined
+  }));
+};
+
+/**
+ * Sumber data peta, dimuat bertingkat seperti Peta Sebaran ASTA DESA.
+ *
+ * Dulu `/sebaran-peta` mengirim ±191 ribu titik se-kabupaten (±25 MB JSON) di
+ * muka. Sekarang pembukaan halaman hanya mengambil rekap jumlah per kecamatan
+ * dan desa (beberapa kilobyte) untuk choropleth; titik baru diminta untuk
+ * kecamatan yang dibuka (`kecamatanTerpilih`), ternormalisasi.
+ */
+export const useDataPeta = (kecamatanTerpilih = '') => {
+  const ringkasan = useAstaDesa('/sebaran-peta');
+  const paramKecamatan = useMemo(() => ({ kecamatan: kecamatanTerpilih }), [kecamatanTerpilih]);
+  const rinci = useAstaDesa('/sebaran-peta', paramKecamatan, { aktif: Boolean(kecamatanTerpilih) });
   const layer = useAstaDesa('/layer');
   const kecamatan = useAstaDesa('/wilayah/kecamatan');
 
-  // SETIAP ARRAY DI BAWAH WAJIB DI-useMemo. `data?.titik || []` menghasilkan
-  // array BARU pada tiap render selama data masih null, dan array baru itu
-  // menjadi dependensi efek yang menggambar ulang titik serta menyusun daftar
-  // layer — yang memanggil setState, yang memicu render berikutnya. Tanpa memo,
-  // halaman ini masuk gelung render tanpa akhir, bukan sekadar lambat.
-  const titik = useMemo(() => sebaran.data?.titik || [], [sebaran.data]);
+  // SETIAP ARRAY DI BAWAH WAJIB DI-useMemo. Array baru tiap render menjadi
+  // dependensi efek yang menggambar ulang titik dan memanggil setState — gelung
+  // render tanpa akhir, bukan sekadar lambat.
+  //
+  // Balasan kecamatan sebelumnya masih dipegang hook sampai balasan baru tiba;
+  // dicocokkan dulu supaya titik kecamatan lama tidak sempat tergambar.
+  const titik = useMemo(
+    () =>
+      kecamatanTerpilih && kunciWilayah(rinci.data?.kecamatan) === kunciWilayah(kecamatanTerpilih)
+        ? bukaTitik(rinci.data, kecamatanTerpilih)
+        : [],
+    [rinci.data, kecamatanTerpilih]
+  );
 
   // Hanya layer aktif, urut `urutan` — tepat seperti kueri panel:
   // Layer::where('is_active', true)->orderBy('urutan')
@@ -172,36 +203,38 @@ export const useDataPeta = () => {
     [kecamatan.data]
   );
 
+  const adaPilihan = Boolean(kecamatanTerpilih);
+
   return {
     titik,
-    rekapSebaran: sebaran.data || null,
+    // Rekap kelengkapan + `per_kecamatan` (bahan choropleth).
+    rekapSebaran: ringkasan.data || null,
     layer: daftarLayer,
     kecamatan: daftarKecamatan,
-    memuat: sebaran.memuat || layer.memuat,
-    galat: sebaran.galat || layer.galat,
+    memuat: ringkasan.memuat || layer.memuat,
+    memuatTitik: adaPilihan && rinci.memuat,
+    galat: ringkasan.galat || layer.galat || (adaPilihan ? rinci.galat : null),
     ambil: (paksa) => {
       bersihkanSimpananPeta();
-      return Promise.all([sebaran.ambil(paksa), layer.ambil(paksa), kecamatan.ambil(paksa)]);
+      return Promise.all([
+        ringkasan.ambil(paksa),
+        layer.ambil(paksa),
+        kecamatan.ambil(paksa),
+        ...(adaPilihan ? [rinci.ambil(paksa)] : [])
+      ]);
     },
 
     /**
-     * Hanya titik sebarannya, untuk menunggui penyusuran yang belum selesai.
+     * Hanya data sebaran, untuk menunggui penyusuran yang belum selesai.
      *
-     * Dipisah dari `ambil` di atas karena tiga hal, dan ketiganya salah bila
-     * memakai `ambil`:
-     *
-     *   • Modenya WAJIB 'segar', bukan bawaan 'cache'. `ambil()` tanpa argumen
-     *     dijawab dari simpanan browser yang berumur 10 menit — pemeriksaan
-     *     tiap menit tidak akan pernah menyentuh server, dan keadaan "belum
-     *     siap" yang sudah tersimpan akan bertahan sepuluh menit penuh.
-     *     'segar' melewati simpanan browser tanpa mengirim force=1, jadi server
-     *     tetap boleh menjawab dari cache-nya sendiri dan tidak disuruh
-     *     menyusuri ulang.
-     *   • `diam: true` supaya tidak memasang keadaan "memuat" tiap siklus;
-     *     tanpa itu seluruh penanda di atas peta berkedip sekali semenit.
-     *   • Layer dan daftar kecamatan tidak ikut diambil ulang — keduanya sudah
-     *     ada dan tidak ada hubungannya dengan penyusuran yang ditunggu.
+     * Mode 'segar' (bukan 'cache' yang berumur 10 menit) dan `diam: true`
+     * supaya penanda di atas peta tidak berkedip tiap siklus. Layer dan daftar
+     * kecamatan tidak ikut diambil ulang.
      */
-    ambilSebaranDiam: () => sebaran.ambil('segar', { diam: true })
+    ambilSebaranDiam: () =>
+      Promise.all([
+        ringkasan.ambil('segar', { diam: true }),
+        ...(adaPilihan ? [rinci.ambil('segar', { diam: true })] : [])
+      ])
   };
 };

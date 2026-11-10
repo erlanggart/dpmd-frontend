@@ -94,6 +94,15 @@ const bacaJeda = (err) => {
 
 const tunggu = (ms) => new Promise((r) => setTimeout(r, ms));
 
+/**
+ * Batas waktu per endpoint, menggantikan 30 detik bawaan axios.
+ *
+ * Batas axios mencakup unduhannya. Titik peta berukuran beberapa megabyte, dan
+ * di jaringan kantor yang sedang tersendat unduhan itu saja bisa melewati 30
+ * detik, padahal servernya sudah menjawab seketika.
+ */
+const BATAS_WAKTU_MS = { '/sebaran-peta': 2 * 60 * 1000 };
+
 /** Ubah galat axios menjadi pesan yang bisa dibaca orang. */
 const rapikanGalat = (err) => {
   const status = err.response?.status;
@@ -124,7 +133,10 @@ const rapikanGalat = (err) => {
 const mintaDenganUlang = async (jalur, params) => {
   for (let coba = 0; ; coba += 1) {
     try {
-      return await api.get(`/asta-desa${jalur}`, { params });
+      return await api.get(`/asta-desa${jalur}`, {
+        params,
+        ...(BATAS_WAKTU_MS[jalur] ? { timeout: BATAS_WAKTU_MS[jalur] } : {})
+      });
     } catch (err) {
       const jeda = bacaJeda(err);
       if (coba >= JEDA_ULANG_MS.length || !layakUlang(err, jeda)) throw err;
@@ -238,6 +250,25 @@ const salinanTerakhir = (jalur, params) => {
  */
 export const ambilSekali = (jalur, params = {}, cara = 'segar') => muat(jalur, params, cara);
 
+/**
+ * Jawaban pembaruan berkala, dengan bagian yang isinya tidak berubah tetap
+ * memakai objek lama.
+ *
+ * Tiap jawaban JSON adalah objek baru meski isinya sama, jadi tanpa ini setiap
+ * siklus menghitung ulang semua `useMemo` dan menggambar ulang seluruh grafik.
+ * Hanya untuk endpoint yang memang diperbarui berkala: muatannya kecil, sehingga
+ * membandingkannya jauh lebih murah daripada menggambar ulang.
+ */
+const pertahankanRujukan = (lama, baru) => {
+  if (!lama?.data || !baru?.data || typeof baru.data !== 'object') return baru;
+  if (Array.isArray(baru.data)) return JSON.stringify(lama.data) === JSON.stringify(baru.data) ? lama : baru;
+  const data = { ...baru.data };
+  Object.keys(data).forEach((k) => {
+    if (JSON.stringify(data[k]) === JSON.stringify(lama.data[k])) data[k] = lama.data[k];
+  });
+  return { ...baru, data };
+};
+
 /** Buang seluruh cache sisi browser (dipakai bersama tombol muat ulang). */
 export const bersihkanSimpanan = () => simpanan.clear();
 
@@ -247,14 +278,22 @@ export const bersihkanSimpanan = () => simpanan.clear();
  * @param {object}  params  query
  * @param {object}  opsi    { aktif, segarkanTiapMs }
  *                          `aktif: false` menunda pengambilan sampai tabnya dibuka.
- *                          `segarkanTiapMs` menyalakan pembaruan otomatis.
+ *                          `segarkanTiapMs` menyalakan pembaruan otomatis: angka,
+ *                          atau fungsi `(data) => ms` bila jedanya bergantung pada
+ *                          isi jawaban terakhir.
  */
 export const useAstaDesa = (jalur, params = {}, opsi = {}) => {
   const aktif = opsi.aktif !== false;
-  const segarkanTiapMs = opsi.segarkanTiapMs || 0;
-  const [body, setBody] = useState(null);
-  const [memuat, setMemuat] = useState(false);
+  // Salinan yang sudah ada dipakai sejak render PERTAMA. Kalau baru dibaca di
+  // efek, tiap pembukaan halaman sempat menggambar keadaan kosong lebih dulu.
+  const [awal] = useState(() => (aktif ? salinanTerakhir(jalur, params) : null));
+  const [body, setBody] = useState(awal?.nilai ?? null);
+  const [memuat, setMemuat] = useState(aktif && !awal);
   const [galat, setGalat] = useState(null);
+  const segarkanTiapMs =
+    (typeof opsi.segarkanTiapMs === 'function' ? opsi.segarkanTiapMs(body?.data ?? null) : opsi.segarkanTiapMs) || 0;
+  const berkalaRef = useRef(false);
+  berkalaRef.current = segarkanTiapMs > 0;
   // { pada, pesan, status, jedaDetik } saat yang tampil adalah salinan lama
   // karena server sedang menolak; null saat datanya hasil ambil terbaru.
   const [basi, setBasi] = useState(null);
@@ -280,7 +319,7 @@ export const useAstaDesa = (jalur, params = {}, opsi = {}) => {
       }
       return muat(jalur, paramsRef.current, cara, { bolehBasi: true })
         .then((hasil) => {
-          setBody(hasil);
+          setBody((lama) => (diam && berkalaRef.current ? pertahankanRujukan(lama, hasil) : hasil));
           if (!diam) setMemuat(false);
           // Galat lama dibersihkan begitu ada jawaban yang bisa ditampilkan,
           // termasuk pada pembaruan diam-diam: kalau tidak, pesan merah dari

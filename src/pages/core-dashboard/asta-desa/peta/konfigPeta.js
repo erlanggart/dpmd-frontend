@@ -325,3 +325,66 @@ export const fotoRumah = (detail) => {
   }
   return null;
 };
+
+/**
+ * Choropleth jumlah titik per wilayah — disalin dari Peta Sebaran super admin
+ * ASTA DESA (map.blade.php: PALET_CHOROPLETH, BASEMAP_GELAP, gayaWilayah,
+ * opasitasIsian, kelasUntuk; Map.php: ambangKelas).
+ *
+ * Dua palet karena poligonnya menumpang di atas basemap yang bisa diganti: di
+ * peta terang makin banyak makin GELAP, di citra satelit arahnya dibalik sebab
+ * langkah gelap lenyap di atas citra.
+ */
+export const NAMA_LAYER_WILAYAH = 'Sebaran per Wilayah';
+const PALET_CHOROPLETH = {
+  terang: ['#86b6ef', '#5598e7', '#2a78d6', '#1c5cab', '#0d366b'],
+  gelap: ['#184f95', '#256abf', '#3987e5', '#6da7ec', '#9ec5f4']
+};
+const BASEMAP_GELAP = ['satellite', 'hybrid'];
+
+/**
+ * Empat ambang kuantil pemisah lima kelas warna. Kuantil, bukan rentang sama
+ * rata: sebarannya sangat timpang, dan pembagian rata membuat peta nyaris satu
+ * warna. Kosong bila wilayah berdata kurang dari lima.
+ */
+export const ambangKuantil = (nilai) => {
+  const urut = nilai.filter((n) => n > 0).sort((a, b) => a - b);
+  if (urut.length < 5) return [];
+  return [...new Set([0.2, 0.4, 0.6, 0.8].map((q) => urut[Math.floor(q * (urut.length - 1))]))];
+};
+
+/** Kelas warna 0–4 untuk sejumlah titik, atau -1 bila belum ada data. */
+export const kelasDari = (jumlah, ambang) =>
+  jumlah ? Math.min(ambang.filter((a) => jumlah > a).length, 4) : -1;
+
+/**
+ * Layer choropleth. Fitur membawa `kelas` dan `terpilih`. `basemapRef` dibaca
+ * saat menggambar; panggil `layer.changed()` setelah basemap diganti.
+ *
+ * Wilayah terpilih dibuat nyaris bening (tidak nol, supaya tetap bisa diklik):
+ * begitu titik rumahnya tampil, isian warna justru menghalangi. Gaya di-cache
+ * per (kelas, terpilih, basemap) agar tidak ada objek gaya baru tiap frame.
+ */
+export const layerWilayah = (source, basemapRef, zIndex) => {
+  const simpanan = {};
+  return new VectorLayer({
+    source,
+    zIndex,
+    name: NAMA_LAYER_WILAYAH,
+    style: (fitur) => {
+      const gelap = BASEMAP_GELAP.includes(basemapRef.current);
+      const kelas = fitur.get('kelas') ?? -1;
+      const terpilih = Boolean(fitur.get('terpilih'));
+      const kunci = `${kelas}|${terpilih ? 1 : 0}|${gelap ? 1 : 0}`;
+      if (!simpanan[kunci]) {
+        const warna = kelas < 0 ? '#94a3b8' : PALET_CHOROPLETH[gelap ? 'gelap' : 'terang'][kelas];
+        simpanan[kunci] = new Style({
+          fill: new Fill({ color: warna + (terpilih ? '14' : gelap ? '66' : '8c') }),
+          // Garis batas gelap: garis putih lenyap di atas peta jalan.
+          stroke: new Stroke({ color: terpilih ? '#0f172a' : 'rgba(15,23,42,0.75)', width: terpilih ? 2.5 : 1 })
+        });
+      }
+      return simpanan[kunci];
+    }
+  });
+};

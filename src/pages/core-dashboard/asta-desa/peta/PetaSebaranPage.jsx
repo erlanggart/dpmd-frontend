@@ -32,13 +32,13 @@ import View from 'ol/View';
 import TileLayer from 'ol/layer/Tile';
 import VectorLayer from 'ol/layer/Vector';
 import VectorSource from 'ol/source/Vector';
-import Cluster from 'ol/source/Cluster';
 import Feature from 'ol/Feature';
 import Point from 'ol/geom/Point';
 import Geometry from 'ol/geom/Geometry';
 import GeoJSON from 'ol/format/GeoJSON';
+import MultiPolygon from 'ol/geom/MultiPolygon';
 import { fromLonLat, toLonLat } from 'ol/proj';
-import AnimatedCluster from 'ol-ext/layer/AnimatedCluster';
+import { containsCoordinate } from 'ol/extent';
 import SelectCluster from 'ol-ext/interaction/SelectCluster';
 import 'ol/ol.css';
 import 'ol-ext/dist/ol-ext.css';
@@ -60,6 +60,8 @@ import { Galat, Memuat } from '../ui';
 // Aset" di panel super admin pun hanya membuka halaman detail sensus.
 import { PanelDetail } from '../SensusTab';
 import PanelPeta from './PanelPeta';
+import { useGeoWilayah } from '../../../../components/landingpage/petaWilayah';
+import { ClusterHemat, LayerClusterHemat } from './klasterHemat';
 import {
   BASEMAP,
   DURASI_ANIMASI_CLUSTER,
@@ -67,10 +69,12 @@ import {
   ID_LAYER_TITIK,
   JARAK_CLUSTER,
   NAMA_LAYER_TITIK,
+  NAMA_LAYER_WILAYAH,
   PUSAT,
   ZOOM_AWAL,
   ZOOM_HOME,
   ZOOM_TITIK,
+  ambangKuantil,
   atributTitik,
   buatLayer,
   fotoRumah,
@@ -79,8 +83,10 @@ import {
   gayaHaloGps,
   gayaTitikTerpilih,
   hitungSkala,
+  kelasDari,
   layerPenandaKlik,
   layerSorot,
+  layerWilayah,
   sumberBasemap,
   urlLegenda
 } from './konfigPeta';
@@ -89,6 +95,7 @@ import {
   ambilDesa,
   ambilDetailSensus,
   ambilGeometriWilayah,
+  kunciWilayah,
   useDataPeta
 } from './usePetaSebaran';
 
@@ -202,7 +209,16 @@ const TombolKontrol = ({ judul, onClick, children, memuat = false }) => (
 );
 
 const PetaSebaranPage = ({ basePath = '/core-dashboard/asta-desa' }) => {
-  const { titik, rekapSebaran, layer, kecamatan, memuat, galat, ambil, ambilSebaranDiam } = useDataPeta();
+  // Filter. `search` dipisah dari `filter` supaya ketikan tidak memicu
+  // penghitungan ulang ribuan titik pada setiap huruf — nilainya disalin ke
+  // `filter.search` setelah 500 ms, persis seperti debounce di panel.
+  const [ketikan, setKetikan] = useState('');
+  const [filter, setFilter] = useState({ search: '', kecamatan: '', desa: '', user: '' });
+
+  // Titik hanya dimuat untuk kecamatan yang dibuka (cara Peta Sebaran ASTA
+  // DESA); tanpa pilihan, peta hanya menggambar choropleth per kecamatan.
+  const { titik, rekapSebaran, layer, kecamatan, memuat, memuatTitik, galat, ambil, ambilSebaranDiam } =
+    useDataPeta(filter.kecamatan);
 
   /**
    * Server belum selesai menyusun titiknya.
@@ -252,14 +268,9 @@ const PetaSebaranPage = ({ basePath = '/core-dashboard/asta-desa' }) => {
   const [tab, setTab] = useState('layer');
   const [basemapAktif, setBasemapAktif] = useState('osm');
   const [menuBasemap, setMenuBasemap] = useState(false);
-  const [koordinat, setKoordinat] = useState('-6.5971, 106.8456');
+  const koordinatRef = useRef(null);
   const [mencariGps, setMencariGps] = useState(false);
 
-  // Filter. `search` dipisah dari `filter` supaya ketikan tidak memicu
-  // penghitungan ulang ribuan titik pada setiap huruf — nilainya disalin ke
-  // `filter.search` setelah 500 ms, persis seperti debounce di panel.
-  const [ketikan, setKetikan] = useState('');
-  const [filter, setFilter] = useState({ search: '', kecamatan: '', desa: '', user: '' });
   const [daftarDesa, setDaftarDesa] = useState([]);
   const [idsSpasial, setIdsSpasial] = useState(null);
 
@@ -278,6 +289,11 @@ const PetaSebaranPage = ({ basePath = '/core-dashboard/asta-desa' }) => {
   const baseRef = useRef(null);
   const sumberTitikRef = useRef(null);
   const sumberSorotRef = useRef(null);
+  const sumberKecamatanRef = useRef(null);
+  const sumberDesaRef = useRef(null);
+  const lapisWilayahRef = useRef([]);
+  const basemapRef = useRef('osm');
+  const labelWilayahRef = useRef(null);
   const sumberPenandaRef = useRef(null);
   const sumberGpsRef = useRef(null);
   const petaLayerRef = useRef({}); // id layer -> layer OL
@@ -354,6 +370,25 @@ const PetaSebaranPage = ({ basePath = '/core-dashboard/asta-desa' }) => {
     ]);
   }, [layer]);
 
+  // Klik choropleth → pilih wilayah. Dipasang ulang tiap render karena penangan
+  // klik OpenLayers dipasang sekali dan harus membaca pilihan terbaru. Nama
+  // dicocokkan ke daftar penyaring supaya sama persis dengan pilihan dropdown.
+  // Mengembalikan false bila wilayahnya sudah terpilih: klik itu lalu
+  // diperlakukan seperti biasa (info titik/WMS).
+  const pilihWilayahRef = useRef(() => false);
+  pilihWilayahRef.current = (fitur) => {
+    const cocok = (daftar, nama) => daftar.find((d) => kunciWilayah(d) === kunciWilayah(nama)) || nama;
+    const nama = fitur.get('nama');
+    if (fitur.get('tingkat') === 'desa') {
+      if (kunciWilayah(nama) === kunciWilayah(filter.desa)) return false;
+      setFilter((f) => ({ ...f, desa: cocok(daftarDesa, nama) }));
+      return true;
+    }
+    if (kunciWilayah(nama) === kunciWilayah(filter.kecamatan)) return false;
+    setFilter((f) => ({ ...f, kecamatan: cocok(kecamatan, nama), desa: '' }));
+    return true;
+  };
+
   // ── Penangan klik peta ─────────────────────────────────────────────────────
   /**
    * Satu klik mengerjakan lima hal, dalam urutan yang sama dengan panel:
@@ -364,6 +399,20 @@ const PetaSebaranPage = ({ basePath = '/core-dashboard/asta-desa' }) => {
   const tanganiKlik = useCallback((evt) => {
     const map = mapRef.current;
     if (!map) return;
+
+    // 0. Klik pada choropleth (bukan pada titik) memilih wilayahnya: kecamatan,
+    //    atau desa bila kecamatannya sedang dibuka (layer desa di atas).
+    let wilayah = null;
+    let kenaTitik = false;
+    map.forEachFeatureAtPixel(evt.pixel, (feature, lyr) => {
+      if (lyr && lyr.get('name') === NAMA_LAYER_WILAYAH) {
+        if (!wilayah) wilayah = feature;
+        return false;
+      }
+      if (feature.get('features')?.length || feature.get('data')) kenaTitik = true;
+      return kenaTitik;
+    });
+    if (wilayah && !kenaTitik && pilihWilayahRef.current(wilayah)) return;
 
     // 1. Koordinat penanda — menempel ke fitur terdekat, bukan titik klik mentah.
     let koordPenanda = evt.coordinate;
@@ -399,6 +448,8 @@ const PetaSebaranPage = ({ basePath = '/core-dashboard/asta-desa' }) => {
     // 4. Fitur vektor di bawah kursor. Cluster dibongkar jadi beberapa entri.
     const kumpulan = [];
     map.forEachFeatureAtPixel(evt.pixel, (feature, lyr) => {
+      // Poligon choropleth bukan atribut yang perlu dibaca di panel info.
+      if (lyr && lyr.get('name') === NAMA_LAYER_WILAYAH) return;
       const anggota = feature.get('features');
       const namaLayer = (lyr && lyr.get('name')) || 'Fitur Spasial';
 
@@ -558,6 +609,15 @@ const PetaSebaranPage = ({ basePath = '/core-dashboard/asta-desa' }) => {
     });
     mapRef.current = map;
 
+    // Choropleth: kecamatan di bawah sorot, desa di atasnya (masih di bawah titik).
+    sumberKecamatanRef.current = new VectorSource();
+    sumberDesaRef.current = new VectorSource();
+    lapisWilayahRef.current = [
+      layerWilayah(sumberKecamatanRef.current, basemapRef, 4),
+      layerWilayah(sumberDesaRef.current, basemapRef, 11)
+    ];
+    lapisWilayahRef.current.forEach((l) => map.addLayer(l));
+
     sumberSorotRef.current = new VectorSource();
     map.addLayer(layerSorot(sumberSorotRef.current));
 
@@ -570,9 +630,9 @@ const PetaSebaranPage = ({ basePath = '/core-dashboard/asta-desa' }) => {
     // Cluster titik kuesioner.
     sumberTitikRef.current = new VectorSource();
     const simpananGaya = {};
-    const layerCluster = new AnimatedCluster({
+    const layerCluster = new LayerClusterHemat({
       name: NAMA_LAYER_TITIK,
-      source: new Cluster({ distance: JARAK_CLUSTER, source: sumberTitikRef.current }),
+      source: new ClusterHemat({ distance: JARAK_CLUSTER, source: sumberTitikRef.current, wrapX: false }),
       animationDuration: DURASI_ANIMASI_CLUSTER,
       zIndex: 100,
       style: gayaCluster(simpananGaya)
@@ -599,9 +659,33 @@ const PetaSebaranPage = ({ basePath = '/core-dashboard/asta-desa' }) => {
 
     map.on('pointermove', (e) => {
       const c = toLonLat(e.coordinate);
-      setKoordinat(`${c[1].toFixed(4)}, ${c[0].toFixed(4)}`);
-      const kena = map.hasFeatureAtPixel(map.getEventPixel(e.originalEvent));
+      if (koordinatRef.current) koordinatRef.current.textContent = `${c[1].toFixed(4)}, ${c[0].toFixed(4)}`;
+      const piksel = map.getEventPixel(e.originalEvent);
+      const kena = map.hasFeatureAtPixel(piksel);
       map.getTargetElement().style.cursor = kena ? 'pointer' : '';
+
+      // Nama + jumlah wilayah di bawah kursor; ditulis langsung ke DOM, bukan
+      // lewat state, agar gerakan tetikus tidak merender ulang halaman.
+      const label = labelWilayahRef.current;
+      if (!label) return;
+      let teks = '';
+      map.forEachFeatureAtPixel(
+        piksel,
+        (f) => {
+          teks = `${f.get('nama')} · ${Number(f.get('jumlah') || 0).toLocaleString('id-ID')} titik`;
+          return true;
+        },
+        { layerFilter: (l) => l.get('name') === NAMA_LAYER_WILAYAH }
+      );
+      label.textContent = teks;
+      label.style.display = teks ? 'block' : 'none';
+      if (teks) {
+        label.style.left = `${piksel[0]}px`;
+        label.style.top = `${piksel[1] - 14}px`;
+      }
+    });
+    map.getViewport().addEventListener('mouseleave', () => {
+      if (labelWilayahRef.current) labelWilayahRef.current.style.display = 'none';
     });
 
     map.on('singleclick', tanganiKlik);
@@ -649,14 +733,24 @@ const PetaSebaranPage = ({ basePath = '/core-dashboard/asta-desa' }) => {
   // Begitu bentuknya berbeda (penyaring berubah, data utuh menggantikan yang
   // sementara), seluruhnya dibangun ulang seperti biasa.
   const tergambarRef = useRef([]);
+  // Fitur per titik, dipakai ulang antar-penyaring. Membangun ratusan ribu Feature
+  // adalah bagian terbesar dari jeda saat penyaring diganti atau dibersihkan, dan
+  // titiknya sendiri tidak berubah. WeakMap: terbuang sendiri bersama titiknya.
+  const fiturRef = useRef(new WeakMap());
   useEffect(() => {
     const sumber = sumberTitikRef.current;
     if (!sumber) return;
-    const keFitur = (t) =>
-      new Feature({
-        geometry: new Point(fromLonLat([Number(t.lng), Number(t.lat)])),
-        data: t
-      });
+    const keFitur = (t) => {
+      let fitur = fiturRef.current.get(t);
+      if (!fitur) {
+        fitur = new Feature({
+          geometry: new Point(fromLonLat([Number(t.lng), Number(t.lat)])),
+          data: t
+        });
+        fiturRef.current.set(t, fitur);
+      }
+      return fitur;
+    };
     const lama = tergambarRef.current;
     const n = lama.length;
     const lanjutan =
@@ -667,7 +761,7 @@ const PetaSebaranPage = ({ basePath = '/core-dashboard/asta-desa' }) => {
     if (lanjutan) {
       sumber.addFeatures(titikTersaring.slice(n).map(keFitur));
     } else {
-      sumber.clear();
+      sumber.clear(true);
       sumber.addFeatures(titikTersaring.map(keFitur));
     }
     tergambarRef.current = titikTersaring;
@@ -729,10 +823,21 @@ const PetaSebaranPage = ({ basePath = '/core-dashboard/asta-desa' }) => {
           // Uji titik-dalam-polygon dilakukan pada koordinat EPSG:3857, bukan
           // pada derajat — sama dengan panel. Hasilnya bisa berbeda di tepi
           // poligon bila dikerjakan pada proyeksi yang lain.
+          //
+          // Yang diuji hanya titik yang namanya memang kecamatan/desa terpilih:
+          // yang lain toh tersingkir oleh penyaring nama di `titikTersaring`.
+          // Ditambah pemeriksaan kotak batas, ratusan ribu uji terhadap poligon
+          // ber-ribuan simpul (yang membekukan peta) tinggal beberapa ribu.
           const geom = fitur.getGeometry();
+          const kotak = geom.getExtent();
+          const kec = filter.kecamatan.trim();
+          const desa = filter.desa.trim();
           const ids = new Set();
           titik.forEach((t) => {
-            if (geom.intersectsCoordinate(fromLonLat([Number(t.lng), Number(t.lat)]))) ids.add(t.id);
+            if (String(t.kecamatan || '').trim() !== kec) return;
+            if (desa && String(t.desa || '').trim() !== desa) return;
+            const koord = fromLonLat([Number(t.lng), Number(t.lat)]);
+            if (containsCoordinate(kotak, koord) && geom.intersectsCoordinate(koord)) ids.add(t.id);
           });
           setIdsSpasial(ids);
 
@@ -752,11 +857,87 @@ const PetaSebaranPage = ({ basePath = '/core-dashboard/asta-desa' }) => {
     };
   }, [filter.kecamatan, filter.desa, titik]);
 
+  // ── Choropleth kecamatan → desa ────────────────────────────────────────────
+  //
+  // Cara Peta Sebaran ASTA DESA: pembukaan halaman hanya menggambar 40
+  // kecamatan berwarna menurut jumlah titiknya. Desa (dan titiknya) baru muncul
+  // setelah kecamatannya diklik. Geometri dari public/geo/wilayah-bogor.json
+  // (batas adm_desa ASTA DESA yang sama, ±130 KB gzip) dan diproyeksikan sekali.
+  const geo = useGeoWilayah();
+  const fiturWilayah = useMemo(() => {
+    if (!geo) return null;
+    const buat = (w, tingkat) => {
+      const f = new Feature({ geometry: new MultiPolygon(w.poli).transform('EPSG:4326', 'EPSG:3857') });
+      f.setProperties({ tingkat, nama: w.nama });
+      return f;
+    };
+    const desaPerKecamatan = new Map();
+    geo.desa.forEach((d) => {
+      const k = kunciWilayah(d.kec);
+      if (!desaPerKecamatan.has(k)) desaPerKecamatan.set(k, []);
+      desaPerKecamatan.get(k).push(buat(d, 'desa'));
+    });
+    return { kecamatan: geo.kecamatan.map((k) => buat(k, 'kecamatan')), desaPerKecamatan };
+  }, [geo]);
+
+  // Kunci kecamatan terakhir yang digambar; null = belum pernah (pas-kan peta).
+  const tingkatTerakhirRef = useRef(null);
+  useEffect(() => {
+    const sKec = sumberKecamatanRef.current;
+    const sDesa = sumberDesaRef.current;
+    const map = mapRef.current;
+    if (!sKec || !sDesa || !fiturWilayah) return;
+
+    const jumlahKec = new Map();
+    const jumlahDesa = new Map();
+    (rekapSebaran?.per_kecamatan || []).forEach((k) => {
+      const kk = kunciWilayah(k.kecamatan);
+      jumlahKec.set(kk, (jumlahKec.get(kk) || 0) + k.total);
+      (k.desa || []).forEach((d) => {
+        const kunci = `${kk}|${kunciWilayah(d.desa)}`;
+        jumlahDesa.set(kunci, (jumlahDesa.get(kunci) || 0) + d.total);
+      });
+    });
+
+    const kecDipilih = kunciWilayah(filter.kecamatan);
+    const desaDipilih = kunciWilayah(filter.desa);
+
+    const ambangKec = ambangKuantil([...jumlahKec.values()]);
+    fiturWilayah.kecamatan.forEach((f) => {
+      const k = kunciWilayah(f.get('nama'));
+      const n = jumlahKec.get(k) || 0;
+      f.setProperties({ jumlah: n, kelas: kelasDari(n, ambangKec), terpilih: k === kecDipilih });
+    });
+    if (!sKec.getFeatures().length) sKec.addFeatures(fiturWilayah.kecamatan);
+
+    // Ambang desa dihitung sekabupaten, bukan per kecamatan yang dibuka, supaya
+    // warna yang sama selalu berarti jumlah yang sama.
+    const ambangDesa = ambangKuantil([...jumlahDesa.values()]);
+    const desa = kecDipilih ? fiturWilayah.desaPerKecamatan.get(kecDipilih) || [] : [];
+    desa.forEach((f) => {
+      const k = kunciWilayah(f.get('nama'));
+      const n = jumlahDesa.get(`${kecDipilih}|${k}`) || 0;
+      f.setProperties({ jumlah: n, kelas: kelasDari(n, ambangDesa), terpilih: Boolean(desaDipilih) && k === desaDipilih });
+    });
+    sDesa.clear(true);
+    sDesa.addFeatures(desa);
+
+    // Tampilan sekabupaten saat pertama dibuka dan tiap pilihan kecamatan
+    // dilepas — bukan tiap rekap diperbarui, supaya peta tidak melompat saat
+    // pengguna sedang menggeser. Memperbesar ke kecamatan diurus efek sorot.
+    if (!kecDipilih && tingkatTerakhirRef.current !== '' && map) {
+      map.getView().fit(sKec.getExtent(), { padding: [60, 60, 60, 60] });
+    }
+    tingkatTerakhirRef.current = kecDipilih;
+  }, [fiturWilayah, rekapSebaran, filter.kecamatan, filter.desa]);
+
   // ── Aksi kontrol ───────────────────────────────────────────────────────────
   const gantiBasemap = (id) => {
     setBasemapAktif(id);
     setMenuBasemap(false);
     if (baseRef.current) baseRef.current.setSource(sumberBasemap(id));
+    basemapRef.current = id;
+    lapisWilayahRef.current.forEach((l) => l.changed());
   };
 
   const zoom = (delta) => {
@@ -894,6 +1075,11 @@ const PetaSebaranPage = ({ basePath = '/core-dashboard/asta-desa' }) => {
       <div id="peta-sebaran-asta" className="relative h-full w-full overflow-hidden bg-slate-50">
         {/* Peta */}
         <div id="peta-kanvas" ref={wadahRef} className="absolute inset-0 z-0 bg-slate-100 shadow-inner" />
+        <div
+          ref={labelWilayahRef}
+          style={{ display: 'none' }}
+          className="sembunyi-cetak pointer-events-none absolute z-30 -translate-x-1/2 -translate-y-full whitespace-nowrap rounded-lg bg-slate-900/90 px-2.5 py-1 text-[11px] font-semibold text-white shadow-lg"
+        />
 
         {/* Bilah atas: kembali, toggle panel, pencarian */}
         <header className="sembunyi-cetak pointer-events-none absolute left-6 right-6 top-6 z-40 flex items-center gap-3">
@@ -920,18 +1106,31 @@ const PetaSebaranPage = ({ basePath = '/core-dashboard/asta-desa' }) => {
               type="text"
               value={ketikan}
               onChange={(e) => setKetikan(e.target.value)}
-              placeholder="Cari aset..."
+              placeholder={filter.kecamatan ? 'Cari aset...' : 'Pilih kecamatan dulu, lalu cari…'}
               aria-label="Cari nama KK, NIK, atau enumerator"
               className="w-full border-none bg-transparent text-sm text-slate-700 outline-none placeholder:text-slate-400"
             />
           </div>
 
+          {filter.kecamatan && (
+            <button
+              type="button"
+              onClick={bersihkanFilter}
+              className="pointer-events-auto flex h-12 flex-shrink-0 items-center gap-2 rounded-2xl border border-white bg-white px-4 text-xs font-bold text-slate-700 shadow-2xl transition-all hover:text-slate-900 active:scale-95"
+            >
+              <ArrowLeft className="h-4 w-4" />
+              Semua kecamatan
+            </button>
+          )}
+
           {/* Jumlah titik yang sedang tergambar. Tidak ada di panel, tetapi
               halaman ini menyaring di sisi klien dan pembaca berhak tahu berapa
               dari keseluruhan yang sedang ia lihat. */}
           <span className="pointer-events-auto hidden flex-shrink-0 items-center gap-1.5 rounded-2xl border border-white bg-white/90 px-4 py-3 text-[10px] font-black uppercase tracking-widest text-slate-500 shadow-2xl backdrop-blur lg:flex">
-            {memuat && <Loader2 className="h-3 w-3 animate-spin" />}
-            {titikTersaring.length.toLocaleString('id-ID')} / {titik.length.toLocaleString('id-ID')} titik
+            {(memuat || memuatTitik) && <Loader2 className="h-3 w-3 animate-spin" />}
+            {filter.kecamatan
+              ? `${titikTersaring.length.toLocaleString('id-ID')} / ${titik.length.toLocaleString('id-ID')} titik`
+              : `${(rekapSebaran?.total_titik || 0).toLocaleString('id-ID')} titik · pilih kecamatan`}
           </span>
         </header>
 
@@ -953,7 +1152,7 @@ const PetaSebaranPage = ({ basePath = '/core-dashboard/asta-desa' }) => {
             daftarKecamatan={kecamatan}
             daftarDesa={daftarDesa}
             daftarEnumerator={daftarEnumerator}
-            koordinat={koordinat}
+            koordinatRef={koordinatRef}
             onBersihkanFilter={bersihkanFilter}
             onBukaDetail={setIdDetail}
           />
@@ -1165,10 +1364,32 @@ const PetaSebaranPage = ({ basePath = '/core-dashboard/asta-desa' }) => {
         </div>
 
         {/* Penanda muat pertama, di atas peta yang masih kosong. */}
-        {memuat && titik.length === 0 && (
+        {memuat && !rekapSebaran && (
           <div className="sembunyi-cetak absolute inset-0 z-20 flex items-center justify-center bg-slate-50/70 backdrop-blur-sm">
             <div className="rounded-2xl border border-slate-200 bg-white px-6 py-5 shadow-xl">
-              <Memuat pesan="Menyusun titik sebaran…" tinggi="py-2" />
+              <Memuat pesan="Memuat peta sebaran…" tinggi="py-2" />
+            </div>
+          </div>
+        )}
+
+        {/* Petunjuk tahap: kecamatan dulu, baru desa dan titiknya. */}
+        {rekapSebaran && !belumSiap && (!filter.kecamatan || (memuatTitik && titik.length === 0)) && (
+          <div className="sembunyi-cetak pointer-events-none absolute inset-x-0 bottom-4 z-20 flex justify-center px-4">
+            <div
+              role="status"
+              className="flex items-center gap-2 rounded-2xl border border-slate-200 bg-white/95 px-4 py-3 text-xs font-semibold text-slate-700 shadow-lg backdrop-blur"
+            >
+              {filter.kecamatan ? (
+                <>
+                  <Loader2 className="h-3.5 w-3.5 flex-shrink-0 animate-spin text-sky-500" />
+                  Memuat desa dan titik Kecamatan {filter.kecamatan}…
+                </>
+              ) : (
+                <>
+                  <MapPin className="h-3.5 w-3.5 flex-shrink-0 text-sky-500" />
+                  Klik kecamatan di peta untuk memuat desa dan titik lokasinya
+                </>
+              )}
             </div>
           </div>
         )}
@@ -1176,7 +1397,7 @@ const PetaSebaranPage = ({ basePath = '/core-dashboard/asta-desa' }) => {
         {/* Titik sedang dimuat bertahap: yang sudah terbaca sudah tergambar,
             sisanya menyusul. Pita kecil di bawah, bukan lapisan penuh — peta
             sudah bisa dipakai. */}
-        {belumSiap && progresPeta && titik.length > 0 && (
+        {belumSiap && progresPeta && rekapSebaran?.total_titik > 0 && (
           <div className="sembunyi-cetak pointer-events-none absolute inset-x-0 bottom-4 z-20 flex justify-center px-4">
             <div
               role="status"
@@ -1205,7 +1426,7 @@ const PetaSebaranPage = ({ basePath = '/core-dashboard/asta-desa' }) => {
             Dibedakan dari penanda muat di atas: yang ini menjelaskan sebabnya
             dan berapa lama, karena menunggu belasan menit tanpa keterangan
             persis yang membuat peta ini terbaca sebagai rusak. */}
-        {!memuat && belumSiap && titik.length === 0 && (
+        {!memuat && belumSiap && !rekapSebaran?.total_titik && (
           <div className="sembunyi-cetak absolute inset-0 z-20 flex items-center justify-center bg-slate-50/70 p-4 backdrop-blur-sm">
             <div className="max-w-md rounded-2xl border border-slate-200 bg-white px-6 py-5 text-center shadow-xl">
               <Loader2 className="mx-auto h-6 w-6 animate-spin text-slate-400" />
