@@ -56,7 +56,7 @@ const CctvShell = ({ dasar = "/dpmd" }) => {
 
 	return (
 		<div className="min-h-screen bg-slate-50">
-			<div className="mx-auto max-w-7xl space-y-5 px-4 py-6 sm:px-6 lg:px-8">
+			<div className="mx-auto max-w-[1920px] space-y-5 px-4 py-6 sm:px-6 lg:px-8">
 				<div className="rounded-xl border border-slate-200 bg-white p-5 sm:p-6">
 					<div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
 						<div className="flex min-w-0 items-start gap-3.5">

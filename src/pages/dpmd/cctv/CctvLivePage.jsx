@@ -82,16 +82,16 @@ const JEDA_DETEKSI_MS = 1500;
 // Tiap kamera dianalisis ±4–5 dtk sekali (9 kamera bergiliran di CPU). Layanan
 // dianggap diam bila tidak ada analisis/jawaban baru selama ini.
 const BASI_DETEKSI_MS = 15000;
-// Kotak dipertahankan sampai sekian analisis BERTURUT-TURUT tidak menemukan
-// orang, supaya satu bingkai yang meleset tidak membuat kotak berkedip.
-const KOSONG_UNTUK_HAPUS = 2;
+// Layanan AI sudah menahan kotak tiap orang yang terlewat satu analisis
+// (lacakOrang di cctv-ai), jadi di sini cukup hapus saat analisis kosong.
+const KOSONG_UNTUK_HAPUS = 1;
 
 /**
  * Kotak deteksi AI (orang/wajah/rebah) digambar di atas video live. Posisinya
  * dari analisis terakhir layanan AI, jadi bisa sedikit tertinggal dari gerakan
- * di video. `slice` = video ber-object-cover.
+ * di video. cocok: "slice" untuk video object-cover, "meet" untuk object-contain.
  */
-const LapisanDeteksi = ({ urlDeteksi, onTokenBasi }) => {
+const LapisanDeteksi = ({ urlDeteksi, onTokenBasi, cocok = "slice" }) => {
 	const [d, setD] = useState(null);
 	useEffect(() => {
 		if (!urlDeteksi) return undefined;
@@ -149,7 +149,7 @@ const LapisanDeteksi = ({ urlDeteksi, onTokenBasi }) => {
 		<svg
 			className="pointer-events-none absolute inset-0 h-full w-full"
 			viewBox={`0 0 ${d.lebar} ${d.tinggi}`}
-			preserveAspectRatio="xMidYMid slice"
+			preserveAspectRatio={`xMidYMid ${cocok}`}
 			aria-hidden="true"
 		>
 			{d.tanda.map(({ kotak: [x, y, w, h], label, warna }, i) => (
@@ -558,22 +558,26 @@ const PemutarBesar = ({ daftar, indeks, onGanti, onTutup }) => {
 
 			<div ref={wadahRef} className="relative flex min-h-0 flex-1 items-center justify-center bg-black px-2 pb-2 sm:px-6 sm:pb-6">
 				{mode === "mse" && (
-					<video
-						key={kamera.id}
-						ref={videoRef}
-						autoPlay
-						muted
-						playsInline
-						onLoadedData={() => setTampil(true)}
-						className="max-h-full max-w-full rounded-lg bg-black object-contain"
-					/>
+					// Pembungkus seukuran video supaya lapisan kotak (object-contain → "meet") tepat di atasnya.
+					<div className="relative h-full w-full">
+						<video
+							key={kamera.id}
+							ref={videoRef}
+							autoPlay
+							muted
+							playsInline
+							onLoadedData={() => setTampil(true)}
+							className="h-full w-full rounded-lg bg-black object-contain"
+						/>
+						{tampil && <LapisanDeteksi urlDeteksi={url?.ai_deteksi_url} cocok="meet" />}
+					</div>
 				)}
 				{mode === "potret" && url?.go2rtc_frame_url && (
 					<img
 						src={`${url.go2rtc_frame_url}&_=${detak}`}
 						alt={`Kamera ${kamera.name}`}
 						onLoad={() => setTampil(true)}
-						className="max-h-full max-w-full rounded-lg object-contain"
+						className="h-full w-full rounded-lg object-contain"
 					/>
 				)}
 				{mode === "mati" && (
