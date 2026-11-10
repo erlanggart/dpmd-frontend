@@ -5,6 +5,7 @@ import api from '../../../api';
 import toast from 'react-hot-toast';
 import ChatDrawer from '../../../components/shared/ChatDrawer';
 import DesaPageHeader from '../../../components/desa/DesaPageHeader';
+import LpjVideoLinks from './LpjVideoLinks';
 
 const MAX_FILE_SIZE = 100 * 1024 * 1024; // 100MB
 const MAX_FILES = 10;
@@ -39,6 +40,8 @@ const DesaBankeuLpjPage = ({
   judul,
   deskripsi,
   infoTambahan,
+  // true = unggah baru boleh setelah link video (Dayeuh Pajajaran & Infrastruktur) lengkap.
+  wajibVideo = false,
 }) => {
   const [lpjList, setLpjList] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -53,6 +56,8 @@ const DesaBankeuLpjPage = ({
   // baru muncul setelah DPMD memulai percakapannya.
   const [berkasBerchat, setBerkasBerchat] = useState(new Set());
   const fileInputRef = useRef(null);
+  const [videoLengkap, setVideoLengkap] = useState(false);
+  const terkunci = wajibVideo && !videoLengkap;
 
   useEffect(() => {
     fetchLpj();
@@ -147,6 +152,9 @@ const DesaBankeuLpjPage = ({
     if (status === 413 || errorCode === 'FILE_TOO_LARGE') {
       return 'Upload gagal: Ukuran file terlalu besar. Maksimal 100 MB per file. Silakan kompres file PDF terlebih dahulu.';
     }
+    if (errorCode === 'VIDEO_WAJIB') {
+      return serverMsg || 'Upload gagal: link video wajib belum lengkap.';
+    }
     if (errorCode === 'INVALID_FILE_TYPE') {
       return 'Upload gagal: Format file tidak didukung. Hanya file PDF yang diperbolehkan.';
     }
@@ -167,6 +175,7 @@ const DesaBankeuLpjPage = ({
   };
 
   const handleUpload = async () => {
+    if (terkunci) return;
     if (selectedFiles.length === 0) {
       toast.error('Pilih minimal satu file terlebih dahulu');
       return;
@@ -412,6 +421,8 @@ const DesaBankeuLpjPage = ({
           </div>
         )}
 
+        {wajibVideo && <LpjVideoLinks tahun={tahun} onLengkapChange={setVideoLengkap} />}
+
         {/* Upload Form */}
         <div className="rounded-xl border border-slate-200 bg-white p-5 sm:p-6">
           <h3 className="mb-4 flex items-center gap-2 text-base font-semibold text-slate-900">
@@ -426,11 +437,13 @@ const DesaBankeuLpjPage = ({
               <span className="ml-1 font-normal text-slate-400">(bisa pilih beberapa file sekaligus)</span>
             </label>
             <div
-              onClick={() => fileInputRef.current?.click()}
-              className={`relative cursor-pointer rounded-xl border border-dashed p-6 text-center transition-colors ${
-                selectedFiles.length > 0
-                  ? 'border-slate-400 bg-slate-50'
-                  : 'border-slate-300 hover:border-slate-400 hover:bg-slate-50'
+              onClick={() => { if (!terkunci) fileInputRef.current?.click(); }}
+              className={`relative rounded-xl border border-dashed p-6 text-center transition-colors ${
+                terkunci
+                  ? 'cursor-not-allowed border-slate-200 bg-slate-50 opacity-60'
+                  : selectedFiles.length > 0
+                  ? 'cursor-pointer border-slate-400 bg-slate-50'
+                  : 'cursor-pointer border-slate-300 hover:border-slate-400 hover:bg-slate-50'
               }`}
             >
               <input
@@ -438,6 +451,7 @@ const DesaBankeuLpjPage = ({
                 type="file"
                 accept=".pdf"
                 multiple
+                disabled={terkunci}
                 onChange={handleFileSelect}
                 className="hidden"
               />
@@ -445,6 +459,12 @@ const DesaBankeuLpjPage = ({
               <p className="text-sm font-medium text-slate-700">Klik untuk memilih file</p>
               <p className="mt-1 text-xs text-slate-400">Format PDF · maks 100 MB per file · maks {MAX_FILES} file</p>
             </div>
+
+            {terkunci && (
+              <p className="mt-2 text-xs font-medium text-amber-700">
+                Isi dan simpan link video wajib terlebih dahulu (3 Dayeuh Pajajaran & 3 Infrastruktur).
+              </p>
+            )}
 
             {/* Selected Files List */}
             {selectedFiles.length > 0 && (
@@ -496,9 +516,9 @@ const DesaBankeuLpjPage = ({
           {/* Submit Button */}
           <button
             onClick={handleUpload}
-            disabled={selectedFiles.length === 0 || uploading}
+            disabled={selectedFiles.length === 0 || uploading || terkunci}
             className={`flex w-full items-center justify-center gap-2 rounded-lg px-6 py-3 font-semibold text-white transition-colors ${
-              selectedFiles.length === 0 || uploading
+              selectedFiles.length === 0 || uploading || terkunci
                 ? 'cursor-not-allowed bg-slate-300'
                 : 'bg-slate-900 hover:bg-slate-800'
             }`}

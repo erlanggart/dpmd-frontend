@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { FileText, Download, Search, ChevronDown, ChevronUp, Eye, CheckCircle2, XCircle, BarChart3, MapPin, Loader2, ShieldCheck, ShieldX, RotateCcw, MessageSquare, Clock, X, Trash2 } from 'lucide-react';
+import { FileText, Download, Search, ChevronDown, ChevronUp, Eye, CheckCircle2, XCircle, BarChart3, MapPin, Loader2, ShieldCheck, ShieldX, RotateCcw, MessageSquare, Clock, X, Trash2, Video } from 'lucide-react';
 import api from '../../../../api';
 import toast from 'react-hot-toast';
 import Swal from 'sweetalert2';
@@ -201,6 +201,7 @@ const BankeuLpjMonitoringPage = ({
     const rows = [];
     data.kecamatan.forEach(kec => {
       kec.desa_list.forEach(desa => {
+        const startRow = rows.length;
         if (desa.has_lpj && desa.lpj_files?.length > 0) {
           desa.lpj_files.forEach((lpj, idx) => {
             rows.push({
@@ -233,6 +234,13 @@ const BankeuLpjMonitoringPage = ({
             'Diverifikasi Oleh': '-',
             'Keterangan': '-'
           });
+        }
+        // Kolom video hanya ditambah bila backend mengirim field video (TA >= 2026)
+        if ('video' in desa) {
+          for (let i = startRow; i < rows.length; i++) {
+            rows[i]['Video Dayeuh Pajajaran'] = desa.video?.dayeuh_pajajaran?.join('; ') || '-';
+            rows[i]['Video Infrastruktur'] = desa.video?.infrastruktur?.join('; ') || '-';
+          }
         }
       });
     });
@@ -328,6 +336,20 @@ const BankeuLpjMonitoringPage = ({
             </div>
           </div>
         </div>
+
+        {summary.total_video_lengkap != null && (
+          <div className="bg-white rounded-xl border border-gray-200 p-4">
+            <div className="flex items-center gap-3">
+              <div className="h-10 w-10 bg-indigo-100 rounded-lg flex items-center justify-center">
+                <Video className="h-5 w-5 text-indigo-600" />
+              </div>
+              <div>
+                <p className="text-2xl font-bold text-indigo-700">{summary.total_video_lengkap}</p>
+                <p className="text-xs text-gray-500">Video lengkap</p>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Verification Status Filters */}
@@ -538,6 +560,48 @@ const BankeuLpjMonitoringPage = ({
                             </div>
                           );
                         })}
+
+                        {/* Link video wajib desa (hanya ada untuk TA >= 2026) */}
+                        {'video' in desa && (
+                          <div className="ml-8 mt-2 rounded-lg border border-gray-200 bg-gray-50/50 p-3">
+                            <div className="flex items-center gap-2 mb-2">
+                              <p className="text-xs font-semibold text-gray-700">Link Video</p>
+                              <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold ${
+                                !desa.video ? 'bg-gray-100 text-gray-600'
+                                : desa.video.lengkap ? 'bg-green-100 text-green-700'
+                                : 'bg-amber-100 text-amber-700'
+                              }`}>
+                                {!desa.video ? 'Belum diisi' : desa.video.lengkap ? 'Lengkap' : 'Belum lengkap'}
+                              </span>
+                            </div>
+                            {desa.video && (
+                              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                {[
+                                  ['Dayeuh Pajajaran', desa.video.dayeuh_pajajaran],
+                                  ['Infrastruktur', desa.video.infrastruktur],
+                                ].map(([judul, links]) => (
+                                  <div key={judul} className="min-w-0">
+                                    <p className="text-[11px] font-medium text-gray-500 mb-1">{judul}</p>
+                                    {links?.length ? (
+                                      <ol className="space-y-0.5">
+                                        {links.map((url, i) => (
+                                          <li key={i} className="flex gap-1.5 text-[11px] min-w-0">
+                                            <span className="text-gray-400 flex-shrink-0">{i + 1}.</span>
+                                            <a href={url} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline truncate">
+                                              {url}
+                                            </a>
+                                          </li>
+                                        ))}
+                                      </ol>
+                                    ) : (
+                                      <p className="text-[11px] text-gray-400">-</p>
+                                    )}
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        )}
                       </div>
                     ))}
                   </div>

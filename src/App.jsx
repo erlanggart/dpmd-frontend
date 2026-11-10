@@ -341,7 +341,6 @@ const AparaturDesaEditPage = lazy(
 const ProfilDesaPage = lazy(() => import("./pages/desa/ProfilDesaPage"));
 const DesaSettings = lazy(() => import("./pages/desa/DesaSettings"));
 const DesaBankeuPage = lazy(() => import("./pages/desa/bankeu/DesaBankeuPage"));
-const DesaBankeuPerubahanPage = lazy(() => import("./pages/desa/bankeu-perubahan/DesaBankeuPerubahanPage"));
 const DesaBantuanProvinsiLpjPage = lazy(() => import("./pages/desa/bantuan-provinsi/DesaBantuanProvinsiLpjPage"));
 // Leadership layouts removed - all internal roles use unified DPMDStaffLayout
 const SuperadminLayout = lazy(
@@ -631,7 +630,8 @@ const DesaPermissionRoute = ({ permission, children }) => {
     );
   }
 
-  if (!hasPermission(permission)) {
+  // `permission` boleh daftar: cukup punya salah satunya
+  if (![].concat(permission).some((key) => hasPermission(key))) {
     return <Navigate to="/forbidden" replace />;
   }
 
@@ -1252,12 +1252,12 @@ function App() {
                     />
                   </Route>
 
-                  <Route element={<DesaPermissionRoute permission="bankeu" />}>
+                  <Route element={<DesaPermissionRoute permission={["bankeu", "bankeu-perubahan"]} />}>
                     <Route path="bankeu" element={<DesaBankeuPage />} />
                   </Route>
 
                   <Route element={<DesaPermissionRoute permission="bankeu-perubahan" />}>
-                    <Route path="bankeu-perubahan" element={<DesaBankeuPerubahanPage />} />
+                    <Route path="bankeu-perubahan" element={<Navigate to="/desa/bankeu?tahun=2026&tab=perubahan" replace />} />
                   </Route>
 
                   <Route element={<DesaPermissionRoute permission="bantuan-provinsi-lpj" />}>

@@ -32,7 +32,6 @@ import {
 	BarChart3,
 	DollarSign,
 	Hammer,
-	ShieldCheck,
 	CalendarOff,
 	HardDrive,
 	ClipboardList, Clapperboard,
@@ -111,7 +110,7 @@ const RAMP_4 = ['#104281', '#1c5cab', '#2a78d6', '#6da7ec'];
  */
 const KELOMPOK_MODUL = [
 	{ judul: 'Pembinaan Desa', isi: ['bumdes', 'kerjasama'] },
-	{ judul: 'Bantuan Keuangan', isi: ['bankeu', 'bankeu-perubahan', 'lpj-provinsi'] },
+	{ judul: 'Bantuan Keuangan', isi: ['bankeu', 'lpj-provinsi'] },
 	{ judul: 'Akun Operator Desa', isi: ['akun-bankeu', 'akun-bumdes', 'akun-kerjasama'] },
 	{ judul: 'Alat Bidang', isi: ['hari-libur', 'produk-hukum', 'drive', 'formulir', 'video-desa'] },
 ];
@@ -121,7 +120,6 @@ const TABS = [
 	{ id: 'bumdes', label: 'BUMDes', icon: Building2 },
 	{ id: 'kerjasama', label: 'Kerja Sama Desa', icon: Handshake },
 	{ id: 'bankeu', label: 'Bantuan Keuangan', icon: DollarSign },
-	{ id: 'bankeu-perubahan', label: 'Bankeu Perubahan', icon: DollarSign },
 	{ id: 'bantuan-provinsi-lpj', label: 'LPJ Bantuan Provinsi', icon: FileText },
 	{ id: 'hari-libur', label: 'Hari Libur', icon: CalendarOff },
 	{ id: 'activity', label: 'Aktivitas', icon: Activity },
@@ -149,6 +147,13 @@ const SUB_KERJASAMA = [
 const SUB_BANKEU_2025 = [
 	{ id: 'penyaluran', label: 'Penyaluran T1 & T2' },
 	{ id: 'proposal', label: 'Proposal Bantuan Keuangan' },
+	{ id: 'lpj', label: 'LPJ Bantuan Keuangan' },
+];
+
+const SUB_BANKEU_2026 = [
+	{ id: 'proposal', label: 'Verifikasi Proposal' },
+	{ id: 'perubahan', label: 'Bankeu Perubahan' },
+	{ id: 'penyaluran', label: 'Penyaluran T1 & T2' },
 	{ id: 'lpj', label: 'LPJ Bantuan Keuangan' },
 ];
 
@@ -272,6 +277,7 @@ const SpkedPage = () => {
 	const [activeTab, setActiveTab] = useState('overview');
 	const [bankeuYear, setBankeuYear] = useState(null); // null = layar pilih tahun
 	const [bankeu2025View, setBankeu2025View] = useState('penyaluran');
+	const [bankeu2026View, setBankeu2026View] = useState('proposal');
 	const [bankeuView, setBankeuView] = useState('berkas');
 	const [bumdesView, setBumdesView] = useState('data');
 	const [kerjasamaView, setKerjasamaView] = useState('monitor');
@@ -330,6 +336,7 @@ const SpkedPage = () => {
 		setActiveTab('bankeu');
 		setBankeuView('berkas');
 		setBankeu2025View('penyaluran');
+		setBankeu2026View('proposal');
 		setBankeuYear(tahun);
 	};
 
@@ -380,16 +387,9 @@ const SpkedPage = () => {
 		{
 			id: 'bankeu',
 			judul: 'Bantuan Keuangan',
-			deskripsi: 'Verifikasi proposal, penyaluran, dan LPJ per tahun anggaran',
+			deskripsi: 'Verifikasi proposal, Bankeu Perubahan, penyaluran, dan LPJ per tahun anggaran',
 			icon: DollarSign,
 			aksi: () => bukaBankeu(null),
-		},
-		{
-			id: 'bankeu-perubahan',
-			judul: 'Bankeu Perubahan',
-			deskripsi: 'Verifikasi akhir DPMD untuk proposal dan LPJ perubahan',
-			icon: ShieldCheck,
-			aksi: () => setActiveTab('bankeu-perubahan'),
 		},
 		{
 			id: 'lpj-provinsi',
@@ -762,21 +762,20 @@ const SpkedPage = () => {
 											{bankeu2025View === 'proposal' && <BankeuProposal2025MonitoringPage tahun={2025} />}
 											{bankeu2025View === 'lpj' && <BankeuLpjMonitoringPage tahun={2025} />}
 										</>
+									) : bankeuYear === 2026 ? (
+										<>
+											<SubTabs items={SUB_BANKEU_2026} aktif={bankeu2026View} onPilih={setBankeu2026View} />
+											{bankeu2026View === 'proposal' && <DpmdVerificationPage tahunAnggaran={2026} />}
+											{bankeu2026View === 'perubahan' && <DpmdBankeuPerubahanPage tahun={2026} />}
+											{bankeu2026View === 'penyaluran' && <BankeuDashboard />}
+											{bankeu2026View === 'lpj' && <BankeuLpjMonitoringPage tahun={2026} />}
+										</>
 									) : (
 										<DpmdVerificationPage tahunAnggaran={bankeuYear} />
 									)}
 								</PanelModul>
 							</div>
 						)}
-					</div>
-				)}
-
-				{/* ---------- Bankeu Perubahan ---------- */}
-				{activeTab === 'bankeu-perubahan' && (
-					<div key="bankeu-perubahan" className="animate-fadeIn">
-						<PanelModul>
-							<DpmdBankeuPerubahanPage />
-						</PanelModul>
 					</div>
 				)}
 

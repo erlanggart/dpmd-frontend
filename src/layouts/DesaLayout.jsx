@@ -83,18 +83,10 @@ const menuItems = [
   {
     id: "bankeu",
     section: "Bantuan Keuangan",
-    permission: "bankeu",
+    permission: ["bankeu", "bankeu-perubahan"],
     label: "Bantuan Keuangan",
     path: "/desa/bankeu",
     icon: "banknote",
-  },
-  {
-    id: "bankeu-perubahan",
-    section: "Bantuan Keuangan",
-    permission: "bankeu-perubahan",
-    label: "Bankeu Perubahan",
-    path: "/desa/bankeu-perubahan",
-    icon: "coins",
   },
   {
     id: "bantuan-provinsi-lpj",
@@ -156,7 +148,7 @@ const DesaLayout = () => {
   // Menu yang tidak diizinkan Admin Desa tidak ditampilkan sama sekali.
   const visibleMenuItems = menuItems.filter(
     (item) =>
-      (!item.permission || hasPermission(item.permission)) &&
+      (!item.permission || [].concat(item.permission).some((key) => hasPermission(key))) &&
       !(item.id === "katalog-bumdes" && katalogJadiDashboard)
   );
 

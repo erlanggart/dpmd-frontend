@@ -1,11 +1,9 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { LuCoins, LuFileText, LuRadar, LuArrowLeft, LuArrowRight, LuClipboardCheck } from 'react-icons/lu';
+import { LuFileText, LuRadar } from 'react-icons/lu';
 import api from '../../../api';
 import Swal from 'sweetalert2';
 import BankeuPerubahanProposalPage from './BankeuPerubahanProposalPage';
 import BankeuPerubahanTrackingTab from './BankeuPerubahanTrackingTab';
-import DesaBankeuPerubahanLpjPage from './DesaBankeuPerubahanLpjPage';
-import DesaPageHeader from '../../../components/desa/DesaPageHeader';
 
 // Timestamp update verifikasi terbaru pada sebuah proposal (0 jika belum ada)
 const latestUpdateTime = (p) => {
@@ -70,14 +68,14 @@ const escapeHtml = (value) => String(value || '')
   .replaceAll('"', '&quot;')
   .replaceAll("'", '&#039;');
 
-const DesaBankeuPerubahanPage = () => {
-  const [selectedYear, setSelectedYear] = useState(null);
+// Dipakai tertanam di tab "Bankeu Perubahan" pada DesaBankeuPage (TA 2026).
+const DesaBankeuPerubahanPage = ({ tahun = 2026 }) => {
   const [activeTab, setActiveTab] = useState('pengajuan');
   const [trackingUpdates, setTrackingUpdates] = useState(0);
   const revisionPopupOpen = useRef(false);
 
-  const seenKey = selectedYear ? `bankeuPerubahanTrackingSeen_${selectedYear}` : null;
-  const revisionPopupKey = selectedYear ? `bankeuPerubahanRevisionPopup_${selectedYear}` : null;
+  const seenKey = `bankeuPerubahanTrackingSeen_${tahun}`;
+  const revisionPopupKey = `bankeuPerubahanRevisionPopup_${tahun}`;
 
   // Tandai semua update tracking sebagai sudah dibaca
   const markTrackingSeen = useCallback((proposals = null) => {
@@ -168,11 +166,10 @@ const DesaBankeuPerubahanPage = () => {
 
   // Poll proposal untuk menghitung jumlah update verifikasi yang belum dibaca
   useEffect(() => {
-    if (!selectedYear) return;
     let active = true;
     const fetchUpdates = async () => {
       try {
-        const res = await api.get('/desa/bankeu-perubahan/proposals', { params: { tahun: selectedYear } });
+        const res = await api.get('/desa/bankeu-perubahan/proposals', { params: { tahun } });
         if (!active) return;
         const proposals = res.data?.data || [];
         showRevisionPopup(proposals);
@@ -189,78 +186,16 @@ const DesaBankeuPerubahanPage = () => {
     fetchUpdates();
     const id = setInterval(fetchUpdates, 30000);
     return () => { active = false; clearInterval(id); };
-  }, [selectedYear, activeTab, seenKey, markTrackingSeen, showRevisionPopup]);
-
-  // Year selection screen (Phase 1 hanya TA 2026)
-  if (!selectedYear) {
-    return (
-      <div className="space-y-5">
-        <DesaPageHeader
-          icon={LuCoins}
-          eyebrow="Bantuan Keuangan"
-          title="Bantuan Keuangan Perubahan"
-          description="Pilih tahun anggaran untuk mengelola proposal bantuan keuangan perubahan."
-        />
-
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-          <button
-            onClick={() => setSelectedYear(2026)}
-            className="group rounded-xl border border-slate-200 bg-white p-5 text-left transition hover:border-slate-300 hover:shadow-sm"
-          >
-            <div className="flex items-start justify-between gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-slate-900 text-white">
-                <LuFileText className="h-5 w-5" />
-              </div>
-              <span className="rounded-full bg-slate-100 px-2.5 py-1 text-[11px] font-semibold text-slate-600">
-                Proposal
-              </span>
-            </div>
-            <h3 className="mt-4 text-xl font-semibold tracking-tight text-slate-900">TA 2026</h3>
-            <p className="mt-1 text-sm font-medium text-slate-700">
-              Proposal Bantuan Keuangan Perubahan
-            </p>
-            <p className="mt-2 text-sm leading-6 text-slate-500">
-              Pengajuan, tracking verifikasi, dan LPJ untuk TA 2026.
-            </p>
-            <span className="mt-4 inline-flex items-center gap-1.5 text-sm font-semibold text-slate-900">
-              Buka
-              <LuArrowRight className="h-4 w-4 text-slate-400 transition group-hover:translate-x-0.5 group-hover:text-slate-900" />
-            </span>
-          </button>
-        </div>
-
-        <div className="rounded-xl border border-slate-200 bg-white p-5">
-          <h4 className="text-sm font-semibold text-slate-900">Informasi Bankeu Perubahan</h4>
-          <ul className="mt-2 space-y-1.5 text-sm leading-6 text-slate-500">
-            <li>• Alur verifikasi: <strong className="font-semibold text-slate-700">Desa → Kecamatan → DPMD</strong></li>
-            <li>• Proposal terpisah dari Bankeu reguler.</li>
-            <li>• Maksimal anggaran per proposal: Rp 1.500.000.000.</li>
-            <li>• Pastikan dokumen proposal sudah lengkap sebelum dikirim ke kecamatan.</li>
-          </ul>
-        </div>
-      </div>
-    );
-  }
+  }, [tahun, activeTab, seenKey, markTrackingSeen, showRevisionPopup]);
 
   const tabs = [
     { id: 'pengajuan', label: 'Pengajuan', icon: LuFileText, desc: 'Kelola proposal perubahan' },
     { id: 'tracking', label: 'Tracking', icon: LuRadar, desc: 'Pantau status verifikasi' },
-    { id: 'lpj', label: 'LPJ', icon: LuClipboardCheck, desc: 'Laporan pertanggungjawaban' },
   ];
 
   return (
     <div className="space-y-5">
       <div className="flex h-14 items-center gap-3 overflow-x-auto rounded-xl border border-slate-200 bg-white px-3 sm:px-4">
-        <button
-          onClick={() => { setSelectedYear(null); setActiveTab('pengajuan'); }}
-          className="flex flex-shrink-0 items-center gap-1.5 text-sm font-medium text-slate-500 transition-colors hover:text-slate-900"
-        >
-          <LuArrowLeft className="h-4 w-4" />
-          <span className="hidden sm:inline">TA {selectedYear}</span>
-        </button>
-
-        <div className="h-5 w-px flex-shrink-0 bg-slate-200" />
-
         <div className="flex items-center gap-1">
           {tabs.map(tab => (
             <button
@@ -287,9 +222,8 @@ const DesaBankeuPerubahanPage = () => {
         </div>
       </div>
 
-      {activeTab === 'pengajuan' && <BankeuPerubahanProposalPage tahun={selectedYear} />}
-      {activeTab === 'tracking' && <BankeuPerubahanTrackingTab tahun={selectedYear} />}
-      {activeTab === 'lpj' && <DesaBankeuPerubahanLpjPage tahun={selectedYear} />}
+      {activeTab === 'pengajuan' && <BankeuPerubahanProposalPage tahun={tahun} />}
+      {activeTab === 'tracking' && <BankeuPerubahanTrackingTab tahun={tahun} />}
     </div>
   );
 };
