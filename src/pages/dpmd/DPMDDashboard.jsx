@@ -34,7 +34,6 @@ import BirthdayPopup from '../../components/BirthdayPopup';
 import WeeklyAttendanceAwardPopup from '../../components/WeeklyAttendanceAwardPopup';
 import { hasPageCache, getPageCache, setPageCache } from '../../utils/pageCache';
 import { bisaPresensi } from "../../utils/presensi";
-import DaftarTugas from '../../components/tugas/DaftarTugas';
 import { useAuth } from "../../context/AuthContext";
 
 const API_CONFIG = {
@@ -782,13 +781,21 @@ const DPMDDashboard = () => {
         // Pegawai wajib presensi tetap mendapat tombol Presensi.
         ...(isAbsensiEligible ? [commonActions[1]] : []),
         jelajah,
-        {
-          icon: FolderOpen,
-          customIcon: <LottieIcon animationData={documentAnimation} className={qaIconClass} />,
-          label: 'Produk Hukum',
-          color: 'cyan',
-          onClick: () => navigate(`${basePath}/produk-hukum`)
-        }
+        role === 'sekretaris_dinas'
+          ? {
+              icon: ClipboardList,
+              customIcon: <LottieIcon animationData={documentAnimation} className={qaIconClass} />,
+              label: 'Daftar Tugas',
+              color: 'purple',
+              onClick: () => navigate('/dpmd/ruang-pribadi')
+            }
+          : {
+              icon: FolderOpen,
+              customIcon: <LottieIcon animationData={documentAnimation} className={qaIconClass} />,
+              label: 'Produk Hukum',
+              color: 'cyan',
+              onClick: () => navigate(`${basePath}/produk-hukum`)
+            }
       ];
     }
 
@@ -1157,13 +1164,6 @@ const DPMDDashboard = () => {
               </div>
             </DashSection>
           </>
-        )}
-
-        {/* Daftar tugas pribadi: khusus Sekretaris Dinas */}
-        {role === 'sekretaris_dinas' && (
-          <DashSection title="Daftar Tugas" subtitle="Pekerjaan pribadi yang perlu Anda ingat" delay={0.17}>
-            <DaftarTugas />
-          </DashSection>
         )}
 
         {/* Informasi pegawai */}

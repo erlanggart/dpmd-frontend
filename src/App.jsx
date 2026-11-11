@@ -440,6 +440,7 @@ const InformasiPage = lazy(
   () => import("./pages/dpmd/InformasiPage"),
 );
 // Smart CCTV — pengawasan kamera terpadu (dipakai rute /dpmd/cctv & /superadmin/cctv)
+const RuangPribadiPage = lazy(() => import("./pages/dpmd/RuangPribadiPage"));
 const CctvShell = lazy(() => import("./pages/dpmd/cctv/CctvShell"));
 const CctvLivePage = lazy(() => import("./pages/dpmd/cctv/CctvLivePage"));
 const CctvAlertsPage = lazy(() => import("./pages/dpmd/cctv/CctvAlertsPage"));
@@ -1323,6 +1324,7 @@ function App() {
                   <Route path="pesan" element={<MessagingPage />} />
                   <Route path="helpdesk" element={<HelpdeskPanelPage />} />
                   <Route path="bank-surat" element={<BankSuratPage />} />
+                  <Route path="ruang-pribadi" element={<RoleProtectedRoute allowedRoles={["sekretaris_dinas"]}><RuangPribadiPage /></RoleProtectedRoute>} />
 
                   {/* Smart CCTV — staf yang diberi akses superadmin (dijaga CctvShell & API) */}
                   <Route path="cctv" element={<CctvShell dasar="/dpmd" />}>
