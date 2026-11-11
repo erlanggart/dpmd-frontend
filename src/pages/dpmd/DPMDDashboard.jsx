@@ -756,6 +756,8 @@ const DPMDDashboard = () => {
     // Tur 3D kantor, ada di Aksi Cepat setiap pegawai.
     const jelajah = {
       icon: Building2,
+      // ikon lucide di kartu polos digambar putih oleh QuickActionCard, jadi beri warna sendiri
+      customIcon: <Building2 className={`${qaIconClass} text-teal-600`} strokeWidth={1.75} />,
       label: 'Jelajahi Kantor',
       color: 'teal',
       onClick: () => navigate('/jelajah')
@@ -775,15 +777,18 @@ const DPMDDashboard = () => {
           color: config.primaryColor,
           onClick: () => navigate('/dpmd/disposisi')
         },
-        ...commonActions.slice(0, 2),
+        commonActions[0],
+        // Perjadin tidak ditampilkan di sini; slotnya untuk Jelajah agar tetap 4 tombol.
+        // Pegawai wajib presensi tetap mendapat tombol Presensi.
+        ...(isAbsensiEligible ? [commonActions[1]] : []),
+        jelajah,
         {
           icon: FolderOpen,
           customIcon: <LottieIcon animationData={documentAnimation} className={qaIconClass} />,
           label: 'Produk Hukum',
           color: 'cyan',
           onClick: () => navigate(`${basePath}/produk-hukum`)
-        },
-        jelajah
+        }
       ];
     }
 
