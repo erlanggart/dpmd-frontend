@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { FileText, Download, Search, ChevronDown, ChevronUp, Eye, CheckCircle2, XCircle, BarChart3, MapPin, Loader2, ShieldCheck, ShieldX, RotateCcw, MessageSquare, Clock, X, Trash2, Video, Receipt, ClipboardCheck } from 'lucide-react';
+import { FileText, Download, Search, ChevronDown, ChevronUp, Eye, CheckCircle2, XCircle, BarChart3, MapPin, Loader2, ShieldCheck, ShieldX, RotateCcw, MessageSquare, Clock, X, Trash2, Video, Receipt } from 'lucide-react';
 import api from '../../../../api';
 import toast from 'react-hot-toast';
 import Swal from 'sweetalert2';
@@ -247,11 +247,10 @@ const BankeuLpjMonitoringPage = ({
             rows[i]['Video Infrastruktur'] = desa.video?.infrastruktur?.join('; ') || '-';
           }
         }
-        // Kolom STS & monev hanya bila backend mengirimnya (TA >= 2026)
+        // Kolom STS hanya bila backend mengirimnya (TA >= 2026)
         if ('sts' in desa) {
           for (let i = startRow; i < rows.length; i++) {
             rows[i]['Nominal STS'] = totalSts(desa);
-            rows[i]['Monev Kecamatan'] = desa.monev?.length ? 'Ada' : 'Belum';
           }
         }
       });
@@ -378,19 +377,6 @@ const BankeuLpjMonitoringPage = ({
           </div>
         )}
 
-        {summary.total_sts_desa != null && (
-          <div className="bg-white rounded-xl border border-gray-200 p-4">
-            <div className="flex items-center gap-3">
-              <div className="h-10 w-10 bg-violet-100 rounded-lg flex items-center justify-center">
-                <ClipboardCheck className="h-5 w-5 text-violet-600" />
-              </div>
-              <div>
-                <p className="text-2xl font-bold text-violet-700">{summary.total_monev_desa}</p>
-                <p className="text-xs text-gray-500">Monev diunggah kecamatan</p>
-              </div>
-            </div>
-          </div>
-        )}
       </div>
 
       {/* Verification Status Filters */}
@@ -661,31 +647,6 @@ const BankeuLpjMonitoringPage = ({
                                     <a href={getFileUrl(st.file_path)} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">
                                       {st.nama_file}
                                     </a>
-                                  </li>
-                                ))}
-                              </ul>
-                            )}
-                          </div>
-                        )}
-
-                        {/* Hasil monev yang diunggah kecamatan (TA >= 2026) */}
-                        {'monev' in desa && (
-                          <div className="ml-8 mt-2 rounded-lg border border-gray-200 bg-gray-50/50 p-3">
-                            <div className="flex items-center gap-2 mb-2">
-                              <p className="text-xs font-semibold text-gray-700">Hasil Monev Kecamatan</p>
-                              <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold ${desa.monev.length ? 'bg-violet-100 text-violet-700' : 'bg-gray-100 text-gray-600'}`}>
-                                {desa.monev.length ? `${desa.monev.length} berkas` : 'Belum diunggah'}
-                              </span>
-                            </div>
-                            {desa.monev.length > 0 && (
-                              <ul className="space-y-0.5">
-                                {desa.monev.map((m) => (
-                                  <li key={m.id} className="text-[11px]">
-                                    <a href={`${api.defaults.baseURL?.replace('/api', '') || ''}/storage/uploads/bankeu_monev/${m.file_path}`} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">
-                                      {m.nama_file}
-                                    </a>
-                                    <span className="text-gray-400"> · {tanggalId(m.created_at)}</span>
-                                    {m.keterangan && <span className="text-gray-500"> — {m.keterangan}</span>}
                                   </li>
                                 ))}
                               </ul>
