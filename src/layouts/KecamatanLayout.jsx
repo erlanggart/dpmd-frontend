@@ -26,6 +26,7 @@ import {
   Eye,
   CornerDownLeft,
   UserCog,
+  ClipboardCheck,
 } from "lucide-react";
 
 // Menu dikelompokkan menurut sifat pekerjaannya: yang harus diputuskan
@@ -48,6 +49,7 @@ const menuGroups = [
   {
     label: "Pemantauan",
     items: [
+      { id: "monev-bankeu", label: "Monev Bankeu", path: "/kecamatan/monev-bankeu", icon: ClipboardCheck, izin: "bankeu" },
       { id: "aparatur-desa", label: "Aparatur Desa", path: "/kecamatan/aparatur-desa", icon: Users, tag: "Lihat", izin: "aparatur-desa" },
       { id: "bumdes", label: "BUMDes", path: "/kecamatan/bumdes", icon: Store, tag: "Lihat", izin: "bumdes" },
     ],

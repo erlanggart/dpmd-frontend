@@ -6,6 +6,7 @@ import toast from 'react-hot-toast';
 import ChatDrawer from '../../../components/shared/ChatDrawer';
 import DesaPageHeader from '../../../components/desa/DesaPageHeader';
 import LpjVideoLinks from './LpjVideoLinks';
+import LpjSts from './LpjSts';
 
 const MAX_FILE_SIZE = 100 * 1024 * 1024; // 100MB
 const MAX_FILES = 10;
@@ -42,6 +43,8 @@ const DesaBankeuLpjPage = ({
   infoTambahan,
   // true = unggah baru boleh setelah link video (Dayeuh Pajajaran & Infrastruktur) lengkap.
   wajibVideo = false,
+  // true = tampilkan bagian bukti STS pengembalian dana (opsional, khusus LPJ Bankeu).
+  pakaiSts = false,
 }) => {
   const [lpjList, setLpjList] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -550,6 +553,8 @@ const DesaBankeuLpjPage = ({
             </p>
           </div>
         </div>
+
+        {pakaiSts && <LpjSts tahun={tahun} />}
       </div>
 
       {/* Contextual Chat Drawer */}

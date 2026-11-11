@@ -380,6 +380,9 @@ const BankeuVerificationPage = lazy(
 const BankeuVerificationDetailPage = lazy(
   () => import("./pages/kecamatan/bankeu/BankeuVerificationDetailPage"),
 );
+const KecamatanMonevBankeuPage = lazy(
+  () => import("./pages/kecamatan/bankeu/KecamatanMonevBankeuPage"),
+);
 const KecamatanTimVerifikasiPage = lazy(
   () => import("./pages/kecamatan/bankeu/KecamatanTimVerifikasiPage"),
 );
@@ -1782,6 +1785,7 @@ function App() {
                   <Route path="helpdesk" element={<HelpdeskPanelPage />} />
                   {/* Operator kecamatan hanya membuka fitur yang diberikan akun utamanya. */}
                   <Route element={<KecamatanPermissionRoute permission="bankeu" />}>
+                    <Route path="monev-bankeu" element={<KecamatanMonevBankeuPage />} />
                     <Route path="bankeu" element={<KecamatanBankeuPage />} />
                     <Route
                       path="bankeu/verifikasi/:desaId"
