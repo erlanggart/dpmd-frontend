@@ -10,7 +10,7 @@ import {
   LayoutDashboard, Building2, Briefcase, FileText, TrendingUp, Users,
   MapPin, Calendar, BarChart3, PieChart, Activity, Bell, X,
   Clock, CheckCircle, Send, Mail, Inbox, ChevronRight, User, Phone, Award,
-  FolderOpen, ClipboardList, Newspaper, Eye, Trash2, ChevronUp, ListChecks
+  FolderOpen, ClipboardList, Newspaper, Eye, Trash2, ChevronUp, ListChecks, CalendarDays
 } from 'lucide-react';
 import api from '../../api';
 import axios from 'axios';
@@ -23,9 +23,7 @@ import LottieIcon from '../../components/mobile/LottieIcon';
 import chatbotAnimation from '../../assets/lottie/chatbot.json';
 import bellAnimation from '../../assets/lottie/bell.json';
 import contactAnimation from '../../assets/lottie/contact.json';
-import briefcaseAnimation from '../../assets/lottie/briefcase.json';
 import documentAnimation from '../../assets/lottie/document.json';
-import calendarAnimation from '../../assets/lottie/calendar.json';
 import InfoCard from '../../components/mobile/InfoCard';
 import SectionHeader from '../../components/mobile/SectionHeader';
 import ActivityCard from '../../components/mobile/ActivityCard';
@@ -712,6 +710,13 @@ const DPMDDashboard = () => {
     const qaIconClass = 'w-9 h-9 sm:w-10 sm:h-10 lg:w-12 lg:h-12';
 
     // Common actions for all roles - using unified /dpmd paths
+    // Ikon modern: ikon lucide putih di ubin bergradasi (dipakai Jadwal & Daftar Tugas)
+    const ikonUbin = (Ikon, warna) => (
+      <span className={`${qaIconClass} flex items-center justify-center rounded-2xl bg-gradient-to-br text-white shadow-md ring-1 ring-white/20 ${warna}`}>
+        <Ikon className="h-1/2 w-1/2" strokeWidth={2.4} />
+      </span>
+    );
+
     const commonActions = [
       {
         icon: Mail,
@@ -721,24 +726,20 @@ const DPMDDashboard = () => {
         badge: unreadMessages || null,
         onClick: () => navigate('/dpmd/pesan')
       },
-      isAbsensiEligible
-        ? {
+      // Perjadin tidak di Aksi Cepat (tetap ada di menu samping) agar tombol tetap 4;
+      // pegawai wajib presensi tetap mendapat tombol Presensi.
+      ...(isAbsensiEligible
+        ? [{
             icon: CheckCircle,
             customIcon: <LottieIcon animationData={bellAnimation} className={qaIconClass} />,
             label: 'Presensi',
             color: 'rose',
             onClick: () => navigate('/dpmd/absensi')
-          }
-        : {
-            icon: Briefcase,
-            customIcon: <LottieIcon animationData={briefcaseAnimation} className={qaIconClass} />,
-            label: 'Perjadin',
-            color: config.primaryColor,
-            onClick: () => navigate('/dpmd/perjadin')
-          },
+          }]
+        : []),
       {
         icon: Calendar,
-        customIcon: <LottieIcon animationData={calendarAnimation} className={qaIconClass} />,
+        customIcon: ikonUbin(CalendarDays, 'from-sky-500 to-blue-700 shadow-blue-500/30'),
         label: 'Jadwal',
         color: 'blue',
         onClick: () => navigate('/dpmd/jadwal-kegiatan')
@@ -784,11 +785,7 @@ const DPMDDashboard = () => {
         role === 'sekretaris_dinas'
           ? {
               icon: ListChecks,
-              customIcon: (
-                <span className={`${qaIconClass} flex items-center justify-center rounded-2xl bg-gradient-to-br from-violet-500 to-purple-700 text-white shadow-md shadow-purple-500/30 ring-1 ring-white/20`}>
-                  <ListChecks className="h-1/2 w-1/2" strokeWidth={2.4} />
-                </span>
-              ),
+              customIcon: ikonUbin(ListChecks, 'from-violet-500 to-purple-700 shadow-purple-500/30'),
               label: 'Daftar Tugas',
               color: 'purple',
               onClick: () => navigate('/dpmd/ruang-pribadi')
