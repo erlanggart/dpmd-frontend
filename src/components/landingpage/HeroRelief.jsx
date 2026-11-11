@@ -2,6 +2,7 @@ import { Component, Suspense, lazy } from "react";
 import { Link } from "react-router-dom";
 import { KECAMATAN_DATA } from "./dataWilayah";
 import { KataNaik } from "./JudulBagian";
+import LencanaIntegritas from "./LencanaIntegritas";
 
 const ReliefBogor = lazy(() => import("./ReliefBogor"));
 
@@ -43,6 +44,9 @@ export default function HeroRelief() {
 						<Link to="/jelajah" className="px-2 py-3 text-[15px] font-semibold text-[#eef2f7]/85 underline decoration-[#e3b23c] decoration-2 underline-offset-[6px] transition hover:text-white">
 							Jelajahi kantor 3D
 						</Link>
+					</div>
+					<div data-masuk style={{ "--urut": 7 }} className="mt-12">
+						<LencanaIntegritas />
 					</div>
 				</div>
 

@@ -1,0 +1,77 @@
+/* Lencana integritas di hero: perisai 3D berputar + prisma kata yang berganti.
+ * CSS 3D murni, sengaja bukan WebGL karena relief peta sudah memakai satu konteks. */
+.integ-perisai-adegan { perspective: 500px; }
+.integ-perisai {
+	position: relative;
+	width: 100%;
+	height: 100%;
+	transform-style: preserve-3d;
+	animation: integPutar 9s linear infinite;
+}
+.integ-perisai > svg {
+	position: absolute;
+	inset: 0;
+	width: 100%;
+	height: 100%;
+	/* lapisan belakang dibalik agar centangnya tidak tampak terbalik */
+	transform: translateZ(var(--z)) rotateY(var(--balik, 0deg));
+}
+.integ-cahaya {
+	position: absolute;
+	inset: 18% 10% -12%;
+	border-radius: 9999px;
+	background: radial-gradient(closest-side, rgb(227 178 60 / 0.35), transparent);
+	filter: blur(8px);
+	animation: integDenyut 3s ease-in-out infinite;
+}
+
+.integ-prisma-adegan { perspective: 700px; height: var(--t); }
+.integ-prisma {
+	position: relative;
+	height: 100%;
+	transform-style: preserve-3d;
+	transform: translateZ(calc(var(--t) / -2));
+	animation: integGanti 12s cubic-bezier(0.7, 0, 0.2, 1) infinite;
+}
+.integ-sisi {
+	position: absolute;
+	inset: 0;
+	display: flex;
+	align-items: center;
+	gap: 0.6rem;
+	padding: 0 1rem;
+	overflow: hidden;
+	border: 1px solid rgb(238 242 247 / 0.12);
+	border-left: 3px solid #e3b23c;
+	border-radius: 0.375rem;
+	background: linear-gradient(100deg, #13203a, #0d1729 70%);
+	backface-visibility: hidden;
+	transform: rotateX(calc(var(--i) * -90deg)) translateZ(calc(var(--t) / 2));
+}
+/* kilau yang menyapu muka prisma */
+.integ-sisi::after {
+	content: "";
+	position: absolute;
+	inset: 0;
+	background: linear-gradient(100deg, transparent 35%, rgb(255 255 255 / 0.12) 50%, transparent 65%);
+	transform: translateX(-100%);
+	animation: integKilau 3s ease-in-out infinite;
+}
+
+@keyframes integPutar { to { transform: rotateY(360deg); } }
+@keyframes integDenyut { 50% { opacity: 0.45; transform: scale(0.9); } }
+@keyframes integKilau { 60%, 100% { transform: translateX(100%); } }
+@keyframes integGanti {
+	0%, 20% { transform: translateZ(calc(var(--t) / -2)) rotateX(0deg); }
+	25%, 45% { transform: translateZ(calc(var(--t) / -2)) rotateX(90deg); }
+	50%, 70% { transform: translateZ(calc(var(--t) / -2)) rotateX(180deg); }
+	75%, 95% { transform: translateZ(calc(var(--t) / -2)) rotateX(270deg); }
+	100% { transform: translateZ(calc(var(--t) / -2)) rotateX(360deg); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.integ-perisai,
+	.integ-cahaya,
+	.integ-prisma,
+	.integ-sisi::after { animation: none; }
+}
