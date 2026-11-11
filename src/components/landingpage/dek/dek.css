@@ -16,40 +16,38 @@
 	inset: 0;
 	opacity: 0;
 	visibility: hidden;
-	pointer-events: none;
+	/* Sengaja tanpa pointer-events: none. visibility:hidden sudah tak bisa diklik dan slide
+	   aktif selalu di atas (z-index 2), sedangkan mengganti pointer-events memaksa ribuan path
+	   SVG peta dihitung ulang (±15 ms per ganti, terukur 11 Nov 2026). */
 	/* menunggu di bawah, tersingkap seperti tirai dari tepi bawah */
 	transform: translate3d(0, 10%, 0);
 	clip-path: inset(22% 0 0 0 round 28px 28px 0 0);
-	will-change: opacity, transform, clip-path, filter;
+	will-change: opacity, transform, clip-path;
 	backface-visibility: hidden;
 	transition:
 		opacity 900ms cubic-bezier(0.7, 0, 0.2, 1),
 		transform 900ms cubic-bezier(0.7, 0, 0.2, 1),
 		clip-path 900ms cubic-bezier(0.7, 0, 0.2, 1),
-		filter 900ms cubic-bezier(0.7, 0, 0.2, 1),
 		visibility 0s linear 900ms;
 }
 
-/* yang ditinggalkan mundur ke belakang: mengecil dan meredup */
+/* yang ditinggalkan mundur ke belakang: mengecil dan memudar. Tanpa filter brightness:
+   slide sudah memudar ke opacity 0, sedangkan filter di layer selebar layar mahal. */
 .dek-slide.is-before {
 	transform: translate3d(0, -3%, 0) scale(0.92);
 	clip-path: inset(0 0 0 0 round 28px);
-	filter: brightness(0.45);
 }
 
 .dek-slide.is-active {
 	opacity: 1;
 	visibility: visible;
-	pointer-events: auto;
 	transform: none;
 	clip-path: inset(0 0 0 0 round 0);
-	filter: none;
 	z-index: 2;
 	transition:
 		opacity 900ms cubic-bezier(0.7, 0, 0.2, 1),
 		transform 900ms cubic-bezier(0.7, 0, 0.2, 1),
 		clip-path 900ms cubic-bezier(0.7, 0, 0.2, 1),
-		filter 900ms cubic-bezier(0.7, 0, 0.2, 1),
 		visibility 0s linear 0s;
 }
 

@@ -1,3 +1,4 @@
+import { useLayoutEffect, useRef } from "react";
 import { AbsoluteFill, Sequence, interpolate, spring, useCurrentFrame, useVideoConfig } from "remotion";
 
 /*
@@ -54,29 +55,42 @@ function Titik({ desa, kelurahan, bumdes }) {
 	const b3 = interpolate(f, [345, 385], [0, 1], { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
 	const akhir = interpolate(f, [510, 535], [1, 0], { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
 	const urutBumdes = Math.min(bumdes, desa);
+	const kanvas = useRef(null);
 
-	return (
-		<svg width={1280} height={720} style={{ position: "absolute", inset: 0 }}>
-			{Array.from({ length: total }, (_, i) => {
-				const kel = i >= desa;
-				const muncul = interpolate(f, [4 + (i / total) * 70, 16 + (i / total) * 70], [0, 1], { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
-				const cx = x0 + (i % KOLOM) * jarak + jarak / 2;
-				const cy = y0 + Math.floor(i / KOLOM) * jarak + jarak / 2;
-				const punya = !kel && i < urutBumdes;
-				const warna = b2 > 0 ? (punya ? PADI : KERTAS) : kel ? KERTAS : PADI;
-				const r = (ukuran / 2) * muncul * (1 - b3 * 0.55) * akhir;
-				const isi = b3 > 0 ? `rgba(238,242,247,${0.25 + (0.2 * ((i * 7) % 5)) / 4})` : warna;
-				return (
-					<g key={i} opacity={punya ? 1 : 1 - 0.75 * b2 * (1 - b3)}>
-						<circle cx={cx} cy={cy} r={Math.max(0, r)} fill={isi} />
-						{b3 > 0 && [0, 1, 2].map((s) => (
-							<circle key={s} cx={cx + (s - 1) * 5 * b3} cy={cy + (s === 1 ? -4 : 3) * b3} r={Math.max(0, 2.3 * b3 * akhir)} fill={s === 1 ? PADI : KERTAS} />
-						))}
-					</g>
-				);
-			})}
-		</svg>
-	);
+	// Digambar di canvas, bukan ±1.700 <circle> SVG: mengubah atribut sebanyak itu tiap
+	// frame memaksa hitung ulang style dan layout SVG, dan membuat transisi slide patah.
+	useLayoutEffect(() => {
+		const ctx = kanvas.current?.getContext("2d");
+		if (!ctx) return;
+		ctx.setTransform(SKALA, 0, 0, SKALA, 0, 0);
+		ctx.clearRect(0, 0, 1280, 720);
+		for (let i = 0; i < total; i++) {
+			const kel = i >= desa;
+			const muncul = interpolate(f, [4 + (i / total) * 70, 16 + (i / total) * 70], [0, 1], { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
+			const cx = x0 + (i % KOLOM) * jarak + jarak / 2;
+			const cy = y0 + Math.floor(i / KOLOM) * jarak + jarak / 2;
+			const punya = !kel && i < urutBumdes;
+			const warna = b2 > 0 ? (punya ? PADI : KERTAS) : kel ? KERTAS : PADI;
+			const r = (ukuran / 2) * muncul * (1 - b3 * 0.55) * akhir;
+			const isi = b3 > 0 ? `rgba(238,242,247,${0.25 + (0.2 * ((i * 7) % 5)) / 4})` : warna;
+			ctx.globalAlpha = punya ? 1 : 1 - 0.75 * b2 * (1 - b3);
+			bulatan(ctx, cx, cy, r, isi);
+			if (b3 > 0) for (let s = 0; s < 3; s++) bulatan(ctx, cx + (s - 1) * 5 * b3, cy + (s === 1 ? -4 : 3) * b3, 2.3 * b3 * akhir, s === 1 ? PADI : KERTAS);
+		}
+		ctx.globalAlpha = 1;
+	}, [f, total, desa, urutBumdes, x0, y0, b2, b3, akhir]);
+
+	return <canvas ref={kanvas} width={1280 * SKALA} height={720 * SKALA} style={{ position: "absolute", inset: 0, width: 1280, height: 720 }} />;
+}
+
+// resolusi ganda agar titik tetap tajam saat pemutar diperbesar
+const SKALA = 2;
+function bulatan(ctx, x, y, r, warna) {
+	if (r <= 0) return;
+	ctx.fillStyle = warna;
+	ctx.beginPath();
+	ctx.arc(x, y, r, 0, Math.PI * 2);
+	ctx.fill();
 }
 
 function Tutup() {

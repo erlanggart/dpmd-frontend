@@ -1,18 +1,19 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useDeferredValue, useEffect, useRef, useState } from "react";
 import { Link as RouterLink } from "react-router-dom";
 import { FiMenu, FiX } from "react-icons/fi";
-import { BarChart3, House, LayoutGrid, Map as IkonPeta, Newspaper, Phone } from "lucide-react";
+import { BarChart3, House, LayoutGrid, Map as IkonPeta, Newspaper, Phone, ShieldCheck } from "lucide-react";
 import "@fontsource-variable/plus-jakarta-sans";
 import { useScrollPosition } from "../hooks/useScrollPosition";
 import HeroRelief from "../components/landingpage/HeroRelief";
 import SectionAngka from "../components/landingpage/angka/SectionAngka";
 import FeatureSection from "../components/landingpage/FeatureSection";
 import SectionKontak from "../components/landingpage/SectionKontak";
+import SectionIntegritas from "../components/landingpage/SectionIntegritas";
 import NewsSection from "../components/landingpage/NewsSection";
 import MapSection from "../components/landingpage/MapSection";
 import InstallPWA from "../components/InstallPWA";
 import DokBagian from "../components/landingpage/dek/DokBagian";
-import { useDek } from "../components/landingpage/dek/useDek";
+import { useDek, DURASI_SLIDE } from "../components/landingpage/dek/useDek";
 import { KonteksSlide } from "../components/landingpage/dek/slideAktif";
 import "../components/landingpage/dek/dek.css";
 
@@ -32,6 +33,7 @@ const BAGIAN = [
 	{ id: "peta", label: "Peta", ikon: IkonPeta, isi: <MapSection /> },
 	{ id: "berita", label: "Berita", ikon: Newspaper, isi: <NewsSection /> },
 	{ id: "layanan", label: "Layanan", ikon: LayoutGrid, isi: <FeatureSection /> },
+	{ id: "integritas", label: "Integritas", ikon: ShieldCheck, isi: <SectionIntegritas /> },
 	{ id: "kontak", label: "Kontak", ikon: Phone, isi: <SectionKontak /> },
 ];
 
@@ -51,6 +53,9 @@ const LandingPage = () => {
 		return () => mq.removeEventListener("change", ubah);
 	}, []);
 	const { aktif, keSlide, wadahRef } = useDek(BAGIAN.length, dekAktif);
+	// Isi slide (relief 3D, peta ratusan path, video angka) mengikuti nilai tertunda:
+	// React me-render-nya bertahap di sela frame, jadi transisi slide tidak tertahan.
+	const aktifIsi = useDeferredValue(aktif);
 	const [siap, setSiap] = useState(false);
 	useEffect(() => {
 		let b;
@@ -76,14 +81,21 @@ const LandingPage = () => {
 			pasRef.current.forEach((el) => el && (el.style.zoom = ""));
 			return undefined;
 		}
-		const pas = () => pasRef.current.forEach((el) => {
+		// Hanya slide aktif: mereset zoom semua slide memaksa layout ulang seluruh dek
+		// tepat saat transisi berjalan. Slide lain diukur saat giliran didatangi.
+		const pas = () => {
+			const el = pasRef.current[aktif];
 			if (!el) return;
-			el.style.zoom = "1";
+			// scrollHeight elemen ber-zoom dilaporkan dalam ukuran aslinya, jadi tak perlu
+			// reset ke 1 (zoom diwariskan: reset = hitung ulang style seluruh isi slide).
+			// shortcut: Safari lama memakai zoom non-standar, ukurannya bisa meleset; dek hanya desktop.
 			const tinggi = el.scrollHeight, layar = el.parentElement.clientHeight;
-			el.style.zoom = tinggi > layar + 1 ? String(Math.max(0.6, layar / tinggi)) : "1";
-		});
+			const z = tinggi > layar + 1 ? Math.max(0.6, layar / tinggi).toFixed(3) : "1";
+			if (el.style.zoom !== z) el.style.zoom = z;
+		};
 		pas();
-		const t = [setTimeout(pas, 400), setTimeout(pas, 1500)];
+		// ukur ulang setelah transisi selesai (isi bisa baru termuat), bukan di tengahnya
+		const t = [setTimeout(pas, DURASI_SLIDE + 100), setTimeout(pas, 2000)];
 		let jeda;
 		const ubah = () => { clearTimeout(jeda); jeda = setTimeout(pas, 150); };
 		window.addEventListener("resize", ubah);
@@ -148,10 +160,10 @@ const LandingPage = () => {
 					const posisi = i === aktif && siap ? "is-active" : i < aktif ? "is-before" : "is-after";
 					const tersembunyi = dekAktif && i !== aktif;
 					return (
-						<section key={b.id} ref={(el) => (slideRef.current[i] = el)} id={`bagian-${b.id}`} data-bagian={b.id} className={`dek-slide scroll-mt-16 ${dekAktif ? posisi : ""}`} aria-hidden={tersembunyi} inert={tersembunyi}>
+						<section key={b.id} ref={(el) => (slideRef.current[i] = el)} id={`bagian-${b.id}`} data-bagian={b.id} className={`dek-slide scroll-mt-16 ${dekAktif ? posisi : ""}`} aria-hidden={tersembunyi}>
 							<div className="dek-isi">
 								<div className="dek-pas" ref={(el) => (pasRef.current[i] = el)}>
-									<KonteksSlide.Provider value={!dekAktif || i === aktif}>{b.isi}</KonteksSlide.Provider>
+									<KonteksSlide.Provider value={!dekAktif || i === aktifIsi}>{b.isi}</KonteksSlide.Provider>
 								</div>
 							</div>
 						</section>

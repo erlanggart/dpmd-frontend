@@ -1,77 +1,152 @@
-/* Lencana integritas di hero: perisai 3D berputar + prisma kata yang berganti.
- * CSS 3D murni, sengaja bukan WebGL karena relief peta sudah memakai satu konteks. */
-.integ-perisai-adegan { perspective: 500px; }
-.integ-perisai {
+/* Section Zona Integritas: adegan 3D CSS (perisai berlapis, cincin kartu yang mengorbit,
+ * lantai bercahaya, partikel). Sengaja bukan WebGL: relief di hero sudah memakai satu
+ * konteks, dan transform/opacity berjalan di compositor sehingga transisi dek tetap ringan.
+ * Semua animasi dihentikan saat slide tidak aktif (.ig-diam). */
+
+.ig-panggung {
 	position: relative;
-	width: 100%;
-	height: 100%;
-	transform-style: preserve-3d;
-	animation: integPutar 9s linear infinite;
+	width: 460px;
+	height: 460px;
+	perspective: 1100px;
+	perspective-origin: 50% 38%;
 }
-.integ-perisai > svg {
+@media (max-width: 560px) { .ig-panggung { zoom: 0.72; } }
+@media (max-width: 400px) { .ig-panggung { zoom: 0.62; } }
+
+.ig-dunia {
+	position: absolute;
+	inset: 0;
+	transform-style: preserve-3d;
+	transform: rotateX(calc(-10deg + var(--ry, 0deg))) rotateY(var(--rx, 0deg));
+	transition: transform 700ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* ---- lantai: piringan cahaya dan cincin yang berdenyut keluar ---- */
+.ig-lantai {
+	position: absolute;
+	left: 50%;
+	top: 50%;
+	width: 440px;
+	height: 440px;
+	margin: -220px 0 0 -220px;
+	transform-style: preserve-3d;
+	transform: translateY(150px) rotateX(90deg);
+}
+.ig-lantai > * {
+	position: absolute;
+	inset: 0;
+	border-radius: 9999px;
+}
+.ig-sinar { background: radial-gradient(closest-side, rgb(227 178 60 / 0.28), rgb(227 178 60 / 0.06) 55%, transparent); }
+.ig-gelang {
+	border: 1.5px solid rgb(227 178 60 / 0.55);
+	animation: igGelang 4.5s cubic-bezier(0.2, 0.6, 0.3, 1) infinite;
+	animation-delay: calc(var(--i) * -1.5s);
+	opacity: 0;
+}
+.ig-garis { inset: 18%; border: 1px dashed rgb(238 242 247 / 0.14); }
+
+/* ---- perisai: 14 lapis SVG di sumbu Z = tebal, berayun pelan ---- */
+.ig-perisai {
+	position: absolute;
+	left: 50%;
+	top: 50%;
+	width: 176px;
+	height: 196px;
+	margin: -110px 0 0 -88px;
+	transform-style: preserve-3d;
+	animation: igAyun 8s ease-in-out infinite alternate;
+}
+.ig-perisai > svg {
 	position: absolute;
 	inset: 0;
 	width: 100%;
 	height: 100%;
-	/* lapisan belakang dibalik agar centangnya tidak tampak terbalik */
+	overflow: visible;
 	transform: translateZ(var(--z)) rotateY(var(--balik, 0deg));
 }
-.integ-cahaya {
-	position: absolute;
-	inset: 18% 10% -12%;
-	border-radius: 9999px;
-	background: radial-gradient(closest-side, rgb(227 178 60 / 0.35), transparent);
-	filter: blur(8px);
-	animation: integDenyut 3s ease-in-out infinite;
-}
+.ig-kilau { animation: igKilau 4.2s ease-in-out infinite; }
 
-.integ-prisma-adegan { perspective: 700px; height: var(--t); }
-.integ-prisma {
-	position: relative;
-	height: 100%;
+/* ---- cincin kartu nilai yang mengorbit perisai ---- */
+.ig-cincin {
+	position: absolute;
+	left: 50%;
+	top: 50%;
 	transform-style: preserve-3d;
-	transform: translateZ(calc(var(--t) / -2));
-	animation: integGanti 12s cubic-bezier(0.7, 0, 0.2, 1) infinite;
+	animation: igOrbit 32s linear infinite;
 }
-.integ-sisi {
+.ig-kartu {
+	position: absolute;
+	width: 168px;
+	height: 70px;
+	margin: -35px 0 0 -84px;
+	transform-style: preserve-3d;
+	transform: rotateY(calc(var(--i) * 90deg)) translateZ(225px) translateY(var(--y, 0px));
+}
+.ig-muka,
+.ig-punggung {
 	position: absolute;
 	inset: 0;
-	display: flex;
-	align-items: center;
-	gap: 0.6rem;
-	padding: 0 1rem;
-	overflow: hidden;
-	border: 1px solid rgb(238 242 247 / 0.12);
-	border-left: 3px solid #e3b23c;
-	border-radius: 0.375rem;
-	background: linear-gradient(100deg, #13203a, #0d1729 70%);
+	border-radius: 12px;
 	backface-visibility: hidden;
-	transform: rotateX(calc(var(--i) * -90deg)) translateZ(calc(var(--t) / 2));
 }
-/* kilau yang menyapu muka prisma */
-.integ-sisi::after {
-	content: "";
-	position: absolute;
-	inset: 0;
-	background: linear-gradient(100deg, transparent 35%, rgb(255 255 255 / 0.12) 50%, transparent 65%);
-	transform: translateX(-100%);
-	animation: integKilau 3s ease-in-out infinite;
+.ig-muka {
+	display: flex;
+	flex-direction: column;
+	justify-content: center;
+	padding: 0 16px;
+	border: 1px solid rgb(238 242 247 / 0.14);
+	border-left: 3px solid #e3b23c;
+	background: linear-gradient(115deg, rgb(25 40 68 / 0.96), rgb(12 22 40 / 0.96) 70%);
+	box-shadow: 0 18px 40px -18px rgb(0 0 0 / 0.8), inset 0 1px 0 rgb(255 255 255 / 0.06);
+}
+.ig-punggung {
+	transform: rotateY(180deg);
+	border: 1px solid rgb(227 178 60 / 0.25);
+	background: repeating-linear-gradient(135deg, rgb(227 178 60 / 0.07) 0 6px, transparent 6px 12px), #0c1628;
 }
 
-@keyframes integPutar { to { transform: rotateY(360deg); } }
-@keyframes integDenyut { 50% { opacity: 0.45; transform: scale(0.9); } }
-@keyframes integKilau { 60%, 100% { transform: translateX(100%); } }
-@keyframes integGanti {
-	0%, 20% { transform: translateZ(calc(var(--t) / -2)) rotateX(0deg); }
-	25%, 45% { transform: translateZ(calc(var(--t) / -2)) rotateX(90deg); }
-	50%, 70% { transform: translateZ(calc(var(--t) / -2)) rotateX(180deg); }
-	75%, 95% { transform: translateZ(calc(var(--t) / -2)) rotateX(270deg); }
-	100% { transform: translateZ(calc(var(--t) / -2)) rotateX(360deg); }
+/* ---- partikel emas yang naik pelan ---- */
+.ig-partikel {
+	position: absolute;
+	left: var(--x);
+	top: var(--t);
+	width: var(--u);
+	height: var(--u);
+	border-radius: 9999px;
+	background: #f4c753;
+	box-shadow: 0 0 10px rgb(244 199 83 / 0.9);
+	opacity: 0;
+	transform: translateZ(var(--zz));
+	animation: igNaik var(--d) linear infinite;
+	animation-delay: var(--tunda);
 }
+
+@keyframes igGelang {
+	0% { transform: scale(0.25); opacity: 0; }
+	15% { opacity: 1; }
+	100% { transform: scale(1); opacity: 0; }
+}
+@keyframes igAyun {
+	from { transform: rotateY(-24deg) translateY(0); }
+	to { transform: rotateY(24deg) translateY(-10px); }
+}
+@keyframes igKilau {
+	0%, 35% { transform: translateX(-140px); }
+	75%, 100% { transform: translateX(200px); }
+}
+@keyframes igOrbit { to { transform: rotateY(-360deg); } }
+@keyframes igNaik {
+	0% { opacity: 0; transform: translateZ(var(--zz)) translateY(0); }
+	20% { opacity: 0.9; }
+	100% { opacity: 0; transform: translateZ(var(--zz)) translateY(-170px); }
+}
+
+.ig-diam * { animation-play-state: paused !important; }
 
 @media (prefers-reduced-motion: reduce) {
-	.integ-perisai,
-	.integ-cahaya,
-	.integ-prisma,
-	.integ-sisi::after { animation: none; }
+	.ig-panggung * { animation: none !important; }
+	.ig-cincin { transform: rotateY(-25deg); }
+	.ig-gelang { opacity: 0.5; transform: scale(0.7); }
+	.ig-dunia { transition: none; }
 }

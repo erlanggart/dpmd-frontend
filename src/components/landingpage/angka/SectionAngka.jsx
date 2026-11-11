@@ -3,6 +3,7 @@ import { Player } from "@remotion/player";
 import api from "../../../api";
 import JudulBagian from "../JudulBagian";
 import { useSlideAktif } from "../dek/slideAktif";
+import { DURASI_SLIDE } from "../dek/useDek";
 import BogorDalamAngka, { DURASI } from "./BogorDalamAngka";
 
 const tenang = typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -39,9 +40,11 @@ export default function SectionAngka() {
 	}, []);
 	useEffect(() => {
 		const p = pemutar.current;
-		if (!p || tenang) return;
-		if (diLayar && slideAktif) p.play();
-		else p.pause();
+		if (!p || tenang) return undefined;
+		if (!(diLayar && slideAktif)) { p.pause(); return undefined; }
+		// mulai setelah tirai slide selesai: video dan transisi berebut thread utama
+		const t = setTimeout(() => p.play(), DURASI_SLIDE);
+		return () => clearTimeout(t);
 	}, [diLayar, slideAktif]);
 
 	return (

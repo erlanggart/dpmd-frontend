@@ -9,6 +9,7 @@ import {
 import { KECAMATAN_DATA, BOGOR_BOUNDARY } from './dataWilayah';
 import { bangunGeometri, useGeoWilayah } from './petaWilayah';
 import { useSlideAktif } from './dek/slideAktif';
+import { DURASI_SLIDE } from './dek/useDek';
 import JudulBagian from './JudulBagian';
 
 // ======================= DATA =======================
@@ -82,7 +83,15 @@ const MapSection = () => {
   const [view, setView] = useState({ s: 1, x: 0, y: 0 });
   const [isDragging, setIsDragging] = useState(false);
   const { ref, inView } = useInView({ threshold: 0.1, triggerOnce: true });
-  const tampilPeta = inView && slideAktif && Boolean(geo);
+  // Ditunda satu durasi slide: masuk baru menyebar setelah tirai slide selesai, keluar
+  // disembunyikan setelah slide tak terlihat. Ratusan path SVG yang beranimasi bersamaan
+  // dengan transisi slide adalah sumber patah-patah.
+  const inginTampil = inView && slideAktif && Boolean(geo);
+  const [tampilPeta, setTampilPeta] = useState(false);
+  useEffect(() => {
+    const t = setTimeout(() => setTampilPeta(inginTampil), DURASI_SLIDE);
+    return () => clearTimeout(t);
+  }, [inginTampil]);
   const [selesaiMuncul, setSelesaiMuncul] = useState(false);
   useEffect(() => {
     if (!tampilPeta) { setSelesaiMuncul(false); return undefined; }
@@ -635,11 +644,13 @@ const MapSection = () => {
                           ))}
                         </g>
 
-                        <g filter="url(#mapGlow)">
+                        <g>
                           {/* garis luar kabupaten dari gabungan poligon kecamatan: garis tebal di
                               bawah, lalu isi menutup separuh garis di sisi dalam, jadi yang
-                              tersisa hanya tepi luar */}
-                          <g pointerEvents="none">
+                              tersisa hanya tepi luar. Bayangannya hanya di garis luar (statis) dan
+                              baru dipasang setelah kecamatan selesai muncul: filter blur di atas
+                              ratusan path yang beranimasi digambar ulang tiap frame. */}
+                          <g pointerEvents="none" filter={selesaiMuncul ? 'url(#mapGlow)' : undefined}>
                             {KEC_GEOM.map((g, i) => g.path && (
                               <path key={`luar-${i}`} d={g.path} fill="none" stroke="#d6b44a" strokeWidth="8" strokeLinejoin="round" vectorEffect="non-scaling-stroke" />
                             ))}
@@ -670,7 +681,7 @@ const MapSection = () => {
                                 onMouseLeave={() => setHoveredKec(null)}
                                 className="cursor-pointer"
                                 style={{
-                                  transition: 'opacity 0.5s ease, transform 0.9s cubic-bezier(0.16, 1, 0.3, 1)',
+                                  transition: tampilPeta ? 'opacity 0.5s ease, transform 0.9s cubic-bezier(0.16, 1, 0.3, 1)' : 'none',
                                   transitionDelay: tampilPeta && !selesaiMuncul ? `${TUNDA_KEC[i]}ms` : '0ms',
                                   transformBox: 'fill-box',
                                   transformOrigin: 'center',
