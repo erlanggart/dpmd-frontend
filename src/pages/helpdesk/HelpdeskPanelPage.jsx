@@ -501,7 +501,7 @@ function TabTiket({ awalId, saring, setSaring }) {
 	const adaSaring = Boolean(tingkat || bidang || prioritas || cari || menunggu || status !== "terbuka");
 
 	return (
-		<div className="grid items-stretch gap-4 lg:h-[calc(100vh-15rem)] lg:min-h-[560px] lg:grid-cols-[minmax(320px,380px)_1fr]">
+		<div className="grid items-stretch gap-4 lg:h-[calc(100vh-15rem)] lg:min-h-[560px] lg:grid-cols-[minmax(320px,380px)_minmax(0,1fr)]">
 			{/* ---------- Daftar ---------- */}
 			<div className={`${KARTU} flex min-h-0 flex-col overflow-hidden ${pilih ? "hidden lg:flex" : "flex"}`}>
 				<div className="space-y-2.5 border-b border-slate-200 p-3">

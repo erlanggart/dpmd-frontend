@@ -1322,7 +1322,9 @@ function App() {
                   <Route path="video-meeting" element={<VideoMeetingListPage />} />
                   <Route path="absensi" element={<AbsensiPage />} />
                   <Route path="pesan" element={<MessagingPage />} />
-                  <Route path="helpdesk" element={<HelpdeskPanelPage />} />
+                  {/* DPMDStaffLayout tidak memberi padding (tiap halaman mengurus sendiri); helpdesk
+                      dirancang untuk layout berpadding seperti KecamatanLayout */}
+                  <Route path="helpdesk" element={<div className="mx-auto w-full max-w-[96rem] p-4 sm:p-6 lg:p-8"><HelpdeskPanelPage /></div>} />
                   <Route path="bank-surat" element={<BankSuratPage />} />
                   <Route path="ruang-pribadi" element={<RoleProtectedRoute allowedRoles={["sekretaris_dinas"]}><RuangPribadiPage /></RoleProtectedRoute>} />
 
