@@ -34,6 +34,7 @@ import BirthdayPopup from '../../components/BirthdayPopup';
 import WeeklyAttendanceAwardPopup from '../../components/WeeklyAttendanceAwardPopup';
 import { hasPageCache, getPageCache, setPageCache } from '../../utils/pageCache';
 import { bisaPresensi } from "../../utils/presensi";
+import DaftarTugas from '../../components/tugas/DaftarTugas';
 import { useAuth } from "../../context/AuthContext";
 
 const API_CONFIG = {
@@ -1151,6 +1152,13 @@ const DPMDDashboard = () => {
               </div>
             </DashSection>
           </>
+        )}
+
+        {/* Daftar tugas pribadi: khusus Sekretaris Dinas */}
+        {role === 'sekretaris_dinas' && (
+          <DashSection title="Daftar Tugas" subtitle="Pekerjaan pribadi yang perlu Anda ingat" delay={0.17}>
+            <DaftarTugas />
+          </DashSection>
         )}
 
         {/* Informasi pegawai */}
