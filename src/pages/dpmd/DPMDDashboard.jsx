@@ -10,7 +10,7 @@ import {
   LayoutDashboard, Building2, Briefcase, FileText, TrendingUp, Users,
   MapPin, Calendar, BarChart3, PieChart, Activity, Bell, X,
   Clock, CheckCircle, Send, Mail, Inbox, ChevronRight, User, Phone, Award,
-  FolderOpen, ClipboardList, Newspaper, Eye, Trash2, ChevronUp
+  FolderOpen, ClipboardList, Newspaper, Eye, Trash2, ChevronUp, ListChecks
 } from 'lucide-react';
 import api from '../../api';
 import axios from 'axios';
@@ -783,8 +783,12 @@ const DPMDDashboard = () => {
         jelajah,
         role === 'sekretaris_dinas'
           ? {
-              icon: ClipboardList,
-              customIcon: <LottieIcon animationData={documentAnimation} className={qaIconClass} />,
+              icon: ListChecks,
+              customIcon: (
+                <span className={`${qaIconClass} flex items-center justify-center rounded-2xl bg-gradient-to-br from-violet-500 to-purple-700 text-white shadow-md shadow-purple-500/30 ring-1 ring-white/20`}>
+                  <ListChecks className="h-1/2 w-1/2" strokeWidth={2.4} />
+                </span>
+              ),
               label: 'Daftar Tugas',
               color: 'purple',
               onClick: () => navigate('/dpmd/ruang-pribadi')

@@ -244,7 +244,7 @@ function FormTugas({ tugas, onSelesai, onBatal }) {
   );
 }
 
-const RuangPribadi = ({ halaman = false }) => {
+const RuangPribadi = ({ halaman = false, onData }) => {
   const [tugas, setTugas] = useState(null); // null = memuat
   const [catatan, setCatatan] = useState(null); // null = memuat
   const [gagal, setGagal] = useState(false);
@@ -276,6 +276,11 @@ const RuangPribadi = ({ halaman = false }) => {
     setCatatan(data);
     return data;
   }, []);
+
+  // halaman induk (ringkasan & agenda) ikut diperbarui setiap data berubah
+  useEffect(() => {
+    if (tugas && catatan) onData?.({ tugas, catatan });
+  }, [tugas, catatan, onData]);
 
   const onTersimpan = useCallback((c) => setCatatan((d) => (d.some((x) => x.id === c.id) ? d.map((x) => (x.id === c.id ? c : x)) : [c, ...d])), []);
 
@@ -393,7 +398,7 @@ const RuangPribadi = ({ halaman = false }) => {
         <button type="button" className={kelasTombolGhost} onClick={bukaTambahCatatan}><Plus className="h-4 w-4" /> Catatan</button>
       </div>
       {daftarCatatan.length ? (
-        <div className={halaman ? 'grid gap-3 sm:grid-cols-2 lg:grid-cols-3' : 'grid gap-2 sm:grid-cols-2'}>
+        <div className={halaman ? 'grid gap-3 sm:grid-cols-2 lg:grid-cols-3' : 'grid gap-2 sm:grid-cols-2 xl:grid-cols-1 2xl:grid-cols-2'}>
           {(semuaCatatan || halaman ? daftarCatatan : daftarCatatan.slice(0, 6)).map((c) => (
             <div key={c.id} className="group relative min-w-0 rounded-lg border border-slate-200 bg-slate-50/50 p-3.5 transition hover:border-purple-200">
               <button type="button" onClick={() => bukaEditCatatan(c)} className="block min-h-14 w-full min-w-0 pr-16 text-left">
@@ -446,7 +451,7 @@ const RuangPribadi = ({ halaman = false }) => {
   const kelasTab = (nama) => `flex items-center justify-center gap-1 rounded-md text-sm font-medium transition ${tabAktif === nama ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-800'}`;
 
   return (
-    <div className="overflow-hidden rounded-xl border border-slate-200 bg-white">
+    <div className="overflow-hidden rounded-[1.75rem] border border-slate-200 bg-white shadow-sm">
       <div className="space-y-4 p-5">
         <div className="flex items-start gap-3">
           <span className="flex size-11 shrink-0 items-center justify-center rounded-lg bg-purple-50 text-purple-600"><NotebookPen className="h-5 w-5" /></span>
