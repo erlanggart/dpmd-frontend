@@ -84,6 +84,25 @@ const PanelPeringatan = ({ alerts, onNavigate }) => {
 								{a.title} <span className="ml-1 text-[11px] font-semibold opacity-70">· {kritis ? "Kritis" : "Waspada"} · sejak {sejak(a.since)} lalu</span>
 							</p>
 							<p className={`mt-0.5 text-[12.5px] ${kritis ? "text-red-800" : "text-amber-800"}`}>{a.message}</p>
+								{(a.sebab || a.dampak || a.mitigasi) && (
+									<dl className="mt-2 grid gap-x-3 gap-y-1 text-[12px] sm:grid-cols-[auto_1fr]">
+										{[
+											["Kenapa", a.sebab],
+											["Dampak", a.dampak],
+											["Sudah dilakukan otomatis", a.mitigasi],
+										]
+											.filter(([, isi]) => isi)
+											.map(([judul, isi]) => (
+												<React.Fragment key={judul}>
+													<dt className={`font-semibold ${kritis ? "text-red-900" : "text-amber-900"}`}>{judul}</dt>
+													<dd className={`m-0 ${kritis ? "text-red-800" : "text-amber-800"}`}>
+														{judul === "Sudah dilakukan otomatis" && <FiCheckCircle className="mr-1 inline h-3.5 w-3.5 align-[-2px]" />}
+														{isi}
+													</dd>
+												</React.Fragment>
+											))}
+									</dl>
+								)}
 						</div>
 						{tujuan[a.kategori] && (
 							<button

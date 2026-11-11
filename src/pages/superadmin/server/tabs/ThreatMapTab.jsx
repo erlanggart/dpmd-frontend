@@ -665,7 +665,7 @@ const ThreatMapTab = () => {
 			penyerang: data.attackers.length,
 			terlokasi: data.attackers.filter((a) => a.geo).length,
 			negara: data.countries.filter((c) => /^[A-Z]{2}$/.test(c.cc)).length,
-			diblokir: data.attackers.filter((a) => a.blocked).length,
+			diblokir:data.attackers.filter((a) => a.blocked || a.negara_diblokir).length,
 			kejadian: data.attackers.reduce((t, a) => t + a.n, 0),
 			serius: data.attackers.reduce((t, a) => t + a.critical + a.high, 0),
 		};
@@ -750,19 +750,21 @@ const ThreatMapTab = () => {
 			{/* Tengah: negara asal (kiri) · serangan masuk (kanan) */}
 			<div className="hidden flex-1 items-center justify-between gap-4 py-3 lg:flex">
 				<div className="kali-hud pointer-events-auto w-[230px] px-3 py-2.5">
-					<p className="kali-hud-label mb-2">Top origin</p>
+<p className="kali-hud-label mb-1">Top origin</p>
+					<p className="mb-2 text-[10px] leading-snug text-slate-500">Jumlah percobaan 24 jam, termasuk yang sudah ditolak.</p>
 					{!negaraTeratas.length && <p className="text-[11px] text-slate-500">Belum ada data negara.</p>}
 					{negaraTeratas.map((c) => (
 						<button key={c.cc} onClick={() => fokusNegara(c.cc)} className="group mb-1.5 block w-full text-left" title={`Arahkan globe ke ${c.country}`}>
 							<span className="flex items-center justify-between text-[11.5px]">
 								<span className="truncate text-slate-700 group-hover:text-slate-900">
-									<b className="text-slate-900">{c.cc}</b> {c.country}
-								</span>
-								<span className={c.serius ? "text-red-600" : "text-slate-500"}>{formatAngka(c.events)}</span>
+										<b className="text-slate-900">{c.cc}</b> {c.country}
+										{c.diblokir && <span className="ml-1 rounded bg-slate-200 px-1 text-[9.5px] font-bold text-slate-600">DIBLOKIR</span>}
+</span>
+<span className={c.serius && !c.diblokir ? "text-red-600" : "text-slate-500"}>{formatAngka(c.events)}</span>
 							</span>
 							<span className="mt-0.5 block h-1 bg-slate-100">
 								<span
-									className={`block h-full ${c.serius ? "bg-red-500" : "bg-emerald-500"}`}
+className={`block h-full ${c.diblokir ? "bg-slate-400" : c.serius ? "bg-red-500" : "bg-emerald-500"}`}
 									style={{ width: `${(c.events / maksNegara) * 100}%` }}
 								/>
 							</span>
@@ -812,7 +814,12 @@ const ThreatMapTab = () => {
 						</div>
 					))}
 				</div>
-				<div className="flex flex-wrap items-center justify-between gap-2 pr-28 text-[10.5px] text-slate-500">
+					{data.blocked_countries.length > 0 && (
+						<p className="kali-hud pointer-events-auto px-3 py-1.5 text-[10.5px] leading-snug text-slate-500">
+							Titik di peta = percobaan, bukan penyusup yang berhasil masuk. Blokir negara berlaku di API; halaman statis yang dilayani nginx tetap bisa dijangkau, dan permintaan pertama dari IP yang lokasinya belum diketahui bisa lolos sampai lokasinya dicari.
+						</p>
+					)}
+					<div className="flex flex-wrap items-center justify-between gap-2 pr-28 text-[10.5px] text-slate-500">
 					<p>
 						<span className="text-red-600">●</span> kritis <span className="ml-2 text-orange-600">●</span> tinggi <span className="ml-2 text-amber-600">●</span> sedang{" "}
 						<span className="ml-2 text-slate-400">✕</span> diblokir <span className="ml-2 text-emerald-600">●</span> pengunjung <span className="ml-2 text-blue-600">■</span> server
@@ -893,9 +900,10 @@ const ThreatMapTab = () => {
 									<button onClick={() => setPilih({ ...a, jenis: "attacker" })} className="flex w-full items-center gap-2 px-4 py-1.5 text-left hover:bg-slate-50">
 										<SeverityBadge severity={a.severity} />
 										<span className="w-[120px] shrink-0 truncate text-slate-800">{a.ip}</span>
-										<span className="w-6 shrink-0 text-slate-500">{a.geo?.cc || (a.private ? "LAN" : "··")}</span>
+<span className="w-6 shrink-0 text-slate-500">{a.geo?.cc || (a.private ? "LAN" : "··")}</span>
+											{a.negara_diblokir && !a.blocked && <span className="shrink-0 rounded bg-slate-200 px-1 text-[9.5px] font-bold text-slate-600">negara diblokir</span>}
 										<span className="min-w-0 flex-1 truncate text-slate-500">{a.types.join(", ")}</span>
-										<span className={a.blocked ? "text-slate-400 line-through" : "text-slate-700"}>{a.n}</span>
+<span className={a.blocked || a.negara_diblokir ? "text-slate-400 line-through" : "text-slate-700"}>{a.n}</span>
 									</button>
 								</li>
 							))}

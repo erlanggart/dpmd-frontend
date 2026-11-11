@@ -143,8 +143,11 @@ const HackerGlobe = forwardRef(function HackerGlobe(
 		const serang = attackers
 			.filter((a) => a.geo && a.geo.lat !== null && a.geo.lon !== null)
 			.map((a, i) => ({
-				...a,
-				lat: a.geo.lat,
+					...a,
+					// IP dari negara yang diblokir diperlakukan sebagai ditolak (tanpa busur/label).
+					ip_diblokir: a.blocked,
+					blocked: a.blocked || a.negara_diblokir,
+					lat: a.geo.lat,
 				lon: a.geo.lon,
 				ukuran: 2.5 + Math.min(6, Math.log10(1 + a.n) * 2.6),
 				warna: a.blocked ? WARNA.blocked : WARNA[a.severity] || WARNA.medium,
@@ -672,7 +675,7 @@ const HackerGlobe = forwardRef(function HackerGlobe(
 					{tip.jenis === "attacker" ? (
 						<>
 							<p className="font-bold text-[#f87171]">
-								{tip.data.blocked ? "■ DIBLOKIR" : "▲ PENYERANG"} · {tip.data.ip}
+{tip.data.blocked ? (tip.data.negara_diblokir && !tip.data.ip_diblokir ? "■ DITOLAK (negara diblokir)" : "■ DIBLOKIR") : "▲ PENYERANG"} · {tip.data.ip}
 							</p>
 							<p>{[tip.data.geo?.city, tip.data.geo?.country].filter(Boolean).join(", ") || "Lokasi tidak diketahui"}</p>
 							<p className="text-[#8590aa]">{tip.data.geo?.isp || "-"}</p>

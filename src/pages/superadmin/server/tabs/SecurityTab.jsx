@@ -59,6 +59,44 @@ const TINGKAT = {
 
 const SUMBER = { app: "Aplikasi", nginx: "Nginx", ssh: "SSH" };
 
+/** Panel penjelasan satu kejadian: status nyata + apa/tujuan/dampak/mitigasi/saran dari backend. */
+const PanelPenjelasan = ({ e, info }) => {
+	let status;
+	if (e.blocked) {
+		status = ["bg-emerald-50 text-emerald-800", `Kejadian ini sudah ditangani: permintaannya ditolak.${e.event_type === "honeypot" ? " IP pelaku diblokir otomatis." : ""}`];
+	} else if (e.source === "nginx") {
+		status = ["bg-amber-50 text-amber-800", "Terjadi di nginx (halaman statis), di luar jangkauan blokir aplikasi — hanya dicatat."];
+	} else if (e.source === "ssh") {
+		status = ["bg-amber-50 text-amber-800", "Terjadi di SSH, di luar jangkauan aplikasi — hanya dicatat."];
+	} else {
+		status = ["bg-slate-100 text-slate-700", "Hanya dicatat; skor ancaman IP ini bertambah dan akan diblokir otomatis bila melewati ambang."];
+	}
+	const blok = info?.apa
+		? [
+				["Apa itu", info.apa],
+				["Tujuan penyerang", info.tujuan],
+				["Dampak", info.dampak],
+				["Mitigasi otomatis", info.mitigasi],
+				["Saran", info.saran],
+			].filter(([, isi]) => isi)
+		: [];
+	return (
+		<div className="grid gap-2 rounded-xl bg-slate-50 p-4 text-[12.5px] leading-relaxed text-slate-700 sm:grid-cols-2">
+			<p className={`rounded-lg px-3 py-2 font-semibold sm:col-span-2 ${status[0]}`}>{status[1]}</p>
+			{blok.length ? (
+				blok.map(([judul, isi]) => (
+					<div key={judul}>
+						<p className="text-[11px] font-bold uppercase tracking-wide text-slate-500">{judul}</p>
+						<p>{isi}</p>
+					</div>
+				))
+			) : (
+				<p className="sm:col-span-2">{info?.info}</p>
+			)}
+		</div>
+	);
+};
+
 const DURASI = [
 	{ value: 60, label: "1 jam" },
 	{ value: 360, label: "6 jam" },
@@ -139,7 +177,8 @@ const SecurityTab = () => {
 	const [galat, setGalat] = useState(null);
 	const [blokir, setBlokir] = useState([]);
 	const [ipForm, setIpForm] = useState("");
-	const [kejadian, setKejadian] = useState(null);
+	const [bukaPenjelasan, setBukaPenjelasan] = useState(null);
+const [kejadian, setKejadian] = useState(null);
 	const [filter, setFilter] = useState({ type: "", severity: "", source: "", ip: "", q: "", page: 1 });
 
 	const muatRingkas = useCallback(async () => {
@@ -341,7 +380,9 @@ const SecurityTab = () => {
 										<div className="flex items-center justify-between gap-2">
 											<span className="flex items-center gap-2">
 												<SeverityBadge severity={x.severity} />
-												<span className="text-sm font-semibold text-slate-800">{x.label || x.event_type}</span>
+<span className="text-sm font-semibold text-slate-800" title={ringkas.event_types?.[x.event_type]?.apa || x.info}>
+														{x.label || x.event_type}
+													</span>
 											</span>
 											<span className="text-sm font-extrabold text-slate-800">{formatAngka(x.n)}</span>
 										</div>
@@ -587,16 +628,20 @@ const SecurityTab = () => {
 								</tr>
 							</thead>
 							<tbody className="divide-y divide-slate-100">
-								{kejadian.data.map((e) => (
-									<tr key={e.id} className="align-top hover:bg-slate-50/60">
+									{kejadian.data.map((e) => (
+										<React.Fragment key={e.id}>
+										<tr className="align-top hover:bg-slate-50/60">
 										<td className="whitespace-nowrap px-4 py-2 text-xs text-slate-600">{formatWaktu(e.created_at, { second: "2-digit" })}</td>
 										<td className="px-3 py-2">
 											<SeverityBadge severity={e.severity} />
 										</td>
 										<td className="px-3 py-2 text-xs font-semibold text-slate-700">
 											{e.label}
-											<p className="font-normal text-slate-400">{SUMBER[e.source] || e.source}</p>
-										</td>
+												<p className="font-normal text-slate-400">{SUMBER[e.source] || e.source}</p>
+												<button onClick={() => setBukaPenjelasan(bukaPenjelasan === e.id ? null : e.id)} className="mt-0.5 text-[11px] font-normal text-blue-600 hover:underline">
+													Penjelasan
+												</button>
+</td>
 										<td className="px-3 py-2">
 											<button onClick={() => setF("ip", e.ip_address)} className="font-mono text-xs font-semibold text-blue-600 hover:underline">
 												{e.ip_address}
@@ -624,11 +669,19 @@ const SecurityTab = () => {
 												<span className="rounded bg-red-100 px-1.5 py-0.5 text-[11px] font-bold text-red-700">Ditolak</span>
 											) : (
 												<span className="rounded bg-slate-100 px-1.5 py-0.5 text-[11px] font-semibold text-slate-600">Dicatat</span>
-											)}
-										</td>
-									</tr>
-								))}
-							</tbody>
+												)}
+											</td>
+										</tr>
+										{bukaPenjelasan === e.id && (
+											<tr>
+												<td colSpan={6} className="px-4 pb-3">
+													<PanelPenjelasan e={e} info={ringkas.event_types?.[e.event_type]} />
+												</td>
+											</tr>
+										)}
+										</React.Fragment>
+									))}
+								</tbody>
 						</table>
 					</div>
 				)}

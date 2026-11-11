@@ -9,7 +9,7 @@
 // Tema diterapkan lewat kelas .kali-ops (lihat kali.css) yang memetakan ulang
 // skala warna Tailwind, jadi tab-tab lama ikut bertema tanpa disunting.
 
-import React, { lazy, Suspense, useCallback, useEffect, useState } from "react";
+import React, { lazy, Suspense, useCallback, useEffect, useRef, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import {
 	FiActivity,
@@ -144,6 +144,43 @@ const ServerManagementPage = () => {
 		[params, setParams],
 	);
 
+	// Tab bar lebih lebar dari layar: roda mouse (vertikal) digeser jadi horizontal
+	// dan bar bisa diseret. Tanpa ini hanya touchpad yang bisa menggesernya.
+	const navTab = useRef(null);
+	const seret = useRef(null);
+	useEffect(() => {
+		const el = navTab.current;
+		if (!el) return undefined;
+		const roda = (e) => {
+			if (el.scrollWidth <= el.clientWidth || Math.abs(e.deltaY) <= Math.abs(e.deltaX)) return;
+			e.preventDefault();
+			el.scrollLeft += e.deltaY;
+		};
+		el.addEventListener("wheel", roda, { passive: false });
+		return () => el.removeEventListener("wheel", roda);
+	}, []);
+	const mulaiSeret = (e) => {
+		if (e.pointerType !== "mouse" || e.button !== 0) return;
+		seret.current = { x: e.clientX, kiri: navTab.current.scrollLeft, geser: false };
+	};
+	const gerakSeret = (e) => {
+		const s = seret.current;
+		if (!s) return;
+		const dx = e.clientX - s.x;
+		if (Math.abs(dx) > 5) s.geser = true;
+		if (s.geser) navTab.current.scrollLeft = s.kiri - dx;
+	};
+	const akhiriSeret = () => {
+		const s = seret.current;
+		seret.current = null;
+		// klik sesudah menyeret jangan ikut membuka tab
+		if (s?.geser) navTab.current.addEventListener("click", (ev) => ev.stopPropagation(), { capture: true, once: true });
+	};
+	// tab aktif selalu terlihat (mis. setelah Alt+angka atau membuka lewat URL)
+	useEffect(() => {
+		navTab.current?.querySelector('[aria-current="page"]')?.scrollIntoView({ block: "nearest", inline: "nearest" });
+	}, [tab]);
+
 	// Alt+1…9 → pindah tab (urutan TABS). Event.code dipakai supaya tetap
 	// jalan di tata letak keyboard yang mengubah Alt+angka menjadi simbol.
 	useEffect(() => {
@@ -231,7 +268,15 @@ const ServerManagementPage = () => {
 					</div>
 
 					{/* Tab — dikelompokkan supaya mudah dicari */}
-					<nav className="relative flex items-stretch overflow-x-auto border-t border-slate-200 bg-slate-50 px-2 [scrollbar-width:none]" aria-label="Bagian Manajemen Server">
+					<nav
+						ref={navTab}
+						onPointerDown={mulaiSeret}
+						onPointerMove={gerakSeret}
+						onPointerUp={akhiriSeret}
+						onPointerLeave={akhiriSeret}
+						className="relative flex select-none items-stretch overflow-x-auto border-t border-slate-200 bg-slate-50 px-2 [scrollbar-width:none]"
+						aria-label="Bagian Manajemen Server"
+					>
 						{TABS.map((t, i) => {
 							const Icon = t.icon;
 							const aktif = t.key === tab;
