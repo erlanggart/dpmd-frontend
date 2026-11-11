@@ -33,6 +33,11 @@ const formatRupiah = (value) => {
   return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(value);
 };
 
+// Persentase desa dipotong ke 1 desimal, tidak dibulatkan: 415 dari 416 desa harus
+// tampil 99,7%, bukan 100% (sama dengan angka di halaman SPKED).
+const persenDesa = (bagian, total) => (total > 0 ? Math.floor(((bagian || 0) * 1000) / total) / 10 : 0);
+const tampilPersen = (p) => p.toLocaleString('id-ID', { maximumFractionDigits: 1 });
+
 const formatRupiahShort = (value) => {
   if (!value || value === 0) return 'Rp 0';
   if (value >= 1e12) return `Rp ${(value / 1e12).toFixed(2)} T`;
@@ -98,7 +103,7 @@ const scaleIn = {
 // ═══════════════════════════════════════════════════════════════════
 const HeroSection = React.memo(({ activeYear, setActiveYear, totalAnggaran, totalProposals, summary, anggaranFinal }) => {
   const [formatMode, setFormatMode] = useState('short');
-  const desaPct = summary?.total_desa ? Math.round((summary.desa_mengusulkan / summary.total_desa) * 100) : 0;
+  const desaPct = persenDesa(summary?.desa_mengusulkan, summary?.total_desa);
 
   return (
     <div className="relative overflow-hidden bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
@@ -208,7 +213,7 @@ const HeroSection = React.memo(({ activeYear, setActiveYear, totalAnggaran, tota
                 <div className="w-10 h-10 rounded-xl bg-amber-500/20 flex items-center justify-center">
                   <Users className="w-5 h-5 text-amber-400" />
                 </div>
-                <span className="text-xs font-bold text-amber-400 bg-amber-500/20 px-2 py-1 rounded-lg">{desaPct}%</span>
+                <span className="text-xs font-bold text-amber-400 bg-amber-500/20 px-2 py-1 rounded-lg">{tampilPersen(desaPct)}%</span>
               </div>
               <p className="text-3xl lg:text-4xl font-black text-white">
                 <AnimatedNumber value={summary?.desa_mengusulkan || 0} />
@@ -635,7 +640,7 @@ const DesaParticipation = React.memo(({ summary }) => {
   if (!summary) return null;
 
   const { total_desa, desa_mengusulkan, desa_belum_mengusulkan } = summary;
-  const pct = total_desa > 0 ? Math.round((desa_mengusulkan / total_desa) * 100) : 0;
+  const pct = persenDesa(desa_mengusulkan, total_desa);
   const circumference = 2 * Math.PI * 42;
   const strokeDashoffset = circumference - (pct / 100) * circumference;
 
@@ -688,7 +693,7 @@ const DesaParticipation = React.memo(({ summary }) => {
               transition={{ delay: 0.5, type: 'spring', stiffness: 200 }}
               className="text-3xl font-black text-slate-900"
             >
-              {pct}%
+              {tampilPersen(pct)}%
             </motion.p>
           </div>
         </div>
