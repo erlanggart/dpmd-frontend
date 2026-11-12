@@ -95,9 +95,10 @@ async function handlePushNotification(notificationData) {
 				icon: icon || '/logo-dpmd.png',
 				badge: badge || '/logo-dpmd.png',
 				data: data || {},
-				tag: data?.id || 'notification-' + Date.now(),
+				// pengingat tugas: satu notifikasi yang diganti tiap putaran tapi tetap berbunyi lagi
+				tag: data?.type === 'tugas_pribadi' ? 'tugas_pribadi' : data?.id || 'notification-' + Date.now(),
 				requireInteraction: true,
-				renotify: false,
+				renotify: data?.type === 'tugas_pribadi',
 				silent: false,
 				actions: notificationData.actions || []
 			},

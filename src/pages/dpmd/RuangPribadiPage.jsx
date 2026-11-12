@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, CalendarCheck, ChevronLeft, ChevronRight, CircleAlert, Circle, CheckCircle2, FileText, ListChecks } from 'lucide-react';
+import { AnimatePresence, MotionConfig, motion, useMotionValue, useSpring, useTransform } from 'framer-motion';
 import { useAuth } from '../../context/AuthContext';
 import RuangPribadi from '../../components/tugas/RuangPribadi';
 
@@ -17,18 +18,44 @@ const formatPenuh = new Intl.DateTimeFormat('id-ID', { weekday: 'long', day: 'nu
 const formatPendek = new Intl.DateTimeFormat('id-ID', { day: 'numeric', month: 'short', timeZone: 'UTC' });
 const formatHari = new Intl.DateTimeFormat('id-ID', { weekday: 'short', timeZone: 'UTC' });
 
+// masuk bertahap: wadah mengatur jeda, tiap anak naik sambil memudar masuk
+const wadah = { hidden: {}, show: { transition: { staggerChildren: 0.06 } } };
+const anak = { hidden: { opacity: 0, y: 12 }, show: { opacity: 1, y: 0 } };
+
+// kartu miring 3D mengikuti pointer mouse (sentuhan/pena tidak memicu)
+function Kartu3D({ children, className }) {
+  const x = useMotionValue(0);
+  const y = useMotionValue(0);
+  const sx = useSpring(x, { stiffness: 300, damping: 25 });
+  const sy = useSpring(y, { stiffness: 300, damping: 25 });
+  const rotateX = useTransform(sy, [-0.5, 0.5], [8, -8]);
+  const rotateY = useTransform(sx, [-0.5, 0.5], [-8, 8]);
+  const gerak = (e) => {
+    if (e.pointerType !== 'mouse') return;
+    const r = e.currentTarget.getBoundingClientRect();
+    x.set((e.clientX - r.left) / r.width - 0.5);
+    y.set((e.clientY - r.top) / r.height - 0.5);
+  };
+  const lepas = () => { x.set(0); y.set(0); };
+  return (
+    <motion.div onPointerMove={gerak} onPointerLeave={lepas} style={{ rotateX, rotateY, transformPerspective: 900, transformStyle: 'preserve-3d' }} className={className}>
+      {children}
+    </motion.div>
+  );
+}
+
 function KartuStatistik({ judul, nilai, keterangan, ikon: Ikon, nada = 'text-purple-600 bg-purple-50' }) {
   return (
-    <div className="h-full rounded-2xl border border-slate-200 bg-white px-4 py-5 shadow-sm sm:px-5">
-      <div className="flex flex-col-reverse items-start gap-3 sm:flex-row sm:justify-between">
+    <Kartu3D className="h-full rounded-2xl border border-slate-200 bg-white px-4 py-5 shadow-sm transition-shadow hover:shadow-md sm:px-5">
+      <div className="flex flex-col-reverse items-start gap-3 sm:flex-row sm:justify-between" style={{ transformStyle: 'preserve-3d' }}>
         <div className="min-w-0 space-y-1.5">
           <p className="text-[13px] font-medium text-slate-500">{judul}</p>
-          <p className="text-2xl font-semibold tabular-nums tracking-tight text-slate-900 sm:text-3xl">{nilai ?? '–'}</p>
+          <motion.p key={nilai} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} className="text-2xl font-semibold tabular-nums tracking-tight text-slate-900 sm:text-3xl">{nilai ?? '–'}</motion.p>
           <p className="text-xs text-slate-400">{keterangan}</p>
         </div>
-        <span className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-lg ${nada}`}><Ikon className="h-5 w-5" /></span>
+        <motion.span style={{ translateZ: 24 }} className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-lg ${nada}`}><Ikon className="h-5 w-5" /></motion.span>
       </div>
-    </div>
+    </Kartu3D>
   );
 }
 
@@ -66,19 +93,22 @@ function AgendaPengingat({ tugas }) {
           const dipilih = iso === terpilih;
           const hari = iso === kini;
           return (
-            <button key={iso} type="button" aria-pressed={dipilih} onClick={() => setPilih(iso)}
+            <motion.button key={iso} type="button" aria-pressed={dipilih} onClick={() => setPilih(iso)} whileHover={{ y: -2 }} whileTap={{ scale: 0.94 }}
               aria-label={`${formatPenuh.format(tgl)}${hari ? ', hari ini' : ''}${ada ? ', ada pengingat' : ''}`}
-              className={`flex min-w-0 flex-col items-center gap-1 rounded-lg border py-2.5 transition-colors sm:py-3 ${dipilih ? 'border-purple-600 bg-purple-600 text-white' : hari ? 'border-purple-300 bg-white text-purple-700' : 'border-transparent bg-white text-slate-800 hover:border-slate-200 hover:bg-slate-50'}`}>
-              <span className={`text-xs font-medium ${dipilih ? 'text-white/80' : 'text-slate-500'}`}>{formatHari.format(tgl)}</span>
-              <span className="text-sm font-semibold tabular-nums sm:text-base">{tgl.getUTCDate()}</span>
-              <span className={`h-1 w-1 rounded-full ${ada ? (dipilih ? 'bg-white' : 'bg-purple-600') : 'bg-transparent'}`} aria-hidden="true" />
-            </button>
+              className={`relative flex min-w-0 flex-col items-center gap-1 rounded-xl border py-2.5 transition-colors sm:py-3 ${dipilih ? 'border-purple-600 text-white' : hari ? 'border-purple-300 bg-white text-purple-700' : 'border-transparent bg-white text-slate-800 hover:border-slate-200 hover:bg-slate-50'}`}>
+              {dipilih && <motion.span layoutId="agenda-pil" transition={{ type: 'spring', stiffness: 500, damping: 35 }} className="absolute inset-0 rounded-xl bg-purple-600" />}
+              <span className={`relative z-10 text-xs font-medium ${dipilih ? 'text-white/80' : 'text-slate-500'}`}>{formatHari.format(tgl)}</span>
+              <span className="relative z-10 text-sm font-semibold tabular-nums sm:text-base">{tgl.getUTCDate()}</span>
+              <span className={`relative z-10 h-1 w-1 rounded-full ${ada ? (dipilih ? 'bg-white' : 'bg-purple-600') : 'bg-transparent'}`} aria-hidden="true" />
+            </motion.button>
           );
         })}
       </div>
 
       <div aria-live="polite" className="mt-3 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
         <h3 className="text-sm font-semibold text-slate-900">{formatPenuh.format(objekTanggal(terpilih))}</h3>
+        <AnimatePresence mode="wait" initial={false}>
+        <motion.div key={terpilih} initial={{ opacity: 0, x: 8 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -8 }} transition={{ duration: 0.15 }}>
         {tugas === null ? (
           <div className="mt-3 h-14 animate-pulse rounded-md bg-slate-100" aria-busy="true" aria-label="Memuat agenda" />
         ) : daftar.length ? (
@@ -101,6 +131,8 @@ function AgendaPengingat({ tugas }) {
         ) : (
           <p className="py-4 text-sm text-slate-500">Tidak ada pengingat pada tanggal ini.</p>
         )}
+        </motion.div>
+        </AnimatePresence>
       </div>
     </section>
   );
@@ -115,9 +147,10 @@ const RuangPribadiPage = () => {
   const nama = (user?.name || '').split(' ')[0] || 'Anda';
 
   return (
-    <div className="mx-auto w-full max-w-7xl space-y-7 px-4 py-6 pb-10 sm:space-y-8 sm:px-6 lg:px-8">
+    <MotionConfig reducedMotion="user">
+    <motion.div variants={wadah} initial="hidden" animate="show" className="mx-auto w-full max-w-7xl space-y-7 px-4 py-6 pb-10 sm:space-y-8 sm:px-6 lg:px-8">
       <section>
-        <div className="flex flex-wrap items-end justify-between gap-3">
+        <motion.div variants={anak} className="flex flex-wrap items-end justify-between gap-3">
           <div className="min-w-0">
             <h1 className="text-2xl font-semibold leading-tight tracking-tight text-slate-900 sm:text-3xl">Halo, {nama}</h1>
             <p className="mt-1 text-sm text-slate-500">{formatPenuh.format(objekTanggal(kini))}</p>
@@ -125,22 +158,23 @@ const RuangPribadiPage = () => {
           <button type="button" onClick={() => navigate('/dpmd/dashboard')} className="inline-flex h-11 shrink-0 items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-4 text-sm font-medium text-slate-700 hover:bg-slate-50">
             <ArrowLeft className="h-4 w-4" /> Dashboard
           </button>
-        </div>
-        <div className="mt-4 grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
+        </motion.div>
+        <motion.div variants={anak} className="mt-4 grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
           <KartuStatistik judul="Hari ini" nilai={aktif?.filter((t) => t.tanggal_pengingat === kini).length} keterangan="Pengingat jatuh hari ini" ikon={CalendarCheck} />
           <KartuStatistik judul="Lewat tanggal" nilai={aktif?.filter((t) => t.tanggal_pengingat && t.tanggal_pengingat < kini).length} keterangan="Belum dikerjakan" ikon={CircleAlert} nada="text-red-600 bg-red-50" />
           <KartuStatistik judul="Belum selesai" nilai={aktif?.length} keterangan="Semua tugas aktif" ikon={ListChecks} />
           <KartuStatistik judul="Catatan" nilai={data.catatan?.length} keterangan="Tersimpan di akun Anda" ikon={FileText} />
-        </div>
+        </motion.div>
       </section>
 
-      <div className="grid min-w-0 gap-5 xl:grid-cols-[minmax(0,1.55fr)_minmax(20rem,0.9fr)] xl:items-start xl:gap-y-7">
+      <motion.div variants={anak} className="grid min-w-0 gap-5 xl:grid-cols-[minmax(0,1.55fr)_minmax(20rem,0.9fr)] xl:items-start xl:gap-y-7">
         <AgendaPengingat tugas={data.tugas} />
         <aside className="min-w-0 xl:sticky xl:top-6 xl:col-start-2 xl:row-start-1">
           <RuangPribadi onData={setData} />
         </aside>
-      </div>
-    </div>
+      </motion.div>
+    </motion.div>
+    </MotionConfig>
   );
 };
 

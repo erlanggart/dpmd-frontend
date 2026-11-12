@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { AlertCircle, Check, CheckCheck, CheckCircle2, Circle, FileText, LoaderCircle, NotebookPen, Pencil, Pin, Plus, Trash2, X } from 'lucide-react';
+import { AlertCircle, BellRing, Check, CheckCheck, ChevronDown, FileText, LoaderCircle, NotebookPen, Pencil, Pin, Plus, Trash2, X } from 'lucide-react';
+import { AnimatePresence, MotionConfig, motion } from 'framer-motion';
 import toast from 'react-hot-toast';
 import api from '../../api';
 import confirmDialog from '../../utils/confirmDialog';
@@ -11,7 +12,7 @@ const urutTugas = (a, b) => (a.tanggal_pengingat || '9999').localeCompare(b.tang
 const urutCatatan = (a, b) => Number(b.disematkan) - Number(a.disematkan) || b.updated_at.localeCompare(a.updated_at);
 const kode = (n) => JSON.stringify({ judul: (n.judul ?? '').trim(), isi: n.isi ?? '' });
 
-const kelasInput = 'h-10 w-full rounded-lg border border-slate-200 px-3 text-sm focus:border-purple-500 focus:outline-none focus:ring-2 focus:ring-purple-500/20';
+const kelasInput = 'h-10 w-full rounded-xl border border-slate-200 px-3 text-sm focus:border-purple-500 focus:outline-none focus:ring-2 focus:ring-purple-500/20';
 const kelasTombolGhost = 'inline-flex min-h-10 items-center gap-1 rounded-lg px-2 text-sm font-medium text-purple-600 hover:bg-purple-50';
 const kelasTombolLuar = 'inline-flex min-h-10 shrink-0 items-center gap-1 rounded-lg border border-slate-200 bg-white px-3 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-60';
 const kelasIkonHover = 'sm:opacity-0 sm:group-hover:opacity-100 focus-visible:opacity-100';
@@ -23,18 +24,54 @@ function Dialog({ terbuka, onTutup, judul, deskripsi, lebar = 'max-w-md', childr
     document.addEventListener('keydown', tekan);
     return () => document.removeEventListener('keydown', tekan);
   }, [terbuka, onTutup]);
-  if (!terbuka) return null;
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 p-4" onMouseDown={(e) => { if (e.target === e.currentTarget) onTutup(); }}>
-      <div role="dialog" aria-modal="true" aria-label={judul} className={`relative w-full ${lebar} max-h-[90svh] overflow-y-auto rounded-2xl bg-white p-6 shadow-xl`}>
-        <button type="button" onClick={onTutup} aria-label="Tutup" className="absolute right-4 top-4 flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 hover:bg-slate-100 hover:text-slate-700">
-          <X className="h-4 w-4" />
-        </button>
-        <h2 className="pr-8 text-lg font-semibold text-slate-900">{judul}</h2>
-        {deskripsi && <p className="mt-1 text-sm text-slate-500">{deskripsi}</p>}
-        <div className="mt-4">{children}</div>
-      </div>
-    </div>
+    <AnimatePresence>
+      {terbuka && (
+        <motion.div
+          key="overlay"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 p-4"
+          onMouseDown={(e) => { if (e.target === e.currentTarget) onTutup(); }}
+        >
+          <motion.div
+            role="dialog"
+            aria-modal="true"
+            aria-label={judul}
+            initial={{ opacity: 0, y: 16, scale: 0.96 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 8, scale: 0.98 }}
+            transition={{ type: 'spring', stiffness: 380, damping: 30 }}
+            className={`relative w-full ${lebar} max-h-[90svh] overflow-y-auto rounded-2xl bg-white p-6 shadow-xl`}
+          >
+            <button type="button" onClick={onTutup} aria-label="Tutup" className="absolute right-4 top-4 flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 hover:bg-slate-100 hover:text-slate-700">
+              <X className="h-4 w-4" />
+            </button>
+            <h2 className="pr-8 text-lg font-semibold text-slate-900">{judul}</h2>
+            {deskripsi && <p className="mt-1 text-sm text-slate-500">{deskripsi}</p>}
+            <div className="mt-4">{children}</div>
+          </motion.div>
+        </motion.div>
+      )}
+    </AnimatePresence>
+  );
+}
+
+// kotak centang animasi: lingkaran terisi ungu + tanda centang yang "digambar"
+function Centang({ aktif, label, onKlik }) {
+  return (
+    <motion.button type="button" onClick={onKlik} aria-label={label} whileTap={{ scale: 0.8 }} className="flex h-11 w-11 shrink-0 items-center justify-center">
+      <motion.span
+        initial={false}
+        animate={{ backgroundColor: aktif ? '#9333ea' : '#ffffff', borderColor: aktif ? '#9333ea' : '#cbd5e1' }}
+        className="flex h-[22px] w-[22px] items-center justify-center rounded-full border-2"
+      >
+        <svg viewBox="0 0 24 24" className="h-3.5 w-3.5" fill="none" stroke="#fff" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+          <motion.path d="M5 12l4 4L19 7" initial={false} animate={{ pathLength: aktif ? 1 : 0, opacity: aktif ? 1 : 0 }} transition={{ duration: 0.25 }} />
+        </svg>
+      </motion.span>
+    </motion.button>
   );
 }
 
@@ -230,12 +267,13 @@ function FormTugas({ tugas, onSelesai, onBatal }) {
         {galat && <span className="mt-1 block text-xs font-normal text-red-600">{galat}</span>}
       </label>
       <label className="block text-sm font-medium text-slate-700">
-        Tanggal pengingat (opsional)
+        Mulai diingatkan (opsional)
         <input type="date" value={tanggal} onChange={(e) => setTanggal(e.target.value)} className={`${kelasInput} mt-1 font-normal text-slate-600`} />
+        <span className="mt-1 block text-xs font-normal text-slate-500">Kosongkan agar diingatkan mulai sekarang. Pengingat berulang sampai tugas dicentang selesai.</span>
       </label>
       <div className="flex justify-end gap-2 pt-2">
         <button type="button" disabled={proses} onClick={onBatal} className={kelasTombolLuar}>Batal</button>
-        <button type="submit" disabled={proses} className="inline-flex min-h-10 items-center gap-2 rounded-lg bg-purple-600 px-4 text-sm font-semibold text-white hover:bg-purple-700 disabled:opacity-60">
+        <button type="submit" disabled={proses} className="inline-flex min-h-10 items-center gap-2 rounded-xl bg-purple-600 px-4 text-sm font-semibold text-white hover:bg-purple-700 disabled:opacity-60">
           {proses && <LoaderCircle className="h-4 w-4 animate-spin" />}
           {tugas ? 'Simpan tugas' : 'Tambah tugas'}
         </button>
@@ -256,6 +294,11 @@ const RuangPribadi = ({ halaman = false, onData }) => {
   const [permintaanTutup, setPermintaanTutup] = useState(0);
   const [selesaiTerbuka, setSelesaiTerbuka] = useState(false);
   const [semuaCatatan, setSemuaCatatan] = useState(false);
+  const [judulCepat, setJudulCepat] = useState('');
+  const [menambah, setMenambah] = useState(false);
+  const [menyelesaikan, setMenyelesaikan] = useState(() => new Set()); // id yang centangnya sudah tergambar, menunggu animasi
+  const prosesRef = useRef(new Set()); // id yang sedang diproses (cegah klik ganda)
+  const inputRef = useRef(null);
 
   const muat = useCallback(async () => {
     setGagal(false);
@@ -288,17 +331,45 @@ const RuangPribadi = ({ halaman = false, onData }) => {
   const selesai = useMemo(() => (tugas || []).filter((t) => t.selesai).sort((a, b) => b.updated_at.localeCompare(a.updated_at)), [tugas]);
   const daftarCatatan = useMemo(() => [...(catatan || [])].sort(urutCatatan), [catatan]);
 
-  const bukaTambahTugas = () => { setTugasEdit(null); setDialogTugas(true); };
   const bukaEditTugas = (t) => { setTugasEdit(t); setDialogTugas(true); };
   const bukaTambahCatatan = () => { setCatatanEdit(null); setPermintaanTutup(0); setDialogCatatan(true); };
   const bukaEditCatatan = (c) => { setCatatanEdit(c); setPermintaanTutup(0); setDialogCatatan(true); };
 
-  const centang = async (t) => {
+  const tambahCepat = async (e) => {
+    e.preventDefault();
+    const j = judulCepat.trim();
+    if (!j || menambah) return;
+    setMenambah(true);
     try {
-      const res = await api.patch(`/tugas-pribadi/${t.id}`, { selesai: !t.selesai });
+      const res = await api.post('/tugas-pribadi', { judul: j });
+      setTugas((d) => [res.data.data, ...d]);
+      setJudulCepat('');
+    } catch (err) {
+      toast.error(err?.response?.data?.message || 'Tugas belum tersimpan. Coba lagi.');
+    } finally {
+      setMenambah(false);
+      inputRef.current?.focus();
+    }
+  };
+
+  // optimistis: centang tergambar dulu, lalu status diubah lokal dan disinkronkan ke server
+  const centang = async (t) => {
+    if (prosesRef.current.has(t.id)) return;
+    prosesRef.current.add(t.id);
+    const asli = t.selesai;
+    const ubah = (nilai) => setTugas((d) => d.map((x) => (x.id === t.id ? { ...x, selesai: nilai } : x)));
+    setMenyelesaikan((st) => new Set(st).add(t.id));
+    await new Promise((r) => setTimeout(r, 380));
+    setMenyelesaikan((st) => { const n = new Set(st); n.delete(t.id); return n; });
+    ubah(!asli);
+    try {
+      const res = await api.patch(`/tugas-pribadi/${t.id}`, { selesai: !asli });
       setTugas((d) => d.map((x) => (x.id === t.id ? res.data.data : x)));
     } catch {
+      ubah(asli);
       toast.error('Tugas belum tersimpan. Coba lagi.');
+    } finally {
+      prosesRef.current.delete(t.id);
     }
   };
 
@@ -326,9 +397,9 @@ const RuangPribadi = ({ halaman = false, onData }) => {
 
   const infoTanggal = (tgl) => {
     const h = hariIni();
-    if (tgl < h) return { kelas: 'font-medium text-red-600', teks: `Lewat · ${tanggalId(tgl)}` };
-    if (tgl === h) return { kelas: 'font-medium text-purple-600', teks: 'Hari ini' };
-    return { kelas: 'text-slate-500', teks: `Pengingat · ${tanggalId(tgl)}` };
+    if (tgl < h) return { kelas: 'bg-red-50 text-red-600', teks: `Lewat · ${tanggalId(tgl)}`, lewat: true };
+    if (tgl === h) return { kelas: 'bg-purple-50 text-purple-700', teks: 'Hari ini' };
+    return { kelas: 'bg-slate-100 text-slate-600', teks: `Mulai diingatkan · ${tanggalId(tgl)}` };
   };
 
   const tombolHapus = (jenis, item, url, setDaftar) => (
@@ -338,9 +409,11 @@ const RuangPribadi = ({ halaman = false, onData }) => {
   );
 
   const kosong = (Ikon, judul, teks, label, aksi) => (
-    <div className="rounded-lg bg-slate-50 px-4 py-5 text-center">
-      <Ikon className="mx-auto h-5 w-5 text-purple-600" />
-      <p className="mt-2 text-sm font-medium text-slate-800">{judul}</p>
+    <div className="rounded-xl bg-slate-50 px-4 py-6 text-center">
+      <motion.span animate={{ y: [0, -4, 0] }} transition={{ repeat: Infinity, duration: 3, ease: 'easeInOut' }} className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-purple-100 text-purple-600">
+        <Ikon className="h-6 w-6" />
+      </motion.span>
+      <p className="mt-3 text-sm font-medium text-slate-800">{judul}</p>
       <p className="mt-1 text-xs text-slate-500">{teks}</p>
       <button type="button" className={`${kelasTombolGhost} mt-2`} onClick={aksi}><Plus className="h-4 w-4" /> {label}</button>
     </div>
@@ -348,43 +421,87 @@ const RuangPribadi = ({ halaman = false, onData }) => {
 
   const panelTugas = (
     <>
-      <div className="mb-1 flex items-center justify-between gap-2">
-        <p className="text-xs text-slate-500">Daftar kerja pribadi</p>
-        <button type="button" className={kelasTombolGhost} onClick={bukaTambahTugas}><Plus className="h-4 w-4" /> Tugas</button>
-      </div>
+      <form onSubmit={tambahCepat} className="mb-3 flex items-center gap-2">
+        <div className="relative flex-1">
+          <Plus className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" aria-hidden="true" />
+          <input
+            ref={inputRef}
+            type="text"
+            maxLength={160}
+            value={judulCepat}
+            onChange={(e) => setJudulCepat(e.target.value)}
+            placeholder="Tambah tugas, tekan Enter…"
+            aria-label="Tambah tugas"
+            className={`${kelasInput} h-11 pl-10`}
+          />
+        </div>
+        <motion.button
+          type="submit"
+          aria-label="Tambah tugas"
+          disabled={!judulCepat.trim() || menambah}
+          whileTap={{ scale: 0.9 }}
+          className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-purple-600 text-white shadow-md shadow-purple-500/30 hover:bg-purple-700 disabled:opacity-50 disabled:shadow-none"
+        >
+          {menambah ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <Plus className="h-5 w-5" />}
+        </motion.button>
+      </form>
       <div className="space-y-1">
-        {aktif.length ? aktif.map((t) => {
-          const info = t.tanggal_pengingat ? infoTanggal(t.tanggal_pengingat) : null;
-          return (
-            <div key={t.id} className="group flex min-h-14 items-center gap-2 rounded-lg px-1 py-1 transition hover:bg-slate-50">
-              <button type="button" onClick={() => centang(t)} aria-label={`Tandai selesai: ${t.judul}`} className="flex h-11 w-11 shrink-0 items-center justify-center text-slate-400 hover:text-purple-600">
-                <Circle className="h-5 w-5" />
-              </button>
-              <button type="button" className="min-w-0 flex-1 py-2 text-left" onClick={() => bukaEditTugas(t)}>
-                <span className="block truncate text-sm font-medium text-slate-900">{t.judul}</span>
-                {info && <span className={`mt-0.5 block text-xs ${info.kelas}`}>{info.teks}</span>}
-              </button>
-              <button type="button" aria-label={`Ubah tugas: ${t.judul}`} onClick={() => bukaEditTugas(t)} className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-lg text-slate-400 hover:text-purple-600 ${kelasIkonHover}`}>
-                <Pencil className="h-4 w-4" />
-              </button>
-              {tombolHapus('tugas', t, '/tugas-pribadi', setTugas)}
-            </div>
-          );
-        }) : kosong(CheckCheck, 'Daftar Anda sudah lega.', 'Tambahkan tugas yang ingin Anda ingat.', 'Tambah tugas', bukaTambahTugas)}
+        {aktif.length ? (
+          <ul className="space-y-1">
+            <AnimatePresence initial={false} mode="popLayout">
+              {aktif.map((t) => {
+                const info = t.tanggal_pengingat ? infoTanggal(t.tanggal_pengingat) : null;
+                return (
+                  <motion.li
+                    key={t.id}
+                    layout
+                    initial={{ opacity: 0, y: -8 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, x: 48, scale: 0.95, transition: { duration: 0.25 } }}
+                    whileHover={{ y: -1 }}
+                    className="group flex min-h-14 items-center gap-1 rounded-xl border border-transparent px-1 py-1 transition-colors hover:border-slate-200 hover:bg-white hover:shadow-sm"
+                  >
+                    <Centang aktif={menyelesaikan.has(t.id)} label={`Tandai selesai: ${t.judul}`} onKlik={() => centang(t)} />
+                    <button type="button" className="min-w-0 flex-1 py-2 text-left" onClick={() => bukaEditTugas(t)}>
+                      <span className="block truncate text-sm font-medium text-slate-900">{t.judul}</span>
+                      {info && (
+                        <span className={`mt-1 inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-[11px] font-medium ${info.kelas}`}>
+                          {info.lewat && <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-red-500" aria-hidden="true" />}
+                          {info.teks}
+                        </span>
+                      )}
+                    </button>
+                    <button type="button" aria-label={`Ubah tugas: ${t.judul}`} onClick={() => bukaEditTugas(t)} className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-lg text-slate-400 hover:text-purple-600 ${kelasIkonHover}`}>
+                      <Pencil className="h-4 w-4" />
+                    </button>
+                    {tombolHapus('tugas', t, '/tugas-pribadi', setTugas)}
+                  </motion.li>
+                );
+              })}
+            </AnimatePresence>
+          </ul>
+        ) : kosong(CheckCheck, 'Daftar Anda sudah lega.', 'Tambahkan tugas yang ingin Anda ingat.', 'Tambah tugas', () => inputRef.current?.focus())}
         {selesai.length > 0 && (
           <div className="border-t border-slate-100 pt-2">
             <button type="button" aria-expanded={selesaiTerbuka} className="flex min-h-11 w-full items-center gap-2 px-2 text-left text-xs font-medium text-slate-500 hover:text-slate-800" onClick={() => setSelesaiTerbuka((v) => !v)}>
-              <Check className="h-4 w-4" /> Selesai ({selesai.length}) <span className="ml-auto">{selesaiTerbuka ? 'Sembunyikan' : 'Lihat'}</span>
+              <Check className="h-4 w-4" /> Selesai ({selesai.length})
+              <motion.span animate={{ rotate: selesaiTerbuka ? 180 : 0 }} className="ml-auto flex" aria-hidden="true"><ChevronDown className="h-4 w-4" /></motion.span>
             </button>
-            {selesaiTerbuka && selesai.map((t) => (
-              <div key={t.id} className="flex min-h-12 items-center gap-2 rounded-md px-2">
-                <button type="button" onClick={() => centang(t)} aria-label={`Batalkan selesai: ${t.judul}`} className="flex h-10 w-10 shrink-0 items-center justify-center text-purple-600">
-                  <CheckCircle2 className="h-5 w-5" />
-                </button>
-                <span className="min-w-0 flex-1 truncate text-sm text-slate-400 line-through">{t.judul}</span>
-                {tombolHapus('tugas', t, '/tugas-pribadi', setTugas)}
-              </div>
-            ))}
+            <AnimatePresence initial={false}>
+              {selesaiTerbuka && (
+                <motion.ul key="selesai" initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
+                  <AnimatePresence initial={false} mode="popLayout">
+                    {selesai.map((t) => (
+                      <motion.li key={t.id} layout initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, x: 48, transition: { duration: 0.25 } }} className="flex min-h-12 items-center gap-1 rounded-xl px-1">
+                        <Centang aktif={!menyelesaikan.has(t.id)} label={`Batalkan selesai: ${t.judul}`} onKlik={() => centang(t)} />
+                        <span className="min-w-0 flex-1 truncate text-sm text-slate-400 line-through">{t.judul}</span>
+                        {tombolHapus('tugas', t, '/tugas-pribadi', setTugas)}
+                      </motion.li>
+                    ))}
+                  </AnimatePresence>
+                </motion.ul>
+              )}
+            </AnimatePresence>
           </div>
         )}
       </div>
@@ -399,8 +516,17 @@ const RuangPribadi = ({ halaman = false, onData }) => {
       </div>
       {daftarCatatan.length ? (
         <div className={halaman ? 'grid gap-3 sm:grid-cols-2 lg:grid-cols-3' : 'grid gap-2 sm:grid-cols-2 xl:grid-cols-1 2xl:grid-cols-2'}>
+          <AnimatePresence initial={false} mode="popLayout">
           {(semuaCatatan || halaman ? daftarCatatan : daftarCatatan.slice(0, 6)).map((c) => (
-            <div key={c.id} className="group relative min-w-0 rounded-lg border border-slate-200 bg-slate-50/50 p-3.5 transition hover:border-purple-200">
+            <motion.div
+              key={c.id}
+              layout
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              whileHover={{ y: -2 }}
+              className="group relative min-w-0 rounded-xl border border-slate-200 bg-slate-50/50 p-3.5 transition-[border-color,box-shadow] hover:border-purple-200 hover:shadow-md"
+            >
               <button type="button" onClick={() => bukaEditCatatan(c)} className="block min-h-14 w-full min-w-0 pr-16 text-left">
                 <span className="block truncate text-sm font-medium text-slate-900">{c.judul.trim() || 'Catatan tanpa judul'}</span>
                 <span className="mt-1 line-clamp-2 block text-xs leading-relaxed text-slate-500">{c.isi}</span>
@@ -417,8 +543,9 @@ const RuangPribadi = ({ halaman = false, onData }) => {
                 </button>
                 {tombolHapus('catatan', c, '/catatan-pribadi', setCatatan)}
               </div>
-            </div>
+            </motion.div>
           ))}
+          </AnimatePresence>
           {!halaman && daftarCatatan.length > 6 && (
             <button type="button" className={`${kelasTombolGhost} justify-center sm:col-span-2`} onClick={() => setSemuaCatatan((v) => !v)}>
               {semuaCatatan ? 'Tampilkan lebih sedikit' : `Lihat semua ${daftarCatatan.length} catatan`}
@@ -432,7 +559,7 @@ const RuangPribadi = ({ halaman = false, onData }) => {
   let isi;
   if (gagal) {
     isi = (
-      <div role="alert" className="flex items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-4 text-sm">
+      <div role="alert" className="flex items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3 py-4 text-sm">
         <AlertCircle className="h-4 w-4 shrink-0 text-red-600" />
         <span className="flex-1">Ruang pribadi belum termuat.</span>
         <button type="button" className={kelasTombolLuar} onClick={muat}>Coba lagi</button>
@@ -441,41 +568,53 @@ const RuangPribadi = ({ halaman = false, onData }) => {
   } else if (tugas === null || catatan === null) {
     isi = (
       <div className="space-y-3 py-2" aria-busy="true" aria-label="Memuat tugas dan catatan">
-        {[0, 1, 2].map((i) => <div key={i} className="h-12 animate-pulse rounded-md bg-slate-100" />)}
+        {[0, 1, 2].map((i) => <div key={i} className="h-12 animate-pulse rounded-xl bg-slate-100" />)}
       </div>
     );
   } else {
     isi = tabAktif === 'tugas' ? panelTugas : panelCatatan;
   }
 
-  const kelasTab = (nama) => `flex items-center justify-center gap-1 rounded-md text-sm font-medium transition ${tabAktif === nama ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-800'}`;
+  const kelasTab = (nama) => `relative flex items-center justify-center gap-1 rounded-md text-sm font-medium transition-colors ${tabAktif === nama ? 'text-slate-900' : 'text-slate-500 hover:text-slate-800'}`;
+  const pilTab = <motion.span layoutId="tab-pil-ruang" transition={{ type: 'spring', stiffness: 500, damping: 35 }} className="absolute inset-0 rounded-md bg-white shadow-sm" />;
+
+  // cincin progres: tugas selesai / total tugas
+  const total = tugas?.length ?? 0;
+  const persen = total ? Math.round((selesai.length / total) * 100) : 0;
 
   return (
+    <MotionConfig reducedMotion="user">
     <div className="overflow-hidden rounded-[1.75rem] border border-slate-200 bg-white shadow-sm">
       <div className="space-y-4 p-5">
-        <div className="flex items-start gap-3">
-          <span className="flex size-11 shrink-0 items-center justify-center rounded-lg bg-purple-50 text-purple-600"><NotebookPen className="h-5 w-5" /></span>
+        <div className="flex items-center gap-3">
+          <span className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-purple-500 to-violet-600 text-white shadow-lg shadow-purple-500/30"><NotebookPen className="h-5 w-5" /></span>
           <div className="min-w-0 flex-1">
             <h3 className="font-semibold text-slate-900">Ruang Pribadi</h3>
-            <p className="mt-1 text-sm text-slate-500">Catatan dan daftar kerja Anda, tersimpan di akun ini.</p>
+            <p className="mt-0.5 text-sm text-slate-500">Tugas dan catatan Anda.</p>
           </div>
-          <button type="button" className={kelasTombolLuar} onClick={() => (tabAktif === 'tugas' ? bukaTambahTugas() : bukaTambahCatatan())}>
-            <Plus className="h-4 w-4" /> <span>Tambah</span>
-          </button>
+          <div className="relative h-11 w-11 shrink-0" role="img" aria-label={`${selesai.length} dari ${total} tugas selesai`}>
+            <svg viewBox="0 0 44 44" className="h-11 w-11 -rotate-90" aria-hidden="true">
+              <circle cx="22" cy="22" r="18" fill="none" strokeWidth="4" className="stroke-slate-100" />
+              <motion.circle cx="22" cy="22" r="18" fill="none" strokeWidth="4" strokeLinecap="round" className="stroke-purple-600" initial={{ pathLength: 0 }} animate={{ pathLength: total ? selesai.length / total : 0 }} transition={{ type: 'spring', stiffness: 120, damping: 20 }} />
+            </svg>
+            <span className="absolute inset-0 flex items-center justify-center text-[10px] font-semibold tabular-nums text-slate-700" aria-hidden="true">{persen}%</span>
+          </div>
         </div>
-        <div role="tablist" className="grid h-11 grid-cols-2 rounded-lg bg-slate-100 p-1">
+        <div role="tablist" className="grid h-11 grid-cols-2 rounded-xl bg-slate-100 p-1">
           <button type="button" role="tab" aria-selected={tabAktif === 'tugas'} className={kelasTab('tugas')} onClick={() => setTabAktif('tugas')}>
-            Todo <span className="ml-1 text-xs tabular-nums text-slate-500">{aktif.length}</span>
+            {tabAktif === 'tugas' && pilTab}
+            <span className="relative z-10 flex items-center gap-1">Todo <span className="ml-1 text-xs tabular-nums text-slate-500">{aktif.length}</span></span>
           </button>
           <button type="button" role="tab" aria-selected={tabAktif === 'catatan'} className={kelasTab('catatan')} onClick={() => setTabAktif('catatan')}>
-            <FileText className="h-4 w-4" /> Catatan <span className="ml-1 text-xs tabular-nums text-slate-500">{daftarCatatan.length}</span>
+            {tabAktif === 'catatan' && pilTab}
+            <span className="relative z-10 flex items-center gap-1"><FileText className="h-4 w-4" /> Catatan <span className="ml-1 text-xs tabular-nums text-slate-500">{daftarCatatan.length}</span></span>
           </button>
         </div>
         <div>{isi}</div>
       </div>
       <div className="flex items-center gap-2 border-t border-slate-100 bg-purple-50/50 px-5 py-2.5 text-xs text-slate-500">
-        <Check className="h-3.5 w-3.5 shrink-0 text-purple-600" />
-        Tersimpan di akun Anda · pengingat tugas dikirim ke notifikasi pukul 07.05 WIB
+        <BellRing className="h-3.5 w-3.5 shrink-0 text-purple-600" />
+        Pengingat dikirim tiap 3 jam (07.00–19.00 WIB) sampai tugas dicentang selesai.
       </div>
 
       <Dialog terbuka={dialogTugas} onTutup={() => setDialogTugas(false)} judul={tugasEdit ? 'Ubah tugas' : 'Tugas baru'} deskripsi="Catatan pekerjaan pribadi Anda.">
@@ -507,6 +646,7 @@ const RuangPribadi = ({ halaman = false, onData }) => {
         />
       </Dialog>
     </div>
+    </MotionConfig>
   );
 };
 
