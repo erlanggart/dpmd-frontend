@@ -219,17 +219,6 @@ const PemdesPage = () => {
 				route: getPath('/pemdes/video-desa'),
 				angka: { nilai: null, label: 'videotron & medsos' },
 			},
-			{
-				id: 'musdesus',
-				accent: '#2a78d6',
-				judul: 'Musyawarah Desa Khusus',
-				deskripsi: 'Data, laporan, dan monitoring Musdes Khusus per desa',
-				icon: FileText,
-				route: '/core-dashboard/musdesus',
-				// Dashboard bidang tidak mengirim hitungan musdesus, jadi tidak ada
-				// angka yang bisa ditampilkan — dan tidak dibuat-buat.
-				angka: { nilai: null, label: 'monitoring per desa' },
-			},
 		],
 		[getPath, stats]
 	);

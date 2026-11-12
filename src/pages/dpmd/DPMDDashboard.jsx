@@ -731,19 +731,23 @@ const DPMDDashboard = () => {
       ...(isAbsensiEligible
         ? [{
             icon: CheckCircle,
-            customIcon: <LottieIcon animationData={bellAnimation} className={qaIconClass} />,
+            // animasi lonceng banyak ruang kosong; diperbesar lewat transform agar ukuran kotak (tata letak) tetap
+            customIcon: <LottieIcon animationData={bellAnimation} className={`${qaIconClass} scale-[1.7]`} />,
             label: 'Presensi',
             color: 'rose',
             onClick: () => navigate('/dpmd/absensi')
           }]
         : []),
-      {
-        icon: Calendar,
-        customIcon: ikonUbin(CalendarDays, 'from-sky-500 to-blue-700 shadow-blue-500/30'),
-        label: 'Jadwal',
-        color: 'blue',
-        onClick: () => navigate('/dpmd/jadwal-kegiatan')
-      },
+      // Pegawai wajib presensi tidak mendapat Jadwal di sini agar tombol tetap 4.
+      ...(isAbsensiEligible
+        ? []
+        : [{
+            icon: Calendar,
+            customIcon: ikonUbin(CalendarDays, 'from-sky-500 to-blue-700 shadow-blue-500/30'),
+            label: 'Jadwal',
+            color: 'blue',
+            onClick: () => navigate('/dpmd/jadwal-kegiatan')
+          }]),
       {
         icon: FileText,
         customIcon: <LottieIcon animationData={contactAnimation} className={qaIconClass} />,
