@@ -402,3 +402,11 @@ body.kali-swal .swal2-cancel {
 		animation: none;
 	}
 }
+
+/* Mode layar penuh: panel menutupi layout (sidebar/topbar) dan bisa digulir sendiri. */
+.kali-ops.kali-penuh {
+	position: fixed;
+	inset: 0;
+	z-index: 1000;
+	overflow-y: auto;
+}

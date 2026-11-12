@@ -22,6 +22,7 @@ import {
 import api from "../../../../api";
 import HackerGlobe from "../HackerGlobe";
 import { Card, Galat, Memuat, PilihRentang, SeverityBadge, formatAngka, pesanError, sejak, usePolling } from "../serverUi";
+import { suara } from "../suaraOps";
 
 const RENTANG = [
 	{ value: "1h", label: "1j" },
@@ -397,36 +398,6 @@ const UmpanLangsung = ({ onPilihIp, onBaru, onBaris }) => {
 
 /* ───────────────────────── Alarm & replay ───────────────────────── */
 
-/** Bunyi "bip" pendek lewat WebAudio — tanpa berkas suara. */
-const buatAlarm = () => {
-	let ctx = null;
-	let terakhir = 0;
-	return {
-		siapkan: () => {
-			try {
-				ctx = ctx || new (window.AudioContext || window.webkitAudioContext)();
-				if (ctx.state === "suspended") ctx.resume();
-			} catch {
-				ctx = null;
-			}
-		},
-		bunyi: (sev) => {
-			if (!ctx || Date.now() - terakhir < 350) return;
-			terakhir = Date.now();
-			const o = ctx.createOscillator();
-			const g = ctx.createGain();
-			o.type = "square";
-			o.frequency.value = sev === "critical" ? 880 : 620;
-			g.gain.setValueAtTime(0.0001, ctx.currentTime);
-			g.gain.exponentialRampToValueAtTime(0.06, ctx.currentTime + 0.01);
-			g.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.18);
-			o.connect(g).connect(ctx.destination);
-			o.start();
-			o.stop(ctx.currentTime + 0.2);
-		},
-	};
-};
-
 const LAJU = [
 	{ v: 30, l: "30 dtk" },
 	{ v: 60, l: "1 mnt" },
@@ -593,17 +564,15 @@ const ThreatMapTab = () => {
 	const [ringkas, setRingkas] = useState(null);
 	const [galat, setGalat] = useState(null);
 	const [pilih, setPilih] = useState(null);
-	const [opsi, setOpsi] = useState({ arcs: true, visitors: true, rotate: true, alarm: false });
+	const [opsi, setOpsi] = useState({ arcs: true, visitors: true, rotate: true, alarm: true });
 	const [live, setLive] = useState([]); // waktu tiba kejadian langsung (5 menit terakhir)
 	const [terbaru, setTerbaru] = useState([]); // baris umpan langsung untuk HUD & ticker
 	const globe = useRef(null);
-	const alarm = useRef(null);
-	if (!alarm.current) alarm.current = buatAlarm();
 	const opsiRef = useRef(opsi);
 	opsiRef.current = opsi;
 
 	const replay = useReplay(globe, (e) => {
-		if (opsiRef.current.alarm && (e.sev === "critical" || e.sev === "high")) alarm.current.bunyi(e.sev);
+		if (opsiRef.current.alarm) suara.serangan(e.sev);
 	});
 	const replayAktif = !!replay.data;
 	// Globe menyesuaikan layar: penuh di desktop, tetap muat satu layar di HP.
@@ -623,7 +592,7 @@ const ThreatMapTab = () => {
 			daftar.slice(-25).forEach((e, i) => {
 				setTimeout(() => {
 					globe.current?.strike({ lat: e.geo?.lat, lon: e.geo?.lon, sev: e.severity });
-					if (opsiRef.current.alarm && (e.severity === "critical" || e.severity === "high")) alarm.current.bunyi(e.severity);
+					if (opsiRef.current.alarm) suara.serangan(e.severity);
 				}, i * 220);
 			});
 		},
@@ -736,10 +705,10 @@ const ThreatMapTab = () => {
 							aktif={opsi.alarm}
 							onClick={() => {
 								// AudioContext hanya boleh dibuat dari gestur pengguna.
-								if (!opsi.alarm) alarm.current.siapkan();
+								if (!opsi.alarm) suara.buka();
 								setOpsi((o) => ({ ...o, alarm: !o.alarm }));
 							}}
-							judul="Bunyi bip saat serangan kritis/tinggi masuk"
+							judul="Bunyi tiap serangan masuk: bip tiga kali kritis, dua kali tinggi, tik halus lainnya"
 						>
 							{opsi.alarm ? "alarm on" : "alarm off"}
 						</ChipOpsi>

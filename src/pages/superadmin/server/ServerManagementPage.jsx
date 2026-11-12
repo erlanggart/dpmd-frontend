@@ -15,6 +15,7 @@ import {
 	FiActivity,
 	FiArchive,
 	FiBarChart2,
+	FiBellOff,
 	FiBookOpen,
 	FiBox,
 	FiCheckSquare,
@@ -24,13 +25,18 @@ import {
 	FiGlobe,
 	FiHardDrive,
 	FiLayers,
+	FiMaximize,
+	FiMinimize,
 	FiRefreshCw,
 	FiSettings,
 	FiShield,
 	FiTerminal,
+	FiVolume2,
+	FiVolumeX,
 } from "react-icons/fi";
 import api from "../../../api";
 import { Memuat, formatBytes, formatDurasi, pesanError, usePolling } from "./serverUi";
+import { aturSuara, suara, usePengaturanSuara } from "./suaraOps";
 import "./kali.css";
 
 const ThreatMapTab = lazy(() => import("./tabs/ThreatMapTab"));
@@ -111,7 +117,10 @@ const ServerManagementPage = () => {
 		setMemuat(true);
 		try {
 			const res = await api.get("/superadmin/server/overview");
-			setOverview(res.data?.data || null);
+			const d = res.data?.data || null;
+			setOverview(d);
+			const al = d?.alerts || [];
+			suara.detak(al.some((a) => a.level === "critical") ? "kritis" : al.length ? "waspada" : "sehat");
 			setGalat(null);
 			setTerakhir(new Date());
 		} catch (error) {
@@ -129,14 +138,41 @@ const ServerManagementPage = () => {
 		const id = setInterval(() => setJam(new Date()), 1000);
 		// Popup SweetAlert dipasang di <body>, di luar .kali-ops.
 		document.body.classList.add("kali-swal");
+		// Audio baru boleh berbunyi setelah gestur pertama di halaman.
+		window.addEventListener("pointerdown", suara.buka, true);
+		window.addEventListener("keydown", suara.buka, true);
 		return () => {
 			clearInterval(id);
 			document.body.classList.remove("kali-swal");
+			window.removeEventListener("pointerdown", suara.buka, true);
+			window.removeEventListener("keydown", suara.buka, true);
 		};
 	}, []);
 
+	// Layar penuh: Fullscreen API pada dokumen + panel ditempel menutupi layout
+	// (kelas kali-penuh). Dokumen, bukan panel, yang dibuat penuh supaya popup
+	// SweetAlert di <body> tetap terlihat; di browser tanpa API tetap jadi mode penuh-jendela.
+	const [penuh, setPenuh] = useState(false);
+	useEffect(() => {
+		const ubah = () => !document.fullscreenElement && setPenuh(false);
+		document.addEventListener("fullscreenchange", ubah);
+		return () => {
+			document.removeEventListener("fullscreenchange", ubah);
+			if (document.fullscreenElement) document.exitFullscreen().catch(() => {});
+		};
+	}, []);
+	const alihPenuh = () => {
+		const masuk = !penuh;
+		setPenuh(masuk);
+		suara.layar(masuk);
+		if (masuk) document.documentElement.requestFullscreen?.().catch(() => {});
+		else if (document.fullscreenElement) document.exitFullscreen().catch(() => {});
+	};
+	const setelSuara = usePengaturanSuara();
+
 	const pilihTab = useCallback(
 		(key) => {
+			suara.klik();
 			const p = new URLSearchParams(params);
 			p.set("tab", key);
 			setParams(p, { replace: true });
@@ -210,8 +246,28 @@ const ServerManagementPage = () => {
 	const sys = overview?.system;
 	const l = overview?.latest;
 
+	// Alarm: sirene tiap 12 detik selama kritis/offline sampai diakui (klik
+	// lencana status). Kritis baru setelah diakui membunyikannya lagi.
+	const bahaya = status === "kritis" || status === "offline";
+	const [diakui, setDiakui] = useState(false);
+	const lalu = useRef({ status, kritis, n: peringatan.length });
+	useEffect(() => {
+		const s = lalu.current;
+		lalu.current = { status, kritis, n: peringatan.length };
+		if (!bahaya || kritis > s.kritis) setDiakui(false);
+		if (status === "waspada" && (s.status !== "waspada" || peringatan.length > s.n)) suara.peringatan();
+		if (status === "sehat" && ["waspada", "kritis", "offline"].includes(s.status)) suara.pulih();
+	}, [status, kritis, peringatan.length, bahaya]);
+	useEffect(() => {
+		if (!bahaya || diakui) return undefined;
+		suara.alarm();
+		const id = setInterval(suara.alarm, 12000);
+		return () => clearInterval(id);
+	}, [bahaya, diakui]);
+	const alarmBunyi = bahaya && !diakui && setelSuara.suara;
+
 	return (
-		<div className="kali-ops">
+		<div className={`kali-ops ${penuh ? "kali-penuh" : ""}`}>
 			<div className="mx-auto w-full max-w-[1920px] space-y-4 p-3 pb-10 sm:p-5 lg:p-6">
 				{/* Header */}
 				<div className="relative overflow-hidden rounded-2xl border border-slate-200 bg-white">
@@ -233,16 +289,57 @@ const ServerManagementPage = () => {
 								</p>
 							</div>
 							<div className="flex flex-col items-end gap-2">
-								<span className={`inline-flex items-center gap-1.5 px-3 py-1 text-[11.5px] rounded-full font-semibold ring-1 ${STATUS.kelas}`}>
+								<div className="flex items-center gap-1.5">
+									<button
+										onClick={() => {
+											aturSuara("detak", !setelSuara.detak);
+											suara.klik();
+										}}
+										aria-pressed={setelSuara.detak}
+										title="Bip live tiap sinkron (5 detik)"
+										className={`inline-flex items-center gap-1.5 rounded-lg px-2 py-1 text-[10.5px] font-bold tracking-wider ring-1 ${
+											setelSuara.detak && setelSuara.suara ? "bg-emerald-50 text-emerald-600 ring-emerald-200" : "bg-slate-50 text-slate-500 ring-slate-300"
+										}`}
+									>
+										<span className={`h-1.5 w-1.5 rounded-full bg-current ${setelSuara.detak && setelSuara.suara ? "animate-pulse" : ""}`} />
+										BIP LIVE
+									</button>
+									<button
+										onClick={() => aturSuara("suara", !setelSuara.suara)}
+										aria-pressed={setelSuara.suara}
+										title={setelSuara.suara ? "Matikan semua suara & alarm" : "Nyalakan suara & alarm"}
+										aria-label="Suara"
+										className="kali-ikon"
+									>
+										{setelSuara.suara ? <FiVolume2 className="h-3.5 w-3.5" /> : <FiVolumeX className="h-3.5 w-3.5 text-red-600" />}
+									</button>
+									<button onClick={alihPenuh} title={penuh ? "Keluar layar penuh (Esc)" : "Layar penuh"} aria-label="Layar penuh" className="kali-ikon">
+										{penuh ? <FiMinimize className="h-3.5 w-3.5" /> : <FiMaximize className="h-3.5 w-3.5" />}
+									</button>
+								</div>
+								<button
+									type="button"
+									onClick={() => bahaya && setDiakui(true)}
+									title={alarmBunyi ? "Klik untuk menyenyapkan alarm" : undefined}
+									className={`inline-flex items-center gap-1.5 px-3 py-1 text-[11.5px] rounded-full font-semibold ring-1 ${STATUS.kelas} ${bahaya ? "cursor-pointer" : "cursor-default"}`}
+								>
 									<span className="h-1.5 w-1.5 rounded-full bg-current" />
 									{STATUS.teks}
-								</span>
+									{alarmBunyi && (
+										<>
+											<FiBellOff className="h-3 w-3" /> senyapkan
+										</>
+									)}
+								</button>
 								<p className="kali-display text-2xl font-bold tabular-nums text-slate-900">{jam.toLocaleTimeString("id-ID")}</p>
 								<p className="-mt-1.5 text-[10.5px] tracking-[0.2em] text-slate-500">
 									{jam.toLocaleDateString("id-ID", { weekday: "long", day: "2-digit", month: "short", year: "numeric" }).toUpperCase()}
 								</p>
 								<button
-									onClick={muat}
+									onClick={() => {
+										suara.klik();
+										muat();
+									}}
 									disabled={memuat}
 									className="inline-flex items-center gap-1.5 border border-slate-300 rounded-lg bg-slate-50 px-2.5 py-1 text-[11px] text-slate-700 hover:border-slate-900 hover:text-slate-900 disabled:opacity-60"
 									title="Perbarui sekarang"
