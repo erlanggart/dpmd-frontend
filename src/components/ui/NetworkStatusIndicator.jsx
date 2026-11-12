@@ -25,11 +25,11 @@ const hitungBatang = ({ speed, latency }) => {
 };
 
 const WARNA = {
-  4: { isi: 'bg-emerald-500', teks: 'text-emerald-700', label: 'Sangat bagus' },
-  3: { isi: 'bg-emerald-500', teks: 'text-emerald-700', label: 'Bagus' },
-  2: { isi: 'bg-amber-500', teks: 'text-amber-700', label: 'Sedang' },
-  1: { isi: 'bg-red-500', teks: 'text-red-600', label: 'Lemah' },
-  0: { isi: 'bg-red-500', teks: 'text-red-600', label: 'Offline' },
+  4: { isi: 'bg-gradient-to-t from-emerald-600 to-emerald-400', titik: 'bg-emerald-500', teks: 'text-emerald-700', label: 'Sangat bagus' },
+  3: { isi: 'bg-gradient-to-t from-emerald-600 to-emerald-400', titik: 'bg-emerald-500', teks: 'text-emerald-700', label: 'Bagus' },
+  2: { isi: 'bg-gradient-to-t from-amber-500 to-amber-300', titik: 'bg-amber-500', teks: 'text-amber-700', label: 'Sedang' },
+  1: { isi: 'bg-gradient-to-t from-rose-600 to-rose-400', titik: 'bg-rose-500', teks: 'text-rose-600', label: 'Lemah' },
+  0: { isi: 'bg-gradient-to-t from-rose-600 to-rose-400', titik: 'bg-rose-500', teks: 'text-rose-600', label: 'Offline' },
 };
 
 const formatKecepatan = ({ speed, downlink, latency }) => {
@@ -51,7 +51,7 @@ const NetworkStatusIndicator = () => {
   const memeriksa = network.speed === 'checking';
   const batang = hitungBatang(network);
   const warna = memeriksa
-    ? { isi: 'bg-slate-400', teks: 'text-slate-500', label: 'Memeriksa…' }
+    ? { isi: 'bg-slate-400', titik: 'bg-slate-400', teks: 'text-slate-500', label: 'Memeriksa…' }
     : WARNA[batang];
 
   const rincian = [
@@ -63,27 +63,35 @@ const NetworkStatusIndicator = () => {
 
   return (
     <div
-      className="pointer-events-none fixed top-1.5 right-1.5 z-[9999] flex select-none items-center gap-1 rounded-full border border-slate-200/80 bg-white/90 px-1.5 py-0.5 shadow-sm backdrop-blur"
+      className="pointer-events-none fixed top-1.5 right-1.5 z-[9999] flex select-none items-center gap-1.5 rounded-full bg-white/75 py-1 pl-1.5 pr-2 shadow-[0_2px_12px_-3px_rgba(15,23,42,0.25)] ring-1 ring-slate-900/[0.06] backdrop-blur-md"
       role="status"
       aria-label={rincian}
     >
-      {/* Batang sinyal: 4 batang naik, yang menyala sesuai kualitas */}
+      {/* Titik live: berdenyut selama terhubung, diam saat offline */}
+      <span className="relative flex h-1.5 w-1.5" aria-hidden="true">
+        {batang > 0 && !memeriksa && (
+          <span className={`absolute inset-0 rounded-full opacity-60 motion-safe:animate-ping ${warna.titik}`} />
+        )}
+        <span className={`relative h-1.5 w-1.5 rounded-full ${warna.titik}`} />
+      </span>
+
+      {/* Batang sinyal: tinggi & warna berganti halus; saat memeriksa bergelombang berurutan */}
       <div className="relative flex h-3 items-end gap-[2px]" aria-hidden="true">
         {[1, 2, 3, 4].map((i) => (
           <span
             key={i}
-            className={`w-[3px] rounded-[1px] ${
-              !memeriksa && i <= batang ? warna.isi : 'bg-slate-300'
-            } ${memeriksa ? 'animate-pulse' : ''}`}
-            style={{ height: `${i * 25}%` }}
+            className={`w-[3px] rounded-full transition-all duration-500 ease-out ${
+              !memeriksa && i <= batang ? warna.isi : 'bg-slate-300/80'
+            } ${memeriksa ? 'motion-safe:animate-pulse' : ''}`}
+            style={{ height: `${i * 25}%`, animationDelay: memeriksa ? `${i * 120}ms` : undefined }}
           />
         ))}
         {batang === 0 && !memeriksa && (
           // Tanda silang kecil saat offline, seperti di ponsel
-          <span className="absolute -right-0.5 -top-1 text-[9px] font-bold leading-none text-red-600">×</span>
+          <span className="absolute -right-1 -top-1 text-[9px] font-bold leading-none text-rose-600">×</span>
         )}
       </div>
-      <span className={`text-[10px] font-semibold leading-none tabular-nums ${warna.teks}`}>
+      <span className={`text-[10px] font-semibold leading-none tracking-tight tabular-nums transition-colors duration-500 ${warna.teks}`}>
         {formatKecepatan(network)}
       </span>
     </div>
