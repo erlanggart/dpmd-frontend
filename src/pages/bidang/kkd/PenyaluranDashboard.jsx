@@ -17,7 +17,8 @@ import toast from 'react-hot-toast';
 import { useSipanda } from '../../../hooks/useSipanda';
 import { useBidangPath } from '../../../hooks/useBidangPath';
 import SelectBox from '../../../components/ui/SelectBox';
-import { persen, fmtPersen } from '../../../utils/persen';
+// Data keuangan: persen tidak dibulatkan (lihat fmtPersenRinci).
+import { persenMentah as persen, fmtPersenRinci as fmtPersen } from '../../../utils/persen';
 
 ChartJS.register(LineElement, PointElement, CategoryScale, LinearScale, Tooltip, Filler);
 
@@ -63,11 +64,9 @@ const statusTone = (s = '') => {
 };
 
 const fmtInt = (n) => Number(n || 0).toLocaleString('id-ID');
-const fmtRp = (n) =>
-  n > 0
-    ? new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', notation: 'compact', maximumFractionDigits: 2 }).format(n)
-    : 'Rp 0';
+// Nominal selalu ditulis penuh sampai rupiah terakhir: data keuangan, tidak boleh dibulatkan.
 const fmtRpFull = (n) => new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(n || 0);
+const fmtRp = fmtRpFull;
 const fmtDate = (d) => (d ? new Date(d.replace(' ', 'T')).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' }) : '—');
 
 // (StatCell dihapus bersama strip empat kartu statistik yang memakainya.)
@@ -429,7 +428,7 @@ export default function PenyaluranDashboard({
         ...baseTooltip,
         callbacks: {
           title: (items) => items[0].label,
-          label: (c) => ` ${c.parsed.y.toFixed(1)}% dari total anggaran`,
+          label: (c) => ` ${fmtPersen(c.parsed.y)} dari total anggaran`,
           afterLabel: (c) => `Kumulatif cair: ${fmtRpFull(cumulative[c.dataIndex].cairCum)}`,
         },
       },
@@ -583,10 +582,10 @@ export default function PenyaluranDashboard({
                   Persen dibuat sebesar rupiahnya karena pertanyaan pertama
                   pimpinan hampir selalu "sudah berapa persen", bukan nominal. */}
               <div className="mt-2 flex flex-wrap items-baseline gap-x-4 gap-y-1">
-                <span className="text-[34px] sm:text-[42px] font-extrabold tracking-tight text-slate-900 leading-none" title={fmtRpFull(stats.cairAmt)}>
+                <span className="text-[24px] sm:text-[28px] font-bold tracking-tight tabular-nums text-slate-900 leading-none" title={fmtRpFull(stats.cairAmt)}>
                   {fmtRp(stats.cairAmt)}
                 </span>
-                <span className="text-[22px] sm:text-[26px] font-bold tracking-tight text-slate-400 leading-none">
+                <span className="text-[16px] sm:text-[18px] font-semibold tabular-nums text-slate-400 leading-none">
                   {fmtPersen(stats.pctAmt)}
                 </span>
               </div>
@@ -690,7 +689,7 @@ export default function PenyaluranDashboard({
                       <div className="flex-1 h-6 rounded-lg bg-slate-100 overflow-hidden min-w-0">
                         <div className={`h-full ${p.bar} transition-all duration-700`} style={{ width: `${d.pctDesa}%` }} />
                       </div>
-                      <div className="w-[70px] sm:w-24 shrink-0 text-right" title={`${fmtInt(d.desaCair)}/${fmtInt(d.desaTotal)} desa cair`}>
+                      <div className="w-[118px] sm:w-[136px] shrink-0 text-right tabular-nums" title={`${fmtInt(d.desaCair)}/${fmtInt(d.desaTotal)} desa cair`}>
                         <div className={`text-[12px] font-bold tabular-nums ${p.text}`}>{fmtPersen(d.pctDesa)}</div>
                         <div className="text-[11.5px] text-slate-400 leading-tight">{d.cair > 0 ? fmtRp(d.cair) : '—'}</div>
                       </div>
@@ -822,7 +821,7 @@ export default function PenyaluranDashboard({
                         <div className="flex-1 h-3.5 rounded-full bg-slate-100 overflow-hidden min-w-0">
                           <div className={`h-full rounded-full ${k.pct >= 100 ? A.bar : k.pct > 0 ? 'bg-amber-500' : 'bg-rose-400'}`} style={{ width: `${Math.max(k.pct, 2)}%` }} />
                         </div>
-                        <span className="w-12 shrink-0 text-right text-[13px] font-bold text-slate-700 tabular-nums">{fmtPersen(k.pct)}</span>
+                        <span className="w-16 shrink-0 text-right text-[13px] font-bold text-slate-700 tabular-nums">{fmtPersen(k.pct)}</span>
                         <span className="w-10 shrink-0 text-right text-[11.5px] text-slate-400">{k.c}/{k.n}</span>
                       </div>
                     ))}
@@ -917,7 +916,7 @@ export default function PenyaluranDashboard({
                       <span className="font-semibold text-[14px] text-slate-900 flex-1 min-w-0 truncate">{kec}</span>
                       <span className="text-[13px] text-slate-500 hidden sm:inline">{desaCount} desa</span>
                       <span className={`text-[12px] font-bold px-2 h-5 inline-flex items-center rounded-full ring-1 ${A.soft}`}>{cairCount}/{items.length} cair</span>
-                      <span className="text-[14px] font-bold text-slate-900 w-24 sm:w-28 text-right shrink-0" title={fmtRpFull(total)}>{fmtRp(total)}</span>
+                      <span className="text-[12px] sm:text-[13px] font-semibold tabular-nums text-slate-900 w-[124px] sm:w-40 text-right shrink-0" title={fmtRpFull(total)}>{fmtRp(total)}</span>
                     </button>
 
                     {open && (
@@ -947,7 +946,7 @@ export default function PenyaluranDashboard({
                                     </span>
                                   </td>
                                   <td className="px-2 py-2 text-slate-500 hidden md:table-cell">{e.cair ? fmtDate(e.tglCair) : '—'}</td>
-                                  <td className="px-4 py-2 text-right font-semibold text-slate-900" title={fmtRpFull(e.anggaran)}>{e.anggaran > 0 ? fmtRp(e.anggaran) : '—'}</td>
+                                  <td className="px-4 py-2 text-right font-semibold tabular-nums whitespace-nowrap text-slate-900" title={fmtRpFull(e.anggaran)}>{e.anggaran > 0 ? fmtRp(e.anggaran) : '—'}</td>
                                 </tr>
                               );
                             })}

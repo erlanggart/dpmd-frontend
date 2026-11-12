@@ -38,3 +38,19 @@ export const fmtPersen = (p) => {
 
 /** Jalan pintas: hitung sekaligus format. */
 export const persenTeks = (n, total) => fmtPersen(persen(n, total));
+
+/**
+ * Persen untuk data keuangan: dua desimal, sisanya DIPOTONG (bukan dibulatkan)
+ * sehingga tidak pernah tampak lebih besar dari aslinya. 100% hanya bila lunas.
+ */
+export const persenMentah = (n, total) => (total > 0 && n > 0 ? Math.min((n / total) * 100, 100) : 0);
+
+export const fmtPersenRinci = (p) => {
+	const n = Number(p) || 0;
+	if (n >= 100) return '100%';
+	if (n <= 0) return '0%';
+	// +1e-9 menahan galat float (83,87 tersimpan 83,8699…); batas 9999 menjaga 99,99% tak jadi 100%
+	const seperseratus = Math.min(Math.floor(n * 100 + 1e-9), 9999);
+	if (seperseratus === 0) return '<0,01%';
+	return (seperseratus / 100).toLocaleString('id-ID', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + '%';
+};

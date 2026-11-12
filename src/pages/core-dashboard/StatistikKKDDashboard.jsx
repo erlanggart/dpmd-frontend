@@ -21,6 +21,7 @@ import { Building2, DollarSign, Landmark, Sprout, TrendingUp, Wallet } from 'luc
 import PageHeader from '../../components/statistik/PageHeader';
 import { useSipanda } from '../../hooks/useSipanda';
 import { LEBAR_CORE } from './lebarHalaman';
+import { persenMentah, fmtPersenRinci } from '../../utils/persen';
 
 const AddDashboard = lazy(() => import('../bidang/kkd/add/AddDashboard'));
 const BhprdDashboard = lazy(() => import('../bidang/kkd/BhprdDashboard'));
@@ -71,16 +72,9 @@ const TABS = [
   },
 ];
 
-// Rp dalam satuan yang enak dibaca sekilas. Pimpinan membaca "Rp 406,9 M",
-// bukan dua belas digit — angka penuhnya tetap tersedia lewat title.
-const fmtRp = (n) => {
-  const v = Number(n) || 0;
-  if (v >= 1e12) return `Rp ${(v / 1e12).toFixed(2).replace('.', ',')} T`;
-  if (v >= 1e9) return `Rp ${(v / 1e9).toFixed(1).replace('.', ',')} M`;
-  if (v >= 1e6) return `Rp ${(v / 1e6).toFixed(0)} Jt`;
-  return `Rp ${Math.round(v).toLocaleString('id-ID')}`;
-};
+// Nominal selalu ditulis penuh sampai rupiah terakhir: data keuangan, tidak boleh dibulatkan.
 const fmtRpPenuh = (n) => `Rp ${Math.round(Number(n) || 0).toLocaleString('id-ID')}`;
+const fmtRp = fmtRpPenuh;
 
 const TabSpinner = () => (
   <div className="flex items-center justify-center py-32">
@@ -112,7 +106,7 @@ const StatistikKKDDashboard = () => {
       if (String(r.sudah_cair).toUpperCase() === 'Y') hasil[tab.key].cair += nilai;
     });
     Object.values(hasil).forEach((h) => {
-      h.pct = h.pagu > 0 ? Math.round((h.cair / h.pagu) * 100) : 0;
+      h.pct = persenMentah(h.cair, h.pagu);
     });
     return hasil;
   }, [rows]);
@@ -125,7 +119,7 @@ const StatistikKKDDashboard = () => {
     () => Object.values(ringkas).reduce((s, h) => s + h.cair, 0),
     [ringkas]
   );
-  const totalPct = totalPagu > 0 ? Math.round((totalCair / totalPagu) * 100) : 0;
+  const totalPct = persenMentah(totalCair, totalPagu);
 
   return (
     <div className="min-h-screen bg-slate-50 p-4 pt-20 sm:p-6 lg:p-8 lg:pt-6">
@@ -147,19 +141,19 @@ const StatistikKKDDashboard = () => {
               </p>
               <div className="mt-2.5 flex flex-wrap items-end gap-x-4 gap-y-1">
                 <span
-                  className="text-[40px] font-extrabold leading-none tracking-tight text-slate-900 sm:text-[52px]"
+                  className="text-[22px] font-bold leading-none tracking-tight tabular-nums text-slate-900 sm:text-[34px]"
                   title={fmtRpPenuh(totalCair)}
                 >
                   {loading ? '—' : fmtRp(totalCair)}
                 </span>
-                <span className="pb-1.5 text-[15px] font-medium text-slate-400" title={fmtRpPenuh(totalPagu)}>
+                <span className="pb-1 text-[14px] font-medium tabular-nums text-slate-400" title={fmtRpPenuh(totalPagu)}>
                   dari {loading ? '—' : fmtRp(totalPagu)} pagu
                 </span>
               </div>
             </div>
             <div className="shrink-0 sm:text-right">
-              <span className="text-[34px] font-extrabold leading-none tracking-tight text-emerald-600 sm:text-[40px]">
-                {loading ? '—' : `${totalPct}%`}
+              <span className="text-[26px] font-bold leading-none tracking-tight tabular-nums text-emerald-600 sm:text-[30px]">
+                {loading ? '—' : fmtPersenRinci(totalPct)}
               </span>
               <p className="mt-1.5 text-[14px] font-medium text-slate-500">sudah dicairkan</p>
             </div>
@@ -211,7 +205,7 @@ const StatistikKKDDashboard = () => {
                   </span>
                   {!loading && !kosong && (
                     <span className={`shrink-0 text-[17px] font-bold tabular-nums ${isActive ? 'text-white' : 'text-emerald-600'}`}>
-                      {r.pct}%
+                      {fmtPersenRinci(r.pct)}
                     </span>
                   )}
                 </span>
@@ -220,9 +214,9 @@ const StatistikKKDDashboard = () => {
                   {tab.fullLabel}
                 </span>
 
-                <span className="mt-4 flex flex-wrap items-baseline gap-x-2">
+                <span className="mt-4 flex flex-col gap-1">
                   <span
-                    className={`text-[24px] font-extrabold leading-none tracking-tight tabular-nums ${
+                    className={`text-[18px] font-bold leading-tight tracking-tight tabular-nums ${
                       isActive ? 'text-white' : 'text-slate-900'
                     }`}
                     title={fmtRpPenuh(r.cair)}
@@ -230,7 +224,7 @@ const StatistikKKDDashboard = () => {
                     {loading ? '—' : fmtRp(r.cair)}
                   </span>
                   {!loading && !kosong && (
-                    <span className={`text-[13px] font-medium ${isActive ? 'text-slate-400' : 'text-slate-400'}`} title={fmtRpPenuh(r.pagu)}>
+                    <span className={`text-[12px] font-medium tabular-nums text-slate-400`} title={fmtRpPenuh(r.pagu)}>
                       dari {fmtRp(r.pagu)}
                     </span>
                   )}
