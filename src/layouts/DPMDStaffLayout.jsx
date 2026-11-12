@@ -17,7 +17,6 @@ import { Landmark, ChevronDown, PanelLeftClose, PanelLeftOpen, ScanFace, ArrowLe
 import { useCctvAlerts } from "../hooks/useCctvAlerts";
 import { bolehBuka, useAksesCctv } from "../hooks/useAksesCctv";
 import AnimatedIcon from '../components/AnimatedIcon';
-import ChatBot from '../components/chatbot/ChatBot';
 import { performFullLogout } from "../utils/sessionPersistence";
 import { useConfirm } from "../hooks/useConfirm.jsx";
 import { subscribeToPushNotifications } from "../utils/pushNotifications";
@@ -618,7 +617,7 @@ const DPMDStaffLayout = () => {
 			{/* Desktop Sidebar */}
 			{isDesktop && (
 				<aside
-					className={`fixed top-0 left-0 z-40 flex h-full flex-col border-r border-slate-200 bg-white transition-all duration-300 ease-[cubic-bezier(0.4,0,0.2,1)] ${
+					className={`rounded-r-3xl fixed top-0 left-0 z-40 flex h-full flex-col border-r border-slate-200 bg-white transition-all duration-300 ease-[cubic-bezier(0.4,0,0.2,1)] ${
 						isSidebarCollapsed ? 'w-20' : 'w-64'
 					}`}
 				>
@@ -1142,9 +1141,6 @@ const DPMDStaffLayout = () => {
 			)}
 			</AnimatePresence>
 			{confirmDialog}
-
-			{/* Smart Search ChatBot - only on dashboard */}
-			{location.pathname.endsWith('/dashboard') && <ChatBot isDesktop={isDesktop} />}
 
 			<style>{`
 				@keyframes fadeIn {

@@ -99,7 +99,7 @@ const CoreDashboardLayout = () => {
 
       {/* Sidebar */}
       <aside
-        className={`fixed z-50 flex h-full flex-col border-r border-slate-200 bg-white
+        className={`rounded-r-3xl fixed z-50 flex h-full flex-col border-r border-slate-200 bg-white
           transition-[transform,width] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] lg:relative
           ${sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
           ${sidebarOpen ? 'w-64' : 'lg:w-[76px]'}

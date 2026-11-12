@@ -231,7 +231,7 @@ const DinasLayout = () => {
 
       {/* Sidebar - White - Responsive */}
       <aside
-        className={`fixed top-0 left-0 h-full bg-white text-gray-800 transition-all duration-300 z-40 border-r border-gray-200 ${
+        className={`rounded-r-3xl fixed top-0 left-0 h-full bg-white text-gray-800 transition-all duration-300 z-40 border-r border-gray-200 ${
           sidebarOpen ? "w-64 sm:w-72 translate-x-0" : "-translate-x-full lg:translate-x-0 lg:w-20"
         } overflow-hidden shadow-lg`}
       >

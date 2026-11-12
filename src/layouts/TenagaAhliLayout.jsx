@@ -69,7 +69,7 @@ const TenagaAhliLayout = () => {
 
 			{/* Sidebar */}
 			<aside
-				className={`fixed left-0 top-0 z-40 h-full overflow-hidden border-r border-slate-200 bg-white text-slate-800 shadow-lg transition-all duration-300 ${
+				className={`rounded-r-3xl fixed left-0 top-0 z-40 h-full overflow-hidden border-r border-slate-200 bg-white text-slate-800 shadow-lg transition-all duration-300 ${
 					sidebarTerbuka ? 'w-64 translate-x-0 sm:w-72' : '-translate-x-full lg:w-20 lg:translate-x-0'
 				}`}
 			>

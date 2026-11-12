@@ -211,7 +211,7 @@ const KecamatanLayout = () => {
       <WajibOperatorKecamatan />
       {/* ------------------------------------------------------- sidebar -- */}
       <aside
-        className={`fixed inset-y-0 left-0 z-50 flex flex-col bg-slate-950 text-slate-300 transition-all duration-300 ease-out
+        className={`rounded-r-3xl fixed inset-y-0 left-0 z-50 flex flex-col bg-slate-950 text-slate-300 transition-all duration-300 ease-out
           ${laciTerbuka ? "translate-x-0" : "-translate-x-full"} lg:translate-x-0
           ${lebar ? "w-[17rem]" : "w-[4.75rem]"}`}
       >

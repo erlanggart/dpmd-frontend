@@ -296,7 +296,7 @@ const SuperadminLayout = () => {
 
 			{isDesktop && (
 				<aside
-					className={`fixed left-0 top-0 z-40 flex h-full flex-col border-r border-slate-200 bg-white transition-all duration-300 ease-[cubic-bezier(0.4,0,0.2,1)] ${
+					className={`rounded-r-3xl fixed left-0 top-0 z-40 flex h-full flex-col border-r border-slate-200 bg-white transition-all duration-300 ease-[cubic-bezier(0.4,0,0.2,1)] ${
 						isSidebarCollapsed ? "w-20" : "w-64"
 					}`}
 				>

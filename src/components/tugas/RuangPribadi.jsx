@@ -1,13 +1,27 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { AlertCircle, BellRing, Check, CheckCheck, ChevronDown, FileText, LoaderCircle, NotebookPen, Pencil, Pin, Plus, Trash2, X } from 'lucide-react';
-import { AnimatePresence, MotionConfig, motion } from 'framer-motion';
+import { forwardRef, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { AlertCircle, Bell, BellRing, CalendarPlus, Check, CheckCheck, ChevronDown, FileText, LoaderCircle, NotebookPen, Pencil, Pin, Plus, Search, Trash2, X } from 'lucide-react';
+import { AnimatePresence, MotionConfig, motion, useMotionValue, useTransform } from 'framer-motion';
 import toast from 'react-hot-toast';
 import api from '../../api';
 import confirmDialog from '../../utils/confirmDialog';
 
 // tanggal hari ini menurut WIB, format YYYY-MM-DD (sama dengan format tanggal_pengingat)
 const hariIni = () => new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Jakarta' }).format(new Date());
-const tanggalId = (ymd) => new Date(`${ymd}T00:00:00`).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' });
+const geserHari = (iso, n) => { const t = new Date(`${iso}T00:00:00Z`); t.setUTCDate(t.getUTCDate() + n); return t.toISOString().slice(0, 10); };
+const selisihHari = (a, b) => Math.round((Date.parse(`${a}T00:00:00Z`) - Date.parse(`${b}T00:00:00Z`)) / 864e5);
+const seninDepan = (iso) => geserHari(iso, (8 - new Date(`${iso}T00:00:00Z`).getUTCDay()) % 7 || 7);
+const normalisasi = (s) => s.toLowerCase().replace(/\s+/g, ' ').trim();
+
+// chip tanggal satu baris: lewat (merah), hari ini, besok, atau tanggal pendek
+const infoTanggal = (tgl) => {
+  const h = hariIni();
+  const d = selisihHari(h, tgl);
+  if (d > 0) return { kelas: 'bg-red-50 text-red-600', teks: d === 1 ? 'Lewat kemarin' : `Lewat ${d} hari`, lewat: true };
+  if (d === 0) return { kelas: 'bg-purple-50 text-purple-700', teks: 'Hari ini' };
+  if (d === -1) return { kelas: 'bg-slate-100 text-slate-600', teks: 'Besok' };
+  const beda = tgl.slice(0, 4) !== h.slice(0, 4);
+  return { kelas: 'bg-slate-100 text-slate-600', bel: true, teks: new Date(`${tgl}T00:00:00Z`).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', ...(beda && { year: 'numeric' }), timeZone: 'UTC' }) };
+};
 const urutTugas = (a, b) => (a.tanggal_pengingat || '9999').localeCompare(b.tanggal_pengingat || '9999') || b.created_at.localeCompare(a.created_at);
 const urutCatatan = (a, b) => Number(b.disematkan) - Number(a.disematkan) || b.updated_at.localeCompare(a.updated_at);
 const kode = (n) => JSON.stringify({ judul: (n.judul ?? '').trim(), isi: n.isi ?? '' });
@@ -236,8 +250,54 @@ function EditorCatatan({ catatan, muatUlang, onTersimpan, tutup, permintaanTutup
   );
 }
 
+// ---------- Baris tugas aktif: geser kanan = selesai, geser kiri = hapus ----------
+const BarisTugas = forwardRef(function BarisTugas({ t, sedangSelesai, onCentang, onUbah, onHapus }, ref) {
+  const x = useMotionValue(0);
+  const opKanan = useTransform(x, [0, 96], [0, 1]);
+  const opKiri = useTransform(x, [-96, 0], [1, 0]);
+  const menggeser = useRef(false); // cegah ketukan terpicu setelah menggeser
+  const info = t.tanggal_pengingat ? infoTanggal(t.tanggal_pengingat) : null;
+  return (
+    <motion.li ref={ref} layout initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, x: 48, scale: 0.95, transition: { duration: 0.25 } }} className="relative min-w-0 rounded-xl">
+      <motion.div aria-hidden="true" style={{ opacity: opKanan }} className="absolute inset-0 flex items-center gap-1.5 rounded-xl bg-emerald-500 px-4 text-sm font-semibold text-white"><Check className="h-4 w-4" /> Selesai</motion.div>
+      <motion.div aria-hidden="true" style={{ opacity: opKiri }} className="absolute inset-0 flex items-center justify-end gap-1.5 rounded-xl bg-red-500 px-4 text-sm font-semibold text-white">Hapus <Trash2 className="h-4 w-4" /></motion.div>
+      <motion.div
+        drag="x"
+        dragDirectionLock
+        dragConstraints={{ left: 0, right: 0 }}
+        dragElastic={0.6}
+        style={{ x }}
+        onDragStart={() => { menggeser.current = true; }}
+        onDragEnd={(_, i) => {
+          if (i.offset.x > 96) onCentang(); else if (i.offset.x < -96) onHapus();
+          setTimeout(() => { menggeser.current = false; }, 80);
+        }}
+        className="group relative flex items-start gap-1 rounded-xl border border-transparent bg-white px-1 transition-colors hover:border-slate-200 hover:shadow-sm"
+      >
+        <Centang aktif={sedangSelesai} label={`Tandai selesai: ${t.judul}`} onKlik={onCentang} />
+        <button type="button" className="min-w-0 flex-1 py-2.5 text-left" onClick={() => { if (!menggeser.current) onUbah(); }}>
+          <span className="line-clamp-2 break-words text-sm font-medium text-slate-900">{t.judul}</span>
+          {info && (
+            <span className={`mt-1 inline-flex items-center gap-1 whitespace-nowrap rounded-full px-2 py-0.5 text-[11px] font-medium ${info.kelas}`}>
+              {info.lewat && <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-red-500" aria-hidden="true" />}
+              {info.bel && <Bell className="h-3 w-3" aria-hidden="true" />}
+              {info.teks}
+            </span>
+          )}
+        </button>
+        <button type="button" aria-label={`Ubah tugas: ${t.judul}`} onClick={onUbah} className={`hidden h-10 w-10 shrink-0 items-center justify-center rounded-lg text-slate-400 hover:text-purple-600 sm:flex ${kelasIkonHover}`}>
+          <Pencil className="h-4 w-4" />
+        </button>
+        <button type="button" aria-label={`Hapus tugas: ${t.judul}`} onClick={onHapus} className={`hidden h-10 w-10 shrink-0 items-center justify-center rounded-lg text-slate-400 hover:bg-red-50 hover:text-red-600 sm:flex ${kelasIkonHover}`}>
+          <Trash2 className="h-4 w-4" />
+        </button>
+      </motion.div>
+    </motion.li>
+  );
+});
+
 // ---------- Form tugas ----------
-function FormTugas({ tugas, onSelesai, onBatal }) {
+function FormTugas({ tugas, onSelesai, onBatal, onHapus }) {
   const [judul, setJudul] = useState(tugas?.judul ?? '');
   const [tanggal, setTanggal] = useState(tugas?.tanggal_pengingat ?? '');
   const [galat, setGalat] = useState('');
@@ -271,7 +331,8 @@ function FormTugas({ tugas, onSelesai, onBatal }) {
         <input type="date" value={tanggal} onChange={(e) => setTanggal(e.target.value)} className={`${kelasInput} mt-1 font-normal text-slate-600`} />
         <span className="mt-1 block text-xs font-normal text-slate-500">Kosongkan agar diingatkan mulai sekarang. Pengingat berulang sampai tugas dicentang selesai.</span>
       </label>
-      <div className="flex justify-end gap-2 pt-2">
+      <div className="flex items-center justify-end gap-2 pt-2">
+        {tugas && <button type="button" disabled={proses} onClick={onHapus} className="mr-auto inline-flex min-h-10 items-center gap-1.5 rounded-lg px-2 text-sm font-medium text-red-600 hover:bg-red-50 disabled:opacity-60"><Trash2 className="h-4 w-4" /> Hapus tugas</button>}
         <button type="button" disabled={proses} onClick={onBatal} className={kelasTombolLuar}>Batal</button>
         <button type="submit" disabled={proses} className="inline-flex min-h-10 items-center gap-2 rounded-xl bg-purple-600 px-4 text-sm font-semibold text-white hover:bg-purple-700 disabled:opacity-60">
           {proses && <LoaderCircle className="h-4 w-4 animate-spin" />}
@@ -299,6 +360,35 @@ const RuangPribadi = ({ halaman = false, onData }) => {
   const [menyelesaikan, setMenyelesaikan] = useState(() => new Set()); // id yang centangnya sudah tergambar, menunggu animasi
   const prosesRef = useRef(new Set()); // id yang sedang diproses (cegah klik ganda)
   const inputRef = useRef(null);
+  const [tanggalCepat, setTanggalCepat] = useState(''); // preset tanggal tambah cepat ('' = tanpa tanggal)
+  const [menuTanggal, setMenuTanggal] = useState(false);
+  const [cariBuka, setCariBuka] = useState(false);
+  const [cari, setCari] = useState('');
+  const kotakCepatRef = useRef(null);
+
+  // pintasan "n": fokus ke input tambah cepat di tab Todo
+  useEffect(() => {
+    const tekan = (e) => {
+      if (e.key !== 'n' || e.ctrlKey || e.altKey || e.metaKey) return;
+      const el = e.target;
+      if (el.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(el.tagName) || document.querySelector('[role="dialog"]')) return;
+      e.preventDefault();
+      setTabAktif('tugas');
+      setTimeout(() => inputRef.current?.focus(), 50);
+    };
+    document.addEventListener('keydown', tekan);
+    return () => document.removeEventListener('keydown', tekan);
+  }, []);
+
+  // menu preset tanggal: tutup saat klik di luar / Escape
+  useEffect(() => {
+    if (!menuTanggal) return undefined;
+    const luar = (e) => { if (!kotakCepatRef.current?.contains(e.target)) setMenuTanggal(false); };
+    const esc = (e) => { if (e.key === 'Escape') setMenuTanggal(false); };
+    document.addEventListener('mousedown', luar);
+    document.addEventListener('keydown', esc);
+    return () => { document.removeEventListener('mousedown', luar); document.removeEventListener('keydown', esc); };
+  }, [menuTanggal]);
 
   const muat = useCallback(async () => {
     setGagal(false);
@@ -329,6 +419,19 @@ const RuangPribadi = ({ halaman = false, onData }) => {
 
   const aktif = useMemo(() => (tugas || []).filter((t) => !t.selesai).sort(urutTugas), [tugas]);
   const selesai = useMemo(() => (tugas || []).filter((t) => t.selesai).sort((a, b) => b.updated_at.localeCompare(a.updated_at)), [tugas]);
+  const kataCari = normalisasi(cari);
+  const cocok = (t) => !kataCari || normalisasi(t.judul).includes(kataCari);
+  const aktifTampil = aktif.filter(cocok);
+  const selesaiTampil = selesai.filter(cocok);
+  const kelompok = (() => {
+    const h = hariIni();
+    return [
+      { kunci: 'lewat', judul: 'Lewat tanggal', kelas: 'text-red-600', isi: aktifTampil.filter((t) => t.tanggal_pengingat && t.tanggal_pengingat < h) },
+      { kunci: 'hari', judul: 'Hari ini', kelas: 'text-purple-700', isi: aktifTampil.filter((t) => t.tanggal_pengingat === h) },
+      { kunci: 'nanti', judul: 'Akan datang', kelas: 'text-slate-500', isi: aktifTampil.filter((t) => t.tanggal_pengingat > h) },
+      { kunci: 'tanpa', judul: 'Tanpa tanggal', kelas: 'text-slate-500', isi: aktifTampil.filter((t) => !t.tanggal_pengingat) },
+    ].filter((g) => g.isi.length);
+  })();
   const daftarCatatan = useMemo(() => [...(catatan || [])].sort(urutCatatan), [catatan]);
 
   const bukaEditTugas = (t) => { setTugasEdit(t); setDialogTugas(true); };
@@ -341,9 +444,10 @@ const RuangPribadi = ({ halaman = false, onData }) => {
     if (!j || menambah) return;
     setMenambah(true);
     try {
-      const res = await api.post('/tugas-pribadi', { judul: j });
+      const res = await api.post('/tugas-pribadi', { judul: j, tanggal_pengingat: tanggalCepat || null });
       setTugas((d) => [res.data.data, ...d]);
       setJudulCepat('');
+      setTanggalCepat('');
     } catch (err) {
       toast.error(err?.response?.data?.message || 'Tugas belum tersimpan. Coba lagi.');
     } finally {
@@ -365,6 +469,14 @@ const RuangPribadi = ({ halaman = false, onData }) => {
     try {
       const res = await api.patch(`/tugas-pribadi/${t.id}`, { selesai: !asli });
       setTugas((d) => d.map((x) => (x.id === t.id ? res.data.data : x)));
+      if (!asli) {
+        toast.custom((tt) => (
+          <div className={`flex items-center gap-3 rounded-xl bg-slate-900 px-4 py-2.5 text-sm text-white shadow-lg transition-opacity ${tt.visible ? 'opacity-100' : 'opacity-0'}`}>
+            Tugas selesai
+            <button type="button" onClick={() => { toast.dismiss(tt.id); centang({ ...t, selesai: true }); }} className="rounded-md px-2 py-1 font-semibold text-purple-300 hover:bg-white/10">Batalkan</button>
+          </div>
+        ), { duration: 4000 });
+      }
     } catch {
       ubah(asli);
       toast.error('Tugas belum tersimpan. Coba lagi.');
@@ -374,12 +486,14 @@ const RuangPribadi = ({ halaman = false, onData }) => {
   };
 
   const hapus = async (jenis, item, url, setDaftar) => {
-    if (!(await confirmDialog({ title: `Hapus ${jenis}?`, text: 'Item ini akan dihapus dari ruang pribadi Anda.', confirmText: 'Hapus', confirmColor: '#dc2626' }))) return;
+    if (!(await confirmDialog({ title: `Hapus ${jenis}?`, text: 'Item ini akan dihapus dari ruang pribadi Anda.', confirmText: 'Hapus', confirmColor: '#dc2626' }))) return false;
     try {
       await api.delete(`${url}/${item.id}`);
       setDaftar((d) => d.filter((x) => x.id !== item.id));
+      return true;
     } catch {
       toast.error(`${jenis === 'tugas' ? 'Tugas' : 'Catatan'} belum dapat dihapus. Coba lagi.`);
+      return false;
     }
   };
 
@@ -393,13 +507,6 @@ const RuangPribadi = ({ halaman = false, onData }) => {
         toast.error('Catatan diperbarui di perangkat lain. Daftar catatan sudah dimuat ulang.');
       } else toast.error('Catatan belum dapat diperbarui. Coba lagi.');
     }
-  };
-
-  const infoTanggal = (tgl) => {
-    const h = hariIni();
-    if (tgl < h) return { kelas: 'bg-red-50 text-red-600', teks: `Lewat · ${tanggalId(tgl)}`, lewat: true };
-    if (tgl === h) return { kelas: 'bg-purple-50 text-purple-700', teks: 'Hari ini' };
-    return { kelas: 'bg-slate-100 text-slate-600', teks: `Mulai diingatkan · ${tanggalId(tgl)}` };
   };
 
   const tombolHapus = (jenis, item, url, setDaftar) => (
@@ -422,7 +529,7 @@ const RuangPribadi = ({ halaman = false, onData }) => {
   const panelTugas = (
     <>
       <form onSubmit={tambahCepat} className="mb-3 flex items-center gap-2">
-        <div className="relative flex-1">
+        <div ref={kotakCepatRef} className="relative flex-1">
           <Plus className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" aria-hidden="true" />
           <input
             ref={inputRef}
@@ -432,8 +539,24 @@ const RuangPribadi = ({ halaman = false, onData }) => {
             onChange={(e) => setJudulCepat(e.target.value)}
             placeholder="Tambah tugas, tekan Enter…"
             aria-label="Tambah tugas"
-            className={`${kelasInput} h-11 pl-10`}
+            className={`${kelasInput} h-11 pl-10 pr-12`}
           />
+          <button type="button" aria-label="Atur tanggal pengingat" aria-expanded={menuTanggal} onClick={() => setMenuTanggal((v) => !v)} className={`absolute right-1 top-1/2 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-lg hover:bg-purple-50 ${tanggalCepat ? 'text-purple-600' : 'text-slate-400'}`}>
+            <CalendarPlus className="h-4 w-4" />
+          </button>
+          <AnimatePresence>
+            {menuTanggal && (
+              <motion.div initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -4 }} transition={{ duration: 0.12 }} className="absolute right-0 top-full z-20 mt-1 w-52 rounded-xl border border-slate-200 bg-white p-1 shadow-lg">
+                {[['Tanpa tanggal', ''], ['Hari ini', hariIni()], ['Besok', geserHari(hariIni(), 1)], ['Lusa', geserHari(hariIni(), 2)], ['Senin depan', seninDepan(hariIni())]].map(([nama, nilai]) => (
+                  <button key={nama} type="button" onClick={() => { setTanggalCepat(nilai); setMenuTanggal(false); }} className={`flex min-h-10 w-full items-center rounded-lg px-3 text-left text-sm hover:bg-purple-50 ${tanggalCepat === nilai ? 'font-semibold text-purple-700' : 'text-slate-700'}`}>{nama}</button>
+                ))}
+                <label className="block px-3 pb-2 pt-1 text-xs text-slate-500">
+                  Pilih tanggal…
+                  <input type="date" value={tanggalCepat} onChange={(e) => { setTanggalCepat(e.target.value); if (e.target.value) setMenuTanggal(false); }} className={`${kelasInput} mt-1 h-9`} />
+                </label>
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
         <motion.button
           type="submit"
@@ -445,53 +568,58 @@ const RuangPribadi = ({ halaman = false, onData }) => {
           {menambah ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <Plus className="h-5 w-5" />}
         </motion.button>
       </form>
+      {tanggalCepat && (
+        <span className="-mt-1 mb-3 inline-flex items-center gap-1 rounded-full bg-purple-50 py-0.5 pl-2.5 pr-1 text-xs font-medium text-purple-700">
+          <Bell className="h-3 w-3" aria-hidden="true" /> {infoTanggal(tanggalCepat).teks}
+          <button type="button" aria-label="Hapus tanggal pengingat" onClick={() => setTanggalCepat('')} className="flex h-5 w-5 items-center justify-center rounded-full hover:bg-purple-100"><X className="h-3 w-3" /></button>
+        </span>
+      )}
+      <AnimatePresence initial={false}>
+        {cariBuka && (
+          <motion.div initial={{ width: 0, opacity: 0 }} animate={{ width: '100%', opacity: 1 }} exit={{ width: 0, opacity: 0 }} className="relative mb-3 overflow-hidden">
+            <Search className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" aria-hidden="true" />
+            <input autoFocus type="text" value={cari} onChange={(e) => setCari(e.target.value)} onKeyDown={(e) => { if (e.key === 'Escape') { setCari(''); setCariBuka(false); } }} placeholder="Cari tugas…" aria-label="Cari tugas" className={`${kelasInput} h-11 pl-10 pr-11`} />
+            <button type="button" aria-label="Tutup pencarian" onClick={() => { setCari(''); setCariBuka(false); }} className="absolute right-1 top-1/2 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-lg text-slate-400 hover:bg-slate-100"><X className="h-4 w-4" /></button>
+          </motion.div>
+        )}
+      </AnimatePresence>
       <div className="space-y-1">
-        {aktif.length ? (
-          <ul className="space-y-1">
-            <AnimatePresence initial={false} mode="popLayout">
-              {aktif.map((t) => {
-                const info = t.tanggal_pengingat ? infoTanggal(t.tanggal_pengingat) : null;
-                return (
-                  <motion.li
-                    key={t.id}
-                    layout
-                    initial={{ opacity: 0, y: -8 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, x: 48, scale: 0.95, transition: { duration: 0.25 } }}
-                    whileHover={{ y: -1 }}
-                    className="group flex min-h-14 items-center gap-1 rounded-xl border border-transparent px-1 py-1 transition-colors hover:border-slate-200 hover:bg-white hover:shadow-sm"
-                  >
-                    <Centang aktif={menyelesaikan.has(t.id)} label={`Tandai selesai: ${t.judul}`} onKlik={() => centang(t)} />
-                    <button type="button" className="min-w-0 flex-1 py-2 text-left" onClick={() => bukaEditTugas(t)}>
-                      <span className="block truncate text-sm font-medium text-slate-900">{t.judul}</span>
-                      {info && (
-                        <span className={`mt-1 inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-[11px] font-medium ${info.kelas}`}>
-                          {info.lewat && <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-red-500" aria-hidden="true" />}
-                          {info.teks}
-                        </span>
-                      )}
-                    </button>
-                    <button type="button" aria-label={`Ubah tugas: ${t.judul}`} onClick={() => bukaEditTugas(t)} className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-lg text-slate-400 hover:text-purple-600 ${kelasIkonHover}`}>
-                      <Pencil className="h-4 w-4" />
-                    </button>
-                    {tombolHapus('tugas', t, '/tugas-pribadi', setTugas)}
-                  </motion.li>
-                );
-              })}
-            </AnimatePresence>
-          </ul>
+        {aktifTampil.length ? (
+          <div className="space-y-3">
+            {kelompok.map((g) => (
+              <section key={g.kunci} aria-label={g.judul}>
+                <h4 className={`mb-1 px-1 text-[11px] font-semibold uppercase tracking-wide ${g.kelas}`}>{g.judul} <span className="font-medium tabular-nums opacity-70">{g.isi.length}</span></h4>
+                <ul className={`flex flex-col gap-1 ${halaman ? '2xl:grid 2xl:grid-cols-2 2xl:gap-x-6' : ''}`}>
+                  <AnimatePresence initial={false} mode="popLayout">
+                    {g.isi.map((t) => (
+                      <BarisTugas
+                        key={t.id}
+                        t={t}
+                        sedangSelesai={menyelesaikan.has(t.id)}
+                        onCentang={() => centang(t)}
+                        onUbah={() => bukaEditTugas(t)}
+                        onHapus={() => hapus('tugas', t, '/tugas-pribadi', setTugas)}
+                      />
+                    ))}
+                  </AnimatePresence>
+                </ul>
+              </section>
+            ))}
+          </div>
+        ) : kataCari ? (
+          <p className="rounded-xl bg-slate-50 px-4 py-6 text-center text-sm text-slate-500">Tidak ada tugas yang cocok dengan “{cari.trim()}”</p>
         ) : kosong(CheckCheck, 'Daftar Anda sudah lega.', 'Tambahkan tugas yang ingin Anda ingat.', 'Tambah tugas', () => inputRef.current?.focus())}
-        {selesai.length > 0 && (
+        {selesaiTampil.length > 0 && (
           <div className="border-t border-slate-100 pt-2">
             <button type="button" aria-expanded={selesaiTerbuka} className="flex min-h-11 w-full items-center gap-2 px-2 text-left text-xs font-medium text-slate-500 hover:text-slate-800" onClick={() => setSelesaiTerbuka((v) => !v)}>
-              <Check className="h-4 w-4" /> Selesai ({selesai.length})
+              <Check className="h-4 w-4" /> Selesai ({selesaiTampil.length})
               <motion.span animate={{ rotate: selesaiTerbuka ? 180 : 0 }} className="ml-auto flex" aria-hidden="true"><ChevronDown className="h-4 w-4" /></motion.span>
             </button>
             <AnimatePresence initial={false}>
               {selesaiTerbuka && (
                 <motion.ul key="selesai" initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
                   <AnimatePresence initial={false} mode="popLayout">
-                    {selesai.map((t) => (
+                    {selesaiTampil.map((t) => (
                       <motion.li key={t.id} layout initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, x: 48, transition: { duration: 0.25 } }} className="flex min-h-12 items-center gap-1 rounded-xl px-1">
                         <Centang aktif={!menyelesaikan.has(t.id)} label={`Batalkan selesai: ${t.judul}`} onKlik={() => centang(t)} />
                         <span className="min-w-0 flex-1 truncate text-sm text-slate-400 line-through">{t.judul}</span>
@@ -515,7 +643,7 @@ const RuangPribadi = ({ halaman = false, onData }) => {
         <button type="button" className={kelasTombolGhost} onClick={bukaTambahCatatan}><Plus className="h-4 w-4" /> Catatan</button>
       </div>
       {daftarCatatan.length ? (
-        <div className={halaman ? 'grid gap-3 sm:grid-cols-2 lg:grid-cols-3' : 'grid gap-2 sm:grid-cols-2 xl:grid-cols-1 2xl:grid-cols-2'}>
+        <div className={halaman ? 'grid gap-3 sm:grid-cols-2 xl:grid-cols-3' : 'grid gap-2 sm:grid-cols-2 xl:grid-cols-1 2xl:grid-cols-2'}>
           <AnimatePresence initial={false} mode="popLayout">
           {(semuaCatatan || halaman ? daftarCatatan : daftarCatatan.slice(0, 6)).map((c) => (
             <motion.div
@@ -584,35 +712,41 @@ const RuangPribadi = ({ halaman = false, onData }) => {
 
   return (
     <MotionConfig reducedMotion="user">
-    <div className="overflow-hidden rounded-[1.75rem] border border-slate-200 bg-white shadow-sm">
-      <div className="space-y-4 p-5">
+    <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+      <div className="space-y-4 p-4 sm:p-6">
         <div className="flex items-center gap-3">
           <span className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-purple-500 to-violet-600 text-white shadow-lg shadow-purple-500/30"><NotebookPen className="h-5 w-5" /></span>
           <div className="min-w-0 flex-1">
             <h3 className="font-semibold text-slate-900">Ruang Pribadi</h3>
             <p className="mt-0.5 text-sm text-slate-500">Tugas dan catatan Anda.</p>
           </div>
-          <div className="relative h-11 w-11 shrink-0" role="img" aria-label={`${selesai.length} dari ${total} tugas selesai`}>
-            <svg viewBox="0 0 44 44" className="h-11 w-11 -rotate-90" aria-hidden="true">
-              <circle cx="22" cy="22" r="18" fill="none" strokeWidth="4" className="stroke-slate-100" />
-              <motion.circle cx="22" cy="22" r="18" fill="none" strokeWidth="4" strokeLinecap="round" className="stroke-purple-600" initial={{ pathLength: 0 }} animate={{ pathLength: total ? selesai.length / total : 0 }} transition={{ type: 'spring', stiffness: 120, damping: 20 }} />
-            </svg>
-            <span className="absolute inset-0 flex items-center justify-center text-[10px] font-semibold tabular-nums text-slate-700" aria-hidden="true">{persen}%</span>
+          <div className="w-28 shrink-0 sm:w-40" role="progressbar" aria-valuemin={0} aria-valuemax={total} aria-valuenow={selesai.length} aria-label={`${selesai.length} dari ${total} tugas selesai`}>
+            <p className="mb-1 text-right text-xs tabular-nums text-slate-500" aria-hidden="true">{selesai.length} dari {total} selesai</p>
+            <div className="h-1.5 overflow-hidden rounded-full bg-slate-100">
+              <motion.div className="h-full rounded-full bg-gradient-to-r from-purple-500 to-violet-600" initial={{ width: 0 }} animate={{ width: `${persen}%` }} transition={{ type: 'spring', stiffness: 120, damping: 20 }} />
+            </div>
           </div>
         </div>
-        <div role="tablist" className="grid h-11 grid-cols-2 rounded-xl bg-slate-100 p-1">
-          <button type="button" role="tab" aria-selected={tabAktif === 'tugas'} className={kelasTab('tugas')} onClick={() => setTabAktif('tugas')}>
-            {tabAktif === 'tugas' && pilTab}
-            <span className="relative z-10 flex items-center gap-1">Todo <span className="ml-1 text-xs tabular-nums text-slate-500">{aktif.length}</span></span>
-          </button>
-          <button type="button" role="tab" aria-selected={tabAktif === 'catatan'} className={kelasTab('catatan')} onClick={() => setTabAktif('catatan')}>
-            {tabAktif === 'catatan' && pilTab}
-            <span className="relative z-10 flex items-center gap-1"><FileText className="h-4 w-4" /> Catatan <span className="ml-1 text-xs tabular-nums text-slate-500">{daftarCatatan.length}</span></span>
-          </button>
+        <div className="flex items-center gap-2">
+          <div role="tablist" className="grid h-11 flex-1 grid-cols-2 rounded-xl bg-slate-100 p-1">
+            <button type="button" role="tab" aria-selected={tabAktif === 'tugas'} className={kelasTab('tugas')} onClick={() => setTabAktif('tugas')}>
+              {tabAktif === 'tugas' && pilTab}
+              <span className="relative z-10 flex items-center gap-1">Todo <span className="ml-1 text-xs tabular-nums text-slate-500">{aktif.length}</span></span>
+            </button>
+            <button type="button" role="tab" aria-selected={tabAktif === 'catatan'} className={kelasTab('catatan')} onClick={() => setTabAktif('catatan')}>
+              {tabAktif === 'catatan' && pilTab}
+              <span className="relative z-10 flex items-center gap-1"><FileText className="h-4 w-4" /> Catatan <span className="ml-1 text-xs tabular-nums text-slate-500">{daftarCatatan.length}</span></span>
+            </button>
+          </div>
+          {tabAktif === 'tugas' && aktif.length > 5 && (
+            <button type="button" aria-label="Cari tugas" aria-pressed={cariBuka} onClick={() => { if (cariBuka) setCari(''); setCariBuka((v) => !v); }} className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-slate-200 hover:bg-purple-50 ${cariBuka ? 'text-purple-600' : 'text-slate-500'}`}>
+              <Search className="h-4 w-4" />
+            </button>
+          )}
         </div>
         <div>{isi}</div>
       </div>
-      <div className="flex items-center gap-2 border-t border-slate-100 bg-purple-50/50 px-5 py-2.5 text-xs text-slate-500">
+      <div className="flex items-center gap-2 border-t border-slate-100 bg-purple-50/50 px-4 py-2.5 text-xs text-slate-500 sm:px-6">
         <BellRing className="h-3.5 w-3.5 shrink-0 text-purple-600" />
         Pengingat dikirim tiap 3 jam (07.00–19.00 WIB) sampai tugas dicentang selesai.
       </div>
@@ -622,6 +756,7 @@ const RuangPribadi = ({ halaman = false, onData }) => {
           key={tugasEdit?.id ?? 'baru'}
           tugas={tugasEdit}
           onBatal={() => setDialogTugas(false)}
+          onHapus={async () => { if (await hapus('tugas', tugasEdit, '/tugas-pribadi', setTugas)) setDialogTugas(false); }}
           onSelesai={(t) => {
             setTugas((d) => (d.some((x) => x.id === t.id) ? d.map((x) => (x.id === t.id ? t : x)) : [t, ...d]));
             setDialogTugas(false);

@@ -67,7 +67,7 @@ const AdminDesaLayout = () => {
 		<div className="min-h-screen bg-slate-50">
 			{isDesktop && (
 				<aside
-					className={`fixed top-0 left-0 h-full bg-slate-900 text-white shadow-2xl z-40 transition-all duration-300 border-r border-slate-800 ${
+					className={`rounded-r-3xl fixed top-0 left-0 h-full bg-slate-900 text-white shadow-2xl z-40 transition-all duration-300 border-r border-slate-800 ${
 						isCollapsed ? "w-20" : "w-64"
 					}`}
 				>
