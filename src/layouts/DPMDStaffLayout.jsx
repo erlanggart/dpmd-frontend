@@ -613,7 +613,7 @@ const DPMDStaffLayout = () => {
 			: location.pathname === path || location.pathname.startsWith(`${path}/`);
 
 	return (
-		<div className="min-h-screen bg-slate-50">
+		<div className="min-h-screen bg-slate-100">
 			{/* Desktop Sidebar */}
 			{isDesktop && (
 				<aside
@@ -625,7 +625,7 @@ const DPMDStaffLayout = () => {
 					<div className="flex h-16 flex-shrink-0 items-center justify-between gap-2 border-b border-slate-200 px-3">
 						{!isSidebarCollapsed && (
 							<div className="flex min-w-0 flex-1 items-center gap-2.5 pl-1">
-								<img src="/logo-dpmd.png" alt="DPMD" className="h-9 w-auto" />
+								<img src="/logo-dpmd.png" alt="DPMD" className="h-10 w-auto rounded-xl bg-slate-900 p-1.5" />
 								<div className="min-w-0">
 									<p className="truncate text-sm font-semibold leading-tight text-slate-900">DPMD</p>
 									<p className="truncate text-[11px] leading-tight text-slate-400">{isCctvMode ? "Smart CCTV" : "Kabupaten Bogor"}</p>

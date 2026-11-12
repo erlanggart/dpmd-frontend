@@ -53,7 +53,7 @@ const BpjsLayout = () => {
   };
 
   return (
-    <div className="flex h-screen bg-slate-50">
+    <div className="flex h-screen bg-slate-100">
       {/* Mobile top bar */}
       <div className="fixed top-0 left-0 right-0 h-16 bg-white border-b border-slate-200 lg:hidden z-30 flex items-center justify-between px-4 shadow-sm">
         <button

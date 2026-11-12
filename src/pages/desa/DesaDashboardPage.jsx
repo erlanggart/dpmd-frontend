@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
+import { MotionConfig, motion } from "framer-motion";
 import {
 	LuArrowRight,
 	LuBanknote,
@@ -79,6 +80,188 @@ const countAvailableStages = (stages = []) => {
 	return stages.filter((stage) => stage?.hasData).length;
 };
 
+const ikonStat = {
+	profil: LuMapPin,
+	aparatur: LuUsers,
+	kelembagaan: LuBuilding2,
+	bankeu: LuBanknote,
+};
+
+const gradienIkon = {
+	emerald: "from-emerald-400 to-emerald-600 shadow-emerald-500/25",
+	brand: "from-brand-400 to-brand-600 shadow-brand-500/25",
+	slate: "from-slate-400 to-slate-600 shadow-slate-500/20",
+};
+
+// masuk berurutan: wadah mengatur jeda, tiap anak naik sambil memudar masuk
+const wadahAnim = { hidden: {}, show: { transition: { staggerChildren: 0.04 } } };
+const itemAnim = { hidden: { opacity: 0, y: 8 }, show: { opacity: 1, y: 0 } };
+
+const ubinIkon = (nada) => `flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br text-white shadow-md ${gradienIkon[nada] || gradienIkon.slate}`;
+
+// cincin progres SVG: garis digambar lewat pathLength
+const CincinProgres = ({ persen, className = "h-28 w-28" }) => (
+	<div className={`relative shrink-0 ${className}`} role="img" aria-label={`${persen}% selesai`}>
+		<svg viewBox="0 0 100 100" className="h-full w-full -rotate-90" aria-hidden="true">
+			<circle cx="50" cy="50" r="42" fill="none" strokeWidth="8" className="stroke-white/10" />
+			<motion.circle
+				cx="50"
+				cy="50"
+				r="42"
+				fill="none"
+				strokeWidth="8"
+				strokeLinecap="round"
+				className="stroke-brand-400"
+				initial={{ pathLength: 0 }}
+				animate={{ pathLength: Math.min(Math.max(persen, 0), 100) / 100 }}
+				transition={{ type: "spring", stiffness: 80, damping: 20 }}
+			/>
+		</svg>
+		<span className="absolute inset-0 flex items-center justify-center text-xl font-semibold tabular-nums" aria-hidden="true">
+			{persen}%
+		</span>
+	</div>
+);
+
+const BilahProgres = ({ persen, className = "" }) => (
+	<div className={`h-1.5 overflow-hidden rounded-full bg-slate-100 ${className}`}>
+		<motion.div
+			className="h-full rounded-full bg-gradient-to-r from-brand-400 to-brand-600"
+			initial={{ width: 0 }}
+			animate={{ width: `${Math.min(Math.max(persen, 0), 100)}%` }}
+			transition={{ type: "spring", stiffness: 100, damping: 20 }}
+		/>
+	</div>
+);
+
+const KartuStat = ({ stat, persen }) => {
+	const Ikon = ikonStat[stat.id] || LuLayoutDashboard;
+
+	return (
+		<motion.div
+			variants={itemAnim}
+			whileHover={{ y: -2 }}
+			className="min-w-0 rounded-2xl border border-slate-200/70 bg-white p-3.5 shadow-sm transition-shadow hover:shadow-md sm:p-4"
+		>
+			<span className={ubinIkon("brand")}>
+				<Ikon className="h-5 w-5" />
+			</span>
+			<p className="mt-3 text-2xl font-semibold tabular-nums tracking-tight text-slate-900 sm:text-3xl">
+				{stat.value}
+			</p>
+			<p className="mt-0.5 truncate text-sm font-medium text-slate-600">{stat.label}</p>
+			<p className="mt-0.5 truncate text-xs text-slate-400">{stat.hint}</p>
+			{persen !== undefined && <BilahProgres persen={persen} className="mt-3" />}
+		</motion.div>
+	);
+};
+
+const KartuModul = ({ card }) => {
+	const Ikon = card.icon;
+	const nada = card.badgeClass.includes("brand") ? "brand" : card.ready ? "emerald" : "slate";
+
+	return (
+		<motion.div variants={itemAnim} className="h-full">
+			<Link
+				to={card.link}
+				className="group flex h-full flex-col rounded-2xl border border-slate-200/70 bg-white p-4 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md hover:ring-2 hover:ring-brand-500/20"
+			>
+				<div className="flex items-center gap-3">
+					<span className={ubinIkon(nada)}>
+						<Ikon className="h-5 w-5" />
+					</span>
+					<p className="min-w-0 flex-1 truncate text-sm font-semibold text-slate-900">{card.title}</p>
+					<span className={`shrink-0 whitespace-nowrap rounded-full px-2 py-0.5 text-[11px] font-semibold ring-1 ${card.badgeClass}`}>
+						{card.badge}
+					</span>
+				</div>
+
+				<p className="mt-4 text-2xl font-semibold tracking-tight text-slate-900">{card.value}</p>
+				<p className="mt-1 line-clamp-2 text-sm leading-6 text-slate-500">{card.description}</p>
+
+				<dl className="mt-4 space-y-1.5 rounded-xl bg-slate-50 p-3 text-xs">
+					{card.highlights.map((h) => (
+						<div key={`${card.id}-${h.label}`} className="flex items-center justify-between gap-3">
+							<dt className="text-slate-500">{h.label}</dt>
+							<dd className="min-w-0 truncate text-right font-semibold text-slate-900">{h.value}</dd>
+						</div>
+					))}
+				</dl>
+
+				<div className="mt-auto flex items-center justify-between pt-4 text-sm font-semibold text-slate-900">
+					<span className="transition-colors group-hover:text-brand-700">{card.actionLabel}</span>
+					<LuArrowRight className="h-4 w-4 text-slate-400 transition group-hover:translate-x-1 group-hover:text-brand-600" />
+				</div>
+			</Link>
+		</motion.div>
+	);
+};
+
+const KartuKeuangan = ({ card }) => {
+	// tahapan dibaca dari teks status yang sudah ada ("2/3 tahap memiliki data pencairan")
+	const tahap = /^(\d+)\/(\d+) tahap/.exec(card.status);
+
+	return (
+		<motion.div variants={itemAnim} className="h-full">
+			<div className="flex h-full flex-col rounded-2xl border border-slate-200/70 bg-white p-4 shadow-sm">
+				<div className="flex items-center gap-3">
+					<span className={ubinIkon(card.ready ? "emerald" : "slate")}>
+						<LuWallet className="h-5 w-5" />
+					</span>
+					<p className="min-w-0 flex-1 truncate text-sm font-semibold text-slate-900">{card.title}</p>
+					<span
+						className={`shrink-0 rounded-full px-2 py-0.5 text-[11px] font-semibold ring-1 ${
+							card.ready ? "bg-emerald-50 text-emerald-700 ring-emerald-100" : "bg-slate-100 text-slate-500 ring-slate-200"
+						}`}
+					>
+						{card.ready ? "Tersedia" : "Kosong"}
+					</span>
+				</div>
+				<p className="mt-4 break-words text-xl font-semibold tabular-nums tracking-tight text-slate-900">{card.amount}</p>
+				<p className="mb-3 mt-1 text-xs leading-5 text-slate-500">{card.status}</p>
+				{tahap && <BilahProgres persen={(Number(tahap[1]) / Number(tahap[2])) * 100} className="mt-auto" />}
+			</div>
+		</motion.div>
+	);
+};
+
+const ItemFokus = ({ item, nomor }) => {
+	const Ikon = item.icon;
+	const beres = Ikon === LuCircleCheck;
+
+	return (
+		<motion.li variants={itemAnim}>
+			<Link
+				to={item.link}
+				className={`group block rounded-2xl border p-4 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md ${
+					beres ? "border-emerald-200 bg-emerald-50/60" : "border-slate-200/70 bg-white"
+				}`}
+			>
+				<div className="flex items-start gap-3">
+					<div className="relative shrink-0">
+						<span className={`flex h-10 w-10 items-center justify-center rounded-xl ${item.tone}`}>
+							<Ikon className="h-5 w-5" />
+						</span>
+						{!beres && (
+							<span className="absolute -left-1.5 -top-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-slate-900 text-[10px] font-semibold text-white ring-2 ring-white">
+								{nomor}
+							</span>
+						)}
+					</div>
+					<div className="min-w-0 flex-1">
+						<h3 className="text-sm font-semibold text-slate-900">{item.title}</h3>
+						<p className="mt-1 text-sm leading-6 text-slate-500">{item.description}</p>
+						<p className="mt-2 inline-flex items-center gap-1 text-xs font-semibold text-brand-700">
+							{item.actionLabel}
+							<LuArrowRight className="h-3.5 w-3.5 transition group-hover:translate-x-1" />
+						</p>
+					</div>
+				</div>
+			</Link>
+		</motion.li>
+	);
+};
+
 const DesaDashboardPage = () => {
 	const [loading, setLoading] = useState(true);
 	const [error, setError] = useState(null);
@@ -107,10 +290,17 @@ const DesaDashboardPage = () => {
 
 	if (loading) {
 		return (
-			<div className="flex h-64 items-center justify-center rounded-xl border border-slate-200 bg-white">
-				<div className="flex flex-col items-center gap-3 text-slate-500">
-					<LuLoader className="h-6 w-6 animate-spin text-slate-900" />
-					<p className="text-sm font-medium">Memuat ringkasan dashboard desa...</p>
+			<div className="space-y-6" aria-busy="true" aria-label="Memuat ringkasan dashboard desa">
+				<div className="h-48 animate-pulse rounded-3xl bg-slate-200" />
+				<div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+					{[0, 1, 2, 3].map((i) => (
+						<div key={i} className="h-36 animate-pulse rounded-2xl bg-slate-100" />
+					))}
+				</div>
+				<div className="grid gap-4 sm:grid-cols-2 2xl:grid-cols-3">
+					{[0, 1, 2, 3].map((i) => (
+						<div key={i} className="h-64 animate-pulse rounded-2xl bg-slate-100" />
+					))}
 				</div>
 			</div>
 		);
@@ -118,7 +308,7 @@ const DesaDashboardPage = () => {
 
 	if (error) {
 		return (
-			<div className="rounded-xl border border-rose-200 bg-rose-50 p-6">
+			<div className="rounded-2xl border border-rose-200 bg-rose-50 p-6">
 				<div className="flex items-start gap-3 text-rose-700">
 					<LuCircleAlert className="mt-0.5 h-5 w-5 flex-shrink-0" />
 					<div>
@@ -414,6 +604,7 @@ const DesaDashboardPage = () => {
 	];
 
 	const completedModules = featureCards.filter((card) => card.ready).length;
+	const persenModul = featureCards.length ? Math.round((completedModules / featureCards.length) * 100) : 0;
 	const focusItems = [];
 
 	if (profileCompletion.percentage < 100) {
@@ -487,224 +678,126 @@ const DesaDashboardPage = () => {
 	}
 
 	return (
-		<div className="space-y-5">
-			{/* Ditaruh paling atas: ini satu-satunya tempat desa diberi tahu bahwa
-			    ada data yang ditolak beserta alasannya. */}
-			<PeringatanVerifikasiDitolak data={verifikasiDitolak} />
+		<MotionConfig reducedMotion="user">
+			<motion.div variants={wadahAnim} initial="hidden" animate="show" className="space-y-6">
+				{/* Ditaruh paling atas: ini satu-satunya tempat desa diberi tahu bahwa
+						ada data yang ditolak beserta alasannya. */}
+				<PeringatanVerifikasiDitolak data={verifikasiDitolak} />
 
-			{/* Header */}
-			<section className="rounded-xl border border-slate-200 bg-white p-5 sm:p-6">
-				<div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
-					<div className="min-w-0">
-						<div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-brand-600">
-							<LuLayoutDashboard className="h-3.5 w-3.5" />
-							Dashboard {desaLabel.toLowerCase()}
+				{/* Hero */}
+				<motion.section
+					variants={itemAnim}
+					className="relative overflow-hidden rounded-3xl bg-slate-900 p-5 text-white sm:p-8"
+				>
+					<div aria-hidden="true" className="pointer-events-none absolute -right-20 -top-24 h-72 w-72 rounded-full bg-brand-500/20 blur-3xl" />
+					<div aria-hidden="true" className="pointer-events-none absolute -bottom-32 left-1/3 h-64 w-64 rounded-full bg-brand-500/10 blur-3xl" />
+					<div className="relative flex items-center justify-between gap-6">
+						<div className="min-w-0 flex-1">
+							<div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-brand-300">
+								<LuLayoutDashboard className="h-3.5 w-3.5" />
+								Dashboard {desaLabel}
+							</div>
+							<h1 className="mt-2 break-words text-2xl font-semibold tracking-tight sm:text-4xl">
+								{desaLabel} {desa.nama}
+							</h1>
+							<p className="mt-2 max-w-2xl text-sm leading-6 text-slate-300">
+								Ringkasan kelengkapan data, status modul kerja, dan realisasi keuangan{" "}
+								{desaLabel.toLowerCase()} dalam satu halaman.
+							</p>
+
+							<div className="mt-4 flex gap-2 overflow-x-auto pb-1 text-xs font-medium text-slate-100 md:flex-wrap md:overflow-visible md:pb-0">
+								{[
+									[LuMapPin, desa.kecamatan ? `Kecamatan ${desa.kecamatan}` : "Kecamatan belum tersedia"],
+									[LuCircleCheck, `${completedModules}/${featureCards.length} modul memiliki data inti`],
+									[LuWallet, `Realisasi 2025 ${keuangan.total_realisasi_formatted || formatCurrency(0)}`],
+									[null, todayLabel],
+								].map(([Ikon, teks]) => (
+									<span key={teks} className="inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-lg bg-white/10 px-2.5 py-1.5 ring-1 ring-white/15">
+										{Ikon && <Ikon className="h-3.5 w-3.5 text-brand-300" />}
+										{teks}
+									</span>
+								))}
+							</div>
 						</div>
-						<h1 className="mt-2 truncate text-2xl font-semibold tracking-tight text-slate-900 sm:text-3xl">
-							{desaLabel} {desa.nama}
-						</h1>
-						<p className="mt-2 max-w-2xl text-sm leading-6 text-slate-500">
-							Ringkasan kelengkapan data, status modul kerja, dan realisasi keuangan
-							{desaLabel.toLowerCase()} dalam satu halaman.
-						</p>
 
-						<div className="mt-4 flex flex-wrap gap-2 text-xs font-medium text-slate-600">
-							<span className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-1.5">
-								<LuMapPin className="h-3.5 w-3.5 text-slate-400" />
-								{desa.kecamatan ? `Kecamatan ${desa.kecamatan}` : "Kecamatan belum tersedia"}
-							</span>
-							<span className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-1.5">
-								<LuCircleCheck className="h-3.5 w-3.5 text-slate-400" />
-								{completedModules}/{featureCards.length} modul memiliki data inti
-							</span>
-							<span className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-1.5">
-								<LuWallet className="h-3.5 w-3.5 text-slate-400" />
-								Realisasi 2025 {keuangan.total_realisasi_formatted || formatCurrency(0)}
-							</span>
-							<span className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-1.5">
-								{todayLabel}
-							</span>
+						<div className="hidden shrink-0 flex-col items-center gap-2 md:flex">
+							<CincinProgres persen={persenModul} />
+							<p className="text-xs font-semibold uppercase tracking-wide text-slate-300">Kelengkapan modul</p>
+							<p className="text-xs text-slate-400">{completedModules} dari {featureCards.length} modul siap</p>
 						</div>
 					</div>
-				</div>
+				</motion.section>
 
-				<div className="mt-5 grid grid-cols-2 gap-3 border-t border-slate-100 pt-5 lg:grid-cols-4">
+				{/* KPI */}
+				<div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
 					{summaryStats.map((stat) => (
-						<div key={stat.id} className="relative overflow-hidden rounded-lg border border-slate-200 bg-slate-50 p-4">
-							<span className="absolute inset-y-0 left-0 w-1 bg-brand-500" />
-							<p className="text-xs font-medium uppercase tracking-wide text-slate-500">
-								{stat.label}
-							</p>
-							<p className="mt-2 text-2xl font-semibold tracking-tight text-slate-900">
-								{stat.value}
-							</p>
-							<p className="mt-1 truncate text-xs text-slate-500">{stat.hint}</p>
-						</div>
+						<KartuStat key={stat.id} stat={stat} persen={stat.id === "profil" ? profileCompletion.percentage : undefined} />
 					))}
 				</div>
-			</section>
 
-			<div className="grid gap-5 xl:grid-cols-[minmax(0,1.9fr)_minmax(300px,1fr)]">
-				<div className="space-y-5">
-					{/* Modul */}
-					<section className="rounded-xl border border-slate-200 bg-white p-5 sm:p-6">
-						<div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
-							<div>
-								<h2 className="text-base font-semibold text-slate-900">Modul Desa</h2>
-								<p className="mt-1 text-sm text-slate-500">
-									Semua modul utama beserta ringkasan datanya. Klik untuk membuka.
-								</p>
-							</div>
-							<span className="inline-flex items-center gap-1.5 self-start rounded-lg bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-600 sm:self-auto">
-								{featureCards.length} modul
-							</span>
-						</div>
-
-						<div className="mt-5 grid gap-4 md:grid-cols-2 2xl:grid-cols-3">
-							{featureCards.map((card) => {
-								const IconComponent = card.icon;
-
-								return (
-									<Link
-										key={card.id}
-										to={card.link}
-										className="group flex flex-col rounded-xl border border-slate-200 bg-white p-4 transition hover:border-slate-300 hover:shadow-sm"
-									>
-										<div className="flex items-start justify-between gap-3">
-											<div className="flex h-10 w-10 items-center justify-center rounded-lg bg-slate-900 text-white">
-												<IconComponent className="h-4 w-4" />
-											</div>
-											<span
-												className={`rounded-full px-2.5 py-1 text-[11px] font-semibold ring-1 ${card.badgeClass}`}
-											>
-												{card.badge}
-											</span>
-										</div>
-
-										<div className="mt-4">
-											<p className="text-sm font-medium text-slate-500">{card.title}</p>
-											<p className="mt-1 text-xl font-semibold tracking-tight text-slate-900">
-												{card.value}
-											</p>
-											<p className="mt-2 text-sm leading-6 text-slate-500">
-												{card.description}
-											</p>
-										</div>
-
-										<div className="mt-4 space-y-2 rounded-lg border border-slate-100 bg-slate-50 p-3">
-											{card.highlights.map((highlight) => (
-												<div
-													key={`${card.id}-${highlight.label}`}
-													className="flex items-center justify-between gap-4 text-xs"
-												>
-													<span className="text-slate-500">{highlight.label}</span>
-													<span className="text-right font-semibold text-slate-900">
-														{highlight.value}
-													</span>
-												</div>
-											))}
-										</div>
-
-										<div className="mt-4 flex items-center justify-between text-sm font-semibold text-slate-900">
-											<span className="transition-colors group-hover:text-brand-700">{card.actionLabel}</span>
-											<LuArrowRight className="h-4 w-4 text-slate-400 transition group-hover:translate-x-0.5 group-hover:text-brand-600" />
-										</div>
-									</Link>
-								);
-							})}
-						</div>
-					</section>
-
-					{/* Keuangan */}
-					<section className="rounded-xl border border-slate-200 bg-white p-5 sm:p-6">
-						<div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-							<div>
-								<h2 className="text-base font-semibold text-slate-900">
-									Realisasi Keuangan 2025
-								</h2>
-								<p className="mt-1 text-sm text-slate-500">
-									Ringkasan realisasi dari data pencairan yang tersedia di sistem.
-								</p>
-							</div>
-							<div className="rounded-lg bg-slate-900 px-4 py-3 text-white ring-1 ring-inset ring-brand-500/30">
-								<p className="text-[11px] font-semibold uppercase tracking-wide text-brand-400">
-									Total realisasi
-								</p>
-								<p className="mt-1 text-xl font-semibold tracking-tight">
-									{keuangan.total_realisasi_formatted || formatCurrency(0)}
-								</p>
-							</div>
-						</div>
-
-						<div className="mt-5 grid gap-4 sm:grid-cols-2 2xl:grid-cols-4">
-							{financeCards.map((card) => (
-								<div
-									key={card.id}
-									className="rounded-xl border border-slate-200 bg-slate-50 p-4"
-								>
-									<div className="flex items-start justify-between gap-3">
-										<p className="text-sm font-medium text-slate-500">{card.title}</p>
-										<span
-											className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ring-1 ${
-												card.ready
-													? "bg-emerald-50 text-emerald-700 ring-emerald-100"
-													: "bg-white text-slate-500 ring-slate-200"
-											}`}
-										>
-											{card.ready ? "Tersedia" : "Kosong"}
-										</span>
-									</div>
-									<p className="mt-3 text-xl font-semibold tracking-tight text-slate-900">
-										{card.amount}
+				<div className="grid items-start gap-6 xl:grid-cols-[minmax(0,1fr)_22rem] 2xl:grid-cols-[minmax(0,1fr)_24rem]">
+					<div className="min-w-0 space-y-8">
+						{/* Modul */}
+						<section>
+							<motion.div variants={itemAnim} className="flex items-end justify-between gap-3">
+								<div>
+									<h2 className="text-base font-semibold text-slate-900">Modul Desa</h2>
+									<p className="mt-1 text-sm text-slate-500">
+										Semua modul utama beserta ringkasan datanya. Klik untuk membuka.
 									</p>
-									<p className="mt-2 text-xs leading-5 text-slate-500">{card.status}</p>
 								</div>
+								<span className="shrink-0 rounded-lg bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-600">
+									{featureCards.length} modul
+								</span>
+							</motion.div>
+							<div className="mt-4 grid gap-4 sm:grid-cols-2 2xl:grid-cols-3">
+								{featureCards.map((card) => (
+									<KartuModul key={card.id} card={card} />
+								))}
+							</div>
+						</section>
+
+						{/* Keuangan */}
+						<section>
+							<motion.div variants={itemAnim} className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+								<div>
+									<h2 className="text-base font-semibold text-slate-900">Realisasi Keuangan 2025</h2>
+									<p className="mt-1 text-sm text-slate-500">
+										Ringkasan realisasi dari data pencairan yang tersedia di sistem.
+									</p>
+								</div>
+								<div className="rounded-xl bg-slate-900 px-4 py-2.5 text-white ring-1 ring-inset ring-brand-500/30">
+									<p className="text-[11px] font-semibold uppercase tracking-wide text-brand-300">Total realisasi</p>
+									<p className="mt-0.5 text-lg font-semibold tabular-nums tracking-tight">
+										{keuangan.total_realisasi_formatted || formatCurrency(0)}
+									</p>
+								</div>
+							</motion.div>
+							<div className="mt-4 grid gap-4 sm:grid-cols-2 2xl:grid-cols-4">
+								{financeCards.map((card) => (
+									<KartuKeuangan key={card.id} card={card} />
+								))}
+							</div>
+						</section>
+					</div>
+
+					{/* Fokus */}
+					<section className="min-w-0 xl:sticky xl:top-6">
+						<motion.div variants={itemAnim}>
+							<h2 className="text-base font-semibold text-slate-900">Fokus Berikutnya</h2>
+							<p className="mt-1 text-sm text-slate-500">
+								Rekomendasi tindak lanjut berdasarkan kondisi data desa saat ini.
+							</p>
+						</motion.div>
+						<ol className="mt-4 space-y-3">
+							{focusItems.slice(0, 4).map((item, index) => (
+								<ItemFokus key={`${item.title}-${index}`} item={item} nomor={index + 1} />
 							))}
-						</div>
+						</ol>
 					</section>
 				</div>
-
-				{/* Fokus */}
-				<section className="h-fit rounded-xl border border-slate-200 bg-white p-5 sm:p-6">
-					<h2 className="text-base font-semibold text-slate-900">Fokus Berikutnya</h2>
-					<p className="mt-1 text-sm text-slate-500">
-						Rekomendasi tindak lanjut berdasarkan kondisi data desa saat ini.
-					</p>
-
-					<div className="mt-5 space-y-3">
-						{focusItems.slice(0, 4).map((item, index) => {
-							const IconComponent = item.icon;
-
-							return (
-								<Link
-									key={`${item.title}-${index}`}
-									to={item.link}
-									className="group block rounded-xl border border-slate-200 bg-slate-50 p-4 transition hover:border-slate-300 hover:bg-white"
-								>
-									<div className="flex items-start gap-3">
-										<div
-											className={`flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg ${item.tone}`}
-										>
-											<IconComponent className="h-4 w-4" />
-										</div>
-										<div className="min-w-0 flex-1">
-											<h3 className="text-sm font-semibold text-slate-900">{item.title}</h3>
-											<p className="mt-1.5 text-sm leading-6 text-slate-500">
-												{item.description}
-											</p>
-											<p className="mt-2 inline-flex items-center gap-1 text-xs font-semibold text-brand-700">
-												{item.actionLabel}
-												<LuArrowRight className="h-3.5 w-3.5 transition group-hover:translate-x-0.5" />
-											</p>
-										</div>
-									</div>
-								</Link>
-							);
-						})}
-					</div>
-				</section>
-			</div>
-		</div>
+			</motion.div>
+		</MotionConfig>
 	);
 };
 

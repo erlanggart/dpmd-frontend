@@ -48,7 +48,7 @@ const TenagaAhliLayout = () => {
 	const inisial = nama.charAt(0).toUpperCase();
 
 	return (
-		<div className="flex h-screen bg-slate-50">
+		<div className="flex h-screen bg-slate-100">
 			{/* Bilah atas — hanya layar kecil */}
 			<div className="fixed inset-x-0 top-0 z-30 flex h-16 items-center justify-between border-b border-slate-200 bg-white px-4 shadow-sm lg:hidden">
 				<button

@@ -166,7 +166,7 @@ const MainLayout = () => {
 						<img
 							src="/logo-dpmd.png"
 							alt="DPMD Logo"
-							className={`transition-all duration-300 flex-shrink-0 ${
+							className={`rounded-2xl bg-slate-900 p-2 transition-all duration-300 flex-shrink-0 ${
 								isSidebarMinimized ? "h-14" : "h-20"
 							}`}
 						/>

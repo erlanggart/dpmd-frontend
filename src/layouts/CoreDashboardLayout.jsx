@@ -87,7 +87,7 @@ const CoreDashboardLayout = () => {
   const roleLabel = user?.role?.replace(/_/g, ' ') || 'Pengguna';
 
   return (
-    <div className="flex h-screen overflow-hidden bg-slate-50">
+    <div className="flex h-screen overflow-hidden bg-slate-100">
       {/* Overlay mobile */}
       {sidebarOpen && (
         <div
