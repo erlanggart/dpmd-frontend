@@ -9,9 +9,16 @@ import { persen } from './persen';
 
 export const KATEGORI_KEYS_PERUBAHAN = ['wajib', 'pilihan_infrastruktur', 'pilihan_non_infrastruktur'];
 
+/**
+ * Proposal yang sudah pernah diusulkan desa. Yang dikembalikan ke desa (revisi/tolak
+ * Kecamatan, troubleshoot DPMD) tetap dihitung: status revision/rejected bertahan
+ * sampai dikirim ulang. Harus sama dengan getTrackingSummary di backend publik.
+ */
+export const sudahDiusulkan = (p) => Boolean(p.submitted_to_kecamatan) || ['revision', 'rejected'].includes(p.status);
+
 /** Desa sudah/belum mengajukan, per kecamatan. */
 export const hitungPartisipasi = (allDesa = [], allKecamatan = [], trackingData = []) => {
-  const submittedDesaIds = new Set(trackingData.filter(p => p.submitted_to_kecamatan).map(p => Number(p.desa_id)));
+  const submittedDesaIds = new Set(trackingData.filter(sudahDiusulkan).map(p => Number(p.desa_id)));
   const kecNameById = new Map(allKecamatan.map(k => [Number(k.id), k.nama]));
   const byKec = {};
   allKecamatan.forEach(k => { byKec[k.nama] = { sudah: [], belum: [] }; });
