@@ -64,6 +64,7 @@ import {
 } from 'lucide-react';
 import api from '../../api';
 import { LEBAR_CORE, LEBAR_BACA } from './lebarHalaman';
+import { tanyaAlir } from './gemaAlir';
 
 const AmbilPengenalSuara = () =>
 	(typeof window !== 'undefined'
@@ -243,8 +244,84 @@ const bukaKunciSuara = (sudah) => {
 	} catch { /* peramban yang tidak mengizinkan pun tidak apa-apa */ }
 };
 
+/* Suara server (TTS lokal). Aktif bila /gema/kemampuan melaporkan suara_server;
+   mati untuk sisa sesi halaman begitu server menjawab 503. */
+let suaraServerAktif = false;
+let genSuara = 0;       // naik tiap ucapan baru/dihentikan; ucapan lama berhenti sendiri
+let audioServer = null;
+
+/** Hentikan semua suara: speechSynthesis dan antrean audio server. */
+const hentikanSuara = () => {
+	genSuara++;
+	try { audioServer?.pause(); } catch { /* abaikan */ }
+	audioServer = null;
+	window.speechSynthesis?.cancel();
+};
+
+// Pecah di . ! ? yang diikuti spasi, jadi angka desimal (3.5) tidak terpecah.
+const pecahKalimat = (teks) => teks.split(/(?<=[.!?])\s+(?=\S)/).map((k) => k.trim()).filter(Boolean);
+
+/** Putar per kalimat dari server, prefetch satu kalimat di depan. */
+const ucapkanServer = (teks, saatSelesai) => {
+	const daftar = pecahKalimat(teks);
+	if (!daftar.length) { saatSelesai?.(); return; }
+	const gen = ++genSuara;
+	const ambil = (k) => {
+		const p = api.post('/gema/suara', { teks: k }, { responseType: 'blob' }).then((r) => r.data);
+		p.catch(() => {}); // galatnya ditangani saat ditunggu
+		return p;
+	};
+	let depan = ambil(daftar[0]);
+
+	const putar = async (i) => {
+		if (gen !== genSuara) return;
+		if (i >= daftar.length) { saatSelesai?.(); return; }
+		let blob;
+		try {
+			blob = await depan;
+		} catch (e) {
+			if (gen !== genSuara) return;
+			if (e.response?.status === 503) suaraServerAktif = false;
+			ucapkanBrowser(daftar.slice(i).join(' '), saatSelesai);
+			return;
+		}
+		if (gen !== genSuara) return;
+		if (i + 1 < daftar.length) depan = ambil(daftar[i + 1]);
+		const url = URL.createObjectURL(blob);
+		const audio = new Audio(url);
+		audioServer = audio;
+		let lanjut = false;
+		const berikut = () => {
+			if (lanjut) return;
+			lanjut = true;
+			URL.revokeObjectURL(url);
+			putar(i + 1);
+		};
+		audio.onended = berikut;
+		audio.onerror = berikut;
+		// Autoplay ditolak (umum di HP bila jawaban datang lama setelah sentuhan):
+		// sisa kalimat dibacakan peramban, bukan dilewati diam-diam.
+		audio.play().catch(() => {
+			if (lanjut) return;
+			lanjut = true;
+			URL.revokeObjectURL(url);
+			if (gen === genSuara) ucapkanBrowser(daftar.slice(i).join(' '), saatSelesai);
+		});
+	};
+	putar(0);
+};
+
+const ucapkan = (teks, saatSelesai) => {
+	if (suaraServerAktif && teks) {
+		hentikanSuara();
+		ucapkanServer(teks, saatSelesai);
+	} else {
+		ucapkanBrowser(teks, saatSelesai);
+	}
+};
+
 /**
- * Ucapkan teks.
+ * Ucapkan teks (speechSynthesis peramban).
  *
  * Tiga penyakit speechSynthesis yang ditangani di sini:
  *
@@ -255,13 +332,13 @@ const bukaKunciSuara = (sudah) => {
  *  3. Di iOS, cancel() yang langsung disusul speak() kadang membuat keduanya
  *     hilang. Karena itu speak() ditunda satu putaran.
  */
-const ucapkan = (teks, saatSelesai) => {
+const ucapkanBrowser = (teks, saatSelesai) => {
 	if (typeof window === 'undefined' || !window.speechSynthesis || !teks) {
 		saatSelesai?.();
 		return;
 	}
 	const mesin = window.speechSynthesis;
-	mesin.cancel();
+	hentikanSuara();
 
 	const suara = new SpeechSynthesisUtterance(teks);
 	suara.lang = 'id-ID';
@@ -614,6 +691,9 @@ const GemaPage = () => {
 	// tidak pernah jalan dari ucapan — ia menunggu tombol ini ditekan.
 	const [konfirmasiJalan, setKonfirmasiJalan] = useState(false);
 	const [galat, setGalat] = useState(null);
+	// Teks jawaban yang sedang mengalir dari server (kosong bila tidak mengalir).
+	const [kalimatAlir, setKalimatAlir] = useState('');
+	const alirRef = useRef(null); // AbortController alir yang berjalan
 	const [saran, setSaran] = useState([]);
 	const [modelAktif, setModelAktif] = useState(false);
 	const [modeKetik, setModeKetik] = useState(false);
@@ -680,6 +760,7 @@ const GemaPage = () => {
 			.then((r) => {
 				setSaran((r.data?.data || []).map((k) => k.contoh));
 				setModelAktif(Boolean(r.data?.model_aktif));
+				suaraServerAktif = Boolean(r.data?.suara_server);
 			})
 			.catch(() => setSaran([]));
 		window.speechSynthesis?.getVoices();
@@ -844,25 +925,52 @@ const GemaPage = () => {
 			setFasa(siagaRef.current ? 'perintah' : 'mati');
 		};
 
+		// Pertanyaan baru membatalkan alir yang masih berjalan.
+		alirRef.current?.abort();
+		const ctrl = new AbortController();
+		alirRef.current = ctrl;
+		let habis = false;
+		const penjaga = setTimeout(() => { habis = true; ctrl.abort(); }, SABAR_MS);
+
 		try {
-			const r = await api.post(
-				'/gema/tanya',
-				{ teks: bersih, sesi: sesiRef.current },
-				{ timeout: SABAR_MS },
-			);
-			const d = r.data?.data;
+			let d;
+			try {
+				let mengalir = '';
+				d = await tanyaAlir({
+					teks: bersih,
+					sesi: sesiRef.current,
+					signal: ctrl.signal,
+					onToken: (t) => { mengalir += t; setKalimatAlir(mengalir); },
+					onReset: () => { mengalir = ''; setKalimatAlir(''); },
+				});
+			} catch (e) {
+				if (!e.cadangan) throw e;
+				// Alir tidak tersedia: jalur lama.
+				const r = await api.post(
+					'/gema/tanya',
+					{ teks: bersih, sesi: sesiRef.current },
+					{ timeout: SABAR_MS },
+				);
+				d = r.data?.data;
+			}
+			setKalimatAlir('');
 			setJawaban(d);
 			if (typeof d?.giliran === 'number') setGiliran(d.giliran);
 			setRiwayat((h) => [{ peran: 'gema', teks: d?.kalimat, waktu: Date.now() }, ...h].slice(0, 8));
 			setFasa('menjawab');
 			ucapkan(d?.kalimat, selesaiBicara);
 		} catch (e) {
-			const pesan = e.code === 'ECONNABORTED'
+			// Dibatalkan pertanyaan baru atau halaman ditinggalkan: diam saja.
+			if (ctrl.signal.aborted && !habis) return;
+			const pesan = (e.code === 'ECONNABORTED' || habis)
 				? 'Gema kelamaan mencarinya. Coba pertanyaan yang lebih sempit ya.'
-				: (e.response?.data?.message || 'Gema gagal mengambil datanya');
+				: (e.response?.data?.message || (e.dariServer ? e.message : 'Gema gagal mengambil datanya'));
 			setGalat(pesan);
 			setFasa('menjawab');
 			ucapkan(pesan, selesaiBicara);
+		} finally {
+			clearTimeout(penjaga);
+			if (alirRef.current === ctrl) { alirRef.current = null; setKalimatAlir(''); }
 		}
 	}, [modeKetuk, setFasa]);
 
@@ -1152,7 +1260,7 @@ const GemaPage = () => {
 		setPopupDiam(false);
 		try { localStorage.removeItem(KUNCI_SIAGA); } catch { /* abaikan */ }
 		try { pengenalRef.current?.stop(); } catch { /* sudah berhenti */ }
-		window.speechSynthesis?.cancel();
+		hentikanSuara();
 		hentikanAudio();
 		setTranskrip('');
 		setFasa('mati');
@@ -1260,7 +1368,7 @@ const GemaPage = () => {
 					rafRef.current = 0;
 					tulisTenaga(0);
 				}
-				window.speechSynthesis?.cancel();
+				hentikanSuara();
 			} else if (siagaRef.current && !rafRef.current) {
 				mulaiAmplitudo();
 				try { pengenalRef.current?.start(); } catch { /* sudah jalan */ }
@@ -1278,14 +1386,15 @@ const GemaPage = () => {
 		clearTimeout(ketukMaksRef.current);
 		try { pengenalRef.current?.abort(); } catch { /* abaikan */ }
 		hentikanAudio();
-		window.speechSynthesis?.cancel();
+		alirRef.current?.abort();
+		hentikanSuara();
 	}, [hentikanAudio]);
 
 	const ketukLingkaran = () => {
 		// Menghentikan suara selalu jadi arti ketukan saat Gema sedang bicara,
 		// di kedua jalur — orang menekan lingkaran justru untuk menyela.
 		if (fase === 'menjawab') {
-			window.speechSynthesis?.cancel();
+			hentikanSuara();
 			jedaRef.current = false;
 			setFasa(modeKetuk ? 'mati' : (siagaRef.current ? 'siaga' : 'mati'));
 			return;
@@ -1593,7 +1702,18 @@ const GemaPage = () => {
 					</div>
 				)}
 
-				{jawaban && (
+				{kalimatAlir && (
+					<div className="mt-5 rounded-2xl border border-slate-200 bg-white p-4 sm:p-5">
+						<div className="flex items-start gap-3">
+							<span className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg bg-slate-900 text-white">
+								<Sparkles className="h-4 w-4" />
+							</span>
+							<p className="min-w-0 text-base font-semibold leading-snug text-slate-900">{kalimatAlir}</p>
+						</div>
+					</div>
+				)}
+
+				{jawaban && !kalimatAlir && (
 					<div className="mt-5 space-y-4">
 						<div className="rounded-2xl border border-slate-200 bg-white p-4 sm:p-5">
 							<div className="flex items-start gap-3">
@@ -1613,6 +1733,11 @@ const GemaPage = () => {
 									    'mesin-cadangan' artinya model gagal dipanggil dan
 									    Gema jatuh ke pencarian deterministik — jawabannya
 									    tetap benar, pemahamannya saja yang lebih kaku. */}
+									{jawaban.ditenagai === 'model' && (
+										<span className="mt-1 inline-block rounded-full bg-emerald-50 px-2 py-0.5 text-[11px] font-medium text-emerald-700">
+											AI lokal
+										</span>
+									)}
 									{jawaban.ditenagai === 'mesin-cadangan' && (
 										<p className="mt-1 text-xs text-amber-700">
 											Model bahasa tidak bisa dihubungi — dijawab pencarian langsung.
