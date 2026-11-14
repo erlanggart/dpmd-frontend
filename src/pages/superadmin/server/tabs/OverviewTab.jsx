@@ -146,7 +146,7 @@ const PosturServer = ({ postur, onNavigate }) => {
 			tujuan: "backup",
 			label: "Backup terakhir",
 			value: terbaru ? sejak(terbaru) : "Belum ada",
-			hint: `MySQL ${mysql ? sejak(mysql) : "-"} · Proxmox ${vzdump ? sejak(vzdump) : "-"}`,
+			hint: `Database ${mysql ? sejak(mysql) : "-"} · Proxmox ${vzdump ? sejak(vzdump) : "-"}`,
 			tone: umurJam === null ? "red" : umurJam > 36 ? "amber" : "green",
 			icon: FiArchive,
 		},

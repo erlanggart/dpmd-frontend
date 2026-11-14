@@ -1,4 +1,4 @@
-// Tab Backup — cadangan database MySQL, serta snapshot & backup penuh
+// Tab Backup — cadangan database PostgreSQL, serta snapshot & backup penuh
 // container/VM Proxmox (buat, rollback, hapus).
 
 import React from "react";
@@ -146,7 +146,7 @@ const BackupTab = () => {
 	return (
 		<div className="space-y-4">
 			<Card
-				title="Database MySQL"
+				title="Database PostgreSQL"
 				icon={FiDatabase}
 				actions={
 					<Tombol variant="primary" icon={FiDownloadCloud} disabled={mysql.running || !mysql.available} onClick={backupMysql}>

@@ -30,7 +30,7 @@ const JENIS = [
 		judul: "Backup Database",
 		ringkas: "Seluruh isi basis data sebagai berkas .sql",
 		detail:
-			"Struktur tabel, data, trigger, dan stored routine. Tinggal diimpor ke MySQL localhost.",
+			"Struktur tabel, data, dan fungsi basis data. Tinggal dipulihkan ke PostgreSQL localhost.",
 		icon: FiDatabase,
 		warna: "indigo",
 		ekstensi: ".sql",
@@ -302,13 +302,13 @@ const BackupPage = () => {
 					<li>
 						Buat basis data kosong:{" "}
 						<code className="px-1.5 py-0.5 rounded bg-slate-100 font-mono text-[12px]">
-							CREATE DATABASE dpmd CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+							createdb -U postgres dpmd
 						</code>
 					</li>
 					<li>
 						Impor berkas .sql:{" "}
 						<code className="px-1.5 py-0.5 rounded bg-slate-100 font-mono text-[12px]">
-							mysql -u root -p dpmd &lt; dpmd-database-....sql
+							psql -U postgres -d dpmd -f dpmd-database-....sql
 						</code>
 					</li>
 					<li>
