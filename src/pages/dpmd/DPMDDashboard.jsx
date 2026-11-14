@@ -9,7 +9,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { 
   LayoutDashboard, Building2, Briefcase, FileText, TrendingUp, Users,
   MapPin, Calendar, BarChart3, PieChart, Activity, Bell, X,
-  Clock, CheckCircle, Send, Mail, Inbox, ChevronRight, User, Phone, Award,
+  Clock, CheckCircle, Send, Mail, Inbox, ChevronRight, User,
   FolderOpen, ClipboardList, Newspaper, Eye, Trash2, ChevronUp, ListChecks, CalendarDays
 } from 'lucide-react';
 import api from '../../api';
@@ -22,6 +22,7 @@ import LottieIcon from '../../components/mobile/LottieIcon';
 // jadi ringan (apalagi digabung keep-alive: ikut pause saat pindah tab).
 import chatbotAnimation from '../../assets/lottie/chatbot.json';
 import bellAnimation from '../../assets/lottie/bell.json';
+import IkonJelajah from '../../components/mobile/IkonJelajah';
 import contactAnimation from '../../assets/lottie/contact.json';
 import documentAnimation from '../../assets/lottie/document.json';
 import InfoCard from '../../components/mobile/InfoCard';
@@ -216,18 +217,6 @@ const LinkRow = ({ icon: Icon, title, subtitle, onClick }) => (
     </span>
     <ChevronRight className="h-4 w-4 flex-shrink-0 text-slate-300 transition group-hover:text-slate-500" />
   </button>
-);
-
-const InfoRow = ({ icon: Icon, label, value }) => (
-  <div className="flex items-center gap-3 px-4 py-3">
-    <span className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg border border-slate-200 bg-slate-50 text-slate-500">
-      <Icon className="h-4 w-4" />
-    </span>
-    <div className="min-w-0 flex-1">
-      <p className="text-xs text-slate-400">{label}</p>
-      <p className="truncate text-sm font-medium text-slate-900">{value}</p>
-    </div>
-  </div>
 );
 
 // ==================== MAIN COMPONENT ====================
@@ -760,8 +749,8 @@ const DPMDDashboard = () => {
     // Tur 3D kantor, ada di Aksi Cepat setiap pegawai.
     const jelajah = {
       icon: Building2,
-      // ikon lucide di kartu polos digambar putih oleh QuickActionCard, jadi beri warna sendiri
-      customIcon: <Building2 className={`${qaIconClass} text-teal-600`} strokeWidth={1.75} />,
+      // Ikon bergerak (framer-motion) agar sekelas ikon Lottie di sebelahnya; scale tidak mengubah ukuran kotak.
+      customIcon: <IkonJelajah className={`${qaIconClass} scale-[1.6]`} />,
       label: 'Jelajahi Kantor',
       color: 'teal',
       onClick: () => navigate('/jelajah')
@@ -823,7 +812,7 @@ const DPMDDashboard = () => {
     return (
       <div className="min-h-screen animate-pulse bg-slate-50 pb-20 lg:pb-6">
         <div className="h-[env(safe-area-inset-top,0px)]" />
-        <header className="bg-slate-900">
+        <header className="rounded-b-[2rem] bg-slate-900 sm:rounded-b-[2.5rem]">
           <div className="mx-auto max-w-6xl px-4 pb-16 pt-10 sm:px-6 lg:px-8">
             <div className="h-3 w-28 rounded bg-white/10" />
             <div className="mt-3 h-7 w-56 rounded bg-white/15" />
@@ -872,7 +861,9 @@ const DPMDDashboard = () => {
   const nipText = pegawaiData?.nip;
 
   return (
-    <div className="min-h-screen bg-slate-50 pb-20 lg:pb-6">
+    // Setinggi layar yang terlihat dikurangi ruang bilah bawah: Home yang isinya muat tidak bisa
+    // digulir; isi yang lebih panjang (dashboard pimpinan) tetap bisa digulir seperti biasa.
+    <div className="flex min-h-[calc(100dvh-6rem-env(safe-area-inset-bottom))] flex-col bg-slate-50 lg:min-h-dvh lg:pb-6">
       {/* Birthday Popup */}
       <BirthdayPopup />
       <WeeklyAttendanceAwardPopup />
@@ -948,7 +939,7 @@ const DPMDDashboard = () => {
       )}
 
       {/* ============ HERO ============ */}
-      <header className="relative overflow-hidden bg-slate-900">
+      <header className="relative overflow-hidden rounded-b-[2rem] bg-slate-900 sm:rounded-b-[2.5rem]">
         <div
           className="pointer-events-none absolute inset-0 opacity-70"
           style={{ background: 'radial-gradient(120% 90% at 85% 0%, rgba(148,163,184,0.18) 0%, rgba(15,23,42,0) 60%)' }}
@@ -1010,7 +1001,7 @@ const DPMDDashboard = () => {
       </header>
 
       {/* ============ CONTENT ============ */}
-      <main className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
+      <main className="mx-auto flex w-full max-w-6xl flex-1 flex-col px-4 sm:px-6 lg:px-8">
         {/* Aksi Cepat — kartu putih menimpa hero */}
         <motion.section
           initial={{ opacity: 0, y: 14 }}
@@ -1171,25 +1162,39 @@ const DPMDDashboard = () => {
           </>
         )}
 
-        {/* Informasi pegawai */}
-        {config.showPegawaiInfo && pegawaiData && (
-          <DashSection title="Informasi Pegawai" subtitle="Data profil dan kontak" delay={0.18}>
-            <div className="divide-y divide-slate-100 overflow-hidden rounded-xl border border-slate-200 bg-white">
-              {pegawaiData?.bidang?.nama_bidang && (
-                <InfoRow icon={Building2} label="Bidang" value={pegawaiData.bidang.nama_bidang} />
-              )}
-              {pegawaiData?.no_hp && (
-                <InfoRow icon={Phone} label="No. HP" value={pegawaiData.no_hp} />
-              )}
-              {pegawaiData?.pangkat && (
-                <InfoRow icon={Award} label="Pangkat" value={pegawaiData.pangkat} />
-              )}
-              {pegawaiData?.golongan && (
-                <InfoRow icon={TrendingUp} label="Golongan" value={pegawaiData.golongan} />
-              )}
+        {/* pengisi ruang: kartu sorotan turun ke dasar layar bila isi di atasnya pendek */}
+        <div aria-hidden className="flex-1" />
+        {/* Sorotan penutup: tanpa data, mengisi bagian bawah dashboard dengan ajakan ke tur 3D kantor. */}
+        <motion.section
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.45, ease: 'easeOut', delay: 0.18 }}
+          className="relative mb-4 mt-4 overflow-hidden rounded-2xl bg-slate-900 text-white shadow-xl shadow-slate-900/10 sm:mb-6 sm:mt-6 sm:rounded-3xl"
+        >
+          <div aria-hidden className="absolute inset-0 opacity-[0.07] [background-image:linear-gradient(#fff_1px,transparent_1px),linear-gradient(90deg,#fff_1px,transparent_1px)] [background-size:28px_28px]" />
+          <div aria-hidden className="absolute -right-16 -top-20 h-64 w-64 rounded-full bg-teal-500/30 blur-3xl" />
+          <div aria-hidden className="absolute -bottom-24 left-10 h-56 w-56 rounded-full bg-indigo-500/25 blur-3xl" />
+          <div className="relative flex items-center gap-3 p-4 sm:flex-row-reverse sm:gap-8 sm:p-8 lg:p-10">
+            <div className="min-w-0 flex-1">
+              <span className="hidden items-center gap-1.5 rounded-full bg-white/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-teal-200 ring-1 ring-white/15 sm:inline-flex">
+                <span className="h-1.5 w-1.5 rounded-full bg-teal-300" /> Tur 3D
+              </span>
+              <h2 className="text-base font-bold leading-snug tracking-tight sm:mt-3 sm:text-3xl sm:leading-tight">
+                Jelajahi kantor DPMD <br className="hidden sm:block" />dari mana saja
+              </h2>
+              <p className="mt-2 hidden max-w-md text-sm leading-6 text-slate-300 sm:block">
+                Berkeliling ruang kerja virtual, sapa rekan yang sedang daring, dan main bersama di sela pekerjaan.
+              </p>
+              <button
+                onClick={() => navigate('/jelajah')}
+                className="mt-2.5 inline-flex items-center gap-1.5 rounded-xl bg-white px-3.5 py-2 text-xs font-bold text-slate-900 shadow-lg transition hover:bg-teal-50 sm:mt-5 sm:gap-2 sm:rounded-2xl sm:px-5 sm:py-3 sm:text-sm"
+              >
+                Mulai jelajah <ChevronRight className="h-4 w-4" />
+              </button>
             </div>
-          </DashSection>
-        )}
+            <IkonJelajah className="h-20 w-20 shrink-0 drop-shadow-2xl sm:h-44 sm:w-44" />
+          </div>
+        </motion.section>
       </main>
 
       {/* Status Viewer (Fullscreen) */}

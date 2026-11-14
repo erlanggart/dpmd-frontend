@@ -1,9 +1,14 @@
+import { useEffect, useRef, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import { useNetwork } from '../../context/NetworkContext';
 
 /**
  * Indikator jaringan di pojok kanan atas: batang sinyal ala ponsel (0–4) dan
  * kecepatan di sebelahnya.
+ *
+ * Hanya tampil saat sinyal sedang/lemah/offline, atau 4 detik setelah kualitas
+ * berubah (mis. pulih). Saat sinyal bagus lencana disembunyikan supaya tidak
+ * menutupi tombol di pojok kanan atas halaman mana pun.
  *
  * Jumlah batang dihitung dari latensi ping ke server, bukan dari
  * `navigator.connection` — yang terakhir hanya ada di Chrome/Edge/Android.
@@ -46,10 +51,26 @@ const formatKecepatan = ({ speed, downlink, latency }) => {
 const NetworkStatusIndicator = () => {
   const network = useNetwork();
   const { pathname } = useLocation();
-  // game Jelajah di HP: layar untuk pemain, lencana ini menutupi baris HUD
-  if (pathname.startsWith('/jelajah') && window.matchMedia?.('(pointer: coarse)').matches) return null;
   const memeriksa = network.speed === 'checking';
   const batang = hitungBatang(network);
+
+  // Tampilkan sebentar setiap kali kualitas berubah (bukan saat pengukuran pertama).
+  const [baruBerubah, setBaruBerubah] = useState(false);
+  const sebelumnya = useRef(null);
+  useEffect(() => {
+    if (memeriksa) return undefined;
+    const lalu = sebelumnya.current;
+    sebelumnya.current = batang;
+    if (lalu === null || lalu === batang) return undefined;
+    setBaruBerubah(true);
+    const t = setTimeout(() => setBaruBerubah(false), 4000);
+    return () => clearTimeout(t);
+  }, [batang, memeriksa]);
+
+  // game Jelajah di HP: layar untuk pemain, lencana ini menutupi baris HUD
+  if (pathname.startsWith('/jelajah') && window.matchMedia?.('(pointer: coarse)').matches) return null;
+  const buruk = !memeriksa && batang <= 2;
+  if (!buruk && !baruBerubah) return null;
   const warna = memeriksa
     ? { isi: 'bg-slate-400', titik: 'bg-slate-400', teks: 'text-slate-500', label: 'Memeriksa…' }
     : WARNA[batang];

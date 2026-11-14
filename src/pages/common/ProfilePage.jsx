@@ -43,27 +43,29 @@ const PENDIDIKAN_OPTIONS = [
 ];
 
 // Reusable display field
-const InfoField = ({ icon: Icon, label, value, iconColor = 'text-slate-300' }) => (
+const InfoField = ({ icon: Icon, label, value, iconColor = 'text-slate-500' }) => (
   <div className="flex items-start gap-3 py-3">
-    <div className={`w-9 h-9 rounded-xl bg-white/10 flex items-center justify-center flex-shrink-0 ${iconColor}`}>
+    <div className={`w-9 h-9 rounded-xl bg-slate-50 ring-1 ring-slate-100 flex items-center justify-center flex-shrink-0 ${iconColor}`}>
       <Icon className="w-4 h-4" />
     </div>
     <div className="flex-1 min-w-0">
-      <p className="text-[11px] uppercase tracking-wider text-slate-400 font-medium">{label}</p>
-      <p className="text-sm font-semibold text-white mt-0.5 truncate">{value || <span className="text-slate-500 italic font-normal">Belum diisi</span>}</p>
+      <p className="text-xs text-slate-500">{label}</p>
+      <p className="text-sm font-medium text-slate-900 mt-0.5 break-words">{value || <span className="text-slate-400">—</span>}</p>
     </div>
   </div>
 );
 
+const INPUT_CLS = 'w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 outline-none transition focus:border-slate-400 focus:ring-4 focus:ring-slate-100';
+
 // Reusable edit field
 const EditField = ({ label, name, value, onChange, type = 'text', options, placeholder }) => (
   <div>
-    <label className="block text-[11px] uppercase tracking-wider text-slate-300 font-semibold mb-1.5">{label}</label>
+    <label className="block text-xs font-medium text-slate-600 mb-1.5">{label}</label>
     {options ? (
       <select
         value={value}
         onChange={(e) => onChange(name, e.target.value)}
-        className="w-full px-3 py-2.5 bg-white/5 border border-white/10 rounded-xl text-sm text-white placeholder:text-slate-500 focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-400 transition-all outline-none"
+        className={INPUT_CLS}
       >
         {options.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
       </select>
@@ -72,7 +74,7 @@ const EditField = ({ label, name, value, onChange, type = 'text', options, place
         value={value}
         onChange={(e) => onChange(name, e.target.value)}
         rows={3}
-        className="w-full px-3 py-2.5 bg-white/5 border border-white/10 rounded-xl text-sm text-white placeholder:text-slate-500 focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-400 transition-all outline-none resize-none"
+        className={`${INPUT_CLS} resize-none`}
         placeholder={placeholder}
       />
     ) : (
@@ -80,7 +82,7 @@ const EditField = ({ label, name, value, onChange, type = 'text', options, place
         type={type}
         value={value}
         onChange={(e) => onChange(name, e.target.value)}
-        className="w-full px-3 py-2.5 bg-white/5 border border-white/10 rounded-xl text-sm text-white placeholder:text-slate-500 focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-400 transition-all outline-none"
+        className={INPUT_CLS}
         placeholder={placeholder}
       />
     )}
@@ -300,47 +302,64 @@ const ProfilePage = () => {
     { id: 'account', label: 'Akun', icon: FiShield },
   ];
 
+  const Spinner = ({ className }) => (
+    <svg className={`animate-spin ${className}`} viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" /><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" /></svg>
+  );
+
   const SaveCancelButtons = ({ onSave, onCancel }) => (
     <div className="flex gap-2">
-      <button onClick={onCancel} className="px-3.5 py-2 text-sm font-medium text-slate-300 bg-white/10 hover:bg-white/20 rounded-xl transition-all">Batal</button>
-      <button onClick={onSave} disabled={isLoading} className="flex items-center gap-1.5 px-4 py-2 text-sm font-medium text-white bg-emerald-500 hover:bg-emerald-600 rounded-xl transition-all disabled:opacity-50">
-        {isLoading ? <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" /><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" /></svg> : <FiCheck className="w-3.5 h-3.5" />}
+      <button onClick={onCancel} className="px-3.5 py-2 text-sm font-medium text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-xl transition-all">Batal</button>
+      <button onClick={onSave} disabled={isLoading} className="flex items-center gap-1.5 px-4 py-2 text-sm font-medium text-white bg-slate-900 hover:bg-slate-800 rounded-xl transition-all disabled:opacity-50">
+        {isLoading ? <Spinner className="h-4 w-4" /> : <FiCheck className="w-3.5 h-3.5" />}
         Simpan
       </button>
     </div>
   );
 
   const EditButton = ({ onClick }) => (
-    <button onClick={onClick} className="flex items-center gap-1.5 px-3.5 py-2 text-sm font-medium text-slate-200 hover:text-white bg-white/10 hover:bg-white/20 rounded-xl transition-all">
+    <button onClick={onClick} className="flex items-center gap-1.5 px-3.5 py-2 text-sm font-medium text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-xl transition-all">
       <FiEdit2 className="w-3.5 h-3.5" /> Edit
     </button>
   );
 
-  return (
-    <div className="min-h-screen bg-[linear-gradient(180deg,#0f172a_0%,#115e59_36%,#dbeafe_74%,#f8fafc_100%)]">
-      {/* Hero Header — background mengikuti halaman home, foto tanpa card */}
-      <div className="relative max-w-2xl mx-auto px-4 pt-6">
-        <div className="flex items-center justify-between mb-4">
-          <button onClick={() => navigate(-1)} className="flex items-center gap-2 text-white/90 hover:text-white transition-colors">
-            <FiArrowLeft className="h-5 w-5" />
-            <span className="text-sm font-medium">Kembali</span>
-          </button>
-          <div className="flex items-center gap-2">
-            <button onClick={() => setShowPasswordModal(true)} className="p-2.5 bg-white/15 hover:bg-white/25 rounded-xl transition-all backdrop-blur-sm" title="Ubah Password">
-              <FiLock className="h-4 w-4 text-white" />
-            </button>
-            <button onClick={handleLogout} className="p-2.5 bg-red-500 rounded-xl backdrop-blur-sm shadow-md" title="Keluar">
-              <FiLogOut className="h-5 w-5 text-white" />
-            </button>
-          </div>
-        </div>
+  const closePasswordModal = () => { setShowPasswordModal(false); setPasswordForm({ currentPassword: '', newPassword: '', confirmPassword: '' }); };
 
-        {/* Foto profil — tanpa bingkai; kartu info menutupi ~5% bawah foto (gaya home) */}
-        <div className="flex flex-col items-center">
-          <div className="relative z-0">
+  const cardCls = 'bg-white border border-slate-200 rounded-2xl shadow-sm';
+  const cardHead = (title, sub, action) => (
+    <div className="px-5 py-4 border-b border-slate-100 flex items-center justify-between gap-3">
+      <div className="min-w-0">
+        <h3 className="text-sm font-semibold text-slate-900">{title}</h3>
+        <p className="text-xs text-slate-500 mt-0.5">{sub}</p>
+      </div>
+      {action}
+    </div>
+  );
+  const loadingBox = (
+    <div className="space-y-3 py-2">
+      {[0, 1, 2, 3].map(i => <div key={i} className="h-12 rounded-xl bg-slate-100 animate-pulse" />)}
+    </div>
+  );
+
+  return (
+    <div className="min-h-dvh bg-slate-50">
+      {/* Header — pita gelap seperti Home; kartu identitas menimpanya */}
+      <div className="bg-slate-900 rounded-b-[2rem] sm:rounded-b-[2.5rem] pb-20" style={{ paddingTop: 'calc(env(safe-area-inset-top, 0px) + 0.75rem)' }}>
+        <div className="max-w-2xl mx-auto px-4 flex items-center justify-between">
+          <button onClick={() => navigate(-1)} aria-label="Kembali" className="h-10 w-10 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white transition-colors">
+            <FiArrowLeft className="h-5 w-5" />
+          </button>
+          <h1 className="text-base font-semibold text-white">Profil</h1>
+          <div className="h-10 w-10" aria-hidden="true" />
+        </div>
+      </div>
+
+      {/* Kartu identitas */}
+      <div className="max-w-2xl mx-auto px-4 -mt-14">
+        <div className="bg-white border border-slate-200 rounded-3xl shadow-sm p-5 flex flex-col items-center text-center">
+          <div className="relative">
             <button
               onClick={() => avatarUrl && setShowPhotoReview(true)}
-              className="w-36 h-36 rounded-[28px] overflow-hidden bg-slate-900/40 shadow-2xl shadow-black/30 cursor-pointer transition-all"
+              className="w-24 h-24 rounded-3xl overflow-hidden bg-slate-100 cursor-pointer block"
             >
               {/* object-contain, bukan cover: foto pegawai umumnya potret, dan
                   dipaksa mengisi kotak membuat kepala atau bahu terpotong. */}
@@ -348,50 +367,41 @@ const ProfilePage = () => {
                 <img src={avatarUrl} alt={user.name} className="w-full h-full object-contain" onError={(e) => { e.target.style.display = 'none'; e.target.nextSibling.style.display = 'flex'; }} />
               ) : null}
               <div className={`w-full h-full bg-gradient-to-br ${gradient} flex items-center justify-center ${avatarUrl ? 'hidden' : ''}`} style={{ display: avatarUrl ? 'none' : 'flex' }}>
-                <span className="text-white font-bold text-5xl">{user.name?.charAt(0).toUpperCase() || 'U'}</span>
+                <span className="text-white font-bold text-4xl">{user.name?.charAt(0).toUpperCase() || 'U'}</span>
               </div>
             </button>
-            <button onClick={() => fileInputRef.current?.click()} disabled={isUploadingPhoto} className="absolute top-2 right-2 w-9 h-9 bg-white/95 rounded-xl shadow-md border border-gray-100 flex items-center justify-center hover:scale-110 transition-transform disabled:opacity-50">
-              {isUploadingPhoto ? (
-                <svg className="animate-spin h-4 w-4 text-gray-400" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" /><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" /></svg>
-              ) : (
-                <FiCamera className="h-3.5 w-3.5 text-gray-500" />
-              )}
+            <button onClick={() => fileInputRef.current?.click()} disabled={isUploadingPhoto} aria-label="Ganti foto" className="absolute -bottom-1 -right-1 h-9 w-9 rounded-full bg-slate-900 text-white ring-4 ring-white flex items-center justify-center hover:bg-slate-800 transition disabled:opacity-60">
+              {isUploadingPhoto ? <Spinner className="h-4 w-4" /> : <FiCamera className="h-4 w-4" />}
             </button>
             <input ref={fileInputRef} type="file" accept="image/*" onChange={handlePhotoSelect} disabled={isUploadingPhoto} className="hidden" />
           </div>
 
-          {/* Kartu info — dark glass (senada kartu Aksi Cepat), tidak menutupi foto */}
-          <div className="w-full mt-4">
-            <div className="bg-slate-800/60 backdrop-blur-md border border-white/10 rounded-3xl shadow-xl shadow-black/20 py-5 px-5 text-center">
-              <h1 className="text-xl font-bold text-white">{user.name}</h1>
-              {pegawaiData?.jabatan && <p className="text-sm text-slate-300 mt-0.5">{pegawaiData.jabatan}</p>}
-              <div className="flex flex-wrap items-center justify-center gap-2 mt-3">
-                <span className={`inline-flex items-center gap-1 px-3 py-1 bg-gradient-to-r ${gradient} text-white rounded-full text-xs font-semibold shadow-sm`}>
-                  <FiShield className="w-3 h-3" />
-                  {roleLabels[user.role] || user.role}
-                </span>
-                {pegawaiData?.status_kepegawaian && (
-                  <span className="inline-flex items-center gap-1 px-3 py-1 bg-white/10 text-slate-200 rounded-full text-xs font-semibold">
-                    <FiAward className="w-3 h-3" />
-                    {statusLabel(pegawaiData.status_kepegawaian)}
-                  </span>
-                )}
-              </div>
-              {pegawaiData?.nip && <p className="text-xs text-slate-400 mt-2 font-mono">NIP: {pegawaiData.nip}</p>}
-            </div>
+          <h2 className="mt-4 text-xl font-bold text-slate-900">{user.name}</h2>
+          {pegawaiData?.jabatan && <p className="text-sm text-slate-500 mt-0.5">{pegawaiData.jabatan}</p>}
+          <div className="flex flex-wrap items-center justify-center gap-2 mt-3">
+            <span className="inline-flex items-center gap-1 px-3 py-1 bg-slate-900 text-white rounded-full text-xs font-semibold">
+              <FiShield className="w-3 h-3" />
+              {roleLabels[user.role] || user.role}
+            </span>
+            {pegawaiData?.status_kepegawaian && (
+              <span className="inline-flex items-center gap-1 px-3 py-1 bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200 rounded-full text-xs font-semibold">
+                <FiAward className="w-3 h-3" />
+                {statusLabel(pegawaiData.status_kepegawaian)}
+              </span>
+            )}
           </div>
+          {pegawaiData?.nip && <p className="text-xs text-slate-500 mt-2 font-mono">NIP: {pegawaiData.nip}</p>}
         </div>
       </div>
 
       {/* Tab Navigation */}
-      <div className="max-w-2xl mx-auto px-4 mt-6">
-        <div className="bg-slate-800/60 backdrop-blur-md border border-white/10 rounded-2xl p-1.5 flex gap-1">
+      <div className="max-w-2xl mx-auto px-4 mt-4">
+        <div className="bg-white border border-slate-200 rounded-2xl p-1 flex gap-1">
           {tabs.map(tab => (
             <button
               key={tab.id}
               onClick={() => { setActiveTab(tab.id); setEditingSection(null); }}
-              className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-medium transition-all ${activeTab === tab.id ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-300 hover:text-white hover:bg-white/10'}`}
+              className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-[13px] sm:text-sm font-medium transition-all ${activeTab === tab.id ? 'bg-slate-900 text-white shadow-sm' : 'text-slate-500 hover:text-slate-900'}`}
             >
               <tab.icon className="w-4 h-4" />
               {tab.label}
@@ -401,25 +411,17 @@ const ProfilePage = () => {
       </div>
 
       {/* Tab Content */}
-      <div className="max-w-2xl mx-auto px-4 mt-4 pb-8">
+      <div className="max-w-2xl mx-auto px-4 mt-4 pb-8 space-y-4">
 
         {/* PERSONAL TAB */}
         {activeTab === 'personal' && user.pegawai_id && (
-          <div className="bg-slate-800/60 backdrop-blur-md border border-white/10 rounded-2xl overflow-hidden">
-            <div className="px-6 py-4 border-b border-white/10 flex items-center justify-between">
-              <div>
-                <h3 className="font-bold text-white">Data Pribadi</h3>
-                <p className="text-xs text-gray-400 mt-0.5">Informasi personal pegawai</p>
-              </div>
-              {editingSection !== 'personal'
-                ? <EditButton onClick={() => { setEditingSection('personal'); if (pegawaiData) initPegawaiForm(pegawaiData); }} />
-                : <SaveCancelButtons onSave={handleSavePegawai} onCancel={() => { setEditingSection(null); if (pegawaiData) initPegawaiForm(pegawaiData); }} />
-              }
-            </div>
-            <div className="p-6">
-              {pegawaiLoading ? (
-                <div className="flex justify-center py-12"><div className="w-8 h-8 border-2 border-white/20 border-t-white rounded-full animate-spin" /></div>
-              ) : editingSection === 'personal' ? (
+          <div className={cardCls}>
+            {cardHead('Data Pribadi', 'Informasi personal pegawai', editingSection !== 'personal'
+              ? <EditButton onClick={() => { setEditingSection('personal'); if (pegawaiData) initPegawaiForm(pegawaiData); }} />
+              : <SaveCancelButtons onSave={handleSavePegawai} onCancel={() => { setEditingSection(null); if (pegawaiData) initPegawaiForm(pegawaiData); }} />
+            )}
+            <div className="px-5 py-4">
+              {pegawaiLoading ? loadingBox : editingSection === 'personal' ? (
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <EditField label="Jenis Kelamin" name="jenis_kelamin" value={pegawaiForm.jenis_kelamin} onChange={(n, v) => setPegawaiForm({ ...pegawaiForm, [n]: v })} options={GENDER_OPTIONS} />
                   <EditField label="Tempat Lahir" name="tempat_lahir" value={pegawaiForm.tempat_lahir} onChange={(n, v) => setPegawaiForm({ ...pegawaiForm, [n]: v })} placeholder="Kota / Kabupaten" />
@@ -431,13 +433,13 @@ const ProfilePage = () => {
                   </div>
                 </div>
               ) : (
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6">
-                  <div className="space-y-0 divide-y divide-white/5">
+                <div className="grid grid-cols-1 sm:grid-cols-2 sm:gap-x-8 divide-y divide-slate-100 sm:divide-y-0">
+                  <div className="divide-y divide-slate-100">
                     <InfoField icon={FiUser} label="Jenis Kelamin" value={pegawaiData?.jenis_kelamin === 'L' ? 'Laki-laki' : pegawaiData?.jenis_kelamin === 'P' ? 'Perempuan' : null} iconColor="text-blue-500" />
                     <InfoField icon={FiMapPin} label="Tempat Lahir" value={pegawaiData?.tempat_lahir} iconColor="text-rose-400" />
                     <InfoField icon={FiCalendar} label="Tanggal Lahir" value={formatDate(pegawaiData?.tanggal_lahir)} iconColor="text-amber-500" />
                   </div>
-                  <div className="space-y-0 divide-y divide-white/5">
+                  <div className="divide-y divide-slate-100">
                     <InfoField icon={FiBook} label="Pendidikan Terakhir" value={pegawaiData?.pendidikan_terakhir} iconColor="text-purple-500" />
                     <InfoField icon={FiPhone} label="No. HP" value={pegawaiData?.no_hp} iconColor="text-green-500" />
                     <InfoField icon={FiMapPin} label="Alamat" value={pegawaiData?.alamat} iconColor="text-teal-500" />
@@ -449,32 +451,24 @@ const ProfilePage = () => {
         )}
 
         {activeTab === 'personal' && !user.pegawai_id && (
-          <div className="bg-slate-800/60 backdrop-blur-md border border-white/10 rounded-2xl p-8 text-center">
-            <div className="w-16 h-16 bg-white/10 rounded-2xl flex items-center justify-center mx-auto mb-4">
-              <FiUser className="w-7 h-7 text-slate-400" />
+          <div className={`${cardCls} p-8 text-center`}>
+            <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-4">
+              <FiUser className="w-7 h-7 text-slate-500" />
             </div>
-            <p className="text-slate-200 font-medium">Data pribadi tidak tersedia</p>
-            <p className="text-xs text-slate-400 mt-1">Akun Anda belum terhubung dengan data pegawai</p>
+            <p className="text-slate-900 font-medium">Data pribadi tidak tersedia</p>
+            <p className="text-xs text-slate-500 mt-1">Akun Anda belum terhubung dengan data pegawai</p>
           </div>
         )}
 
         {/* EMPLOYMENT TAB */}
         {activeTab === 'employment' && user.pegawai_id && (
-          <div className="bg-slate-800/60 backdrop-blur-md border border-white/10 rounded-2xl overflow-hidden">
-            <div className="px-6 py-4 border-b border-white/10 flex items-center justify-between">
-              <div>
-                <h3 className="font-bold text-white">Data Kepegawaian</h3>
-                <p className="text-xs text-gray-400 mt-0.5">Jabatan, pangkat, dan status</p>
-              </div>
-              {editingSection !== 'employment'
-                ? <EditButton onClick={() => { setEditingSection('employment'); if (pegawaiData) initPegawaiForm(pegawaiData); }} />
-                : <SaveCancelButtons onSave={handleSavePegawai} onCancel={() => { setEditingSection(null); if (pegawaiData) initPegawaiForm(pegawaiData); }} />
-              }
-            </div>
-            <div className="p-6">
-              {pegawaiLoading ? (
-                <div className="flex justify-center py-12"><div className="w-8 h-8 border-2 border-white/20 border-t-white rounded-full animate-spin" /></div>
-              ) : editingSection === 'employment' ? (
+          <div className={cardCls}>
+            {cardHead('Data Kepegawaian', 'Jabatan, pangkat, dan status', editingSection !== 'employment'
+              ? <EditButton onClick={() => { setEditingSection('employment'); if (pegawaiData) initPegawaiForm(pegawaiData); }} />
+              : <SaveCancelButtons onSave={handleSavePegawai} onCancel={() => { setEditingSection(null); if (pegawaiData) initPegawaiForm(pegawaiData); }} />
+            )}
+            <div className="px-5 py-4">
+              {pegawaiLoading ? loadingBox : editingSection === 'employment' ? (
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <EditField label="NIP" name="nip" value={pegawaiForm.nip} onChange={(n, v) => setPegawaiForm({ ...pegawaiForm, [n]: v })} placeholder="Nomor Induk Pegawai" />
                   <EditField label="Jabatan" name="jabatan" value={pegawaiForm.jabatan} onChange={(n, v) => setPegawaiForm({ ...pegawaiForm, [n]: v })} placeholder="Jabatan" />
@@ -486,14 +480,14 @@ const ProfilePage = () => {
                   <EditField label="TMT Jabatan" name="tmt_jabatan" value={pegawaiForm.tmt_jabatan} onChange={(n, v) => setPegawaiForm({ ...pegawaiForm, [n]: v })} type="date" />
                 </div>
               ) : (
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6">
-                  <div className="space-y-0 divide-y divide-white/5">
+                <div className="grid grid-cols-1 sm:grid-cols-2 sm:gap-x-8 divide-y divide-slate-100 sm:divide-y-0">
+                  <div className="divide-y divide-slate-100">
                     <InfoField icon={FiHash} label="NIP" value={pegawaiData?.nip} iconColor="text-blue-500" />
                     <InfoField icon={FiBriefcase} label="Jabatan" value={pegawaiData?.jabatan} iconColor="text-orange-500" />
                     <InfoField icon={FiAward} label="Status Kepegawaian" value={statusLabel(pegawaiData?.status_kepegawaian)} iconColor="text-emerald-500" />
                     <InfoField icon={FiStar} label="Pangkat" value={pegawaiData?.pangkat} iconColor="text-amber-500" />
                   </div>
-                  <div className="space-y-0 divide-y divide-white/5">
+                  <div className="divide-y divide-slate-100">
                     <InfoField icon={FiShield} label="Golongan" value={pegawaiData?.golongan} iconColor="text-purple-500" />
                     <InfoField icon={FiShield} label="Eselon" value={pegawaiData?.eselon} iconColor="text-indigo-500" />
                     <InfoField icon={FiBriefcase} label="Unit Kerja" value={pegawaiData?.unit_kerja} iconColor="text-teal-500" />
@@ -507,84 +501,70 @@ const ProfilePage = () => {
 
         {/* ACCOUNT TAB */}
         {activeTab === 'account' && (
-          <div className="space-y-4">
-            <div className="bg-slate-800/60 backdrop-blur-md border border-white/10 rounded-2xl overflow-hidden">
-              <div className="px-6 py-4 border-b border-white/10 flex items-center justify-between">
-                <div>
-                  <h3 className="font-bold text-white">Informasi Akun</h3>
-                  <p className="text-xs text-gray-400 mt-0.5">Nama, email, dan role</p>
+          <div className={cardCls}>
+            {cardHead('Informasi Akun', 'Nama, email, dan role', editingSection !== 'account'
+              ? <EditButton onClick={() => { setEditingSection('account'); setAccountForm({ name: user.name || '', email: user.email || '' }); }} />
+              : <SaveCancelButtons onSave={handleSaveAccount} onCancel={() => setEditingSection(null)} />
+            )}
+            <div className="px-5 py-4">
+              {editingSection === 'account' ? (
+                <div className="space-y-4">
+                  <EditField label="Nama Lengkap" name="name" value={accountForm.name} onChange={(n, v) => setAccountForm({ ...accountForm, [n]: v })} placeholder="Nama lengkap" />
+                  <EditField label="Email" name="email" value={accountForm.email} onChange={(n, v) => setAccountForm({ ...accountForm, [n]: v })} type="email" placeholder="email@example.com" />
+                  <div>
+                    <label className="block text-xs font-medium text-slate-600 mb-1.5">Role</label>
+                    <div className="rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-2.5 text-sm text-slate-500">{roleLabels[user.role] || user.role} <span className="text-[10px]">(tidak dapat diubah)</span></div>
+                  </div>
                 </div>
-                {editingSection !== 'account'
-                  ? <EditButton onClick={() => { setEditingSection('account'); setAccountForm({ name: user.name || '', email: user.email || '' }); }} />
-                  : <SaveCancelButtons onSave={handleSaveAccount} onCancel={() => setEditingSection(null)} />
-                }
-              </div>
-              <div className="p-6">
-                {editingSection === 'account' ? (
-                  <div className="space-y-4">
-                    <EditField label="Nama Lengkap" name="name" value={accountForm.name} onChange={(n, v) => setAccountForm({ ...accountForm, [n]: v })} placeholder="Nama lengkap" />
-                    <EditField label="Email" name="email" value={accountForm.email} onChange={(n, v) => setAccountForm({ ...accountForm, [n]: v })} type="email" placeholder="email@example.com" />
-                    <div>
-                      <label className="block text-[11px] uppercase tracking-wider text-slate-300 font-semibold mb-1.5">Role</label>
-                      <div className="px-3 py-2.5 bg-white/5 border border-white/10 rounded-xl text-sm text-slate-400">{roleLabels[user.role] || user.role} <span className="text-[10px]">(tidak dapat diubah)</span></div>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="space-y-0 divide-y divide-white/5">
-                    <InfoField icon={FiUser} label="Nama Lengkap" value={user.name} iconColor="text-blue-500" />
-                    <InfoField icon={FiMail} label="Email" value={user.email} iconColor="text-rose-400" />
-                    <InfoField icon={FiShield} label="Role" value={roleLabels[user.role] || user.role} iconColor="text-purple-500" />
-                    {user.bidang_name && <InfoField icon={FiBriefcase} label="Bidang" value={user.bidang_name} iconColor="text-emerald-500" />}
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {/* Quick Actions */}
-            <div className="bg-slate-800/60 backdrop-blur-md border border-white/10 rounded-2xl overflow-hidden">
-              <div className="px-6 py-4 border-b border-white/10">
-                <h3 className="font-bold text-white">Pengaturan</h3>
-              </div>
-              <div className="divide-y divide-white/5">
-                <button onClick={() => setShowPasswordModal(true)} className="w-full flex items-center justify-between px-6 py-4 hover:bg-white/5 transition-colors">
-                  <div className="flex items-center gap-3">
-                    <div className="w-9 h-9 bg-amber-500/15 rounded-xl flex items-center justify-center">
-                      <FiLock className="w-4 h-4 text-amber-400" />
-                    </div>
-                    <div className="text-left">
-                      <p className="text-sm font-semibold text-white">Ubah Password</p>
-                      <p className="text-xs text-slate-400">Ganti password akun Anda</p>
-                    </div>
-                  </div>
-                  <FiChevronRight className="w-4 h-4 text-slate-500" />
-                </button>
-                <button onClick={handleLogout} className="w-full flex items-center justify-between px-6 py-4 bg-red-500/10 hover:bg-red-500/15 transition-colors">
-                  <div className="flex items-center gap-3">
-                    <div className="w-9 h-9 bg-red-500/20 rounded-xl flex items-center justify-center">
-                      <FiLogOut className="w-4 h-4 text-red-400" />
-                    </div>
-                    <div className="text-left">
-                      <p className="text-sm font-semibold text-red-400">Keluar</p>
-                      <p className="text-xs text-slate-400">Keluar dari sistem</p>
-                    </div>
-                  </div>
-                  <FiChevronRight className="w-4 h-4 text-slate-500" />
-                </button>
-              </div>
+              ) : (
+                <div className="divide-y divide-slate-100">
+                  <InfoField icon={FiUser} label="Nama Lengkap" value={user.name} iconColor="text-blue-500" />
+                  <InfoField icon={FiMail} label="Email" value={user.email} iconColor="text-rose-400" />
+                  <InfoField icon={FiShield} label="Role" value={roleLabels[user.role] || user.role} iconColor="text-purple-500" />
+                  {user.bidang_name && <InfoField icon={FiBriefcase} label="Bidang" value={user.bidang_name} iconColor="text-emerald-500" />}
+                </div>
+              )}
             </div>
           </div>
         )}
+
+        {/* Pengaturan akun — tampil di semua tab */}
+        <div>
+          <p className="px-1 mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">Pengaturan akun</p>
+          <div className={`${cardCls} divide-y divide-slate-100 overflow-hidden`}>
+            <button onClick={() => setShowPasswordModal(true)} className="w-full flex items-center gap-3 px-5 py-3.5 text-left hover:bg-slate-50 transition-colors">
+              <div className="w-9 h-9 rounded-xl bg-slate-50 ring-1 ring-slate-100 flex items-center justify-center text-slate-600 flex-shrink-0">
+                <FiLock className="w-4 h-4" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium text-slate-900">Ubah Password</p>
+                <p className="text-xs text-slate-500">Perbarui kata sandi akun</p>
+              </div>
+              <FiChevronRight className="w-4 h-4 text-slate-400" />
+            </button>
+            <button onClick={handleLogout} className="w-full flex items-center gap-3 px-5 py-3.5 text-left hover:bg-red-50/50 transition-colors">
+              <div className="w-9 h-9 rounded-xl bg-red-50 text-red-600 flex items-center justify-center flex-shrink-0">
+                <FiLogOut className="w-4 h-4" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium text-red-600">Keluar</p>
+                <p className="text-xs text-slate-500">Keluar dari aplikasi</p>
+              </div>
+              <FiChevronRight className="w-4 h-4 text-slate-400" />
+            </button>
+          </div>
+        </div>
       </div>
 
       {/* Password Modal */}
       {showPasswordModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={() => { setShowPasswordModal(false); setPasswordForm({ currentPassword: '', newPassword: '', confirmPassword: '' }); }} />
-          <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-md p-6">
+          <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={closePasswordModal} />
+          <div className="relative bg-white rounded-3xl shadow-2xl w-full max-w-md p-6">
             <div className="flex items-center justify-between mb-6">
-              <h3 className="text-lg font-bold text-gray-900">Ubah Password</h3>
-              <button onClick={() => { setShowPasswordModal(false); setPasswordForm({ currentPassword: '', newPassword: '', confirmPassword: '' }); }} className="p-1.5 hover:bg-gray-100 rounded-lg transition-colors">
-                <FiX className="w-5 h-5 text-gray-400" />
+              <h3 className="text-lg font-bold text-slate-900">Ubah Password</h3>
+              <button onClick={closePasswordModal} className="p-1.5 hover:bg-slate-100 rounded-lg transition-colors">
+                <FiX className="w-5 h-5 text-slate-400" />
               </button>
             </div>
             <div className="space-y-4">
@@ -594,16 +574,16 @@ const ProfilePage = () => {
                 { key: 'confirm', label: 'Konfirmasi Password', field: 'confirmPassword', placeholder: 'Ulangi password baru' },
               ].map(item => (
                 <div key={item.key}>
-                  <label className="block text-[11px] uppercase tracking-wider text-gray-500 font-semibold mb-1.5">{item.label}</label>
+                  <label className="block text-xs font-medium text-slate-600 mb-1.5">{item.label}</label>
                   <div className="relative">
                     <input
                       type={showPw[item.key] ? 'text' : 'password'}
                       value={passwordForm[item.field]}
                       onChange={(e) => setPasswordForm({ ...passwordForm, [item.field]: e.target.value })}
-                      className="w-full px-3 py-2.5 pr-10 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 transition-all outline-none"
+                      className={`${INPUT_CLS} pr-10`}
                       placeholder={item.placeholder}
                     />
-                    <button type="button" onClick={() => setShowPw({ ...showPw, [item.key]: !showPw[item.key] })} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
+                    <button type="button" onClick={() => setShowPw({ ...showPw, [item.key]: !showPw[item.key] })} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600">
                       {showPw[item.key] ? <FiEyeOff className="w-4 h-4" /> : <FiEye className="w-4 h-4" />}
                     </button>
                   </div>
@@ -614,8 +594,8 @@ const ProfilePage = () => {
               )}
             </div>
             <div className="flex gap-3 mt-6">
-              <button onClick={() => { setShowPasswordModal(false); setPasswordForm({ currentPassword: '', newPassword: '', confirmPassword: '' }); }} className="flex-1 py-2.5 text-sm font-medium text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-xl transition-all">Batal</button>
-              <button onClick={handleChangePassword} disabled={passwordLoading || !passwordForm.currentPassword || !passwordForm.newPassword || passwordForm.newPassword !== passwordForm.confirmPassword} className="flex-1 py-2.5 text-sm font-medium text-white bg-gray-900 hover:bg-gray-800 rounded-xl transition-all disabled:opacity-40 disabled:cursor-not-allowed">
+              <button onClick={closePasswordModal} className="flex-1 py-2.5 text-sm font-medium text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-xl transition-all">Batal</button>
+              <button onClick={handleChangePassword} disabled={passwordLoading || !passwordForm.currentPassword || !passwordForm.newPassword || passwordForm.newPassword !== passwordForm.confirmPassword} className="flex-1 py-2.5 text-sm font-medium text-white bg-slate-900 hover:bg-slate-800 rounded-xl transition-all disabled:opacity-40 disabled:cursor-not-allowed">
                 {passwordLoading ? 'Menyimpan...' : 'Ubah Password'}
               </button>
             </div>

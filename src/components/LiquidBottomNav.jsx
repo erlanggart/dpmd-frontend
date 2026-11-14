@@ -10,7 +10,7 @@ import React, { useRef, useState, useLayoutEffect, useEffect } from "react";
 import { motion } from "framer-motion";
 
 const BAR_H = 62;         // tinggi badan bar
-const CORNER = 22;        // radius sudut bar
+const CORNER = 0;         // bar menempel rata di tepi bawah layar, tanpa sudut membulat
 const NOTCH_HALF = 40;    // setengah lebar cekungan
 const NOTCH_DEPTH = 28;   // kedalaman cekungan
 const BALL = 52;          // diameter bola indikator
@@ -102,9 +102,11 @@ const LiquidBottomNav = ({ items = [] }) => {
 
 	const ActiveIcon = items[activeIndex]?.icon;
 
+	// Menempel di dasar layar; area safe-area (garis home iPhone) di bawahnya diisi warna bar.
+	// Tinggi total = BAR_H + safe-area: konten diberi ruang setinggi itu oleh DPMDStaffLayout.
 	return (
-		<nav className="fixed bottom-4 left-4 right-4 z-50 font-[Poppins]">
-			<div ref={containerRef} className="relative max-w-lg mx-auto" style={{ height: BAR_H }}>
+		<nav className="fixed inset-x-0 bottom-0 z-50 font-[Poppins]">
+			<div ref={containerRef} className="relative w-full" style={{ height: BAR_H }}>
 				{/* Permukaan bar + cekungan (SVG) */}
 				<svg
 					className="absolute inset-x-0 bottom-0"
@@ -112,11 +114,11 @@ const LiquidBottomNav = ({ items = [] }) => {
 					height={BAR_H}
 					viewBox={`0 0 ${W || 1} ${BAR_H}`}
 					preserveAspectRatio="none"
-					style={{ filter: "drop-shadow(0 10px 22px rgba(15,23,42,0.16))" }}
+					style={{ filter: "drop-shadow(0 -6px 16px rgba(15,23,42,0.14))" }}
 				>
 					<motion.path
 						d={buildPath(W, cx)}
-						fill="#334155"
+						fill="#1e293b"
 						initial={false}
 						animate={{ d: buildPath(W, cx) }}
 						transition={flow}
@@ -180,6 +182,8 @@ const LiquidBottomNav = ({ items = [] }) => {
 					})}
 				</div>
 			</div>
+			{/* Hanya area garis home yang diberi warna bar; nav sendiri transparan supaya cekungan tetap terlihat. */}
+			<div className="bg-[#1e293b]" style={{ height: "env(safe-area-inset-bottom)" }} />
 		</nav>
 	);
 };

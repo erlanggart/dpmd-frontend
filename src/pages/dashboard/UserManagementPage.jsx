@@ -372,6 +372,25 @@ const UserManagementPage = () => {
 		});
 	};
 
+	const handleReset2fa = async (user) => {
+		const konfirmasi = await Swal.fire({
+			icon: 'warning',
+			title: 'Reset 2FA?',
+			html: `<b>${user.name}</b> harus memindai QR baru saat login berikutnya. Lakukan hanya setelah pemilik akun dipastikan, misalnya HP-nya hilang.`,
+			showCancelButton: true,
+			confirmButtonText: 'Ya, reset',
+			cancelButtonText: 'Batal',
+			confirmButtonColor: '#dc2626',
+		});
+		if (!konfirmasi.isConfirmed) return;
+		try {
+			const response = await api.delete(`/users/${user.id}/2fa`);
+			Swal.fire({ icon: 'success', title: 'Berhasil', text: response.data.message });
+		} catch (err) {
+			Swal.fire({ icon: 'error', title: 'Gagal', text: err.response?.data?.message || 'Gagal mereset 2FA' });
+		}
+	};
+
 	const handleResetPassword = (user) => {
 		setSelectedUser(user);
 		setShowResetModal(true);
@@ -1202,6 +1221,7 @@ const UserManagementPage = () => {
 						device: handleSetDevice,
 						impersonate: handleImpersonate,
 						resetPassword: handleResetPassword,
+						reset2fa: handleReset2fa,
 						ubahStatus: handleToggleActive,
 					}}
 				/>

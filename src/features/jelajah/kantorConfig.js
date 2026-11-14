@@ -299,7 +299,7 @@ export const RUANGAN = [
 		lantai: 1,
 		rect: { x0: 8.5, x1: 15, z0: -13, z1: 2 },
 		pintu: { x: 8.5, z: 0.25, sumbu: "x" },
-		npc: { x: 11.8, z: -1.8, arah: [0, 1] },
+		npc: { x: 11.8, z: -1.2, arah: [0, 1] },
 		petugas: "Petugas Bidang Pemdes",
 		sapaan:
 			"Selamat datang! Kami menjaga agar data dan tata kelola pemerintahan di setiap desa tetap rapi dan sah.",

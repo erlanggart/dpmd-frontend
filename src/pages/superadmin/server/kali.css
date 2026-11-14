@@ -410,3 +410,36 @@ body.kali-swal .swal2-cancel {
 	z-index: 1000;
 	overflow-y: auto;
 }
+
+/* ─────────── Simulasi serangan (palsu, untuk demo) ─────────── */
+@keyframes kali-sim-guncang {
+	0% { transform: translate(0, 0); }
+	20% { transform: translate(-3px, 2px); }
+	40% { transform: translate(2px, -3px); }
+	60% { transform: translate(-2px, -2px); }
+	80% { transform: translate(3px, 3px); }
+	100% { transform: translate(0, 0); }
+}
+.kali-sim-guncang {
+	animation: kali-sim-guncang 0.12s infinite;
+}
+@keyframes kali-sim-strobo {
+	from { opacity: 0; }
+	to { opacity: 0.55; }
+}
+.kali-sim-strobo {
+	animation: kali-sim-strobo 0.5s infinite alternate;
+}
+@keyframes kali-sim-kedip {
+	50% { opacity: 0.55; }
+}
+.kali-sim-kedip {
+	animation: kali-sim-kedip 1s steps(2, jump-none) infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+	.kali-sim-guncang,
+	.kali-sim-strobo,
+	.kali-sim-kedip {
+		animation: none;
+	}
+}

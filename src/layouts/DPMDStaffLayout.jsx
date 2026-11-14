@@ -247,6 +247,27 @@ const DPMDStaffLayout = () => {
 	const { confirmDialog, showConfirm } = useConfirm();
 	const { isDesktop, isSidebarCollapsed, setIsSidebarCollapsed } = useResponsive();
 
+	// Angka di menu Pesan (pesan belum dibaca) dan Helpdesk (tiket baru dalam wewenang
+	// pegawai; server membalas 0 bila tidak berwenang). Dimuat tiap pindah halaman
+	// dan tiap 60 detik selama tab terlihat.
+	const [jumlahPesan, setJumlahPesan] = React.useState(0);
+	const [jumlahHelpdesk, setJumlahHelpdesk] = React.useState(0);
+	React.useEffect(() => {
+		let batal = false;
+		const muat = () => {
+			if (document.hidden) return;
+			api.get('/messaging/unread-count')
+				.then((r) => !batal && setJumlahPesan(r.data?.data?.unread_count || 0))
+				.catch(() => {});
+			api.get('/helpdesk/petugas/tiket-baru')
+				.then((r) => !batal && setJumlahHelpdesk(r.data?.data?.jumlah || 0))
+				.catch(() => {});
+		};
+		muat();
+		const jeda = setInterval(muat, 60000);
+		return () => { batal = true; clearInterval(jeda); };
+	}, [location.pathname]);
+
 	const token = ambilToken();
 	const config = ROLE_CONFIG[roleType] || ROLE_CONFIG.pegawai;
 	// Tema netral (slate) — satu bahasa desain untuk sidebar, sheet mobile, dan
@@ -502,11 +523,11 @@ const DPMDStaffLayout = () => {
 		{ path: "/dpmd/disposisi", label: "Disposisi", icon: 'contact' },
 		{ path: "/dpmd/bank-surat", label: "Bank Surat", icon: 'archive' },
 		{ path: "/dpmd/video-meeting", label: "Video Meeting", icon: 'video' },
-		{ path: "/dpmd/pesan", label: "Pesan", icon: 'chatbot' },
+		{ path: "/dpmd/pesan", label: "Pesan", icon: 'chatbot', badge: jumlahPesan },
 		// Smart CCTV hanya untuk staf yang diberi akses oleh superadmin
 		...(aksesCctv.adaAkses ? [{ path: "/dpmd/cctv", label: "Smart CCTV", icon: 'camera' }] : []),
 		// Tiket Helpdesk dari masyarakat, desa, dan kecamatan yang menjadi wewenang bidang/pimpinan.
-		{ path: "/dpmd/helpdesk", label: "Helpdesk", icon: 'helpdesk' },
+		{ path: "/dpmd/helpdesk", label: "Helpdesk", icon: 'helpdesk', badge: jumlahHelpdesk },
 		// Tur 3D kantor (halaman publik /jelajah) — untuk semua pegawai.
 		{ path: "/jelajah", label: "Jelajahi Kantor", icon: 'building' },
 	];
@@ -937,10 +958,10 @@ const DPMDStaffLayout = () => {
 
 			{/* Main Content */}
 			<main 
-				className={`min-h-screen transition-all duration-300 ${
+				className={`min-h-dvh transition-all duration-300 ${
 					isDesktop 
 						? isSidebarCollapsed ? 'ml-20' : 'ml-64'
-						: hideBottomNav ? '' : 'pb-28'
+						: hideBottomNav ? '' : 'pb-[calc(6rem+env(safe-area-inset-bottom))]'
 				}`}
 			>
 				<KeepAliveOutlet context={{ setHideBottomNav }} />
@@ -952,7 +973,6 @@ const DPMDStaffLayout = () => {
 					items={bottomNavItems.map((item) => ({
 						label: item.label,
 						icon: item.icon || FiGrid,
-						badge: item.isQuickAction ? unreadCount : 0,
 						active: item.path
 							? (location.pathname === item.path || (item.isMain && location.pathname.startsWith(item.path)))
 							: false,
@@ -1087,6 +1107,11 @@ const DPMDStaffLayout = () => {
 											<div className="min-w-0 flex-1">
 												<p className="truncate text-sm font-semibold">{item.label}</p>
 											</div>
+											{item.badge > 0 && (
+												<span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-red-500 px-1.5 text-[10px] font-bold text-white">
+													{item.badge > 99 ? "99+" : item.badge}
+												</span>
+											)}
 											<FiChevronRight className={`h-4 w-4 ${isActive ? 'text-white/80' : 'text-slate-300'}`} />
 										</button>
 									);

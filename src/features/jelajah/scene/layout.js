@@ -347,8 +347,11 @@ for (const x of [-6.0, -1.8, 1.6]) klaster(1, "pmd", x, -2.5);
 klaster(1, "pmd", -2.85, 1.9);
 // Sekretariat: klaster mengapit meja layanan.
 for (const x of [-0.45, 4.6, 6.2]) klaster(1, "sekretariat", x, -9.4);
-// Pemdes: dua deret meja.
-for (const x of [9.7, 11.8, 13.9]) for (const z of [-9.0, -4.5]) klaster(1, "pemdes", x, z);
+// Pemdes: dua kolom x tiga deret meja dengan lorong tengah ±1,8 m sampai dinding
+// belakang, celah antar-deret >= 1 m. Dulu tiga kolom berjarak 0,5 m (dan petugas
+// yang berdiri di mulut lorong) menutup seluruh lebar ruang: tamu berjari-jari
+// 0,38 m butuh celah > 0,76 m, jadi bagian belakang tak terjangkau.
+for (const x of [10.05, 13.45]) for (const z of [-3.8, -7.75, -11.5]) klaster(1, "pemdes", x, z);
 // Gudang Arsip lantai 2: lemari arsip berjajar.
 for (const x of [-14.2, -13.2, -12.2, -11.2]) perabot("lemari", 1, x, -9.2, 0, [0.95, 0.5]);
 for (const z of [-7.6, -6.6]) perabot("lemari", 1, -14.6, z, Math.PI / 2, [0.5, 0.95]);

@@ -17,12 +17,14 @@ import {
 	FiSlash,
 	FiTerminal,
 	FiUnlock,
+	FiZap,
 	FiX,
 } from "react-icons/fi";
 import api from "../../../../api";
 import HackerGlobe from "../HackerGlobe";
 import { Card, Galat, Memuat, PilihRentang, SeverityBadge, formatAngka, pesanError, sejak, usePolling } from "../serverUi";
 import { suara } from "../suaraOps";
+import { OverlaySimulasi, useSimulasi } from "./SimulasiSerangan";
 
 const RENTANG = [
 	{ value: "1h", label: "1j" },
@@ -575,6 +577,7 @@ const ThreatMapTab = () => {
 		if (opsiRef.current.alarm) suara.serangan(e.sev);
 	});
 	const replayAktif = !!replay.data;
+	const sim = useSimulasi(globe, opsiRef);
 	// Globe menyesuaikan layar: penuh di desktop, tetap muat satu layar di HP.
 	const [tinggiGlobe, setTinggiGlobe] = useState(() => (typeof window !== "undefined" && window.innerWidth < 640 ? 480 : 720));
 	useEffect(() => {
@@ -588,7 +591,7 @@ const ThreatMapTab = () => {
 		(daftar) => {
 			const kini = Date.now();
 			setLive((l) => [...l.filter((t) => kini - t < 300000), ...daftar.map(() => kini)]);
-			if (replayAktif) return;
+			if (replayAktif || sim.aktif) return;
 			daftar.slice(-25).forEach((e, i) => {
 				setTimeout(() => {
 					globe.current?.strike({ lat: e.geo?.lat, lon: e.geo?.lon, sev: e.severity });
@@ -596,7 +599,7 @@ const ThreatMapTab = () => {
 				}, i * 220);
 			});
 		},
-		[replayAktif],
+		[replayAktif, sim.aktif],
 	);
 
 	useEffect(() => {
@@ -680,8 +683,16 @@ const ThreatMapTab = () => {
 					<div className="flex flex-wrap items-center justify-end gap-1.5">
 						<PilihRentang value={rentang} onChange={setRentang} opsi={RENTANG} />
 						<button
+							onClick={sim.mulai}
+							disabled={sim.terlihat || replayAktif}
+							className="inline-flex items-center gap-1 bg-red-600 px-2.5 py-1 text-[11px] font-bold text-white ring-1 ring-red-500 disabled:opacity-40"
+							title="Simulasi serangan palsu untuk demo — tidak mengirim apa pun ke server"
+						>
+							<FiZap className="h-3 w-3" /> SIMULASI
+						</button>
+						<button
 							onClick={() => replay.mulai(rentang)}
-							disabled={replay.memuat || replayAktif}
+							disabled={replay.memuat || replayAktif || sim.terlihat}
 							className="inline-flex items-center gap-1 bg-red-100 px-2.5 py-1 text-[11px] font-bold text-red-700 ring-1 ring-red-500 disabled:opacity-40"
 							title="Putar ulang serangan pada rentang ini sebagai time-lapse"
 						>
@@ -817,15 +828,16 @@ className={`block h-full ${c.diblokir ? "bg-slate-400" : c.serius ? "bg-red-500"
 			) : null}
 
 			{/* Hero: globe penuh dengan HUD */}
-			<section className="kali-kartu relative overflow-hidden rounded-2xl border border-slate-200 bg-black">
+			<section className={`kali-kartu relative overflow-hidden rounded-2xl border border-slate-200 bg-black ${sim.guncang ? "kali-sim-guncang" : ""}`}>
 				<div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(138,164,255,.10),transparent_62%)]" />
 				<HackerGlobe
 					ref={globe}
-					showStatic={!replayAktif}
+					showStatic={!replayAktif && !sim.terlihat}
 					overlay={
 						<>
-							{hud}
+							{!sim.terlihat && hud}
 							{replayAktif && <OverlayReplay r={replay} />}
+							{sim.terlihat && <OverlaySimulasi sim={sim} />}
 						</>
 					}
 					attackers={data.attackers}

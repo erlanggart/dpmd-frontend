@@ -4,6 +4,7 @@ import { useNavigate } from "react-router-dom";
 import api from "../api";
 import { FiEye, FiEyeOff, FiLoader, FiAlertCircle, FiLock, FiClock } from "react-icons/fi";
 import LoginImageSlider from "../components/login/LoginImageSlider";
+import LangkahDuaFaktor from "../components/login/LangkahDuaFaktor";
 import { useAuth } from "../context/AuthContext";
 import { isPWA } from "../utils/pwaDetection";
 
@@ -15,6 +16,20 @@ import { isPWA } from "../utils/pwaDetection";
 // (lihat AuthContext/sessionPersistence) sampai user menekan keluar sendiri —
 // tidak perlu isi ulang form sama sekali, jadi checkbox ini disembunyikan.
 const REMEMBERED_EMAIL_KEY = "dpmd_remembered_email";
+
+// ID perangkat dibuat sekali lalu disimpan; dipakai login biasa dan langkah 2FA.
+const ambilDeviceId = () => {
+	let deviceId = localStorage.getItem('dpmd_device_id');
+	if (!deviceId) {
+		deviceId = crypto.randomUUID ? crypto.randomUUID() :
+			'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
+				const r = (Math.random() * 16) | 0;
+				return (c === 'x' ? r : (r & 0x3) | 0x8).toString(16);
+			});
+		localStorage.setItem('dpmd_device_id', deviceId);
+	}
+	return deviceId;
+};
 
 const LoginPage = () => {
 	const [email, setEmail] = useState("");
@@ -42,6 +57,8 @@ const LoginPage = () => {
 	// Dihitung sekali: mode tampilan (browser/PWA) tidak berubah selama app dibuka.
 	const [tampilkanIngatSaya] = useState(() => !isPWA());
 	const [ingatSaya, setIngatSaya] = useState(false);
+	// null, atau { jenis: 'pasang' | 'kode', tiket, email } saat login pegawai butuh 2FA.
+	const [tahap2fa, setTahap2fa] = useState(null);
 
 	// Isi ulang email yang diingat (kalau ada) begitu halaman login dibuka di browser biasa.
 	useEffect(() => {
@@ -80,6 +97,50 @@ const LoginPage = () => {
 	const lockoutMinutes = Math.floor(lockoutRemaining / 60000);
 	const lockoutSeconds = Math.floor((lockoutRemaining % 60000) / 1000);
 
+	const selesaikanMasuk = ({ token: expressToken, user: newUser }) => {
+		// Reset lockout on successful login
+		setLockoutUntil(null);
+		setLockoutRemaining(0);
+
+		// Simpan/hapus email yang diingat sesuai centang "Ingat saya" (browser biasa saja).
+		if (tampilkanIngatSaya) {
+			try {
+				if (ingatSaya) {
+					localStorage.setItem(REMEMBERED_EMAIL_KEY, email);
+				} else {
+					localStorage.removeItem(REMEMBERED_EMAIL_KEY);
+				}
+			} catch {
+				// localStorage bisa diblokir (mode privat); tidak fatal untuk login.
+			}
+		}
+
+		// Save token and user using context
+		login(newUser, null, expressToken);
+
+		// Navigate based on role
+		if (newUser.role === "desa") {
+			navigate("/desa/dashboard");
+		} else if (newUser.role === "admin_desa") {
+			navigate("/admin-desa/akun");
+		} else if (newUser.role === "kecamatan") {
+			navigate("/kecamatan/dashboard");
+		} else if (newUser.role === "dinas_terkait" || newUser.role === "verifikator_dinas") {
+			navigate("/dinas/dashboard");
+		} else if (newUser.role === "bpjs") {
+			navigate("/bpjs/dashboard");
+		} else if (newUser.role === "tenaga_ahli") {
+			navigate("/tenaga-ahli/ikhtisar");
+		} else if (newUser.role === "superadmin") {
+			navigate("/superadmin/dashboard");
+		} else if (["pegawai", "ketua_tim", "kepala_bidang", "kepala_dinas", "sekretaris_dinas", "bendahara"].includes(newUser.role)) {
+			// All DPMD internal staff go to unified /dpmd route
+			navigate("/dpmd/dashboard");
+		} else {
+			navigate("/dashboard");
+		}
+	};
+
 	const handleLogin = async (e) => {
 		e.preventDefault();
 
@@ -95,16 +156,7 @@ const LoginPage = () => {
 		setPasswordError(null);
 
 		try {
-			// Get device ID for auto-registration
-			let deviceId = localStorage.getItem('dpmd_device_id');
-			if (!deviceId) {
-				deviceId = crypto.randomUUID ? crypto.randomUUID() : 
-					'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
-						const r = (Math.random() * 16) | 0;
-						return (c === 'x' ? r : (r & 0x3) | 0x8).toString(16);
-					});
-				localStorage.setItem('dpmd_device_id', deviceId);
-			}
+			const deviceId = ambilDeviceId();
 
 			// Login to Express backend
 			const response = await api.post("/auth/login", {
@@ -113,55 +165,18 @@ const LoginPage = () => {
 				device_id: deviceId,
 			});
 
-			const newUser = response.data.data.user;
-			const expressToken = response.data.data.token;
-
-			console.log('Login successful');
-
-			// Reset lockout on successful login
-			setLockoutUntil(null);
-			setLockoutRemaining(0);
-
-			// Simpan/hapus email yang diingat sesuai centang "Ingat saya" (browser biasa saja).
-			if (tampilkanIngatSaya) {
-				try {
-					if (ingatSaya) {
-						localStorage.setItem(REMEMBERED_EMAIL_KEY, email);
-					} else {
-						localStorage.removeItem(REMEMBERED_EMAIL_KEY);
-					}
-				} catch {
-					// localStorage bisa diblokir (mode privat); tidak fatal untuk login.
-				}
-			}
-
-			// Save token and user using context
-			login(newUser, null, expressToken);
-
-			// Navigate based on role
-			if (newUser.role === "desa") {
-				navigate("/desa/dashboard");
-			} else if (newUser.role === "admin_desa") {
-				navigate("/admin-desa/akun");
-			} else if (newUser.role === "kecamatan") {
-				navigate("/kecamatan/dashboard");
-			} else if (newUser.role === "dinas_terkait" || newUser.role === "verifikator_dinas") {
-				navigate("/dinas/dashboard");
-			} else if (newUser.role === "bpjs") {
-				navigate("/bpjs/dashboard");
-			} else if (newUser.role === "tenaga_ahli") {
-				navigate("/tenaga-ahli/ikhtisar");
-			} else if (newUser.role === "superadmin") {
-				navigate("/superadmin/dashboard");
-			} else if (["pegawai", "ketua_tim", "kepala_bidang", "kepala_dinas", "sekretaris_dinas", "bendahara"].includes(newUser.role)) {
-				// All DPMD internal staff go to unified /dpmd route
-				navigate("/dpmd/dashboard");
-			} else {
-				navigate("/dashboard");
-			}
+			selesaikanMasuk(response.data.data);
 		} catch (error) {
 			console.error("Login gagal:", error.response?.data || error.message);
 			
+			// Pegawai DPMD: sandi benar, tinggal 2FA.
+			const kode2fa = error.response?.data?.code;
+			if (kode2fa === 'PERLU_PASANG_2FA' || kode2fa === 'PERLU_KODE_2FA') {
+				const { tiket_2fa, email: emailAkun } = error.response.data.data || {};
+				setTahap2fa({ jenis: kode2fa === 'PERLU_PASANG_2FA' ? 'pasang' : 'kode', tiket: tiket_2fa, email: emailAkun || email });
+				return;
+			}
+
 			// Handle rate limit (429) response
 			if (error.response?.status === 429) {
 				const rateLimit = error.response.data?.rate_limit;
@@ -185,9 +200,10 @@ const LoginPage = () => {
 
 	return (
 		<div className="min-h-screen bg-slate-100 px-4 py-6 text-slate-900 sm:px-6 lg:flex lg:items-center lg:justify-center lg:px-8">
-			<div className="relative z-10 flex w-full max-w-6xl overflow-hidden rounded-[1.75rem] border border-white/80 bg-white shadow-2xl shadow-slate-950/10 lg:min-h-[680px]">
+			{/* Saat 2FA: satu kolom di tengah, panel gambar kiri disembunyikan. */}
+			<div className={`relative z-10 mx-auto flex w-full overflow-hidden rounded-[1.75rem] border border-white/80 bg-white shadow-2xl shadow-slate-950/10 ${!tahap2fa ? "max-w-6xl lg:min-h-[680px]" : tahap2fa.jenis === "pasang" ? "max-w-5xl" : "max-w-xl"}`}>
 				{/* Left Side - Image Slider */}
-				<div className="relative hidden w-[52%] overflow-hidden bg-slate-950 lg:block">
+				<div className={`relative hidden w-[52%] overflow-hidden bg-slate-950 ${tahap2fa ? "" : "lg:block"}`}>
 					<LoginImageSlider />
 					<div className="absolute inset-0 z-10 bg-slate-950/60"></div>
 					<div className="absolute inset-0 z-10 flex flex-col justify-end p-10 text-white">
@@ -209,8 +225,8 @@ const LoginPage = () => {
 				</div>
 
 				{/* Right Side - Login Form */}
-				<div className="w-full px-5 py-7 sm:px-8 sm:py-10 lg:w-[48%] lg:px-12">
-					<div className="mb-7 flex items-center gap-3 lg:hidden">
+				<div className={`w-full px-5 py-7 sm:px-8 sm:py-10 ${tahap2fa ? "lg:px-10" : "lg:w-[48%] lg:px-12"}`}>
+					<div className={`mb-7 flex items-center gap-3 ${tahap2fa ? "" : "lg:hidden"}`}>
 						<img
 							src="/logo-bogor.png"
 							alt="Logo Kabupaten Bogor"
@@ -221,9 +237,13 @@ const LoginPage = () => {
 							<p className="text-xs text-slate-500">Sistem Informasi Terpadu</p>
 						</div>
 					</div>
-					<p className="text-sm font-semibold text-[rgb(var(--color-secondary))]">Masuk akun</p>
-					<h2 className="mt-2 text-3xl font-bold tracking-normal text-slate-950 sm:text-4xl">Selamat datang</h2>
-					<p className="mt-3 text-sm leading-6 text-slate-600">Gunakan akun DPMD, desa, kecamatan, atau dinas terkait untuk melanjutkan.</p>
+					{!tahap2fa && (
+						<>
+							<p className="text-sm font-semibold text-[rgb(var(--color-secondary))]">Masuk akun</p>
+							<h2 className="mt-2 text-3xl font-bold tracking-normal text-slate-950 sm:text-4xl">Selamat datang</h2>
+							<p className="mt-3 text-sm leading-6 text-slate-600">Gunakan akun DPMD, desa, kecamatan, atau dinas terkait untuk melanjutkan.</p>
+						</>
+					)}
 					{authNotice && (
 						<div className="mt-4 rounded-xl border border-amber-300 bg-amber-50 px-4 py-3">
 							<p className="text-sm font-medium text-amber-900">{authNotice}</p>
@@ -232,6 +252,14 @@ const LoginPage = () => {
 
 					{/* Izin lokasi & notifikasi tidak diminta di halaman login; langganan
 					    push dibentuk setelah login oleh layout masing-masing peran. */}
+					{tahap2fa ? (
+						<LangkahDuaFaktor
+							tahap={tahap2fa}
+							deviceId={ambilDeviceId()}
+							onBerhasil={selesaikanMasuk}
+							onBatal={(pesan) => { setTahap2fa(null); setPassword(''); setError(pesan || null); }}
+						/>
+					) : (
 					<form onSubmit={handleLogin} className="mt-8 space-y-5">
 						<div>
 							<label htmlFor="email" className="mb-2 block text-sm font-semibold text-slate-700">
@@ -348,6 +376,7 @@ const LoginPage = () => {
 							</div>
 						)}
 					</form>
+					)}
 				</div>
 			</div>
 
