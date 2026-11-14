@@ -1,3 +1,4 @@
+import TombolSuara from "../components/ui/TombolSuara";
 import React, { useState, useRef, useEffect } from "react";
 import { Outlet, NavLink, useNavigate } from "react-router-dom";
 import {
@@ -151,6 +152,7 @@ const BpjsLayout = () => {
 
           {/* Footer / logout */}
           <div className="p-3 border-t border-slate-100">
+            <TombolSuara varian="baris" ringkas={!sidebarOpen} className={`mb-1 text-slate-600 hover:bg-slate-100 ${!sidebarOpen ? "lg:justify-center" : ""}`} />
             <button
               onClick={handleLogout}
               className={`flex items-center gap-3 w-full px-4 py-3 rounded-xl text-slate-600 hover:bg-red-50 hover:text-red-600 transition-all duration-200 ${
@@ -211,6 +213,7 @@ const BpjsLayout = () => {
                     {user?.email || "bpjs@dpmd.bogorkab.go.id"}
                   </p>
                 </div>
+                <TombolSuara varian="baris" className="text-slate-600 hover:bg-slate-50" />
                 <button
                   onClick={handleLogout}
                   className="w-full flex items-center gap-3 px-4 py-3 text-sm text-slate-600 hover:bg-red-50 hover:text-red-600 transition-colors"

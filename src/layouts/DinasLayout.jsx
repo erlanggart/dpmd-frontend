@@ -1,3 +1,4 @@
+import TombolSuara from "../components/ui/TombolSuara";
 import React, { useState, useRef, useEffect } from "react";
 import { Outlet, useNavigate, NavLink, useLocation } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
@@ -318,6 +319,7 @@ const DinasLayout = () => {
 
           {/* Logout Button */}
           <div className="p-4 border-t border-gray-200">
+            <TombolSuara varian="baris" ringkas={!sidebarOpen} className={`mb-1 text-gray-700 hover:bg-gray-100 ${!sidebarOpen ? "lg:justify-center" : ""}`} />
             <button
               onClick={handleLogout}
               className={`flex items-center gap-3 px-4 py-3 w-full rounded-xl text-gray-700 hover:bg-red-50 hover:text-red-600 transition-all duration-200 group ${

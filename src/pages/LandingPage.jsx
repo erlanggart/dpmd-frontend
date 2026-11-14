@@ -41,6 +41,14 @@ const MQ_DEK = "(min-width: 768px)";
 
 const LandingPage = () => {
 	const scrollY = useScrollPosition();
+
+	// Landing page untuk publik: tanpa efek suara antarmuka (lihat utils/suaraUi.js).
+	useEffect(() => {
+		document.body.dataset.suara = "mati";
+		return () => {
+			delete document.body.dataset.suara;
+		};
+	}, []);
 	const [menuBuka, setMenuBuka] = useState(false);
 
 	// Dek hanya di desktop; matchMedia supaya jendela yang dikecilkan ikut berpindah

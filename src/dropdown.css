@@ -1,0 +1,106 @@
+/*
+ * Dropdown (<select>) berdesain di seluruh aplikasi, termasuk daftar pilihannya yang terbuka.
+ * Memakai "customizable select" (appearance: base-select, Chrome/Edge 135+). Browser yang belum
+ * mendukung (Firefox, Safari lama) melewati blok ini dan tetap memakai dropdown bawaannya.
+ * Sengaja TIDAK di dalam @layer: aturan tanpa layer menang atas utilitas Tailwind (mis. appearance-none),
+ * jadi semua <select> ikut tanpa menyunting tiap berkas. Hanya dropdown satu pilihan; listbox
+ * (multiple/size) dibiarkan.
+ */
+@supports (appearance: base-select) {
+	select:not([multiple]):not([size]),
+	select:not([multiple]):not([size])::picker(select) {
+		appearance: base-select;
+	}
+
+	select:not([multiple]):not([size]) {
+		cursor: pointer;
+		/* panah latar (bg-[url(...)]) diganti ::picker-icon di bawah */
+		background-image: none;
+		transition: border-color 0.15s, box-shadow 0.15s, background-color 0.15s;
+	}
+	select:not([multiple]):not([size]):disabled {
+		cursor: not-allowed;
+	}
+	select:not([multiple]):not([size]):open {
+		border-color: #818cf8;
+		box-shadow: 0 0 0 4px rgb(99 102 241 / 0.12);
+	}
+
+	select:not([multiple]):not([size])::picker-icon {
+		content: "";
+		width: 1rem;
+		height: 1rem;
+		margin-inline-start: 0.5rem;
+		background-color: #64748b;
+		mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E") center / contain no-repeat;
+		transition: rotate 0.2s ease;
+	}
+	select:not([multiple]):not([size]):open::picker-icon {
+		rotate: 180deg;
+		background-color: #4f46e5;
+	}
+
+	select:not([multiple]):not([size])::picker(select) {
+		margin-block: 0.375rem;
+		padding: 0.375rem;
+		min-width: anchor-size(width);
+		max-height: min(22rem, 60vh);
+		overflow-y: auto;
+		border: 1px solid #e2e8f0;
+		border-radius: 0.875rem;
+		background: #fff;
+		box-shadow: 0 18px 40px -12px rgb(15 23 42 / 0.25), 0 4px 10px -4px rgb(15 23 42 / 0.08);
+		opacity: 0;
+		translate: 0 -6px;
+		transition: opacity 0.15s ease, translate 0.15s ease, overlay 0.15s allow-discrete, display 0.15s allow-discrete;
+	}
+	select:not([multiple]):not([size]):open::picker(select) {
+		opacity: 1;
+		translate: 0 0;
+	}
+	@starting-style {
+		select:not([multiple]):not([size]):open::picker(select) {
+			opacity: 0;
+			translate: 0 -6px;
+		}
+	}
+
+	select:not([multiple]):not([size]) option {
+		display: flex;
+		align-items: center;
+		gap: 0.5rem;
+		padding: 0.5rem 0.75rem;
+		border-radius: 0.625rem;
+		font-size: 0.875rem;
+		line-height: 1.25rem;
+		color: #334155;
+		cursor: pointer;
+		transition: background-color 0.1s, color 0.1s;
+	}
+	select:not([multiple]):not([size]) option:hover,
+	select:not([multiple]):not([size]) option:focus-visible {
+		background: #eef2ff;
+		color: #3730a3;
+		outline: none;
+	}
+	select:not([multiple]):not([size]) option:checked {
+		background: linear-gradient(135deg, #4f46e5, #6366f1);
+		color: #fff;
+		font-weight: 600;
+	}
+	select:not([multiple]):not([size]) option::checkmark {
+		order: 1;
+		margin-inline-start: auto;
+		content: "✓";
+	}
+	select:not([multiple]):not([size]) option:disabled {
+		opacity: 0.45;
+		cursor: not-allowed;
+	}
+	select:not([multiple]):not([size]) optgroup {
+		padding-top: 0.25rem;
+		font-size: 0.75rem;
+		font-weight: 600;
+		color: #94a3b8;
+	}
+}

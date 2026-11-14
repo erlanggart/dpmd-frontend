@@ -1,3 +1,4 @@
+import TombolSuara from "../components/ui/TombolSuara";
 import React, { useState } from "react";
 import { Outlet, useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
@@ -305,6 +306,7 @@ const DesaLayout = () => {
               )}
             </div>
 
+            <TombolSuara varian="baris" ringkas={isSidebarCollapsed} className={`mt-3 text-slate-600 hover:bg-slate-100 ${isSidebarCollapsed ? "justify-center" : ""}`} />
             <button
               onClick={handleLogout}
               className={`mt-3 flex w-full items-center rounded-lg px-3 py-2.5 text-slate-600 transition-colors hover:bg-rose-50 hover:text-rose-600 ${
@@ -471,6 +473,7 @@ const DesaLayout = () => {
 
                 <div className="my-2 border-t border-slate-100"></div>
 
+                <TombolSuara varian="baris" className="mb-1 text-slate-700 hover:bg-slate-50" />
                 <button
                   onClick={handleLogout}
                   className="flex w-full items-center gap-3 rounded-lg p-3 text-left transition-colors hover:bg-rose-50"

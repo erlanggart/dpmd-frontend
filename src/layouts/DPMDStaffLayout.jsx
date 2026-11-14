@@ -1,6 +1,7 @@
 // src/layouts/DPMDStaffLayout.jsx
 // Unified layout for all internal DPMD staff roles
 // Supports both mobile (bottom nav) and desktop (sidebar) modes
+import TombolSuara from "../components/ui/TombolSuara";
 import React from "react";
 import { Navigate, useNavigate, useLocation } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
@@ -835,6 +836,7 @@ const DPMDStaffLayout = () => {
 							)}
 						</button>
 
+						<TombolSuara varian="baris" ringkas={isSidebarCollapsed} className={`mt-1 text-slate-500 hover:bg-slate-100 hover:text-slate-700 ${isSidebarCollapsed ? "justify-center" : ""}`} />
 						<button
 							onClick={handleLogout}
 							className={`mt-1 flex w-full items-center rounded-lg px-2.5 py-2 text-slate-500 transition-colors hover:bg-rose-50 hover:text-rose-600 ${
@@ -1147,6 +1149,7 @@ const DPMDStaffLayout = () => {
 
 							{/* Logout */}
 							<div className="border-t border-slate-100 px-6 py-4">
+									<TombolSuara varian="baris" className="mb-2 text-slate-700 hover:bg-slate-100" />
 								<button
 									onClick={handleLogout}
 									className="flex w-full items-center gap-4 rounded-2xl bg-red-50 px-4 py-3 text-left text-red-600 border border-red-200"

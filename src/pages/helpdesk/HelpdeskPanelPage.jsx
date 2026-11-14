@@ -4,10 +4,11 @@ import toast from "react-hot-toast";
 import {
 	ArrowLeft, ArrowUpRight, ChartColumn, ChevronDown, Copy, CornerDownLeft, Flame, Hourglass, Inbox, Lightbulb, LoaderCircle,
 	MessageCircleReply, MessageSquareText, MessagesSquare, Pencil, Plus, RefreshCw, Route, Search, Send, Settings, Siren, Smile,
-	Sparkles, Star, Ticket, Timer, Trash2, TriangleAlert, User, WandSparkles, X, Zap,
+	Sparkles, Star, Ticket, Timer, Trash2, TriangleAlert, User, Volume2, VolumeX, WandSparkles, X, Zap, Headset,
 } from "lucide-react";
 import api from "../../api";
 import { IKON_KATEGORI, LABEL_TINGKAT, STATUS_TIKET, ikonKategori, pesanGalat, waktu } from "../../components/helpdesk/ikonHelpdesk";
+import { aturSuara, useSuaraAktif } from "../../utils/suaraUi";
 
 /**
  * Panel Helpdesk untuk petugas: kecamatan (tiket wilayahnya), staf bidang
@@ -18,9 +19,11 @@ import { IKON_KATEGORI, LABEL_TINGKAT, STATUS_TIKET, ikonKategori, pesanGalat, w
  */
 
 const AUDIENS = { semua: "Semua", publik: "Hanya tamu", akun: "Hanya akun desa/kecamatan" };
-const INPUT = "w-full px-3 py-2 text-sm bg-white border border-slate-300 text-slate-900 placeholder-slate-400 rounded-lg focus:outline-none focus:border-slate-500 focus:ring-1 focus:ring-slate-500 transition";
-const PILIH = "pl-2.5 pr-8 py-1.5 text-sm bg-white border border-slate-300 rounded-lg text-slate-700";
-const KARTU = "bg-white rounded-xl border border-slate-200";
+const INPUT = "w-full px-3 py-2 text-sm bg-white border border-slate-200 text-slate-900 placeholder-slate-400 rounded-xl shadow-sm hover:border-slate-300 focus:outline-none focus:border-indigo-400 focus:ring-4 focus:ring-indigo-500/10 transition";
+// Panah dropdown kustom (appearance-none membuang panah bawaan browser yang berbeda-beda).
+const PANAH = "appearance-none cursor-pointer bg-no-repeat bg-[length:1rem] bg-[position:right_0.7rem_center] bg-[url(data:image/svg+xml,%3Csvg%20xmlns=%27http://www.w3.org/2000/svg%27%20viewBox=%270%200%2024%2024%27%20fill=%27none%27%20stroke=%27%2364748b%27%20stroke-width=%272.2%27%20stroke-linecap=%27round%27%20stroke-linejoin=%27round%27%3E%3Cpath%20d=%27m6%209%206%206%206-6%27/%3E%3C/svg%3E)]";
+const PILIH = `pl-3 pr-9 py-2 text-sm font-medium bg-white border border-slate-200 rounded-xl text-slate-700 shadow-sm hover:border-slate-300 hover:bg-slate-50/60 focus:outline-none focus:border-indigo-400 focus:ring-4 focus:ring-indigo-500/10 transition ${PANAH}`;
+const KARTU = "bg-white rounded-2xl border border-slate-200/80 shadow-sm";
 const TOMBOL = "inline-flex items-center justify-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded-lg transition-colors disabled:opacity-50";
 const TOMBOL_GARIS = `${TOMBOL} border border-slate-300 bg-white text-slate-700 hover:bg-slate-50`;
 
@@ -501,7 +504,7 @@ function TabTiket({ awalId, saring, setSaring }) {
 	const adaSaring = Boolean(tingkat || bidang || prioritas || cari || menunggu || status !== "terbuka");
 
 	return (
-		<div className="grid items-stretch gap-4 lg:h-[calc(100vh-15rem)] lg:min-h-[560px] lg:grid-cols-[minmax(320px,380px)_minmax(0,1fr)]">
+		<div className="grid items-stretch gap-4 lg:h-[calc(100vh-26.5rem)] lg:min-h-[560px] lg:grid-cols-[minmax(320px,380px)_minmax(0,1fr)]">
 			{/* ---------- Daftar ---------- */}
 			<div className={`${KARTU} flex min-h-0 flex-col overflow-hidden ${pilih ? "hidden lg:flex" : "flex"}`}>
 				<div className="space-y-2.5 border-b border-slate-200 p-3">
@@ -736,11 +739,11 @@ function TabFaq({ data, muat, draf, setDraf }) {
 				<form onSubmit={simpan} className={`${KARTU} space-y-3 p-4`}>
 					<p className="m-0 text-sm font-bold text-slate-900">{draf.id ? "Ubah FAQ" : "FAQ Baru"}</p>
 					<div className="grid gap-3 sm:grid-cols-2">
-						<select className={INPUT} value={draf.category_id} onChange={ubah("category_id")} required>
+						<select className={`${INPUT} pr-9 ${PANAH}`} value={draf.category_id} onChange={ubah("category_id")} required>
 							<option value="">Pilih kategori</option>
 							{kategoriBoleh.map((k) => <option key={k.id} value={k.id}>{k.name}</option>)}
 						</select>
-						<select className={INPUT} value={draf.audience} onChange={ubah("audience")}>
+						<select className={`${INPUT} pr-9 ${PANAH}`} value={draf.audience} onChange={ubah("audience")}>
 							{Object.entries(AUDIENS).map(([k, v]) => <option key={k} value={k}>Tampil ke: {v}</option>)}
 						</select>
 					</div>
@@ -836,10 +839,10 @@ function TabKategori({ data, muat }) {
 					<div className="grid gap-3 sm:grid-cols-2">
 						<input className={INPUT} value={draf.name} onChange={ubah("name")} required maxLength={100} placeholder="Nama kategori" />
 						<input className={INPUT} value={draf.description || ""} onChange={ubah("description")} maxLength={255} placeholder="Deskripsi singkat" />
-						<select className={INPUT} value={draf.target_level} onChange={ubah("target_level")}>
+						<select className={`${INPUT} pr-9 ${PANAH}`} value={draf.target_level} onChange={ubah("target_level")}>
 							{Object.entries(LABEL_TINGKAT).map(([k, v]) => <option key={k} value={k}>Penanggung jawab awal: {v}</option>)}
 						</select>
-						<select className={INPUT} value={draf.bidang_id || ""} onChange={ubah("bidang_id")}>
+						<select className={`${INPUT} pr-9 ${PANAH}`} value={draf.bidang_id || ""} onChange={ubah("bidang_id")}>
 							<option value="">Bidang: Sekretariat (bawaan)</option>
 							{data.bidang.map((b) => <option key={b.id} value={b.id}>Bidang: {b.nama}</option>)}
 						</select>
@@ -1052,6 +1055,7 @@ export default function HelpdeskPanelPage() {
 	const [drafFaq, setDrafFaq] = useState(null);
 	const [saringTiket, setSaringTiket] = useState(SARING_TIKET_AWAL);
 	const [ringkas, setRingkas] = useState(null);
+	const suaraAktif = useSuaraAktif();
 
 	/* Hak kelola dibaca dari server (pimpinan DPMD atau Kepala Bidang). */
 	useEffect(() => {
@@ -1113,42 +1117,75 @@ export default function HelpdeskPanelPage() {
 		...(kelola?.pimpinan ? [{ key: "pengaturan", label: "Pengaturan", Ikon: Settings }] : []),
 	];
 
-		return (
+	// Kartu statistik kepala halaman: [label, nilai, ikon, warna ikon, sorot (angka perlu perhatian), klik]
+	const kartuStat = [
+		["Menunggu", ringkas ? ringkas.menunggu : "…", Hourglass, "bg-amber-400/20 text-amber-200", ringkas?.menunggu > 0 && "text-amber-300", () => saringCepat({ status: "baru" })],
+		[`Lewat ${JAM_TERLAMBAT} jam`, ringkas ? ringkas.terlambat ?? 0 : "…", Timer, "bg-rose-400/20 text-rose-200", ringkas?.terlambat > 0 && "text-rose-300", () => saringCepat({ status: "baru", menunggu: true })],
+		["Mendesak", ringkas ? ringkas.mendesak ?? 0 : "…", Siren, "bg-rose-400/20 text-rose-200", ringkas?.mendesak > 0 && "text-rose-300", () => saringCepat({ prioritas: "tinggi" })],
+		["Tanggapan pertama", ringkas ? durasi(ringkas.menit_tanggap) : "…", Zap, "bg-sky-400/20 text-sky-200", null, null],
+		["Kepuasan", ringkas?.rating ? `${Number(ringkas.rating).toFixed(1)}/5` : "—", Star, "bg-yellow-400/20 text-yellow-200", null, null],
+	];
+
+	return (
 		<div className="space-y-5">
-			<header className="flex flex-col gap-4 2xl:flex-row 2xl:items-end 2xl:justify-between">
-				<div className="min-w-0">
-					<h2 className="m-0 text-xl font-semibold tracking-tight text-slate-900">Helpdesk</h2>
-					<p className="m-0 mt-1 max-w-xl text-sm text-slate-500">Pertanyaan masyarakat, desa, dan kecamatan yang diteruskan chatbot ke petugas sesuai kategori dan wilayah.</p>
-				</div>
-				<dl className="m-0 grid grid-cols-3 gap-x-6 gap-y-3 sm:flex sm:flex-wrap sm:gap-x-8 2xl:shrink-0">
-					{[
-						["Menunggu", ringkas ? ringkas.menunggu : "…", ringkas?.menunggu ? "text-amber-600" : "", () => saringCepat({ status: "baru" })],
-						[`Lewat ${JAM_TERLAMBAT} jam`, ringkas ? ringkas.terlambat ?? 0 : "…", ringkas?.terlambat ? "text-rose-600" : "", () => saringCepat({ status: "baru", menunggu: true })],
-						["Mendesak", ringkas ? ringkas.mendesak ?? 0 : "…", ringkas?.mendesak ? "text-rose-600" : "", () => saringCepat({ prioritas: "tinggi" })],
-						["Tanggapan pertama", ringkas ? durasi(ringkas.menit_tanggap) : "…", "", null],
-						["Kepuasan", ringkas?.rating ? `${Number(ringkas.rating).toFixed(1)}/5` : "—", "", null],
-					].map(([label, nilai, warna, klik]) => (
-						<div key={label} className="min-w-0">
-							<dt className="text-xs text-slate-500">{label}</dt>
-							<dd className="m-0">
-								{klik ? (
-									<button type="button" onClick={klik} className={`text-lg font-semibold tabular-nums hover:underline ${warna || "text-slate-900"}`}>{nilai}</button>
-								) : (
-									<span className={`text-lg font-semibold tabular-nums ${warna || "text-slate-900"}`}>{nilai}</span>
-								)}
-							</dd>
+			<header className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-slate-900 via-indigo-950 to-indigo-800 p-5 text-white shadow-xl shadow-indigo-950/20 sm:p-6">
+				<div aria-hidden="true" className="pointer-events-none absolute -right-16 -top-24 h-64 w-64 rounded-full bg-indigo-400/25 blur-3xl" />
+				<div aria-hidden="true" className="pointer-events-none absolute -bottom-28 left-1/3 h-56 w-56 rounded-full bg-sky-400/15 blur-3xl" />
+				<div className="relative flex flex-col gap-5">
+					<div className="flex items-start justify-between gap-4">
+						<div className="flex min-w-0 items-start gap-4">
+							<span className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-white/10 ring-1 ring-white/20 backdrop-blur">
+								<Headset className="h-6 w-6" />
+							</span>
+							<div className="min-w-0">
+								<div className="flex flex-wrap items-center gap-2">
+									<h2 className="m-0 text-2xl font-bold tracking-tight text-white">Helpdesk</h2>
+									<span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-400/15 px-2 py-0.5 text-[11px] font-medium text-emerald-200 ring-1 ring-emerald-300/30">
+										<span className="h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-300" />
+										Langsung
+									</span>
+								</div>
+								<p className="m-0 mt-1 max-w-2xl text-sm text-indigo-100/80">Pertanyaan masyarakat, desa, dan kecamatan yang diteruskan chatbot ke petugas sesuai kategori dan wilayah.</p>
+							</div>
 						</div>
-					))}
-				</dl>
+						<button type="button" onClick={() => aturSuara(!suaraAktif)} aria-pressed={suaraAktif}
+							title={suaraAktif ? "Matikan suara" : "Nyalakan suara"} aria-label={suaraAktif ? "Matikan suara" : "Nyalakan suara"}
+							className="shrink-0 rounded-xl bg-white/10 p-2.5 text-white ring-1 ring-white/15 transition hover:bg-white/20 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/60">
+							{suaraAktif ? <Volume2 className="h-5 w-5" /> : <VolumeX className="h-5 w-5 opacity-70" />}
+						</button>
+					</div>
+
+					<div className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-5">
+						{kartuStat.map(([label, nilai, Ikon, warnaIkon, sorot, klik]) => {
+							const isi = (
+								<>
+									<span className="flex items-center justify-between gap-2">
+										<span className="truncate text-xs font-medium text-indigo-100/70">{label}</span>
+										<span className={`grid h-7 w-7 shrink-0 place-items-center rounded-lg ${warnaIkon}`}><Ikon className="h-3.5 w-3.5" /></span>
+									</span>
+									<span className={`mt-2 block text-2xl font-bold tabular-nums ${sorot || "text-white"}`}>{nilai}</span>
+									{klik && <span className="mt-0.5 block text-[11px] text-indigo-200/60 transition group-hover:text-indigo-100">Lihat tiket →</span>}
+								</>
+							);
+							const gaya = "group min-w-0 rounded-2xl bg-white/[0.07] p-3.5 text-left ring-1 ring-white/10 backdrop-blur transition";
+							return klik ? (
+								<button key={label} type="button" onClick={klik} className={`${gaya} hover:-translate-y-0.5 hover:bg-white/[0.12] hover:ring-white/25 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/60`}>{isi}</button>
+							) : (
+								<div key={label} className={gaya}>{isi}</div>
+							);
+						})}
+					</div>
+				</div>
 			</header>
 
-			<nav className="-mx-1 overflow-x-auto border-b border-slate-200 px-1">
-				<div className="flex gap-5">
-					{tabs.map(({ key, label, angka }) => (
-						<button key={key} type="button" onClick={() => pilihTab(key)}
-							className={`-mb-px inline-flex items-center gap-1.5 whitespace-nowrap border-b-2 px-0.5 pb-2.5 pt-1 text-sm transition-colors ${tab === key ? "border-slate-900 font-medium text-slate-900" : "border-transparent text-slate-500 hover:text-slate-800"}`}>
+			<nav className="overflow-x-auto pb-1">
+				<div role="tablist" className="inline-flex gap-1 rounded-2xl border border-slate-200/80 bg-white p-1 shadow-sm">
+					{tabs.map(({ key, label, Ikon, angka }) => (
+						<button key={key} type="button" role="tab" aria-selected={tab === key} onClick={() => pilihTab(key)}
+							className={`inline-flex items-center gap-2 whitespace-nowrap rounded-xl px-3.5 py-2 text-sm font-medium transition ${tab === key ? "bg-gradient-to-br from-indigo-600 to-indigo-500 text-white shadow-md shadow-indigo-600/25" : "text-slate-600 hover:bg-slate-100 hover:text-slate-900"}`}>
+							<Ikon className="h-4 w-4" />
 							{label}
-							{angka > 0 && <span className="rounded bg-slate-100 px-1.5 text-[11px] tabular-nums text-slate-600">{angka}</span>}
+							{angka > 0 && <span className={`rounded-full px-1.5 text-[11px] font-semibold tabular-nums ${tab === key ? "bg-white/25 text-white" : "bg-amber-100 text-amber-700"}`}>{angka}</span>}
 						</button>
 					))}
 				</div>

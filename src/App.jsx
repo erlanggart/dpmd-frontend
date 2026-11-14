@@ -1765,7 +1765,7 @@ function App() {
                   <Route path="bidang/pemdes/produk-hukum" element={<ProdukHukumPemdesPage />} />
                   <Route path="bidang/pemdes/produk-hukum/:id" element={<ProdukHukumDetailPemdesPage />} />
                   <Route path="pesan" element={<MessagingPage />} />
-                  <Route path="helpdesk" element={<HelpdeskPanelPage />} />
+                  <Route path="helpdesk" element={<div className="mx-auto w-full max-w-[96rem] p-4 sm:p-6 lg:p-8"><HelpdeskPanelPage /></div>} />
                 </Route>
 
                 {/* Rute Kecamatan - Exclusive untuk Admin Kecamatan */}

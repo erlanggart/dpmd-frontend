@@ -1,3 +1,4 @@
+import TombolSuara from "../components/ui/TombolSuara";
 import React, { useState } from "react";
 import { Outlet, useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
@@ -126,6 +127,7 @@ const AdminDesaLayout = () => {
 							</div>
 						</div>
 						<div className="p-3">
+								<TombolSuara varian="baris" ringkas={isCollapsed} className={`mb-1 text-slate-300 hover:bg-white/10 hover:text-white ${isCollapsed ? "justify-center" : ""}`} />
 							<button
 								onClick={handleLogout}
 								className={`w-full flex items-center ${
@@ -170,6 +172,7 @@ const AdminDesaLayout = () => {
 								</button>
 							);
 						})}
+							<TombolSuara varian="ikon" className="text-slate-400 hover:bg-white/10" />
 						<button
 							onClick={handleLogout}
 							className="flex flex-col items-center px-3 py-1 rounded-xl text-red-300"

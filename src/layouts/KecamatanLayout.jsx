@@ -1,3 +1,4 @@
+import TombolSuara from "../components/ui/TombolSuara";
 import React, { useState, useRef, useEffect, useMemo } from "react";
 import { Outlet, useNavigate, NavLink, useLocation } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
@@ -332,6 +333,7 @@ const KecamatanLayout = () => {
             {ciut ? <ChevronsRight className="h-[18px] w-[18px]" /> : <ChevronsLeft className="h-[18px] w-[18px]" />}
             {lebar && <span>Ciutkan</span>}
           </button>
+          <TombolSuara varian="baris" ringkas={!lebar} className={`text-slate-400 hover:bg-white/[0.04] hover:text-slate-100 ${!lebar ? "justify-center" : ""}`} />
           <button
             onClick={handleLogout}
             className={`flex w-full items-center gap-3 rounded-lg py-2 text-sm text-slate-400 transition-colors hover:bg-rose-500/10 hover:text-rose-300 ${
@@ -481,6 +483,7 @@ const KecamatanLayout = () => {
                   </button>
                 </div>
                 <div className="border-t border-slate-100 p-1.5">
+                  <TombolSuara varian="baris" className="text-slate-600 hover:bg-slate-50 hover:text-slate-900" />
                   <button
                     onClick={handleLogout}
                     className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm text-rose-600 transition-colors hover:bg-rose-50"

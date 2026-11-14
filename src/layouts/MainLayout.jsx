@@ -1,3 +1,4 @@
+import TombolSuara from "../components/ui/TombolSuara";
 import React, { useState, useEffect, useMemo, useRef } from "react";
 import { NavLink, Outlet, useNavigate, useLocation } from "react-router-dom";
 import {
@@ -395,6 +396,7 @@ const MainLayout = () => {
 							
 							{/* Menu Actions */}
 							<div className="py-1">
+								<TombolSuara varian="baris" className="text-gray-700 hover:bg-gray-100" />
 								<button
 									onClick={() => {
 										setDropdownOpen(false);

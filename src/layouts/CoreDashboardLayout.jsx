@@ -1,4 +1,5 @@
 // src/layouts/CoreDashboardLayout.jsx
+import TombolSuara from "../components/ui/TombolSuara";
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { Outlet, NavLink, useNavigate, useLocation } from 'react-router-dom';
 import {
@@ -193,6 +194,7 @@ const CoreDashboardLayout = () => {
               </div>
             </div>
           )}
+          <TombolSuara varian="baris" ringkas={!sidebarOpen} className={`mb-1 text-slate-600 hover:bg-slate-100 hover:text-slate-900 ${!sidebarOpen ? "lg:justify-center" : ""}`} />
           <button
             onClick={() => navigate(basePath)}
             title={!sidebarOpen ? 'Kembali ke beranda' : undefined}

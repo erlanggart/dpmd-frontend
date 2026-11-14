@@ -1,11 +1,16 @@
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import "./index.css";
+import "./dropdown.css";
 import App from "./App.jsx";
 
 import "@splidejs/react-splide/css";
 import { AuthProvider } from "./context/AuthContext.jsx";
 import "leaflet/dist/leaflet.css";
+import { SuaraToast, pasangSuaraGlobal } from "./utils/suaraUi";
+
+// Efek suara klik & pop up di seluruh aplikasi (bisa dimatikan lewat TombolSuara).
+pasangSuaraGlobal();
 
 // DEV: pastikan tidak ada service worker/cache lama yang membajak request,
 // supaya Hot Module Replacement (HMR) Vite jalan & perubahan kode langsung
@@ -48,6 +53,7 @@ createRoot(document.getElementById("root")).render(
 	<StrictMode>
 		<AuthProvider>
 			<App />
+			<SuaraToast />
 		</AuthProvider>
 	</StrictMode>
 );

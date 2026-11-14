@@ -10,6 +10,7 @@
 //
 // Tiga pintu saja, jadi tidak ada sub-menu dan tidak ada status terbuka/tertutup
 // yang perlu diingat antar halaman.
+import TombolSuara from "../components/ui/TombolSuara";
 import React, { useEffect, useRef, useState } from 'react';
 import { NavLink, Outlet, useNavigate } from 'react-router-dom';
 import { FiChevronDown, FiLogOut, FiMenu, FiX } from 'react-icons/fi';
@@ -142,6 +143,7 @@ const TenagaAhliLayout = () => {
 					</nav>
 
 					<div className="border-t border-slate-100 p-3">
+							<TombolSuara varian="baris" ringkas={!sidebarTerbuka} className={`mb-1 text-slate-600 hover:bg-slate-100 ${!sidebarTerbuka ? "lg:justify-center" : ""}`} />
 						<button
 							onClick={keluar}
 							className={`flex w-full items-center gap-3 rounded-xl px-4 py-3 text-slate-600 transition-all duration-200 hover:bg-red-50 hover:text-red-600 ${
@@ -193,6 +195,7 @@ const TenagaAhliLayout = () => {
 									<p className="truncate text-sm font-semibold text-slate-800">{nama}</p>
 									<p className="truncate text-xs text-slate-500">{user?.email || '—'}</p>
 								</div>
+									<TombolSuara varian="baris" className="text-slate-600 hover:bg-slate-50" />
 								<button
 									onClick={keluar}
 									className="flex w-full items-center gap-3 px-4 py-3 text-sm text-slate-600 transition-colors hover:bg-red-50 hover:text-red-600"

@@ -267,7 +267,8 @@ const ServerManagementPage = () => {
 	const alarmBunyi = bahaya && !diakui && setelSuara.suara;
 
 	return (
-		<div className={`kali-ops ${penuh ? "kali-penuh" : ""}`}>
+		// data-suara="mati": panel ini punya efek suara sendiri (suaraOps), jangan dobel dengan suara global.
+		<div data-suara="mati" className={`kali-ops ${penuh ? "kali-penuh" : ""}`}>
 			<div className="mx-auto w-full max-w-[1920px] space-y-4 p-3 pb-10 sm:p-5 lg:p-6">
 				{/* Header */}
 				<div className="relative overflow-hidden rounded-2xl border border-slate-200 bg-white">

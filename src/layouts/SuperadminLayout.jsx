@@ -1,3 +1,4 @@
+import TombolSuara from "../components/ui/TombolSuara";
 import React from "react";
 import { Outlet, Navigate, useNavigate, useLocation } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
@@ -420,6 +421,7 @@ const SuperadminLayout = () => {
 							)}
 						</button>
 
+						<TombolSuara varian="baris" ringkas={isSidebarCollapsed} className={`mt-1 text-slate-500 hover:bg-slate-100 hover:text-slate-700 ${isSidebarCollapsed ? "justify-center" : ""}`} />
 						<button
 							onClick={handleLogout}
 							title={isSidebarCollapsed ? "Logout" : ""}
@@ -721,6 +723,7 @@ const SuperadminLayout = () => {
 								</div>
 
 								<div className="border-t border-slate-100 px-6 py-4">
+										<TombolSuara varian="baris" className="mb-2 text-slate-700 hover:bg-slate-100" />
 									<button
 										onClick={handleLogout}
 										className="flex w-full items-center gap-4 rounded-2xl bg-red-50 px-4 py-3 text-left text-red-600 border border-red-200"
