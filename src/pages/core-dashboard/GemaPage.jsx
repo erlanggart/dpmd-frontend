@@ -60,7 +60,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
 	Mic, MicOff, Keyboard, Sparkles, AlertCircle, Volume2, Loader2, Send, Ear,
-	Check, ShieldAlert, KeyRound, RotateCcw, Lock, Hand,
+	Check, ShieldAlert, KeyRound, RotateCcw, Lock, Hand, ThumbsUp, ThumbsDown,
 } from 'lucide-react';
 import api from '../../api';
 import { LEBAR_CORE, LEBAR_BACA } from './lebarHalaman';
@@ -687,6 +687,22 @@ const GemaPage = () => {
 	const [fase, setFase] = useState('mati');
 	const [transkrip, setTranskrip] = useState('');
 	const [jawaban, setJawaban] = useState(null);
+	// Penilaian jawaban dikunci pada id_tanya, jadi otomatis kosong lagi
+	// begitu jawaban berganti (tanpa efek reset).
+	const [penilaian, setPenilaian] = useState({ id: null, nilai: 0, galat: null });
+	const idTanya = jawaban?.id_tanya;
+	const nilaiJawaban = penilaian.id === idTanya ? penilaian.nilai : 0;
+	const galatNilai = penilaian.id === idTanya ? penilaian.galat : null;
+	const nilaiJawabanIni = async (nilai) => {
+		const baru = nilaiJawaban === nilai ? 0 : nilai;
+		const sebelum = nilaiJawaban;
+		setPenilaian({ id: idTanya, nilai: baru, galat: null });
+		try {
+			await api.post('/gema/nilai', { id: idTanya, nilai: baru });
+		} catch {
+			setPenilaian({ id: idTanya, nilai: sebelum, galat: 'Penilaian belum terkirim, coba lagi.' });
+		}
+	};
 	// Tindakan yang mengubah data (sejauh ini: setel ulang sandi akun pegawai)
 	// tidak pernah jalan dari ucapan — ia menunggu tombol ini ditekan.
 	const [konfirmasiJalan, setKonfirmasiJalan] = useState(false);
@@ -1742,6 +1758,36 @@ const GemaPage = () => {
 										<p className="mt-1 text-xs text-amber-700">
 											Model bahasa tidak bisa dihubungi — dijawab pencarian langsung.
 										</p>
+									)}
+									{idTanya && (
+										<div className="mt-2 flex flex-wrap items-center gap-2" onClick={(e) => e.stopPropagation()}>
+											<span className="text-xs text-slate-500">Jawaban ini tepat?</span>
+											<button
+												type="button"
+												aria-pressed={nilaiJawaban === 1}
+												aria-label="Jawaban tepat"
+												onClick={(e) => { e.stopPropagation(); nilaiJawabanIni(1); }}
+												className={`inline-flex min-h-11 min-w-11 items-center justify-center gap-1.5 rounded-xl border px-3 text-xs font-medium ${nilaiJawaban === 1 ? 'border-emerald-300 bg-emerald-50 text-emerald-700' : 'border-slate-200 bg-white text-slate-600'}`}
+											>
+												<ThumbsUp className="h-4 w-4" /> Tepat
+											</button>
+											<button
+												type="button"
+												aria-pressed={nilaiJawaban === -1}
+												aria-label="Jawaban keliru"
+												onClick={(e) => { e.stopPropagation(); nilaiJawabanIni(-1); }}
+												className={`inline-flex min-h-11 min-w-11 items-center justify-center gap-1.5 rounded-xl border px-3 text-xs font-medium ${nilaiJawaban === -1 ? 'border-rose-300 bg-rose-50 text-rose-700' : 'border-slate-200 bg-white text-slate-600'}`}
+											>
+												<ThumbsDown className="h-4 w-4" /> Keliru
+											</button>
+											{galatNilai && <span className="text-xs text-rose-600">{galatNilai}</span>}
+											{!galatNilai && nilaiJawaban === 1 && (
+												<span className="text-xs text-slate-500">Terima kasih, Gema mencatatnya.</span>
+											)}
+											{!galatNilai && nilaiJawaban === -1 && (
+												<span className="text-xs text-slate-500">Terima kasih, Gema tidak akan meniru jawaban ini.</span>
+											)}
+										</div>
 									)}
 									{jawaban.total > 0 && (
 										<p className="mt-1 text-xs text-slate-500">
