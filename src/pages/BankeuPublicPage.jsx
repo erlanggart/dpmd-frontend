@@ -101,7 +101,7 @@ const scaleIn = {
 // ═══════════════════════════════════════════════════════════════════
 // HERO SECTION - Clean Executive Header
 // ═══════════════════════════════════════════════════════════════════
-const HeroSection = React.memo(({ activeYear, setActiveYear, totalAnggaran, totalProposals, summary, anggaranFinal }) => {
+const HeroSection = React.memo(({ activeYear, setActiveYear, totalAnggaran, totalProposals, summary }) => {
   const [formatMode, setFormatMode] = useState('short');
   const desaPct = persenDesa(summary?.desa_mengusulkan, summary?.total_desa);
 
@@ -171,7 +171,7 @@ const HeroSection = React.memo(({ activeYear, setActiveYear, totalAnggaran, tota
                     <div className="w-10 h-10 rounded-xl bg-emerald-500/20 flex items-center justify-center">
                       <DollarSign className="w-5 h-5 text-emerald-400" />
                     </div>
-                    <span className="text-emerald-400/80 text-xs font-semibold uppercase tracking-wider">Total Usulan</span>
+                    <span className="text-emerald-400/80 text-xs font-semibold uppercase tracking-wider">Total Final di DPMD</span>
                   </div>
                   <button
                     onClick={() => setFormatMode(formatMode === 'short' ? 'full' : 'short')}
@@ -183,10 +183,6 @@ const HeroSection = React.memo(({ activeYear, setActiveYear, totalAnggaran, tota
                 <p className="text-3xl lg:text-4xl font-black text-white tracking-tight leading-none">
                   {formatAnggaran(totalAnggaran, formatMode)}
                 </p>
-                <div className="flex items-center gap-2 mt-4 pt-4 border-t border-white/10">
-                  <span className="text-xs text-slate-400">Final di DPMD:</span>
-                  <span className="text-sm font-bold text-emerald-400">{formatAnggaran(anggaranFinal, formatMode)}</span>
-                </div>
               </div>
             </div>
           </motion.div>
@@ -202,7 +198,7 @@ const HeroSection = React.memo(({ activeYear, setActiveYear, totalAnggaran, tota
               <p className="text-3xl lg:text-4xl font-black text-white">
                 <AnimatedNumber value={totalProposals} />
               </p>
-              <p className="text-slate-400 text-sm mt-2">Total Proposal</p>
+              <p className="text-slate-400 text-sm mt-2">Proposal Final</p>
             </div>
           </motion.div>
 
@@ -1218,10 +1214,9 @@ const BankeuPublicPage = () => {
       <HeroSection
         activeYear={activeYear}
         setActiveYear={setActiveYear}
-        totalAnggaran={totalAnggaran}
-        totalProposals={totalProposals}
+        totalAnggaran={anggaranPerProgram?.total_anggaran_final || 0}
+        totalProposals={anggaranPerProgram?.total_proposal_final || 0}
         summary={summary}
-        anggaranFinal={anggaranPerProgram?.total_anggaran_final || 0}
       />
 
       {/* Main Content */}
