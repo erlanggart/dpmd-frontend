@@ -65,7 +65,10 @@ export default defineConfig({
 					if (id.includes('jspdf') || id.includes('html2canvas')) return 'pdf';
 					if (id.includes('pdfjs-dist')) return 'pdfjs';
 					if (id.includes('fabric')) return 'fabric';
-					if (id.includes('chart.js') || id.includes('recharts') || id.includes('d3-')) return 'charts';
+					// Dua pustaka grafik dipisah: halaman yang memakai recharts (mis. Asta
+					// Desa) tidak perlu ikut mengunduh chart.js, dan sebaliknya.
+					if (id.includes('chart.js') || id.includes('react-chartjs-2')) return 'chartjs';
+					if (id.includes('recharts') || id.includes('d3-')) return 'charts';
 					if (id.includes('framer-motion')) return 'motion';
 					// three.js hanya dipakai tur /jelajah; dipisah agar tidak terbawa ke chunk lain.
 					if (/[\\/]node_modules[\\/](three|@react-three)[\\/]/.test(id)) return 'three';
