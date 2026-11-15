@@ -1247,6 +1247,9 @@ function App() {
 
                   <Route element={<DesaPermissionRoute permission="produk-hukum" />}>
                     <Route path="produk-hukum" element={<ProdukHukum />} />
+                  </Route>
+                  {/* Detail SK juga dibuka dari Kelembagaan & Aparatur, hanya untuk dibaca */}
+                  <Route element={<DesaPermissionRoute permission={["produk-hukum", "kelembagaan", "aparatur-desa"]} />}>
                     <Route
                       path="produk-hukum/:id"
                       element={<ProdukHukumDetail />}

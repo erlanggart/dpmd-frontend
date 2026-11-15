@@ -139,8 +139,8 @@ const DesaLayout = () => {
   const { isDesktop, isSidebarCollapsed, setIsSidebarCollapsed } = useResponsive();
   const [showMenu, setShowMenu] = useState(false);
   const [hoveredItem, setHoveredItem] = useState(null);
-  const { unreadMessages } = useUnreadMessages('/desa/pesan');
   const { hasPermission } = useDesaPermissions();
+  const { unreadMessages } = useUnreadMessages('/desa/pesan', hasPermission('pesan'));
 
   // Operator yang hanya memegang BUMDes sudah melihat katalog sebagai
   // Dashboard-nya (DesaBerandaPage), jadi menu katalog terpisah itu dobel.

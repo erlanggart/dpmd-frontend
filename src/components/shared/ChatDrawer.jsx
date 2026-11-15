@@ -7,6 +7,7 @@ import {
   FiLoader, FiChevronDown, FiTrash2, FiArrowLeft, FiImage
 } from 'react-icons/fi';
 import api from '../../api';
+import { useDesaPermissions } from '../../hooks/useDesaPermissions';
 
 
 
@@ -238,6 +239,8 @@ function ScrollToBottom({ show, onClick }) {
  * ChatDrawer - Contextual chat drawer for verification pages
  */
 export default function ChatDrawer({ referenceType, referenceId, targetUserId, title, disabled, isOpen: controlledOpen, onClose, floating = true }) {
+  const { hasPermission } = useDesaPermissions();
+  const bolehPesan = hasPermission('pesan');
   const [internalOpen, setInternalOpen] = useState(false);
   const open = controlledOpen !== undefined ? controlledOpen : internalOpen;
   const setOpen = (val) => {
@@ -273,12 +276,12 @@ export default function ChatDrawer({ referenceType, referenceId, targetUserId, t
 
   // Check for existing conversation & unread count on mount
   useEffect(() => {
-    if (!referenceType || !referenceId) return;
+    if (!referenceType || !referenceId || !bolehPesan) return;
     setConversation(null);
     setMessages([]);
     setUnreadCount(0);
     checkExistingConversation();
-  }, [referenceType, referenceId]);
+  }, [referenceType, referenceId, bolehPesan]);
 
   const checkExistingConversation = async () => {
     try {
@@ -523,7 +526,7 @@ export default function ChatDrawer({ referenceType, referenceId, targetUserId, t
   const otherUser = conversation?.other_user;
   const drawerTitle = title || (REFERENCE_LABELS[referenceType] ? `Chat ${REFERENCE_LABELS[referenceType]}` : 'Chat Verifikasi');
   const hasConversation = !!conversation;
-  const canSendMessage = hasConversation || !!targetUserId;
+  const canSendMessage = bolehPesan && (hasConversation || !!targetUserId);
 
   if (disabled || (!referenceType || !referenceId)) return null;
 
@@ -622,6 +625,12 @@ export default function ChatDrawer({ referenceType, referenceId, targetUserId, t
                     <div className="flex flex-col items-center justify-center h-full gap-3">
                       <div className="w-8 h-8 rounded-full border-[2.5px] border-slate-200 border-t-emerald-500 animate-spin" />
                       <p className="text-xs text-slate-400 font-medium">Memuat percakapan...</p>
+                    </div>
+                  ) : !bolehPesan ? (
+                    <div className="flex flex-col items-center justify-center h-full text-center px-8">
+                      <FiMessageCircle size={32} className="text-slate-300 mb-3" strokeWidth={1.5} />
+                      <p className="text-base font-semibold text-slate-700 mb-2">Akun ini belum punya izin Pesan</p>
+                      <p className="text-sm text-slate-400 leading-relaxed max-w-[260px]">Minta Admin Desa memberi izin Pesan supaya bisa membaca dan mengirim pesan di sini.</p>
                     </div>
                   ) : !hasConversation && messages.length === 0 ? (
                     <div className="flex flex-col items-center justify-center h-full text-center px-8">

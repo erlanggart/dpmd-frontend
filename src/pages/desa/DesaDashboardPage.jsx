@@ -16,6 +16,8 @@ import {
 	LuWallet,
 } from "react-icons/lu";
 import api from "../../api";
+import { useDesaPermissions } from "../../hooks/useDesaPermissions";
+import { izinRuteDesa } from "../../constants/desaPermissions";
 import PeringatanVerifikasiDitolak from "../../components/desa/PeringatanVerifikasiDitolak";
 
 const DEFAULT_COMPLETION = {
@@ -263,6 +265,7 @@ const ItemFokus = ({ item, nomor }) => {
 };
 
 const DesaDashboardPage = () => {
+	const { hasPermission } = useDesaPermissions();
 	const [loading, setLoading] = useState(true);
 	const [error, setError] = useState(null);
 	const [dashboardData, setDashboardData] = useState(null);
@@ -362,24 +365,28 @@ const DesaDashboardPage = () => {
 	const summaryStats = [
 		{
 			id: "profil",
+			izin: "profil-desa",
 			label: "Profil terisi",
 			value: `${profileCompletion.percentage}%`,
 			hint: `${profileCompletion.filled}/${profileCompletion.total} data utama`,
 		},
 		{
 			id: "aparatur",
+			izin: "aparatur-desa",
 			label: "Aparatur",
 			value: formatNumber(aparatur.total),
 			hint: `${formatNumber(aparatur.nonaktif)} nonaktif`,
 		},
 		{
 			id: "kelembagaan",
+			izin: "kelembagaan",
 			label: "Kelembagaan",
 			value: formatNumber(kelembagaan.total_lembaga),
 			hint: `${formatNumber(kelembagaan.rw)} RW / ${formatNumber(kelembagaan.rt)} RT`,
 		},
 		{
 			id: "bankeu",
+			izin: "bankeu",
 			label: "Proposal Bankeu",
 			value: formatNumber(bankeu.total_proposals),
 			hint:
@@ -389,7 +396,9 @@ const DesaDashboardPage = () => {
 		},
 	];
 
-	const featureCards = [
+	// id kartu = kunci izin; modul tanpa izin tidak ditampilkan, kalau tidak operator
+	// mengklik kartu yang berujung di halaman terlarang.
+	const semuaKartu = [
 		{
 			id: "profil-desa",
 			title: "Profil Desa",
@@ -603,6 +612,7 @@ const DesaDashboardPage = () => {
 		},
 	];
 
+	const featureCards = semuaKartu.filter((card) => hasPermission(card.id));
 	const completedModules = featureCards.filter((card) => card.ready).length;
 	const persenModul = featureCards.length ? Math.round((completedModules / featureCards.length) * 100) : 0;
 	const focusItems = [];
@@ -665,9 +675,10 @@ const DesaDashboardPage = () => {
 		});
 	}
 
-	if (focusItems.length === 0) {
-		focusItems.push({
-			title: "Data inti desa sudah terisi",
+	const fokusBoleh = focusItems.filter((item) => hasPermission(izinRuteDesa(item.link)));
+	if (fokusBoleh.length === 0) {
+		fokusBoleh.push({
+			title: "Tidak ada yang perlu ditindaklanjuti",
 			description:
 				"Pantau realisasi keuangan dan pengajuan bantuan keuangan langsung dari dashboard ini.",
 			link: "/desa/dashboard",
@@ -682,7 +693,7 @@ const DesaDashboardPage = () => {
 			<motion.div variants={wadahAnim} initial="hidden" animate="show" className="space-y-6">
 				{/* Ditaruh paling atas: ini satu-satunya tempat desa diberi tahu bahwa
 						ada data yang ditolak beserta alasannya. */}
-				<PeringatanVerifikasiDitolak data={verifikasiDitolak} />
+				{hasPermission("kelembagaan") && <PeringatanVerifikasiDitolak data={verifikasiDitolak} />}
 
 				{/* Hero */}
 				<motion.section
@@ -730,7 +741,7 @@ const DesaDashboardPage = () => {
 
 				{/* KPI */}
 				<div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-					{summaryStats.map((stat) => (
+					{summaryStats.filter((stat) => hasPermission(stat.izin)).map((stat) => (
 						<KartuStat key={stat.id} stat={stat} persen={stat.id === "profil" ? profileCompletion.percentage : undefined} />
 					))}
 				</div>
@@ -750,6 +761,9 @@ const DesaDashboardPage = () => {
 									{featureCards.length} modul
 								</span>
 							</motion.div>
+							{featureCards.length === 0 && (
+								<p className="mt-4 text-sm text-slate-500">Modul yang boleh Anda buka ada di menu samping.</p>
+							)}
 							<div className="mt-4 grid gap-4 sm:grid-cols-2 2xl:grid-cols-3">
 								{featureCards.map((card) => (
 									<KartuModul key={card.id} card={card} />
@@ -790,7 +804,7 @@ const DesaDashboardPage = () => {
 							</p>
 						</motion.div>
 						<ol className="mt-4 space-y-3">
-							{focusItems.slice(0, 4).map((item, index) => (
+							{fokusBoleh.slice(0, 4).map((item, index) => (
 								<ItemFokus key={`${item.title}-${index}`} item={item} nomor={index + 1} />
 							))}
 						</ol>

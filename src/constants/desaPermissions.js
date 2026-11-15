@@ -61,6 +61,15 @@ export const DESA_PERMISSIONS = [
 
 export const DESA_PERMISSION_KEYS = DESA_PERMISSIONS.map((p) => p.key);
 
+const IZIN_RUTE_LAIN = { kerjasama: "kerjasama-desa", "katalog-bumdes": "bumdes", pengurus: "kelembagaan" };
+
+/** Izin yang dibutuhkan satu alamat `/desa/...`; null bila alamat itu terbuka untuk semua. */
+export const izinRuteDesa = (url) => {
+	const bagian = /^\/desa\/([^/?#]+)/.exec(url || "")?.[1];
+	if (!bagian) return null;
+	return IZIN_RUTE_LAIN[bagian] || (DESA_PERMISSION_KEYS.includes(bagian) ? bagian : null);
+};
+
 /** Contoh bagian/jabatan untuk mempercepat pengisian form (tetap boleh diketik bebas). */
 export const DESA_JABATAN_OPTIONS = [
 	"Keuangan",

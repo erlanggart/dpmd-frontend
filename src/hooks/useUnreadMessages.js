@@ -37,9 +37,10 @@ const samaId = (a, b) =>
 
 /**
  * @param {string} messagingPath - awalan path halaman pesan, mis. '/desa/pesan'
+ * @param {boolean} aktif - false untuk akun tanpa izin Pesan, supaya tidak memanggil API yang pasti ditolak
  * @returns {{ unreadMessages: number, refreshUnread: () => void }}
  */
-export function useUnreadMessages(messagingPath = '/pesan') {
+export function useUnreadMessages(messagingPath = '/pesan', aktif = true) {
   const [unreadMessages, setUnreadMessages] = useState(0);
   const socketRef = useRef(null);
   const location = useLocation();
@@ -58,6 +59,7 @@ export function useUnreadMessages(messagingPath = '/pesan') {
   }, []);
 
   const syncCount = useCallback(async () => {
+    if (!aktif) return;
     try {
       const res = await api.get('/messaging/unread-count');
       if (res.data.success) {
@@ -66,7 +68,7 @@ export function useUnreadMessages(messagingPath = '/pesan') {
     } catch {
       // diam — lencana bertahan di nilai sebelumnya
     }
-  }, []);
+  }, [aktif]);
 
   // Nolkan lencana selama di halaman pesan, sinkronkan ulang saat meninggalkannya.
   useEffect(() => {

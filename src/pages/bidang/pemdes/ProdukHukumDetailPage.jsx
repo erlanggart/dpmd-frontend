@@ -106,6 +106,8 @@ const ProdukHukumDetailPage = ({
 	backPath,
 	apiPrefix = '/pemdes/produk-hukum',
 	editable = false,
+	basisRute = '/bidang/pmd',
+	bolehKelembagaan = true,
 }) => {
 	const { id } = useParams();
 	const navigate = useNavigate();
@@ -125,6 +127,9 @@ const ProdukHukumDetailPage = ({
 
 	const [relatedData, setRelatedData] = useState(null);
 	const [relatedLoading, setRelatedLoading] = useState(false);
+
+	// tanpa izin Kelembagaan tautannya mati, kalau tidak operator terlempar ke halaman terlarang
+	const TautanKelembagaan = bolehKelembagaan ? Link : 'span';
 
 	const handleBack = () => {
 		if (backPath) {
@@ -686,9 +691,9 @@ const ProdukHukumDetailPage = ({
 													<p className="text-xs text-slate-400 mb-1.5">{config.label}</p>
 													<div className="flex flex-wrap gap-2">
 														{items.map((item) => (
-															<Link
+															<TautanKelembagaan
 																key={item.id}
-																to={config.route(item.id)}
+																{...(bolehKelembagaan ? { to: config.route(item.id).replace('/bidang/pmd', basisRute) } : {})}
 																className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium bg-slate-100 text-slate-700 border border-slate-200 rounded-lg hover:bg-slate-100 transition-colors"
 															>
 																{config.displayName(item)}
@@ -697,7 +702,7 @@ const ProdukHukumDetailPage = ({
 																)}
 																<span className={`ml-1 w-1.5 h-1.5 rounded-full flex-shrink-0 ${item.status_kelembagaan === 'aktif' ? 'bg-green-500' : 'bg-red-400'}`} />
 																<ChevronRight className="h-3 w-3 text-brand-400" />
-															</Link>
+															</TautanKelembagaan>
 														))}
 													</div>
 												</div>
@@ -736,9 +741,11 @@ const ProdukHukumDetailPage = ({
 															</span>
 														</td>
 														<td className="px-3 py-2">
-															<Link to={`/bidang/pmd/pengurus/${p.id}`} className="text-brand-600 hover:text-brand-800 transition-colors">
-																<ChevronRight className="h-4 w-4" />
-															</Link>
+															{bolehKelembagaan && (
+																<Link to={`${basisRute}/pengurus/${p.id}`} className="text-brand-600 hover:text-brand-800 transition-colors">
+																	<ChevronRight className="h-4 w-4" />
+																</Link>
+															)}
 														</td>
 													</tr>
 												))}

@@ -9,6 +9,8 @@ import api from "../../api";
 import { useAuth } from "../../context/AuthContext";
 import { LABEL_TINGKAT, STATUS_TIKET, pesanGalat, waktu } from "./ikonHelpdesk";
 import { FormSambung, KUNCI_SAMBUNG, PercakapanPic, PilihProgram } from "./SambungPic";
+import { useDesaPermissions } from "../../hooks/useDesaPermissions";
+import { izinRuteDesa } from "../../constants/desaPermissions";
 
 /**
  * Helpdesk DPMD: tombol bantuan melayang untuk masyarakat, operator desa, dan
@@ -629,6 +631,8 @@ function Sambutan({ awal, nama, onTanya, onTopik }) {
 /* ── Widget utama ─────────────────────────────────────────────────────────── */
 
 export default function HelpdeskWidget() {
+	// tombol ke modul yang tak diizinkan hanya berujung di halaman terlarang
+	const { hasPermission } = useDesaPermissions();
 	const { pathname } = useLocation();
 	const navigate = useNavigate();
 	const [params, setParams] = useSearchParams();
@@ -848,7 +852,7 @@ export default function HelpdeskWidget() {
 
 													{m.meta?.aksi?.length > 0 && (
 														<div className="mt-1.5 flex flex-wrap gap-1.5">
-															{m.meta.aksi.map((a) => (
+															{m.meta.aksi.filter((a) => hasPermission(izinRuteDesa(a.url))).map((a) => (
 																<button key={a.url} type="button" onClick={() => jalankanAksi(a)}
 																	className="inline-flex items-center gap-1.5 rounded-full bg-emerald-600 px-3 py-1.5 text-xs font-semibold text-white shadow-sm transition hover:bg-emerald-700">
 																	{a.label}{/^https:/.test(a.url) ? <ArrowUpRight size={12} /> : <ArrowRight size={12} />}
