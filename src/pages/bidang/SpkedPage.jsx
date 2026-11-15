@@ -56,6 +56,9 @@ const StatistikBumdes = lazy(() => import('../kepala-dinas/StatistikBumdes'));
 
 // Lazy load Bankeu component
 const BankeuDashboard = lazy(() => import('./spked/bankeu/BankeuDashboard'));
+// Penyaluran TA 2026 dibaca langsung dari SIPANDA, sama dengan halaman Bankeu di Core
+// Dashboard; TA 2025 tetap dari berkas JSON yang diunggah (SIPANDA hanya untuk 2026).
+const PenyaluranBankeuSipanda = lazy(() => import('./kkd/BankeuDashboard'));
 const DpmdVerificationPage = lazy(() => import('./spked/bankeu/DpmdVerificationPage'));
 const BankeuLpjMonitoringPage = lazy(() => import('./spked/bankeu/BankeuLpjMonitoringPage'));
 const BankeuProposal2025MonitoringPage = lazy(() => import('./spked/bankeu/BankeuProposal2025MonitoringPage'));
@@ -765,7 +768,7 @@ const SpkedPage = () => {
 									<>
 										{bankeuSub === 'proposal' && <DpmdVerificationPage tahunAnggaran={2026} />}
 										{bankeuSub === 'perubahan' && <DpmdBankeuPerubahanVerificationPage tahun={2026} />}
-										{bankeuSub === 'penyaluran' && <BankeuDashboard tahun={2026} />}
+										{bankeuSub === 'penyaluran' && <PenyaluranBankeuSipanda embedded />}
 										{bankeuSub === 'lpj' && <BankeuLpjMonitoringPage tahun={2026} />}
 									</>
 								) : (
