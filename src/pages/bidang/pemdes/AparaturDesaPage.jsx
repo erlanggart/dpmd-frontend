@@ -80,6 +80,8 @@ const isBpd = (jabatan = '') => {
 	const jab = String(jabatan).toLowerCase();
 	return jab.includes('bpd') || jab.includes('badan permusyawaratan');
 };
+// Sama dengan jenisAparatur di backend: staf desa didaftar terpisah dari perangkat desa.
+const isStaf = (jabatan = '') => !isBpd(jabatan) && String(jabatan).toLowerCase().includes('staf');
 
 // Batas usia 60 tahun (UU 6/2014 Pasal 53) hanya untuk perangkat desa.
 // Kepala desa (termasuk PJ) dan BPD tidak dibatasi usia — jangan ditolak karena umur.
@@ -389,7 +391,9 @@ const TombolEkspor = ({ onEkspor, disabled = false, kecil = false, pilihan = PIL
 	);
 };
 
-const JUDUL_JENIS = { perangkat: 'Perangkat Desa', bpd: 'BPD' };
+const JUDUL_JENIS = { perangkat: 'Perangkat Desa', staf: 'Staf Desa', bpd: 'BPD' };
+// BPD dan staf desa tidak punya pimpinan per desa (kepala desa / PJ).
+const tanpaPimpinan = (jenis) => jenis === 'bpd' || jenis === 'staf';
 
 /**
  * Ambil SEMUA baris yang cocok (tanpa halaman) lalu jadikan Excel/PDF berisi
@@ -1732,7 +1736,7 @@ export const AparaturDesaDetailPage = ({ backPath }) => {
 	const kembali = () => {
 		if (backPath) return navigate(backPath);
 		if ((window.history.state?.idx ?? 0) > 0) return navigate(-1);
-		const daftar = location.pathname.replace(/\/aparatur\/[^/]+\/?$/, `/${a && isBpd(a.jabatan) ? 'bpd' : 'perangkat-desa'}`);
+		const daftar = location.pathname.replace(/\/aparatur\/[^/]+\/?$/, `/${a && isBpd(a.jabatan) ? 'bpd' : a && isStaf(a.jabatan) ? 'staf-desa' : 'perangkat-desa'}`);
 		return navigate(daftar !== location.pathname ? daftar : '/');
 	};
 
@@ -2271,7 +2275,8 @@ const LABEL_SARING_VERIFIKASI = { belum: 'Belum diverifikasi', terverifikasi: 'T
  * desanya 416": setiap desa masuk tepat satu kelompok pimpinan, dan desa yang
  * belum mengisi apa pun langsung terlihat.
  */
-const CakupanDesa = ({ cakupan, bpd, jabatan }) => {
+const CakupanDesa = ({ cakupan, jenis, jabatan }) => {
+	const bpd = tanpaPimpinan(jenis);
 	const [rinci, setRinci] = useState(false);
 	const { total_desa, sudah_input, belum_input, pimpinan, desa_belum_input = [], pimpinan_perlu_dicek = [] } = cakupan;
 	const kelompok = bpd
@@ -2293,7 +2298,7 @@ const CakupanDesa = ({ cakupan, bpd, jabatan }) => {
 				<div>
 					<h3 className="text-sm font-semibold text-slate-900">Cakupan Desa</h3>
 					<p className="text-xs text-slate-500">
-						{fmt(sudah_input)} dari {fmt(total_desa)} desa {jabatan ? `sudah punya ${jabatan}` : `sudah menginput ${bpd ? 'BPD' : 'aparatur'}`}
+						{fmt(sudah_input)} dari {fmt(total_desa)} desa {jabatan ? `sudah punya ${jabatan}` : `sudah menginput ${{ bpd: 'BPD', staf: 'staf desa' }[jenis] || 'aparatur'}`}
 						{belum_input > 0 && <span className="font-semibold text-rose-600"> &middot; {fmt(belum_input)} belum</span>}
 					</p>
 				</div>
@@ -2472,7 +2477,7 @@ const RingkasanAparatur = ({ jenis, stats: statsKabupaten, statsLoading: loading
 		if (!stats) return;
 		try {
 			const { eksporStatistikExcel, eksporStatistikPdf } = await import('./aparaturEkspor');
-			const opsi = { judul: `Statistik ${JUDUL_JENIS[jenis] || 'Aparatur Desa'}`, penyaring: labelSaring, bpd: jenis === 'bpd', jabatan: labelJabatan };
+			const opsi = { judul: `Statistik ${JUDUL_JENIS[jenis] || 'Aparatur Desa'}`, penyaring: labelSaring, bpd: tanpaPimpinan(jenis), jabatan: labelJabatan };
 			await (format === 'pdf' ? eksporStatistikPdf(stats, pendidikanChart, opsi) : eksporStatistikExcel(stats, pendidikanChart, opsi));
 		} catch (error) {
 			console.error('Gagal mengekspor statistik:', error);
@@ -2582,7 +2587,7 @@ const RingkasanAparatur = ({ jenis, stats: statsKabupaten, statsLoading: loading
 							<>
 								{/* Halaman yang sudah tersaring (Perangkat Desa / BPD) tidak
 								    memajang pecahan Pemdes vs BPD: salah satunya pasti nol. */}
-								<div className={`grid grid-cols-2 gap-4 ${jenis ? 'lg:grid-cols-2' : 'lg:grid-cols-4'}`}>
+								<div className={`grid grid-cols-2 gap-4 ${jenis ? 'lg:grid-cols-2' : 'lg:grid-cols-5'}`}>
 									<StatCard
 										label="Total Aparatur"
 										value={fmt(stats.total)}
@@ -2601,6 +2606,15 @@ const RingkasanAparatur = ({ jenis, stats: statsKabupaten, statsLoading: loading
 												share={pct(stats.total_pemdes, total)}
 												barClass="bg-slate-500"
 												onClick={onBuka && (() => onBuka({ jenis: 'perangkat' }, 'Perangkat desa'))}
+											/>
+											<StatCard
+												label="Staf Desa"
+												value={fmt(stats.total_staf)}
+												icon={Users}
+												iconClass="bg-slate-100 text-slate-600"
+												share={pct(stats.total_staf, total)}
+												barClass="bg-slate-400"
+												onClick={onBuka && (() => onBuka({ jenis: 'staf' }, 'Staf desa'))}
 											/>
 											<StatCard
 												label="BPD"
@@ -2623,7 +2637,7 @@ const RingkasanAparatur = ({ jenis, stats: statsKabupaten, statsLoading: loading
 									/>
 								</div>
 
-								{stats.cakupan_desa && <CakupanDesa cakupan={stats.cakupan_desa} bpd={jenis === 'bpd'} jabatan={labelJabatan} />}
+								{stats.cakupan_desa && <CakupanDesa cakupan={stats.cakupan_desa} jenis={jenis} jabatan={labelJabatan} />}
 
 								{/* 5 kolom: donut butuh ruang persegi, bar butuh ruang lebar */}
 								<div className="mt-4 grid gap-4 lg:grid-cols-5">
@@ -4907,6 +4921,7 @@ const POLA_PIMPINAN = {
 
 /** Kepala desa (atau ketua BPD) aktif — orang pertama yang dicari di desa. */
 const pimpinanDesa = (desa, jenis) => {
+	if (jenis === 'staf') return null;
 	const pola = POLA_PIMPINAN[jenis === 'bpd' ? 'bpd' : 'perangkat'];
 	return desa.aparatur.find((orang) => orang.status === 'Aktif' && pola.test(orang.jabatan || '')) || null;
 };
@@ -5001,15 +5016,21 @@ const KartuDesa = ({ desa, jenis, terbuka, sorot = false, onToggle, onBuka, onTa
 						{kosong ? (
 							<span className="mt-0.5 inline-flex items-center gap-1 text-xs font-medium text-amber-700">
 								<AlertTriangle className="h-3.5 w-3.5" />
-								Belum ada data {jenis === 'bpd' ? 'BPD' : 'perangkat'}
+								Belum ada data {jenis === 'bpd' ? 'BPD' : jenis === 'staf' ? 'staf' : 'perangkat'}
 							</span>
 						) : (
 							<span className="mt-0.5 block truncate text-xs text-slate-500">
-								{labelPimpinan}:{' '}
-								{pimpinan ? (
-									<span className="font-medium text-slate-700">{pimpinan.nama_lengkap}</span>
+								{jenis === 'staf' ? (
+									`${desa.aparatur.length} orang`
 								) : (
-									<span className="font-medium text-rose-600">belum tercatat</span>
+									<>
+										{labelPimpinan}:{' '}
+										{pimpinan ? (
+											<span className="font-medium text-slate-700">{pimpinan.nama_lengkap}</span>
+										) : (
+											<span className="font-medium text-rose-600">belum tercatat</span>
+										)}
+									</>
 								)}
 							</span>
 						)}
@@ -5180,19 +5201,19 @@ const WilayahTab = ({ refreshKey = 0, jenis, detailBasePath, onLoadingChange, on
 	const angkaRingkas = [
 		{ label: 'Desa terisi', nilai: `${fmt(ringkasan.terisi)}/${fmt(ringkasan.desa)}`, hint: `${pct(ringkasan.terisi, ringkasan.desa)}% desa` },
 		{ label: 'Belum ada data', nilai: fmt(ringkasan.kosong), hint: 'desa perlu diisi', nada: ringkasan.kosong ? 'text-amber-600' : 'text-slate-900' },
-		{
+		jenis !== 'staf' && {
 			label: jenis === 'bpd' ? 'Tanpa ketua BPD' : 'Tanpa kepala desa',
 			nilai: fmt(ringkasan.tanpaPimpinan),
 			hint: 'dari desa yang terisi',
 			nada: ringkasan.tanpaPimpinan ? 'text-rose-600' : 'text-slate-900',
 		},
 		{ label: 'Terverifikasi', nilai: fmt(ringkasan.terverifikasi), hint: `dari ${fmt(ringkasan.orang)} orang` },
-	];
+	].filter(Boolean);
 
 	return (
 		<div className="space-y-3">
 			<section className="rounded-2xl border border-slate-200 bg-white p-4">
-				<div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+				<div className={`grid grid-cols-2 gap-3 ${angkaRingkas.length === 3 ? 'lg:grid-cols-3' : 'lg:grid-cols-4'}`}>
 					{angkaRingkas.map((item) => (
 						<div key={item.label} className="rounded-xl bg-slate-50 px-3.5 py-3">
 							<p className="text-[11px] font-semibold uppercase tracking-wider text-slate-500">{item.label}</p>
@@ -5829,8 +5850,8 @@ const AparaturDesaPage = ({
 								<button
 									type="button"
 									onClick={() => bukaTambah(null)}
-									title={jenis === 'bpd' ? 'Tambah Anggota BPD' : jenis === 'perangkat' ? 'Tambah Perangkat Desa' : 'Tambah Aparatur'}
-									aria-label={jenis === 'bpd' ? 'Tambah Anggota BPD' : jenis === 'perangkat' ? 'Tambah Perangkat Desa' : 'Tambah Aparatur'}
+									title={jenis === 'bpd' ? 'Tambah Anggota BPD' : jenis === 'perangkat' ? 'Tambah Perangkat Desa' : jenis === 'staf' ? 'Tambah Staf Desa' : 'Tambah Aparatur'}
+									aria-label={jenis === 'bpd' ? 'Tambah Anggota BPD' : jenis === 'perangkat' ? 'Tambah Perangkat Desa' : jenis === 'staf' ? 'Tambah Staf Desa' : 'Tambah Aparatur'}
 									className="flex h-8 w-8 items-center justify-center rounded-lg bg-white text-slate-900 transition-colors hover:bg-slate-200"
 								>
 									<Plus className="h-4 w-4" />
@@ -5883,7 +5904,7 @@ const AparaturDesaPage = ({
 									className="inline-flex items-center gap-2 rounded-xl bg-white px-3.5 py-2 text-sm font-semibold text-slate-900 transition-colors hover:bg-slate-100"
 								>
 									<Plus className="h-4 w-4" />
-									{jenis === 'bpd' ? 'Tambah Anggota BPD' : jenis === 'perangkat' ? 'Tambah Perangkat Desa' : 'Tambah Aparatur'}
+									{jenis === 'bpd' ? 'Tambah Anggota BPD' : jenis === 'perangkat' ? 'Tambah Perangkat Desa' : jenis === 'staf' ? 'Tambah Staf Desa' : 'Tambah Aparatur'}
 								</button>
 							)}
 						</div>

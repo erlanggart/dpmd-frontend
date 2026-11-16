@@ -153,6 +153,15 @@ const PemdesPage = () => {
 				angka: { nilai: angkaAtau(stats.total_perangkat), label: 'perangkat terdaftar' },
 			},
 			{
+				id: 'staf-desa',
+				accent: '#64748b',
+				judul: 'Staf Desa',
+				deskripsi: 'Data staf desa se-Kabupaten Bogor, terpisah dari perangkat desa',
+				icon: Users,
+				route: getPath('/pemdes/staf-desa'),
+				angka: { nilai: angkaAtau(stats.total_staf), label: 'staf terdaftar' },
+			},
+			{
 				id: 'bpd',
 				accent: '#4a3aa7',
 				judul: 'BPD',

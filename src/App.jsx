@@ -1380,6 +1380,7 @@ function App() {
                   <Route path="pemdes/profil-desa/:desaId" element={<PemdesProfilDesaDetailPage />} />
                   <Route path="pemdes/aparatur-desa" element={<PemdesAparaturDesaPage />} />
                   <Route path="pemdes/perangkat-desa" element={<PemdesAparaturDesaPage jenis="perangkat" />} />
+                  <Route path="pemdes/staf-desa" element={<PemdesAparaturDesaPage jenis="staf" />} />
                   <Route path="pemdes/bpd" element={<PemdesAparaturDesaPage jenis="bpd" />} />
                   <Route path="pemdes/aparatur/:id" element={<PemdesAparaturDetailPage />} />
                   <Route path="pemdes/produk-hukum" element={<ProdukHukumPemdesPage detailBasePath="/bidang/pemdes/produk-hukum" />} />
@@ -1521,6 +1522,7 @@ function App() {
                   <Route path="profil-desa/:desaId" element={<PemdesProfilDesaDetailPage />} />
                   <Route path="aparatur-desa" element={<PemdesAparaturDesaPage detailBasePath="/pemdes/aparatur" />} />
                   <Route path="perangkat-desa" element={<PemdesAparaturDesaPage jenis="perangkat" detailBasePath="/pemdes/aparatur" />} />
+                  <Route path="staf-desa" element={<PemdesAparaturDesaPage jenis="staf" detailBasePath="/pemdes/aparatur" />} />
                   <Route path="bpd" element={<PemdesAparaturDesaPage jenis="bpd" detailBasePath="/pemdes/aparatur" />} />
                   <Route path="aparatur/:id" element={<PemdesAparaturDetailPage />} />
                   <Route path="produk-hukum" element={<ProdukHukumPemdesPage />} />
@@ -1763,6 +1765,7 @@ function App() {
                   <Route path="bidang/pemdes/profil-desa/:desaId" element={<PemdesProfilDesaDetailPage />} />
                   <Route path="bidang/pemdes/aparatur-desa" element={<PemdesAparaturDesaPage />} />
                   <Route path="bidang/pemdes/perangkat-desa" element={<PemdesAparaturDesaPage jenis="perangkat" />} />
+                  <Route path="bidang/pemdes/staf-desa" element={<PemdesAparaturDesaPage jenis="staf" />} />
                   <Route path="bidang/pemdes/bpd" element={<PemdesAparaturDesaPage jenis="bpd" />} />
                   <Route path="bidang/pemdes/aparatur/:id" element={<PemdesAparaturDetailPage />} />
                   <Route path="bidang/pemdes/produk-hukum" element={<ProdukHukumPemdesPage />} />

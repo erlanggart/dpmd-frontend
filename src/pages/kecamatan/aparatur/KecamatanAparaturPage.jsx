@@ -171,7 +171,7 @@ const KecamatanAparaturPage = () => {
 
 		// Perangkat desa (bukan kades, bukan BPD) yang masih aktif di usia 60+.
 		const lewatBatas = hasil.filter(
-			(a) => a.jenis === 'perangkat' && !isKepalaDesa(a) && a.status === 'Aktif' && a.usia !== null && a.usia >= BATAS_USIA_PERANGKAT
+			(a) => a.jenis !== 'bpd' && !isKepalaDesa(a) && a.status === 'Aktif' && a.usia !== null && a.usia >= BATAS_USIA_PERANGKAT
 		).length;
 
 		const petaJenjang = new Map();
@@ -306,11 +306,12 @@ const KecamatanAparaturPage = () => {
 					</div>
 
 					<div className="flex flex-wrap items-center gap-2">
-						{/* Jenis: segmen, karena hanya tiga pilihan dan sering diganti */}
+						{/* Jenis: segmen, karena hanya empat pilihan dan sering diganti */}
 						<div className="inline-flex rounded-lg bg-slate-100 p-1">
 							{[
 								['semua', 'Semua'],
 								['perangkat', 'Perangkat'],
+								['staf', 'Staf'],
 								['bpd', 'BPD'],
 							].map(([nilai, label]) => (
 								<button
@@ -647,7 +648,7 @@ const KecamatanAparaturPage = () => {
 									</thead>
 									<tbody className="divide-y divide-slate-100">
 										{tampil.map((a) => {
-											const lewat = a.jenis === 'perangkat' && !isKepalaDesa(a) && a.status === 'Aktif' && a.usia >= BATAS_USIA_PERANGKAT;
+											const lewat = a.jenis !== 'bpd' && !isKepalaDesa(a) && a.status === 'Aktif' && a.usia >= BATAS_USIA_PERANGKAT;
 											return (
 												<tr key={a.id} onClick={() => setDipilih(a.id)} className="cursor-pointer transition-colors hover:bg-slate-50">
 													<td className="px-4 py-2.5">

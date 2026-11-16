@@ -205,6 +205,7 @@ const bagianStatistik = (stats, pendidikan, { bpd, jabatan }) => {
 	];
 	if (stats.total_pemdes && stats.total_bpd) {
 		umum.push(['Perangkat desa', stats.total_pemdes, persen(stats.total_pemdes, total)]);
+		if (stats.total_staf) umum.push(['Staf desa', stats.total_staf, persen(stats.total_staf, total)]);
 		umum.push(['BPD', stats.total_bpd, persen(stats.total_bpd, total)]);
 	}
 	if (stats.verifikasi) {

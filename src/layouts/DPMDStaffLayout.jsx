@@ -211,6 +211,7 @@ const BIDANG_SUBMENUS = {
 	],
 	6: [
 		{ label: 'Perangkat Desa', path: '/bidang/pemdes/perangkat-desa', icon: 'users' },
+		{ label: 'Staf Desa', path: '/bidang/pemdes/staf-desa', icon: 'users' },
 		{ label: 'BPD', path: '/bidang/pemdes/bpd', icon: 'users' },
 		{ label: 'Profil Desa', path: '/bidang/pemdes/profil-desa', icon: 'home' },
 		{ label: 'Produk Hukum', path: '/bidang/pemdes/produk-hukum', icon: 'file' },
