@@ -40,6 +40,11 @@ export const simpanTokenBaru = (response) => {
 		const pemilik = bacaMuatanJwt(tokenBaru);
 		const userSekarang = JSON.parse(localStorage.getItem("user") || "{}");
 		if (!userSekarang?.id || String(pemilik?.id) !== String(userSekarang.id)) return;
+		// Header dari cache (304/service worker) bisa membawa token lama milik user
+		// yang sama: sudah kedaluwarsa atau tanpa tanda 2FA. Hanya terima yang lebih baru.
+		const tokenSekarang = ambilToken();
+		const expSekarang = (tokenSekarang && bacaMuatanJwt(tokenSekarang)?.exp) || 0;
+		if (!pemilik?.exp || pemilik.exp <= expSekarang || pemilik.exp * 1000 <= Date.now()) return;
 
 		localStorage.setItem("expressToken", tokenBaru);
 
