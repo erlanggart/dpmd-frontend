@@ -93,8 +93,7 @@ export const DINDING = [
 	...garis(1, "z", 8.5, 3.8, 12, [[5.75, 1.2]]),
 	...garis(1, "x", 3.8, 8.5, 15),
 	...garis(1, "z", 10.25, 2, 3.8, [[2.75, 1.2]]),
-	// dinding depan Pemdes (pintunya menghadap lorong depan) sampai sayap serambinya
-	...garis(1, "x", 2, 5.5, 15, [[7.0, 1.4]]),
+	...garis(1, "x", 2, 8.5, 15),
 	// PMD berbentuk ㄱ: bagian atasnya membentang di belakang tangga depan sampai
 	// dinding Ruang Rapat Halimun; kakinya di samping tangga depan (pintu depan).
 	// Di belakangnya ada jalan ke dapur (pintu belakang PMD ke jalan itu).
@@ -116,12 +115,10 @@ export const DINDING = [
 	// Dapur di pojok belakang, menempel Halimun; tangga belakang tepat di sampingnya
 	...garis(1, "z", -4.6, -13, -9.6),
 	...garis(1, "x", -9.6, -15, -4.6, [[-7.2, 1.2]]),
-	// Sekretariat (pintu di depan) & Pemdes menempel dengan satu dinding bersama.
-	// Pemdes berbentuk L: serambi layanannya mengambil sisi timur aula (x 5,5–8,5), lorong
-	// ±2,2 m ke pintu Sekretariat tetap tersisa di antara PMD dan serambi.
+	// Sekretariat (pintu di depan) & Pemdes menempel dengan satu dinding bersama;
+	// pintu Pemdes di samping, ke lorong antara PMD & Pemdes
 	...garis(1, "z", -1.4, -13, -6),
-	...garis(1, "z", 8.5, -13, -6),
-	...garis(1, "z", 5.5, -6, 2),
+	...garis(1, "z", 8.5, -13, 2, [[0.25, 1.2]]),
 ];
 
 // Daun pintu. Pintu kaca bergeser, pintu kayu berayun; keduanya terbuka sendiri
@@ -148,7 +145,7 @@ export const DAUN_PINTU = [
 	{ lantai: 1, x: -7.75, z: 3.8, lebar: 1.2, jenis: "kayu" },
 	{ lantai: 1, x: -7.2, z: -9.6, lebar: 1.2, jenis: "kayu" },
 	{ lantai: 1, x: 4.6, z: -6, lebar: 1.4, jenis: "kayu" },
-	{ lantai: 1, x: 7.0, z: 2, lebar: 1.4, jenis: "kayu" },
+	{ lantai: 1, x: 8.5, z: 0.25, lebar: 1.2, jenis: "kayu", sumbu: "x" },
 ];
 
 // ---------- tangga ----------
@@ -355,30 +352,28 @@ for (const x of [-0.45, 4.6, 6.2]) klaster(1, "sekretariat", x, -9.4);
 // Pemdes: dua kolom meja merapat ke dinding kiri-kanan, menyisakan lorong tengah 2,7 m
 // sampai dinding belakang; celah antar-deret 1 m. Tamu berjari-jari 0,38 m butuh celah
 // > 0,76 m — dulu celah ke dinding 0,6 m dan petugas berdiri di mulut lorong, jadi ruang
-// terasa buntu. Petugas layanan kini di serambi (sayap barat), dekat pintu.
+// terasa buntu. Petugas layanan kini di sisi timur menghadap pintu, bukan di mulut lorong.
 for (const x of [9.6, 13.9]) for (const z of [-4.05, -7.75, -11.45]) klaster(1, "pemdes", x, z);
-// Serambi: lemari arsip produk hukum di dinding barat, tamu desa sedang dilayani.
-for (const z of [-4.6, -3.6]) perabot("lemari", 1, 5.88, z, Math.PI / 2, [0.45, 0.9]);
-perabot("tanaman", 1, 6.0, 1.4, 0, [0.6, 0.6]);
-PEGAWAI.push({ x: 6.4, z: -0.1, rot: Math.PI, lantai: 1, area: "pemdes", pose: "duduk", aktivitas: "menunggu", jenis: "tamu", terisi: true, penampilan: penampilanWarga(), kalimat: ["Saya operator desa, mau konsultasi data perangkat desa.", "Perdes kami sudah diunggah, tinggal diperiksa."] });
-// Pojok depan ruang kerja: meja bundar untuk diskusi, papan kerja di dinding, printer.
-perabot("mejaBundar", 1, 11.75, -0.6, 0, [1.1, 1.1]);
+// Tamu desa sedang dilayani, duduk di kursi tamu meja layanan (lihat mejaLayanan).
+PEGAWAI.push({ x: 12.45, z: -0.3, rot: Math.PI / 2, lantai: 1, area: "pemdes", pose: "duduk", aktivitas: "menunggu", jenis: "tamu", terisi: true, penampilan: penampilanWarga(), kalimat: ["Saya operator desa, mau konsultasi data perangkat desa.", "Perdes kami sudah diunggah, tinggal diperiksa."] });
+// Pojok depan ruang kerja: meja bundar diskusi di sisi barat (jalur pintu → lorong tengah
+// tetap ±2 m di antara meja bundar dan meja layanan), papan kerja di dinding, printer di pojok timur.
+perabot("mejaBundar", 1, 10.4, -1.0, 0, [1.1, 1.1]);
 perabot("papanTulis", 1, 11.75, 1.84, Math.PI);
-perabot("printer", 1, 14.55, 0.2, -Math.PI / 2, [0.55, 0.85]);
-perabot("tanaman", 1, 14.4, 1.4, 0, [0.6, 0.6]);
+perabot("printer", 1, 14.55, 1.45, -Math.PI / 2, [0.55, 0.85]);
 perabot("tanaman", 1, 9.0, 1.4, 0, [0.6, 0.6]);
 const KALIMAT_DISKUSI_PEMDES = ["Perdes APBDes desa ini perlu diperbaiki konsiderannya.", "Masa jabatan BPD-nya habis bulan depan, kita surati kecamatan.", "Data perangkat desa ini belum lengkap, nanti saya hubungi operatornya."];
 for (const [x, z, rot, kursi] of [
-	[11.75, -1.45, 0, true],
-	[10.9, -0.6, Math.PI / 2, true],
-	[11.75, 0.25, Math.PI, false],
-	[12.6, -0.6, -Math.PI / 2, false],
+	[10.4, -1.85, 0, true],
+	[9.55, -1.0, Math.PI / 2, true],
+	[10.4, -0.15, Math.PI, false],
+	[11.25, -1.0, -Math.PI / 2, false],
 ]) {
 	perabot("kursi", 1, x, z, rot);
 	// "kegiatan": diisi staf bidang ini lebih dulu daripada mejanya (lihat penghuni.js)
 	if (kursi) PEGAWAI.push({ x, z, rot, lantai: 1, area: "pemdes", pose: "duduk", aktivitas: "rapat", jenis: "kegiatan", terisi: true, penampilan: penampilanPNS(), kalimat: KALIMAT_DISKUSI_PEMDES });
 }
-PEGAWAI.push({ x: 13.85, z: 0.2, rot: Math.PI / 2, lantai: 1, area: "pemdes", pose: "diam", aktivitas: "menunggu", jenis: "kegiatan", terisi: true, penampilan: penampilanPNS({ map: true }), kalimat: ["Menunggu cetakan rekap data aparatur desa.", "Printernya antre, banyak yang mencetak surat."] });
+PEGAWAI.push({ x: 13.85, z: 1.45, rot: Math.PI / 2, lantai: 1, area: "pemdes", pose: "diam", aktivitas: "menunggu", jenis: "kegiatan", terisi: true, penampilan: penampilanPNS({ map: true }), kalimat: ["Menunggu cetakan rekap data aparatur desa.", "Printernya antre, banyak yang mencetak surat."] });
 // Gudang Arsip lantai 2: lemari arsip berjajar.
 for (const x of [-14.2, -13.2, -12.2, -11.2]) perabot("lemari", 1, x, -9.2, 0, [0.95, 0.5]);
 for (const z of [-7.6, -6.6]) perabot("lemari", 1, -14.6, z, Math.PI / 2, [0.5, 0.95]);
@@ -464,8 +459,8 @@ PEGAWAI.push({ x: -7.45, z: 9.2, rot: Math.PI / 2, lantai: 0, area: "lobi", pose
 PEGAWAI.push({ x: 7.45, z: 10.0, rot: -Math.PI / 2, lantai: 0, area: "lobi", pose: "duduk", aktivitas: "menunggu", jenis: "tamu", terisi: true, penampilan: penampilanWarga() });
 PEGAWAI.push({ x: 1.9, z: 9.6, rot: Math.PI, lantai: 0, area: "lobi", pose: "diam", aktivitas: "berdiri", jenis: "tamu", terisi: true, penampilan: penampilanWarga() });
 // Dua pegawai berdiskusi membawa dokumen di area terbuka lantai 2, dekat tangga.
-PEGAWAI.push({ x: 3.9, z: -3.4, rot: 0, lantai: 1, area: "aula2", pose: "diam", aktivitas: "diskusi", jenis: "berdiri", terisi: true, penampilan: penampilanPNS({ map: true }) });
-PEGAWAI.push({ x: 3.9, z: -2.6, rot: Math.PI, lantai: 1, area: "aula2", pose: "diam", aktivitas: "diskusi", jenis: "berdiri", terisi: true, penampilan: penampilanPNS({ map: true }) });
+PEGAWAI.push({ x: 4.6, z: -3.4, rot: 0, lantai: 1, area: "aula2", pose: "diam", aktivitas: "diskusi", jenis: "berdiri", terisi: true, penampilan: penampilanPNS({ map: true }) });
+PEGAWAI.push({ x: 4.6, z: -2.6, rot: Math.PI, lantai: 1, area: "aula2", pose: "diam", aktivitas: "diskusi", jenis: "berdiri", terisi: true, penampilan: penampilanPNS({ map: true }) });
 
 // Pos satpam di samping gerbang: satu satpam duduk berjaga menghadap gerbang
 // (meja & kursinya digambar bersama pos, di ketinggian halaman).
