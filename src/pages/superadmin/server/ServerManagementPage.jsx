@@ -19,6 +19,7 @@ import {
 	FiBookOpen,
 	FiBox,
 	FiCheckSquare,
+	FiCrosshair,
 	FiDatabase,
 	FiFileText,
 	FiGitBranch,
@@ -51,6 +52,7 @@ const SecurityTab = lazy(() => import("./tabs/SecurityTab"));
 const TrafficTab = lazy(() => import("./tabs/TrafficTab"));
 const LogsTab = lazy(() => import("./tabs/LogsTab"));
 const SettingsTab = lazy(() => import("./tabs/SettingsTab"));
+const SocTab = lazy(() => import("./tabs/SocTab"));
 const JournalTab = lazy(() => import("./tabs/JournalTab"));
 const DeployTab = lazy(() => import("./tabs/DeployTab"));
 const BackupTab = lazy(() => import("./tabs/BackupTab"));
@@ -61,6 +63,7 @@ const TABS = [
 	{ key: "ringkasan", grup: "PANTAU", label: "Ringkasan", icon: FiActivity, desc: "Kondisi mesin, aplikasi, database, dan peringatan aktif dalam satu layar." },
 	{ key: "trafik", grup: "PANTAU", label: "Trafik", icon: FiBarChart2, desc: "Jumlah request, rute terlambat, rute error, dan IP paling aktif." },
 	{ key: "log", grup: "PANTAU", label: "Log", icon: FiFileText, desc: "Baca log aplikasi, deploy, nginx, dan SSH langsung dari server." },
+	{ key: "soc", grup: "PERTAHANAN", label: "SOC", icon: FiCrosshair, desc: "Pusat operasi keamanan: insiden yang dikelompokkan otomatis, analisis AI Gema, tindakan, dan dokumentasi tiap insiden." },
 	{ key: "keamanan", grup: "PERTAHANAN", label: "Keamanan", icon: FiShield, desc: "Jejak serangan lengkap, IP penyerang teratas, dan daftar blokir." },
 	{ key: "audit", grup: "PERTAHANAN", label: "Audit", icon: FiCheckSquare, desc: "Periksa celah konfigurasi server (SSH, firewall, port, update, TLS) dan dapatkan perintah perbaikannya." },
 	{ key: "jurnal", grup: "PERTAHANAN", label: "Jurnal Tindakan", icon: FiBookOpen, desc: "Semua tindakan mitigasi: blokir otomatis oleh sistem dan aksi manual superadmin, lengkap dengan siapa dan kapan." },
@@ -436,6 +439,7 @@ const ServerManagementPage = () => {
 					{tab === "trafik" && <TrafficTab />}
 					{tab === "log" && <LogsTab />}
 					{tab === "pengaturan" && <SettingsTab />}
+					{tab === "soc" && <SocTab onNavigate={pilihTab} />}
 					{tab === "jurnal" && <JournalTab onNavigate={pilihTab} />}
 					{tab === "deploy" && <DeployTab />}
 					{tab === "backup" && <BackupTab />}
