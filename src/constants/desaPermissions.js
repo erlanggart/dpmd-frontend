@@ -104,3 +104,21 @@ export const isOperatorBumdes = (user) => {
 
 export const getDesaPermissionLabel = (key) =>
 	DESA_PERMISSIONS.find((p) => p.key === key)?.label || key;
+
+// Keluarga Bantuan Keuangan: akun yang hanya memegang fitur-fitur ini satu kategori.
+const IZIN_BANKEU = ["bankeu", "bankeu-perubahan", "bantuan-provinsi-lpj"];
+
+/**
+ * Kategori akun di tab Akun Desa (Manajemen Akun), dari peran + hak akses fiturnya.
+ * Pesan diabaikan karena hampir semua akun memilikinya. Akun satu fitur (mis. hasil
+ * generate massal BUMDes / Kerja Sama) berkategori fitur itu; lebih dari satu fitur
+ * = operator multi-fitur.
+ */
+export const kategoriAkunDesa = (user) => {
+	if (String(user?.role || "").toLowerCase() === "admin_desa") return { id: "admin_desa", label: "Admin Desa" };
+	const fitur = (Array.isArray(user?.desa_permissions) ? user.desa_permissions : []).filter((k) => k !== "pesan");
+	if (!fitur.length) return { id: "tanpa_fitur", label: "Tanpa akses fitur" };
+	if (fitur.every((k) => IZIN_BANKEU.includes(k))) return { id: "bankeu", label: "Bantuan Keuangan" };
+	if (fitur.length === 1) return { id: fitur[0], label: getDesaPermissionLabel(fitur[0]) };
+	return { id: "operator", label: "Operator multi-fitur" };
+};

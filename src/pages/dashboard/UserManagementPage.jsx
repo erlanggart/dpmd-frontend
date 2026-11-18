@@ -43,6 +43,7 @@ import UserDetailDrawer from "../../components/users/UserDetailDrawer";
 import { getAvatarUrl } from "../../utils/avatarUtils";
 import { ubahStatusAkun } from "../../utils/ubahStatusAkun";
 import { getRoleInfo } from "../../constants/userRoles";
+import { kategoriAkunDesa } from "../../constants/desaPermissions";
 import { useAuth } from "../../context/AuthContext";
 import Swal from "sweetalert2";
 
@@ -136,6 +137,7 @@ const BarisPengguna = ({ user, terpilih, onPilih }) => {
 					<span className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: peran.dot }} />
 					{peran.label}
 				</span>
+				{user.role === 'desa' && <p className="mt-1 whitespace-nowrap pl-1 text-[11px] text-slate-500">{kategoriAkunDesa(user).label}</p>}
 			</td>
 			<td className="hidden px-4 py-3 lg:table-cell">
 				{unit ? (
@@ -220,6 +222,9 @@ const KartuPengguna = ({ user, terpilih, onPilih }) => {
 						<span className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: peran.dot }} />
 						{peran.label}
 					</span>
+					{user.role === 'desa' && (
+						<span className="rounded-full border border-slate-200 px-2 py-0.5 text-[11px] font-medium text-slate-600">{kategoriAkunDesa(user).label}</span>
+					)}
 					{unit && (
 						<span className="inline-flex min-w-0 items-center gap-1 text-[11px] text-slate-500">
 							<UnitIcon className="h-3 w-3 shrink-0 text-slate-400" />
@@ -259,6 +264,7 @@ const UserManagementPage = () => {
 	// Filter wilayah untuk tab Akun Desa; desa menyesuaikan kecamatan terpilih.
 	const [filterKecamatan, setFilterKecamatan] = useState("all");
 	const [filterDesa, setFilterDesa] = useState("all");
+	const [filterKategori, setFilterKategori] = useState("all");
 	const [activeTab, setActiveTab] = useState("superadmin");
 	const [bidangList, setBidangList] = useState([]);
 	const [dinasList, setDinasList] = useState([]);
@@ -663,6 +669,20 @@ const UserManagementPage = () => {
 		);
 	}, [akunDesa, filterKecamatan]);
 
+	// Kategori akun desa (Admin Desa, BUMDes, Kerja Sama, …) beserta jumlahnya di wilayah terpilih.
+	const opsiKategori = useMemo(() => {
+		const peta = new Map();
+		akunDesa.forEach((user) => {
+			if (filterKecamatan !== "all" && idKecamatanUser(user) !== filterKecamatan) return;
+			if (filterDesa !== "all" && idDesaUser(user) !== filterDesa) return;
+			const k = kategoriAkunDesa(user);
+			const ada = peta.get(k.id) || { ...k, jumlah: 0 };
+			ada.jumlah += 1;
+			peta.set(k.id, ada);
+		});
+		return [...peta.values()].sort((a, b) => b.jumlah - a.jumlah);
+	}, [akunDesa, filterKecamatan, filterDesa]);
+
 	// Ganti kecamatan mengosongkan desa, yang boleh jadi bukan bagian kecamatan baru.
 	const gantiKecamatan = (nilai) => {
 		setFilterKecamatan(nilai);
@@ -715,8 +735,12 @@ const UserManagementPage = () => {
 				activeTab !== "desa" ||
 				filterDesa === "all" ||
 				idDesaUser(user) === filterDesa;
+			const matchKategori =
+				activeTab !== "desa" ||
+				filterKategori === "all" ||
+				kategoriAkunDesa(user).id === filterKategori;
 
-			return matchTab && matchSearch && matchBidang && matchDinas && matchKecamatan && matchDesa;
+			return matchTab && matchSearch && matchBidang && matchDinas && matchKecamatan && matchDesa && matchKategori;
 		});
 
 		// Tab Akun Desa diurutkan per wilayah, bukan menurut created_at seperti
@@ -739,7 +763,7 @@ const UserManagementPage = () => {
 		}
 
 		return hasil;
-	}, [users, searchTerm, activeTab, filterBidang, filterDinas, filterKecamatan, filterDesa, tabs]);
+	}, [users, searchTerm, activeTab, filterBidang, filterDinas, filterKecamatan, filterDesa, filterKategori, tabs]);
 
 	const totalPages = Math.max(Math.ceil(filteredUsers.length / itemsPerPage), 1);
 	const startIndex = (currentPage - 1) * itemsPerPage;
@@ -747,7 +771,7 @@ const UserManagementPage = () => {
 
 	useEffect(() => {
 		setCurrentPage(1);
-	}, [searchTerm, activeTab, filterBidang, filterDinas, filterKecamatan, filterDesa, itemsPerPage]);
+	}, [searchTerm, activeTab, filterBidang, filterDinas, filterKecamatan, filterDesa, filterKategori, itemsPerPage]);
 
 	// Export users to Excel
 	const handleExportUsers = (exportType = 'current') => {
@@ -785,6 +809,7 @@ const UserManagementPage = () => {
 					...(tab.id === 'desa' ? {
 						'Desa': user.desa?.nama || '-',
 						'Kecamatan': user.desa?.kecamatan?.nama || user.kecamatan?.nama || '-',
+						'Kategori': kategoriAkunDesa(user).label,
 					} : {}),
 					...(tab.id === 'kecamatan' ? { 'Kecamatan': user.kecamatan?.nama || '-' } : {}),
 					...(tab.id === 'dinas_terkait' ? { 'Dinas': user.dinas?.nama_dinas || '-' } : {}),
@@ -880,7 +905,8 @@ const UserManagementPage = () => {
 		filterBidang !== 'all' ||
 		filterDinas !== 'all' ||
 		filterKecamatan !== 'all' ||
-		filterDesa !== 'all';
+		filterDesa !== 'all' ||
+		filterKategori !== 'all';
 	const nonaktif = users.filter((user) => !user.is_active).length;
 	const belumLengkap = users.filter((user) => user.profile_incomplete).length;
 
@@ -1076,6 +1102,20 @@ const UserManagementPage = () => {
 								{opsiDesa.map((desa) => (
 									<option key={desa.id} value={desa.id}>
 										{desa.nama}
+									</option>
+								))}
+							</select>
+
+							<select
+								value={filterKategori}
+								onChange={(e) => setFilterKategori(e.target.value)}
+								aria-label="Kategori akun desa"
+								className="min-w-0 flex-1 rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-50 focus:border-slate-900 focus:outline-none sm:flex-none"
+							>
+								<option value="all">Semua Kategori</option>
+								{opsiKategori.map((k) => (
+									<option key={k.id} value={k.id}>
+										{k.label} ({k.jumlah})
 									</option>
 								))}
 							</select>
