@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from "react";
-import { Pencil, Plus, Power, Trash2, PlugZap, Loader2, Camera } from "lucide-react";
+import { Pencil, Plus, Power, Trash2, PlugZap, Loader2, Camera, Hexagon } from "lucide-react";
 import toast from "react-hot-toast";
 import Swal from "sweetalert2";
 import {
@@ -10,6 +10,7 @@ import {
 	toggleKamera,
 	ubahKamera,
 } from "../../../api/smartCctvApi";
+import ZonaKamera from "./ZonaKamera";
 
 /**
  * Kelola perangkat kamera: tambah, ubah, uji koneksi, aktif/nonaktif, hapus.
@@ -25,6 +26,25 @@ const KOSONG = {
 	password: "",
 	recognition_enabled: true,
 	fall_detection_enabled: true,
+};
+
+// Waktu relatif sederhana untuk "terakhir online".
+const selisihMenit = (iso) => (Date.now() - new Date(iso).getTime()) / 60000;
+const teksTerakhirOnline = (iso) => {
+	if (!iso) return "belum pernah";
+	const m = selisihMenit(iso);
+	if (m < 1) return "baru saja";
+	if (m < 60) return `${Math.floor(m)} menit lalu`;
+	if (m < 1440) return `${Math.floor(m / 60)} jam lalu`;
+	return new Date(iso).toLocaleString("id-ID", { timeZone: "Asia/Jakarta" });
+};
+
+// Ringkasan zona & jam pantau untuk baris kamera.
+const ringkasZona = (k) => {
+	const n = Array.isArray(k.zona) ? k.zona.length : 0;
+	if (!n) return "Tanpa zona (orang tidak dicatat)";
+	const jam = k.jam_pantau ? `${String(k.jam_pantau.mulai).slice(0, 5)}–${String(k.jam_pantau.selesai).slice(0, 5)}` : "24 jam";
+	return `${n} zona · ${jam}`;
 };
 
 const StatusLencana = ({ status }) => {
@@ -49,6 +69,7 @@ const CctvDevicesPage = () => {
 	const [form, setForm] = useState(KOSONG);
 	const [menyimpan, setMenyimpan] = useState(false);
 	const [menguji, setMenguji] = useState(null);
+	const [zonaKamera, setZonaKamera] = useState(null); // kamera yang zonanya sedang diedit
 
 	const muat = useCallback(async () => {
 		setMemuat(true);
@@ -199,7 +220,13 @@ const CctvDevicesPage = () => {
 						<tbody>
 							{kamera.map((k) => (
 								<tr key={k.id} className="border-b border-slate-50 hover:bg-slate-50/60">
-									<td className="py-2.5 pr-3 font-medium text-slate-900">{k.name}</td>
+									<td className="py-2.5 pr-3 font-medium text-slate-900">
+										{k.name}
+										<div className={`text-[11px] font-normal ${k.status === "active" && k.last_online_at && selisihMenit(k.last_online_at) > 5 ? "text-amber-700" : "text-slate-500"}`}>
+											Terakhir online: {teksTerakhirOnline(k.last_online_at)}
+										</div>
+										<div className="text-[11px] font-normal text-slate-500">{ringkasZona(k)}</div>
+									</td>
 									<td className="py-2.5 pr-3 text-slate-600">{k.lokasi || "—"}</td>
 									<td className="py-2.5 pr-3">
 										<StatusLencana status={k.status} />
@@ -230,6 +257,13 @@ const CctvDevicesPage = () => {
 												<Power className="h-4 w-4" />
 											</button>
 											<button
+												onClick={() => setZonaKamera(k)}
+												title="Zona pantau"
+												className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-900"
+											>
+												<Hexagon className="h-4 w-4" />
+											</button>
+											<button
 												onClick={() => bukaModalUbah(k)}
 												title="Ubah"
 												className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-900"
@@ -250,6 +284,17 @@ const CctvDevicesPage = () => {
 						</tbody>
 					</table>
 				</div>
+			)}
+
+			{zonaKamera && (
+				<ZonaKamera
+					kamera={zonaKamera}
+					onTutup={() => setZonaKamera(null)}
+					onSelesai={() => {
+						setZonaKamera(null);
+						muat();
+					}}
+				/>
 			)}
 
 			{modal && (

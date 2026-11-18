@@ -20,7 +20,7 @@ const TIPE_LABEL = {
 	fall_warning: "Peringatan jatuh",
 	immobility: "Tidak bergerak",
 	other: "Lainnya",
-	person: "Orang terdeteksi",
+	person: "Orang di zona",
 };
 
 const STATUS_LABEL = { active: "Baru", acknowledged: "Diakui", resolved: "Selesai" };

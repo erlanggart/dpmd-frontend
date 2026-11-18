@@ -84,7 +84,9 @@ export const sambungMse = (wsUrl, video, onGagal, { ikutiUjung = true } = {}) =>
 				}
 				if (!sb) return;
 				if (sb.updating || antre.length) {
-					if (antre.length < 60) antre.push(ev.data);
+					// Membuang potongan merusak fMP4 → minta sambung ulang.
+						if (antre.length < 60) antre.push(ev.data);
+						else gagal(new Error("Antrean video penuh"));
 				} else {
 					try {
 						sb.appendBuffer(ev.data);

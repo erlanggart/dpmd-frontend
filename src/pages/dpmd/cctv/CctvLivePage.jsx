@@ -74,9 +74,10 @@ const sambungWebRtc = async (url, videoEl, onGagal) => {
 const URUTAN_SUMBER = ["mse", "go2rtc", "bingkai"];
 const BUTUH_GO2RTC = new Set(["mse", "go2rtc", "bingkai"]);
 const BATAS_MSE_MS = 8000;
+const JEDA_ULANG_MSE_MS = [2000, 5000, 10000, 20000];
 const JEDA_BINGKAI_MS = 3000;
 const LABEL_SUMBER = { mse: "live", go2rtc: "go2rtc", bingkai: "potret", ai: "deteksi AI" };
-const LABEL_PERISTIWA = { known: "Dikenal", unknown: "Tak dikenal", person: "Orang", fall: "Jatuh", fall_warning: "Rawan jatuh", immobility: "Diam lama", other: "Peristiwa" };
+const LABEL_PERISTIWA = { known: "Dikenal", unknown: "Tak dikenal", person: "Orang di zona", fall: "Jatuh", fall_warning: "Rawan jatuh", immobility: "Diam lama", other: "Peristiwa" };
 
 const JEDA_DETEKSI_MS = 1500;
 // Tiap kamera dianalisis ±4–5 dtk sekali (9 kamera bergiliran di CPU). Layanan
@@ -215,10 +216,25 @@ const KartuKamera = ({ kamera, peristiwaTerbaru, dasar, ringkas = false, onPerbe
 	const mseRef = useRef(null);
 	const bersihRef = useRef(null);
 	const selesaiRef = useRef(false);
+	// Sambung ulang MSE: bila MSE pernah tampil, putus sesaat tidak boleh langsung turun ke MJPEG.
+	const pernahMseRef = useRef(false);
+	const percobaanMseRef = useRef(0);
+	const [ulangMse, setUlangMse] = useState(0);
 
 	useEffect(() => {
 		selesaiRef.current = selesaiMuat;
-	}, [selesaiMuat]);
+		if (selesaiMuat && mode === "mse") {
+			pernahMseRef.current = true;
+			percobaanMseRef.current = 0;
+		}
+	}, [selesaiMuat, mode]);
+
+	// Kamera/URL berganti → mulai bersih.
+	useEffect(() => {
+		pernahMseRef.current = false;
+		percobaanMseRef.current = 0;
+		setUlangMse(0);
+	}, [kamera.id, url?.go2rtc_frame_url]);
 
 	const muatUrl = useCallback(async () => {
 		try {
@@ -259,15 +275,37 @@ const KartuKamera = ({ kamera, peristiwaTerbaru, dasar, ringkas = false, onPerbe
 		const pengawas = setTimeout(() => {
 			if (hidup && !selesaiRef.current) sumberBerikut("mse");
 		}, BATAS_MSE_MS);
+		let jedaUlang = null;
 		const putus = sambungMse(urlWs(url), mseRef.current, () => {
-			if (hidup) sumberBerikut("mse");
+			if (!hidup) return;
+			if (pernahMseRef.current && percobaanMseRef.current < 4) {
+				const jeda = JEDA_ULANG_MSE_MS[percobaanMseRef.current];
+				percobaanMseRef.current += 1;
+				setSelesaiMuat(false); // video memuat ulang agar percobaan bisa direset
+				jedaUlang = setTimeout(() => setUlangMse((n) => n + 1), jeda);
+			} else {
+				sumberBerikut("mse");
+			}
 		});
 		return () => {
 			hidup = false;
 			clearTimeout(pengawas);
+			clearTimeout(jedaUlang);
 			putus();
 		};
-	}, [mode, url, sumberBerikut]);
+	}, [mode, url, sumberBerikut, ulangMse]);
+
+	// Sudah turun karena percobaan habis → coba MSE lagi tiap 60 detik (bukan untuk "ai"/"mati").
+	useEffect(() => {
+		if (mode !== "go2rtc" && mode !== "bingkai") return undefined;
+		if (!pernahMseRef.current) return undefined;
+		const t = setTimeout(() => {
+			percobaanMseRef.current = 0;
+			setSelesaiMuat(false);
+			setMode("mse");
+		}, 60000);
+		return () => clearTimeout(t);
+	}, [mode]);
 
 	// Mode bingkai: ambil potret baru tiap beberapa detik.
 	useEffect(() => {

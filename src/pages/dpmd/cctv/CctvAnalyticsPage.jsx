@@ -15,7 +15,7 @@ const TIPE_LABEL = {
 	fall_warning: "Peringatan jatuh",
 	immobility: "Tidak bergerak",
 	other: "Lainnya",
-	person: "Orang terdeteksi",
+	person: "Orang di zona",
 };
 
 const WARNA_TIPE = {
