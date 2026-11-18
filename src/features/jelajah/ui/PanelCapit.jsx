@@ -3,7 +3,7 @@ import { motion } from "framer-motion";
 import { bayarKoin, tambahKoin, useKoleksi } from "../pancing";
 import { suara } from "../suaraPancing";
 
-// Mesin capit di teras Alfamart: bayar koin, capit turun ±1,2 detik, hadiah diundi.
+// Mesin capit di teras DPMD Mart: bayar koin, capit turun ±1,2 detik, hadiah diundi.
 // Nilai harapan 15,6 koin per main, di bawah biayanya (20), jadi koin tidak bisa dicetak.
 
 const BIAYA_CAPIT = 20;
@@ -67,7 +67,7 @@ export default function PanelCapit() {
 	return (
 		<div className="space-y-4">
 			<div className="relative overflow-hidden rounded-3xl bg-gradient-to-b from-pink-500 to-fuchsia-700 p-4 text-white">
-				<p className="text-[11px] font-bold uppercase tracking-[0.2em] text-pink-100">Mesin Capit · Alfamart</p>
+				<p className="text-[11px] font-bold uppercase tracking-[0.2em] text-pink-100">Mesin Capit · DPMD Mart</p>
 				<div className="relative mt-3 h-44 overflow-hidden rounded-2xl bg-sky-100/90 ring-4 ring-yellow-300">
 					<motion.div
 						className="absolute left-1/2 top-0 flex -translate-x-1/2 flex-col items-center"

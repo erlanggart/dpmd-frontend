@@ -1378,7 +1378,7 @@ export default function JelajahPage() {
 									["Kolam Monster", "kolam berbayar di barat kantor: tiket 🪙 2.000 / 10 menit, isinya ikan Monster & Legenda; daftar Lomba Galatama di loket"],
 									["Pasar BUMDes", "food court di utara Kolam Monster: pesan di lapak, duduk di meja mana pun; ada live music"],
 									["Showroom", "timur kantor: beli mobil & motor di meja sales; panggil dari menu ☰ → Garasi saya"],
-									["Tenaga ❤", "berkurang seiring waktu, berlari, dan tertabrak; belanja di Alfamart: ambil keranjang, pilih barang di rak, bayar di kasir, lalu makan dari 🎒 Tas"],
+									["Tenaga ❤", "berkurang seiring waktu, berlari, dan tertabrak; belanja di DPMD Mart: ambil keranjang, pilih barang di rak, bayar di kasir, lalu makan dari 🎒 Tas"],
 									["Tombol 💬 / 🙂", "ngobrol & kirim emote ke tamu lain; dekati tamu untuk menyapa"],
 								]
 							: [
@@ -1400,7 +1400,7 @@ export default function JelajahPage() {
 									["Kolam Monster", "kolam berbayar di barat kantor: E di loket = tiket 🪙 2.000 / 10 menit & Lomba Galatama (juara = ikan terberat)"],
 									["Pasar BUMDes", "food court produk BUM Desa di utara Kolam Monster: E di lapak = pesan menu, duduk di meja mana pun; ada live music"],
 									["Showroom", "timur kantor: E di meja sales = beli mobil / motor; panggil kendaraanmu dari tombol 🚚 Garasi"],
-									["Tenaga ❤", "tinggal sedikit = tak bisa berlari, tertabrak bisa pingsan; masuk Alfamart seberang kantor: E ambil keranjang & barang di rak, bayar di kasir pakai koin, makan dari 🎒 Tas"],
+									["Tenaga ❤", "tinggal sedikit = tak bisa berlari, tertabrak bisa pingsan; masuk DPMD Mart seberang kantor: E ambil keranjang & barang di rak, bayar di kasir pakai koin, makan dari 🎒 Tas"],
 									["Enter / T", "ngobrol dengan tamu lain"],
 									["1 – 5", "emote: lambai, jempol, tepuk, tawa, hati"],
 									["M", "tampilkan/sembunyikan peta"],

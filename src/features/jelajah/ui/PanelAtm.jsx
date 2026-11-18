@@ -2,7 +2,7 @@ import { useState } from "react";
 import { tambahKoin, useKoleksi } from "../pancing";
 import { suara } from "../suaraPancing";
 
-// ATM di teras Alfamart: lihat saldo koin dan ambil bonus harian sekali per tanggal kalender.
+// ATM di teras DPMD Mart: lihat saldo koin dan ambil bonus harian sekali per tanggal kalender.
 
 const KUNCI = "jelajah-atm-v1";
 const BONUS = 25;

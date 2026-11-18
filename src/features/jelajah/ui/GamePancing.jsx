@@ -363,7 +363,7 @@ export default function GamePancing({ sentuh, bersama, onSelesai, onTas }) {
 					onClick={() => setMenuBuka(false)}
 					className={`flex items-center justify-end gap-1.5 ${sentuh ? "overflow-hidden whitespace-nowrap" : "flex-wrap"}`}
 				>
-				<span className="px-1.5 text-xs font-bold tabular-nums" title="Koin — belanja di Alfamart">🪙 {angka(poin)}</span>
+				<span className="px-1.5 text-xs font-bold tabular-nums" title="Koin — belanja di DPMD Mart">🪙 {angka(poin)}</span>
 				{pancing.combo >= 2 && (
 					<span className="rounded-xl bg-gradient-to-r from-orange-500 to-rose-500 px-2 py-1 text-xs font-black" title="Tangkapan beruntun: koin bertambah">
 						🔥 ×{pancing.combo}

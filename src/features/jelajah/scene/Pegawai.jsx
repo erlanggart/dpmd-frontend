@@ -218,7 +218,7 @@ const TUJUAN_LUAR = bebaskan(
 const TUJUAN_SATPAM = TUJUAN_LUAR.filter((t) => t.z > 10 && t.z < 31);
 
 const KALIMAT_WARGA = [
-	"Mau belanja ke Alfamart dulu.",
+	"Mau belanja ke DPMD Mart dulu.",
 	"Mie ayam di seberang itu enak, lho!",
 	"Ada urusan ke DPMD, mengurus berkas desa.",
 	"Panas juga ya siang ini.",

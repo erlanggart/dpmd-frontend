@@ -21,7 +21,7 @@ export const POOL_MISI = [
 	{ id: "lomba", teks: "Ikut lomba galatama di Kolam Monster", jenis: "lomba", target: 1, koin: 200, xp: 150 },
 	{ id: "peti2", teks: "Buka 2 peti hadiah", jenis: "peti", target: 2, koin: 50, xp: 50 },
 	{ id: "mie", teks: "Makan semangkuk mie ayam", jenis: "mie", target: 1, koin: 30, xp: 30 },
-	{ id: "belanja", teks: "Belanja di Alfamart, Koperasi, atau Supermarket CCM", jenis: "belanja", target: 1, koin: 30, xp: 30 },
+	{ id: "belanja", teks: "Belanja di DPMD Mart, Koperasi, atau Supermarket CCM", jenis: "belanja", target: 1, koin: 30, xp: 30 },
 	{ id: "pecel", teks: "Makan di Pecel Ayam Bude", jenis: "pecel", target: 1, koin: 30, xp: 30 },
 	{ id: "mcd", teks: "Makan di McD Tegar Beriman", jenis: "mcd", target: 1, koin: 40, xp: 40 },
 	{ id: "bioskop", teks: "Nonton film di bioskop Cibinong City Mall", jenis: "bioskop", target: 1, koin: 50, xp: 50 },

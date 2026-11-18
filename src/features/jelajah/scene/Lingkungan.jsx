@@ -21,7 +21,7 @@ import Parkiran from "./Parkiran";
 
 // Pohon digambar sebagai InstancedMesh (batang, daun, bak tanam, rumput dalam bak):
 // puluhan pohon cukup empat draw call, penting untuk HP kelas menengah.
-// Warung tenda di seberang kantor: mie ayam (timur Alfamart) & pecel ayam (barat Koperasi).
+// Warung tenda di seberang kantor: mie ayam (timur DPMD Mart) & pecel ayam (barat Koperasi).
 const TEMA_MIE = {
 	tenda: ["#f97316", "#ea580c"],
 	gerobak: "#1d4ed8",

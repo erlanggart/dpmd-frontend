@@ -82,7 +82,7 @@ export function tinggiMal(yLama, x, z) {
 }
 
 // --- Lt 1 ---
-// pusat x supermarket (toko berdenah sama dengan Alfamart; disusun di layout.js)
+// pusat x supermarket (toko berdenah sama dengan DPMD Mart; disusun di layout.js)
 export const SUPERMARKET_CCM = { cx: -1734, z0: -565 };
 export const KONTER_KOPI = kotak(-1724.2, -1723.2, -593, -585);
 export const TITIK_PESAN_KOPI = { x: -1725.4, z: -589, lantaiMal: 0 };

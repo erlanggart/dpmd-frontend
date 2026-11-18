@@ -79,7 +79,7 @@ export default function BarTenaga({ onTas, onAlbum, onGaya, onMisi, onPeringkat,
 							🧺 {belanja.keranjang.length}/{MAKS_KERANJANG} · 🪙 {totalKeranjang()}
 						</span>
 					)}
-					{nilai < TENAGA_LARI && !pingsan && <span className="w-full text-[10px] font-semibold text-rose-200 [text-shadow:0_1px_2px_#000]">Lemas — makan di Alfamart!</span>}
+					{nilai < TENAGA_LARI && !pingsan && <span className="w-full text-[10px] font-semibold text-rose-200 [text-shadow:0_1px_2px_#000]">Lemas — makan di DPMD Mart!</span>}
 					{kehujanan && <span className="w-full text-[10px] font-semibold text-sky-200 [text-shadow:0_1px_2px_#000]">🌧️ Kehujanan — tenaga cepat habis</span>}
 				</div>
 			)}
@@ -92,7 +92,7 @@ export default function BarTenaga({ onTas, onAlbum, onGaya, onMisi, onPeringkat,
 				<div className="h-2 overflow-hidden rounded-full bg-black/40">
 					<div className={`h-full rounded-full transition-all duration-300 ${nilai < TENAGA_LARI || kehujanan ? "animate-pulse" : ""}`} style={{ width: `${persen}%`, background: warna }} />
 				</div>
-				{nilai < TENAGA_LARI && !pingsan && <p className="mt-1 text-[10px] font-semibold text-rose-200">Lemas — tak bisa berlari. Makan di Alfamart!</p>}
+				{nilai < TENAGA_LARI && !pingsan && <p className="mt-1 text-[10px] font-semibold text-rose-200">Lemas — tak bisa berlari. Makan di DPMD Mart!</p>}
 				{kehujanan && <p className="mt-1 text-[10px] font-semibold text-sky-200">🌧️ Kehujanan!</p>}
 			</div>
 

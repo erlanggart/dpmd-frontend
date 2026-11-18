@@ -7,7 +7,7 @@ import { DERMAGA, KIOS_DERMAGA, keDuniaDermaga } from "./situ";
 // shortcut: tanpa tabrakan, tambah penghalang dinamis bila dikeluhkan
 export const ABANG_HUJAN = [
 	{ x: -3, z: 30.35, rot: 0, tempat: "trotoar depan kantor" },
-	{ x: 2, z: 40.7, rot: Math.PI, tempat: "trotoar depan Alfamart" },
+	{ x: 2, z: 40.7, rot: Math.PI, tempat: "trotoar depan DPMD Mart" },
 	...DERMAGA.map((d) => ({
 		...keDuniaDermaga(d, KIOS_DERMAGA.s - 2.4, KIOS_DERMAGA.w),
 		rot: Math.atan2(-d.nz, d.nx), // menghadap titian (arah −w)

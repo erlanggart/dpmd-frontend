@@ -34,7 +34,7 @@ import { teksturPavingParkir } from "./tekstur";
 import Tokoh from "./Tokoh";
 
 // Detail halaman toko di seberang kantor: pelataran paving, zebra cross dari gerbang, lampu
-// jalan, bangku, tong sampah, pot bunga, rak sepeda, lalu isi tiap toko (teras Alfamart,
+// jalan, bangku, tong sampah, pot bunga, rak sepeda, lalu isi tiap toko (teras DPMD Mart,
 // teras Koperasi, etalase Distro, hiasan warung) dan gerobak es cendol. Geometri statis
 // digabung lewat <Gabung>; yang berpendar (lampu, neon, bohlam) tetap mesh sendiri dan
 // terangnya diatur satu bahan bersama tiap frame. Tulisan hanya di benda yang menempel.
@@ -164,7 +164,7 @@ function PotBunga({ x, z, i }) {
 
 // ---------- isi toko ----------
 
-// Mesin capit di teras Alfamart (lokal: depan = −z). Hadiahnya bola-bola warna-warni.
+// Mesin capit di teras DPMD Mart (lokal: depan = −z). Hadiahnya bola-bola warna-warni.
 function MesinCapit() {
 	const { x, z } = MESIN_CAPIT;
 	const hadiah = [[-0.25, 0, "#f472b6"], [0, 0.1, "#facc15"], [0.25, -0.05, "#60a5fa"], [-0.1, -0.15, "#34d399"], [0.15, 0.2, "#fb923c"], [-0.28, 0.2, "#a78bfa"], [0.3, 0.15, "#f87171"]];

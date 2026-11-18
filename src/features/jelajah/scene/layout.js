@@ -620,7 +620,7 @@ export const JALAN = { trotoar: 29.4, kanstin: 31.3, aspal0: 31.6, aspal1: 39.6 
 const TIANG_GERBANG = 0.35; // setengah lebar tiang batu di kedua sisi gerbang
 
 // Deretan toko di seberang jalan depan kantor, muka menghadap jalan (−z), halaman parkir
-// dari trotoar seberang sampai muka toko. Alfamart tepat di depan kantor, Koperasi Desa
+// dari trotoar seberang sampai muka toko. DPMD Mart tepat di depan kantor, Koperasi Desa
 // Merah Putih (sembako) di sebelah baratnya. Keduanya bisa dimasuki dengan denah yang sama:
 // pintu kaca geser di tengah, tiga rak (tiap sisi satu jenis barang), kasir di kiri,
 // kulkas / karung di dinding belakang, tumpukan keranjang di kanan pintu.
@@ -667,7 +667,7 @@ export const TOKO_PER_ID = Object.fromEntries(TOKO.map((t) => [t.id, t]));
 // toko bertanda lantaiMal (supermarket CCM) hanya dikenali di lantai mal itu
 export const tokoDi = (x, z) => TOKO.find((t) => x > t.x0 && x < t.x1 && z > t.z0 && z < t.z1 && (t.lantaiMal === undefined || t.lantaiMal === malAktif.lantai)) || null;
 
-// Warung tenda mie ayam di sebelah timur Alfamart: gerobak (pesan di sini), dua meja
+// Warung tenda mie ayam di sebelah timur DPMD Mart: gerobak (pesan di sini), dua meja
 // panjang berbangku. Pesanan diantar ke meja begitu pembeli duduk.
 export const WARUNG_MIE = { x0: -19.2, x1: -9.4, z0: 44.8, z1: 52.8, tinggi: 2.7 };
 export const GEROBAK_MIE = { x: -11.2, z: 46.4, lx: 1.9, lz: 0.8 };
@@ -736,7 +736,7 @@ export const BANGKU_TOKO = [-24, -13.5, 8, 29.5].map((x) => ({ x, z: Z_TEPI_TOKO
 // pasangan tong: hijau di x, kuning di x + 0,6
 export const TONG_TOKO = [-27.3, -11.5, 3.5, 10.2, 19.5, 24].map((x) => ({ x, z: Z_TEPI_TOKO + 0.5 }));
 export const POT_TOKO = [-29.5, -18.7, -5.5, 5.8, 17.8, 31.5].map((x) => ({ x, z: Z_TEPI_TOKO + 0.3 }));
-// teras Alfamart: freezer es krim, rak galon, booth ATM, mesin capit (menghadap −z)
+// teras DPMD Mart: freezer es krim, rak galon, booth ATM, mesin capit (menghadap −z)
 export const FREEZER_ALFAMART = { x: -4.4, z: 46.3, lx: 1.5, lz: 0.7 };
 export const GALON_ALFAMART = { x: 3.2, z: 46.4, lx: 1.4, lz: 0.6 };
 export const ATM_ALFAMART = { x: 5.1, z: 46.1, lx: 0.9, lz: 0.9 };

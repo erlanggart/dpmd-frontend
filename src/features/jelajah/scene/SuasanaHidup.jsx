@@ -29,7 +29,7 @@ const KALIMAT_LAPAK = {
 
 // [x, z, jangkau, lantaiMal|null, kalimat[], perempuan]
 const SAPA_TEMPAT = [
-	...TOKO.filter((t) => t.id !== "ccm").map((t) => [(t.pintu.x0 + t.pintu.x1) / 2, t.z0 + 1.5, 3, null, t.id === "alfamart" ? ["Selamat datang di Alfamart, selamat berbelanja!", "Selamat datang, Kak. Ada promo minuman hari ini."] : ["Mari, Kak, sembako murah di Koperasi Desa Merah Putih.", "Beras dan minyaknya baru datang, Kak."], t.id === "alfamart"]),
+	...TOKO.filter((t) => t.id !== "ccm").map((t) => [(t.pintu.x0 + t.pintu.x1) / 2, t.z0 + 1.5, 3, null, t.id === "alfamart" ? ["Selamat datang di DPMD Mart, selamat berbelanja!", "Selamat datang, Kak. Ada promo minuman hari ini."] : ["Mari, Kak, sembako murah di Koperasi Desa Merah Putih.", "Beras dan minyaknya baru datang, Kak."], t.id === "alfamart"]),
 	[GEROBAK_MIE.x, GEROBAK_MIE.z - 1, 3, null, ["Mie ayamnya, Kak! Masih hangat.", "Mampir, Kak, mie ayam Pak Kumis!", "Bakso juga ada, Kak."], false],
 	[GEROBAK_PECEL.x, GEROBAK_PECEL.z - 1, 3, null, ["Pecel ayamnya, Nak? Sambalnya baru diulek!", "Mari, mampir dulu. Lele gorengnya garing!", "Makan dulu, Nak, biar kuat kerjanya."], true],
 	[(DISTRO.pintu.x0 + DISTRO.pintu.x1) / 2, DISTRO.z0 + 1.5, 3, null, ["Selamat datang di Distro Gaya, silakan dicoba bajunya.", "Koleksi baru, Kak, ruang cobanya di sebelah kanan."], true],

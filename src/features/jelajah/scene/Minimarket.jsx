@@ -12,7 +12,7 @@ import { usePudar } from "./pudar";
 import { suasana } from "./suasana";
 import Tokoh from "./Tokoh";
 
-// Deretan toko di seberang jalan depan kantor yang bisa dimasuki (Alfamart & Koperasi Desa
+// Deretan toko di seberang jalan depan kantor yang bisa dimasuki (DPMD Mart & Koperasi Desa
 // Merah Putih): pintu kaca geser yang membuka sendiri, tiga rak berisi barang (tiap sisi satu
 // jenis, berlabel harga), kasir, kulkas / tumpukan karung, dan tumpukan keranjang. Dinding &
 // atap ikut memudar saat menghalangi kamera. Dipasang di grup halaman (y = TANAH).
@@ -390,7 +390,7 @@ function Toko({ t, daftarDinding }) {
 					<Bendera x={cx} y={t.tinggi + (lebar / 2) * Math.tan(0.42) - 0.1} z={t.z0 + 0.6} />
 				</>
 			) : (
-				<Papan posisi={[cx, 3.85, t.z0 - 0.16]} rotasi={Math.PI} lebar={6.4} tinggi={0.95} latar={gaya.aksen} baris={[{ teks: gaya.papan || "Alfamart", ukuran: gaya.papan ? 0.55 : 0.7, tebal: true, warna: "#ffffff", y: 0.52 }]} />
+				<Papan posisi={[cx, 3.85, t.z0 - 0.16]} rotasi={Math.PI} lebar={6.4} tinggi={0.95} latar={gaya.aksen} baris={[{ teks: gaya.papan || "DPMD Mart", ukuran: gaya.papan ? 0.55 : 0.7, tebal: true, warna: "#ffffff", y: 0.52 }]} />
 			)}
 		</group>
 	);

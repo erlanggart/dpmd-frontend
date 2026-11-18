@@ -148,7 +148,7 @@ export function PanelTas() {
 					})}
 				</ul>
 			) : (
-				<p className="rounded-2xl bg-slate-50 p-4 text-center text-sm text-slate-500">{pelindung.length ? "Belum ada makanan di tas." : "Tas masih kosong."} Belanja di Alfamart atau Koperasi Desa Merah Putih seberang kantor pakai koin hasil memancing.</p>
+				<p className="rounded-2xl bg-slate-50 p-4 text-center text-sm text-slate-500">{pelindung.length ? "Belum ada makanan di tas." : "Tas masih kosong."} Belanja di DPMD Mart atau Koperasi Desa Merah Putih seberang kantor pakai koin hasil memancing.</p>
 			)}
 		</div>
 	);

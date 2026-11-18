@@ -1,6 +1,6 @@
 // Toko di seberang kantor (denahnya di scene/layout.js → TOKO).
 export const INFO_TOKO = {
-	alfamart: { nama: "Alfamart", ikon: "🛒" },
+	alfamart: { nama: "DPMD Mart", ikon: "🛒" },
 	koperasi: { nama: "Koperasi Desa Merah Putih", ikon: "🇮🇩" },
 	ccm: { nama: "Supermarket Cibinong City Mall", ikon: "🛍️" },
 };

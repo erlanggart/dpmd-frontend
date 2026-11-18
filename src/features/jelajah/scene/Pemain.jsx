@@ -1037,7 +1037,7 @@ export default function Pemain({ daftarDinding, penghuni, penampilan = PENAMPILA
 				for (const a of ABANG_HUJAN) if (a.tiba) coba("abang:hujan", Math.hypot(a.x - p.x, a.z - p.z), 2.2);
 				coba("pesan:mie", Math.hypot(TITIK_PESAN_MIE.x - p.x, TITIK_PESAN_MIE.z - p.z), JARAK_GEROBAK);
 				coba("pesan:pecel", Math.hypot(TITIK_PESAN_PECEL.x - p.x, TITIK_PESAN_PECEL.z - p.z), JARAK_GEROBAK);
-				// halaman toko: mesin capit di teras Alfamart & gerobak es cendol
+				// halaman toko: mesin capit di teras DPMD Mart & gerobak es cendol
 				coba("capit", Math.hypot(TITIK_CAPIT.x - p.x, TITIK_CAPIT.z - p.z), JARAK_GEROBAK);
 				coba("cendol", Math.hypot(TITIK_CENDOL.x - p.x, TITIK_CENDOL.z - p.z), JARAK_GEROBAK);
 				for (const f of FASILITAS_TOKO) coba("fasilitas:" + f.id, Math.hypot(f.x - p.x, f.z - p.z), f.jangkau);
