@@ -403,6 +403,81 @@ body.kali-swal .swal2-cancel {
 	}
 }
 
+/* ─────────── Peta ancaman: panggung gelap, kaca neon, siku sudut ─────────── */
+.kali-peta {
+	background:
+		radial-gradient(ellipse 55% 50% at 50% 48%, rgba(34, 211, 238, 0.09), transparent 70%),
+		radial-gradient(ellipse 80% 40% at 50% 115%, rgba(138, 164, 255, 0.14), transparent 65%),
+		#05080f;
+	border: 1px solid rgba(138, 164, 255, 0.16);
+	box-shadow:
+		0 24px 60px -24px rgba(0, 0, 0, 0.8),
+		inset 0 1px 0 rgba(255, 255, 255, 0.04);
+}
+/* kisi halus yang memudar ke tepi */
+.kali-peta::before {
+	content: "";
+	position: absolute;
+	inset: 0;
+	pointer-events: none;
+	background-image:
+		linear-gradient(rgba(138, 164, 255, 0.05) 1px, transparent 1px),
+		linear-gradient(90deg, rgba(138, 164, 255, 0.05) 1px, transparent 1px);
+	background-size: 44px 44px;
+	-webkit-mask-image: radial-gradient(ellipse at center, #000 25%, transparent 78%);
+	mask-image: radial-gradient(ellipse at center, #000 25%, transparent 78%);
+}
+.kali-neon-kotak,
+.kali-kpi {
+	position: relative;
+	background: linear-gradient(180deg, rgba(20, 28, 47, 0.82), rgba(9, 13, 24, 0.82));
+	border: 1px solid rgba(138, 164, 255, 0.16);
+	border-radius: 10px;
+	backdrop-filter: blur(8px);
+}
+.kali-neon-kotak::before,
+.kali-neon-kotak::after {
+	content: "";
+	position: absolute;
+	width: 12px;
+	height: 12px;
+	pointer-events: none;
+}
+.kali-neon-kotak::before {
+	top: -1px;
+	left: -1px;
+	border-top: 2px solid rgba(34, 211, 238, 0.8);
+	border-left: 2px solid rgba(34, 211, 238, 0.8);
+	border-top-left-radius: 10px;
+}
+.kali-neon-kotak::after {
+	right: -1px;
+	bottom: -1px;
+	border-right: 2px solid rgba(34, 211, 238, 0.8);
+	border-bottom: 2px solid rgba(34, 211, 238, 0.8);
+	border-bottom-right-radius: 10px;
+}
+/* KPI: garis aksen menyala di sisi atas */
+.kali-kpi::before {
+	content: "";
+	position: absolute;
+	top: -1px;
+	left: 14px;
+	right: 14px;
+	height: 1px;
+	background: linear-gradient(90deg, transparent, rgba(34, 211, 238, 0.7), transparent);
+}
+.kali-pijar {
+	text-shadow: 0 0 16px color-mix(in srgb, currentColor 45%, transparent);
+}
+.kali-judul-peta {
+	background: linear-gradient(90deg, #8aa4ff, #22d3ee 50%, #8aa4ff);
+	-webkit-background-clip: text;
+	background-clip: text;
+	color: transparent;
+}
+
+
 /* Mode layar penuh: panel menutupi layout (sidebar/topbar) dan bisa digulir sendiri. */
 .kali-ops.kali-penuh {
 	position: fixed;

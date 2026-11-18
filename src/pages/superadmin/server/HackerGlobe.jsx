@@ -322,8 +322,13 @@ const HackerGlobe = forwardRef(function HackerGlobe(
 			ctx.beginPath();
 			ctx.arc(cx, cy, R, 0, Math.PI * 2);
 			ctx.fill();
-			ctx.strokeStyle = "rgba(138,164,255,0.45)";
-			ctx.lineWidth = 1 * dpr;
+			const tepi = ctx.createRadialGradient(cx, cy, R * 0.8, cx, cy, R);
+			tepi.addColorStop(0, "rgba(34,211,238,0)");
+			tepi.addColorStop(1, "rgba(34,211,238,0.2)");
+			ctx.fillStyle = tepi;
+			ctx.fill();
+			ctx.strokeStyle = "rgba(125,211,252,0.55)";
+			ctx.lineWidth = 1.2 * dpr;
 			ctx.stroke();
 
 			// Graticule tiap 30°
@@ -371,6 +376,7 @@ const HackerGlobe = forwardRef(function HackerGlobe(
 
 			// Busur serangan + komet berjalan
 			if (opsi.showArcs && opsi.showStatic) {
+				ctx.globalCompositeOperation = "lighter";
 				for (const a of L.serang) {
 					if (!a.busur) continue;
 					const pts = a.busur.map(([la, lo, r]) => proyeksi(la, lo, r));
@@ -398,7 +404,16 @@ const HackerGlobe = forwardRef(function HackerGlobe(
 						ctx.lineTo(p2[0], p2[1]);
 						ctx.stroke();
 					}
+					// kepala komet berpendar
+					const kepala = pts[ujung];
+					if (kepala?.[3]) {
+						ctx.fillStyle = rgba(a.warna, 0.9);
+						ctx.beginPath();
+						ctx.arc(kepala[0], kepala[1], 2.4 * dpr, 0, Math.PI * 2);
+						ctx.fill();
+					}
 				}
+				ctx.globalCompositeOperation = "source-over";
 			}
 
 			// Pengunjung
@@ -550,7 +565,17 @@ const HackerGlobe = forwardRef(function HackerGlobe(
 			const pindai = ((waktu * 0.25) % 1) * 2 - 1;
 			const yPindai = cy + pindai * R;
 			const lebarPindai = Math.sqrt(Math.max(0, R * R - (yPindai - cy) ** 2));
-			ctx.strokeStyle = "rgba(138,164,255,0.16)";
+			ctx.save();
+			ctx.beginPath();
+			ctx.arc(cx, cy, R, 0, Math.PI * 2);
+			ctx.clip();
+			const pita = ctx.createLinearGradient(0, yPindai - R * 0.22, 0, yPindai);
+			pita.addColorStop(0, "rgba(34,211,238,0)");
+			pita.addColorStop(1, "rgba(34,211,238,0.10)");
+			ctx.fillStyle = pita;
+			ctx.fillRect(cx - R, yPindai - R * 0.22, R * 2, R * 0.22);
+			ctx.restore();
+			ctx.strokeStyle = "rgba(34,211,238,0.35)";
 			ctx.lineWidth = 1 * dpr;
 			ctx.beginPath();
 			ctx.moveTo(cx - lebarPindai, yPindai);
