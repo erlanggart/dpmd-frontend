@@ -57,7 +57,7 @@ const LoginPage = () => {
 	// Dihitung sekali: mode tampilan (browser/PWA) tidak berubah selama app dibuka.
 	const [tampilkanIngatSaya] = useState(() => !isPWA());
 	const [ingatSaya, setIngatSaya] = useState(false);
-	// null, atau { jenis: 'pasang' | 'kode', tiket, email } saat login pegawai butuh 2FA.
+	// null, atau { jenis: 'pasang' | 'kode', tiket, email } saat login butuh 2FA (semua akun).
 	const [tahap2fa, setTahap2fa] = useState(null);
 
 	// Isi ulang email yang diingat (kalau ada) begitu halaman login dibuka di browser biasa.
@@ -169,7 +169,7 @@ const LoginPage = () => {
 		} catch (error) {
 			console.error("Login gagal:", error.response?.data || error.message);
 			
-			// Pegawai DPMD: sandi benar, tinggal 2FA.
+			// Sandi benar, tinggal 2FA (wajib untuk semua akun).
 			const kode2fa = error.response?.data?.code;
 			if (kode2fa === 'PERLU_PASANG_2FA' || kode2fa === 'PERLU_KODE_2FA') {
 				const { tiket_2fa, email: emailAkun } = error.response.data.data || {};

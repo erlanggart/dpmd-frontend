@@ -334,7 +334,7 @@ const LangkahDuaFaktor = ({ tahap, deviceId, onBerhasil, onBatal }) => {
 					judul="Pasang verifikasi 2 langkah"
 					subjudul={
 						<>
-							Akun DPMD{email && <> ({samarkanEmail(email)})</>} wajib memakai verifikasi 2 langkah. Cukup dilakukan sekali.
+							Akun Anda{email && <> ({samarkanEmail(email)})</>} wajib memakai verifikasi 2 langkah. Cukup dilakukan sekali.
 						</>
 					}
 					onKembali={kembali}
@@ -368,6 +368,7 @@ const LangkahDuaFaktor = ({ tahap, deviceId, onBerhasil, onBatal }) => {
 									</a>
 								</div>
 								<p className="hidden text-sm leading-6 text-slate-600 lg:block">Arahkan kamera aplikasi ke kode QR di sebelah kanan.</p>
+								<p className="order-4 text-xs leading-5 text-amber-700">Akun ini dipakai lebih dari satu orang? Pindai kode QR yang sama di HP setiap pemakainya sekarang, karena QR hanya muncul sekali.</p>
 								<details className="order-3 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 lg:hidden">
 									<summary className="cursor-pointer text-sm font-semibold text-slate-700">
 										Tidak bisa memindai? Masukkan kunci manual

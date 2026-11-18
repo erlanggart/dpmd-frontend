@@ -43,7 +43,6 @@ import { getAvatarUrl } from '../../utils/avatarUtils';
 import { ROLE_DOT } from '../../constants/userRoles';
 
 // Peran pegawai DPMD yang wajib 2FA saat login.
-const PERAN_PEGAWAI = ['superadmin', 'kepala_dinas', 'sekretaris_dinas', 'kepala_bidang', 'ketua_tim', 'bendahara', 'pegawai'];
 
 const STATUS_DEVICE = ['PPPK_Paruh_Waktu', 'Tenaga_Alih_Daya', 'Tenaga_Keamanan', 'Tenaga_Kebersihan'];
 
@@ -278,7 +277,8 @@ const UserDetailDrawer = ({
 								<Tindakan icon={LuLogIn} label="Masuk Sebagai" nada="utama" onClick={() => aksi.impersonate(user)} />
 							)}
 							<Tindakan icon={LuKey} label="Reset Sandi" onClick={() => aksi.resetPassword(user)} />
-							{isSuperadmin && PERAN_PEGAWAI.includes(user.role) && (
+							{/* semua akun wajib 2FA, jadi semua bisa direset (mis. HP hilang) */}
+							{isSuperadmin && (
 								<Tindakan icon={LuShieldOff} label="Reset 2FA" nada="bahaya" onClick={() => aksi.reset2fa(user)} />
 							)}
 							{user.is_active !== false ? (
