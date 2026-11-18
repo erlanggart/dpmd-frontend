@@ -177,7 +177,7 @@ const BackupTab = () => {
 					) : (
 						<Kosong icon={FiDatabase} title="Belum ada cadangan" text="Tekan Backup sekarang untuk membuat yang pertama." />
 					)}
-					<p className="text-xs text-slate-500">Disimpan di {mysql.dir} di server (7 terbaru). Backup otomatis harian di host Proxmox tetap berjalan.</p>
+					<p className="text-xs text-slate-500">Disimpan di {mysql.dir} di server (7 terbaru, otomatis tiap hari 03.15 WIB). Backup harian di host Proxmox tetap berjalan.</p>
 				</div>
 			</Card>
 

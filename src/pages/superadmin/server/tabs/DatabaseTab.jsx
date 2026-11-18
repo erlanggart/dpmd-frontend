@@ -1,4 +1,4 @@
-// Tab Database — koneksi & latensi MySQL, statistik query, ukuran tiap tabel,
+// Tab Database — koneksi & latensi PostgreSQL, statistik query, ukuran tiap tabel,
 // dan proses/query yang sedang berjalan.
 
 import React, { useCallback, useMemo, useState } from "react";
@@ -201,9 +201,9 @@ const DatabaseTab = () => {
 				</div>
 			</Card>
 
-			<Card title="Proses Berjalan" subtitle="Koneksi/query yang sedang aktif di MySQL (diurut dari yang paling lama)" icon={FiList} bodyClass="p-0">
+			<Card title="Proses Berjalan" subtitle="Koneksi/query yang sedang aktif di PostgreSQL (diurut dari yang paling lama)" icon={FiList} bodyClass="p-0">
 				{!data.processes.length ? (
-					<p className="p-5 text-center text-sm text-slate-500">Tidak ada data proses (butuh hak PROCESS di MySQL untuk melihat koneksi pengguna lain).</p>
+					<p className="p-5 text-center text-sm text-slate-500">Tidak ada data proses (butuh peran pg_read_all_stats di PostgreSQL untuk melihat koneksi pengguna lain).</p>
 				) : (
 					<div className="max-h-[360px] overflow-auto">
 						<table className="w-full min-w-[720px] text-sm">

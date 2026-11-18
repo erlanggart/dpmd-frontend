@@ -71,9 +71,9 @@ const TABS = [
 	{ key: "semua-aplikasi", grup: "SISTEM", label: "Semua Aplikasi", icon: FiLayers, desc: "Semua container/VM Proxmox: status, sumber daya, nyalakan/matikan." },
 	{ key: "aplikasi", grup: "SISTEM", label: "Proses & Layanan", icon: FiBox, desc: "Proses PM2, layanan systemd, port, dan monitor uptime." },
 	{ key: "deploy", grup: "SISTEM", label: "Deploy", icon: FiGitBranch, desc: "Versi yang berjalan, riwayat commit, deploy ulang, dan rollback frontend/backend." },
-	{ key: "backup", grup: "SISTEM", label: "Backup", icon: FiArchive, desc: "Snapshot & backup penuh container Proxmox serta cadangan database MySQL." },
+	{ key: "backup", grup: "SISTEM", label: "Backup", icon: FiArchive, desc: "Snapshot & backup penuh container Proxmox serta cadangan database PostgreSQL." },
 	{ key: "storage", grup: "SISTEM", label: "Storage", icon: FiHardDrive, desc: "Pemakaian disk, kuota unggahan, dan pembersihan berkas." },
-	{ key: "database", grup: "SISTEM", label: "Database", icon: FiDatabase, desc: "Koneksi, query lambat, dan tabel terbesar MySQL." },
+	{ key: "database", grup: "SISTEM", label: "Database", icon: FiDatabase, desc: "Koneksi, query lambat, dan tabel terbesar PostgreSQL." },
 	{ key: "pengaturan", grup: "SISTEM", label: "Pengaturan", icon: FiSettings, desc: "Ambang peringatan, kuota, perlindungan, honeypot, dan blokir negara." },
 ];
 
