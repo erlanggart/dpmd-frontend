@@ -272,6 +272,13 @@ export function susunPenghuni(data) {
 		if (o && s) taruh(o, s);
 	}
 
+	// 4b. Kegiatan di ruang bidang (diskusi di meja bundar, antre printer) diisi lebih dulu,
+	//     jadi meja yang kosong terbaca sebagai ditinggal pemiliknya, bukan tak berpenghuni.
+	for (const s of slot.filter((t) => t.jenis === "kegiatan")) {
+		const o = ambil((x) => x.ruang === s.area && (x.kelas === "staf" || x.kelas === "tad"));
+		if (o) taruh(o, s, s.penampilan.map ? { map: true } : {});
+	}
+
 	// 5. Staf & TAD ke meja bidangnya.
 	const ruangUntuk = (o) => o.ruang || "sekretariat";
 	for (const o of [...bebas]) {

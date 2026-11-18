@@ -60,6 +60,7 @@ const KALIMAT_LAIN = {
 };
 
 function kalimatUntuk(o) {
+	if (o.kalimat) return o.kalimat;
 	if (o.jenis === "ajudan" || o.jenis === "dapur") return KALIMAT_LAIN[o.jenis];
 	if (o.jenis === "kepalaRapat" && o.area === "halimun")
 		return KALIMAT_LAIN.pimpinan;

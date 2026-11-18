@@ -603,7 +603,7 @@ const PAPAN_RUANG = [
 	[1, "RUANG RAPAT HALIMUN", "#7a2e2e", -7.75, 2.35, 3.96, 0, 1.1],
 	[1, "DAPUR", "#8a5a2b", -7.2, 2.2, -9.44, 0, 1.0],
 	[1, "SEKRETARIAT", "#2563eb", 4.6, 2.35, -5.84, 0, 1.6],
-	[1, "PEMDES", "#0f766e", 8.34, 2.35, 0.25, -Math.PI / 2, 1.2],
+	[1, "PEMDES", "#0f766e", 7.0, 2.35, 2.16, 0, 1.2],
 ];
 
 function PosterRuang({ ruang }) {

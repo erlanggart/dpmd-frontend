@@ -297,9 +297,12 @@ export const RUANGAN = [
 		singkatan: "PEMDES",
 		warna: "#0f766e",
 		lantai: 1,
+		// bentuk L: rect = ruang kerja, rect2 = serambi layanan di sisi barat (dulu aula)
 		rect: { x0: 8.5, x1: 15, z0: -13, z1: 2 },
-		pintu: { x: 8.5, z: 0.25, sumbu: "x" },
-		npc: { x: 11.8, z: -1.2, arah: [0, 1] },
+		rect2: { x0: 5.5, x1: 8.5, z0: -6, z1: 2 },
+		pintu: { x: 7.0, z: 2 },
+		npc: { x: 7.0, z: -2.2, arah: [0, 1] },
+		poster: { x: 7.0, z: -5.83, rot: 0 },
 		petugas: "Petugas Bidang Pemdes",
 		sapaan:
 			"Selamat datang! Kami menjaga agar data dan tata kelola pemerintahan di setiap desa tetap rapi dan sah.",
@@ -457,6 +460,22 @@ export const BENDA = [
 		x: -11.4,
 		z: 8.3,
 		aksi: { jenis: "pesan", judul: "Ruang Kepala Dinas", teks: "Pimpinan sedang memimpin rapat di Ruang Rapat Halimun. Silakan sampaikan keperluan Anda lewat Sekretariat." },
+	},
+	{
+		id: "papan-pemdes",
+		label: "Baca papan kerja Pemdes",
+		lantai: 1,
+		x: 11.75,
+		z: 1.25,
+		aksi: {
+			jenis: "pesan",
+			judul: "Papan kerja Bidang Pemdes",
+			teks: [
+				"• Verifikasi perdes & perkades yang baru diunggah desa.",
+				"• Pemutakhiran data kepala desa, perangkat desa, dan BPD.",
+				"• Profil desa yang perlu dilengkapi operator.",
+			],
+		},
 	},
 	{
 		id: "teh",
