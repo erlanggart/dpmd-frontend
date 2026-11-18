@@ -20,12 +20,16 @@
  */
 import React, { useEffect, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { ArrowLeft, ChevronRight, Search, X } from 'lucide-react';
+import { ArrowLeft, ChevronRight, Search, Users, X } from 'lucide-react';
 import { ambilSekali } from './useAstaDesa';
+import DaftarNamaWarga from './DaftarNamaWarga';
 import { Galat, Kosong, Memuat } from './ui';
 import { angka, persen } from './warna';
 
 export const KOSONG = '__kosong__';
+
+// Hanya tipe ini yang punya indeks nama; 'kolom'/'angka' adalah agregat kolom keluarga.
+const TIPE_NAMA = ['keluarga', 'anggota', 'usia', 'sifat'];
 
 const cocok = (a, b) => String(a ?? '').trim().toLowerCase() === String(b ?? '').trim().toLowerCase();
 
@@ -108,6 +112,9 @@ const ModalRincian = ({ pemilih, filter = {}, onTutup }) => {
   const [turun, setTurun] = useState(filter.kecamatan || null);
   const [urut, setUrut] = useState('jumlah');
   const [cari, setCari] = useState('');
+  // { kecamatan, desa } bila sedang melihat daftar nama warga.
+  const [lihatNama, setLihatNama] = useState(null);
+  const bisaNama = TIPE_NAMA.includes(pemilih.tipe);
 
   useEffect(() => {
     let hidup = true;
@@ -171,6 +178,7 @@ const ModalRincian = ({ pemilih, filter = {}, onTutup }) => {
   const tertinggi = Math.max(1, ...barisTampil.map((b) => b.nilai || 0));
   const bisaTurun = !turun;
   const tingkat = turun ? 'desa/kelurahan' : 'kecamatan';
+  const kecFilter = filter.kecamatan || turun;
 
   return createPortal(
     <div className="fixed inset-0 z-[600] flex items-end justify-center sm:items-center sm:p-4" role="dialog" aria-modal="true">
@@ -192,6 +200,22 @@ const ModalRincian = ({ pemilih, filter = {}, onTutup }) => {
             <X className="h-4 w-4" />
           </button>
         </header>
+
+        {lihatNama ? (
+          <DaftarNamaWarga pemilih={pemilih} kecamatan={lihatNama.kecamatan} desa={lihatNama.desa} onKembali={() => setLihatNama(null)} />
+        ) : (
+          <>
+        {bisaNama && filter.desa && kecFilter && (
+          <div className="flex-shrink-0 border-b border-slate-100 px-5 py-2.5">
+            <button
+              type="button"
+              onClick={() => setLihatNama({ kecamatan: kecFilter, desa: filter.desa })}
+              className="inline-flex items-center gap-1.5 rounded-lg bg-slate-900 px-3 py-1.5 text-xs font-semibold text-white hover:bg-slate-700"
+            >
+              <Users className="h-3.5 w-3.5" /> Lihat nama warga Desa {filter.desa}
+            </button>
+          </div>
+        )}
 
         <div className="flex flex-shrink-0 flex-wrap items-center gap-2 border-b border-slate-100 px-5 py-2.5">
           {turun && !filter.kecamatan && (
@@ -320,7 +344,19 @@ const ModalRincian = ({ pemilih, filter = {}, onTutup }) => {
                         {isiBaris}
                       </button>
                     ) : (
-                      <div className={`rounded-lg px-2 py-1.5 ${sorot ? 'bg-sky-50 ring-1 ring-sky-200' : ''}`}>{isiBaris}</div>
+                      <div className={`flex items-center gap-2 rounded-lg px-2 py-1.5 ${sorot ? 'bg-sky-50 ring-1 ring-sky-200' : ''}`}>
+                        <div className="min-w-0 flex-1">{isiBaris}</div>
+                        {bisaNama && b.w.desa && (
+                          <button
+                            type="button"
+                            onClick={() => setLihatNama({ kecamatan: b.w.kecamatan, desa: b.w.desa })}
+                            aria-label={`Lihat daftar nama di Desa ${b.w.desa}`}
+                            className="inline-flex flex-shrink-0 items-center gap-1 rounded-md bg-slate-100 px-2 py-1 text-[11px] font-semibold text-slate-700 hover:bg-slate-200"
+                          >
+                            <Users className="h-3 w-3" /> Nama
+                          </button>
+                        )}
+                      </div>
                     )}
                   </li>
                 );
@@ -333,6 +369,8 @@ const ModalRincian = ({ pemilih, filter = {}, onTutup }) => {
           <p className="flex-shrink-0 border-t border-slate-100 px-5 py-2 text-[11px] text-slate-400">
             Rincian ini dari potret terakhir di server — bisa tertinggal sedikit dari angka di halaman.
           </p>
+        )}
+          </>
         )}
       </div>
     </div>,
