@@ -30,10 +30,12 @@ import {
 	XAxis,
 	YAxis,
 } from 'recharts';
+import { createPortal } from 'react-dom';
 import Swal from 'sweetalert2';
 import api from '../../../../api';
 import TombolEkspor from '../../../../components/shared/TombolEkspor';
 import escapeHtml from '../../../../utils/escapeHtml';
+import { ArrowLeft, BookOpen, Calendar, CheckCircle, Download, FileText, MapPin, Scale, XCircle } from 'lucide-react';
 import {
 	LuChartPie,
 	LuFileText,
@@ -57,9 +59,120 @@ const WARNA_BATANG = '#334155';
 
 const BASIS_BERKAS = import.meta.env.VITE_IMAGE_BASE_URL || 'http://127.0.0.1:3001';
 const urlDokumen = (berkas) => `${BASIS_BERKAS}/uploads/kerjasama_desa/${encodeURIComponent(berkas)}`;
+const urlPerdes = (berkas) => `${BASIS_BERKAS}/storage/produk_hukum/${encodeURIComponent(berkas)}`;
 
 const angka = (n) => Number(n || 0).toLocaleString('id-ID');
 const pesanGalat = (e, cadangan) => e?.response?.data?.message || e?.message || cadangan;
+
+const tanggalPanjang = (t) =>
+	t ? new Date(t).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' }) : '-';
+
+const BarisDetail = ({ label, value }) => (
+	<div>
+		<p className="mb-0.5 text-xs text-slate-500">{label}</p>
+		<div className="text-sm font-medium text-slate-900">{value || '-'}</div>
+	</div>
+);
+
+const KartuDetail = ({ ikon: Ikon, judul, children }) => (
+	<div className="rounded-xl border border-slate-200 bg-white p-5">
+		<h3 className="mb-4 flex items-center gap-2 text-sm font-semibold text-slate-700">
+			<Ikon className="h-4 w-4 text-brand-600" /> {judul}
+		</h3>
+		<div className="space-y-3">{children}</div>
+	</div>
+);
+
+/**
+ * Detail Perdes payung satu desa, disusun seperti halaman Detail Produk Hukum
+ * tetapi sebagai popup: staf pemantau tidak meninggalkan halaman monitoring.
+ */
+const ModalPerdes = ({ desa, onTutup }) => {
+	const p = desa.perdes;
+	const url = urlPerdes(p.file);
+	const berlaku = p.status_peraturan !== 'dicabut';
+
+	useEffect(() => {
+		const tombol = (e) => e.key === 'Escape' && onTutup();
+		window.addEventListener('keydown', tombol);
+		return () => window.removeEventListener('keydown', tombol);
+	}, [onTutup]);
+
+	// Portal ke body: pembungkus halaman yang memakai transform tidak menggeser posisi fixed.
+	return createPortal(
+		<div className="fixed inset-0 z-[1000] overflow-y-auto bg-slate-900/60 p-4" role="dialog" aria-modal="true" aria-label={`Perdes ${desa.nama}`}>
+			<div className="mx-auto max-w-7xl space-y-6 rounded-2xl bg-slate-50 p-6">
+				<div className="rounded-xl bg-slate-900 p-6 text-white">
+					<div className="mb-3 flex items-center justify-between">
+						<button onClick={onTutup} className="flex items-center gap-2 rounded-lg bg-white/20 px-3 py-1.5 text-sm transition hover:bg-white/30">
+							<ArrowLeft className="h-4 w-4" /> Kembali
+						</button>
+					</div>
+					<div className="mb-2 flex items-center gap-3">
+						<Scale className="h-7 w-7" />
+						<h1 className="text-2xl font-bold">Detail Produk Hukum</h1>
+					</div>
+					<p className="mt-1 text-slate-300">{p.judul}</p>
+				</div>
+
+				<div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+					<div className="space-y-6 lg:col-span-1">
+						<KartuDetail ikon={FileText} judul="Informasi Umum">
+							<BarisDetail label="Judul" value={p.judul} />
+							<BarisDetail label="Nomor" value={p.nomor} />
+							<BarisDetail
+								label="Jenis"
+								value={
+									<span className="inline-flex rounded-full bg-slate-100 px-2 py-1 text-xs font-medium text-slate-700">
+										{String(p.jenis || '').replace(/_/g, ' ') || '-'}
+									</span>
+								}
+							/>
+							<BarisDetail label="Tahun" value={p.tahun} />
+						</KartuDetail>
+
+						<KartuDetail ikon={Calendar} judul="Penetapan">
+							<BarisDetail label="Tanggal Penetapan" value={tanggalPanjang(p.tanggal_penetapan)} />
+							<BarisDetail label="Tempat Penetapan" value={p.tempat_penetapan} />
+						</KartuDetail>
+
+						<KartuDetail ikon={BookOpen} judul="Status">
+							<BarisDetail
+								label="Status"
+								value={
+									<span className={`inline-flex items-center gap-1 rounded-full px-2 py-1 text-xs font-medium ${berlaku ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
+										{berlaku ? <CheckCircle className="h-3 w-3" /> : <XCircle className="h-3 w-3" />}
+										{berlaku ? 'Berlaku' : 'Dicabut'}
+									</span>
+								}
+							/>
+						</KartuDetail>
+
+						<KartuDetail ikon={MapPin} judul="Asal Desa">
+							<BarisDetail label="Desa" value={desa.nama} />
+							<BarisDetail label="Kecamatan" value={desa.kecamatan?.nama} />
+						</KartuDetail>
+					</div>
+
+					<div className="lg:col-span-2">
+						<div className="overflow-hidden rounded-xl border border-slate-200 bg-white">
+							<div className="flex items-center justify-between border-b border-slate-200 px-5 py-3">
+								<h3 className="flex items-center gap-2 text-sm font-semibold text-slate-700">
+									<FileText className="h-4 w-4 text-brand-600" /> Dokumen
+								</h3>
+								<a href={url} download className="inline-flex items-center gap-2 rounded-lg bg-slate-900 px-3 py-1.5 text-xs text-white transition hover:bg-slate-800">
+									<Download className="h-3.5 w-3.5" /> Download
+								</a>
+							</div>
+							<iframe src={url} title={p.judul} className="w-full border-0" style={{ height: '75vh' }} />
+						</div>
+					</div>
+				</div>
+			</div>
+		</div>,
+		document.body,
+	);
+};
 
 /** Satu angka dalam kisi bergaris — tanpa ikon, tanpa kotak warna. */
 const Angka = ({ label, nilai, keterangan, tekan, aksi }) => {
@@ -120,6 +233,8 @@ const KerjasamaMonitoringPage = ({ rapat = false }) => {
 
 	const [saring, setSaring] = useState({ tahun: '', kecamatan_id: '', jenis: '', bidang: '', q: '' });
 	const [halaman, setHalaman] = useState(1);
+	// { desa, kembali }: desa yang Perdes-nya dibuka + cara membuka lagi daftar asalnya.
+	const [perdesDibuka, setPerdesDibuka] = useState(null);
 
 	const petaBidang = useMemo(() => new Map((meta?.bidang || []).map((b) => [b.key, b])), [meta]);
 	const petaJenis = useMemo(() => new Map((meta?.jenis || []).map((j) => [j.key, j])), [meta]);
@@ -185,6 +300,11 @@ const KerjasamaMonitoringPage = ({ rapat = false }) => {
 		setSaring((s) => ({ ...s, [kunci]: nilai }));
 	};
 
+	const tutupPerdes = useCallback(() => {
+		setPerdesDibuka(null);
+		perdesDibuka?.kembali();
+	}, [perdesDibuka]);
+
 	const lihatDesaSudah = async () => {
 		try {
 			const res = await api.get('/dpmd/kerjasama-desa/desa-belum-legalitas', {
@@ -200,27 +320,46 @@ const KerjasamaMonitoringPage = ({ rapat = false }) => {
 			const isi = daftar
 				.slice(0, 200)
 				.map(
-					(d) =>
+					(d, i) =>
 						`<tr><td style="padding:4px 8px;border-bottom:1px solid #f1f5f9">${escapeHtml(d.kecamatan?.nama || '-')}</td>` +
 						`<td style="padding:4px 8px;border-bottom:1px solid #f1f5f9">${escapeHtml(d.nama)}</td>` +
 						`<td style="padding:4px 8px;border-bottom:1px solid #f1f5f9;color:#64748b">${
 							d.nomor_perdes ? `nomor ${escapeHtml(d.nomor_perdes)}` : '-'
+						}</td>` +
+						// Indeks baris, bukan nama berkas, yang masuk atribut: tak ada teks bebas di HTML.
+						`<td style="padding:4px 8px;border-bottom:1px solid #f1f5f9;text-align:right">${
+							d.perdes?.file
+								? `<button type="button" data-i="${i}" style="padding:3px 10px;border-radius:6px;background:#0f172a;color:#fff;font-size:12px">Lihat</button>`
+								: ''
 						}</td></tr>`,
 				)
 				.join('');
 
-			Swal.fire({
-				title: `${daftar.length} desa sudah mengunggah Perdes`,
-				html:
-					`<div style="max-height:60vh;overflow:auto"><table style="width:100%;font-size:12.5px;text-align:left">` +
-					`<thead><tr><th style="padding:4px 8px">Kecamatan</th><th style="padding:4px 8px">Desa</th><th style="padding:4px 8px">Keterangan</th></tr></thead>` +
-					`<tbody>${isi}</tbody></table>` +
-					(daftar.length > 200 ? `<p style="margin-top:8px;color:#64748b;font-size:12px">Menampilkan 200 pertama.</p>` : '') +
-					`</div>`,
-				width: 640,
-				confirmButtonText: 'Tutup',
-				confirmButtonColor: '#0f172a',
-			});
+			// Detail dibuka di modal; "Kembali" menampilkan daftar lagi, jadi staf tak keluar halaman.
+			const lihatBerkas = (d) => {
+				Swal.close();
+				setPerdesDibuka({ desa: d, kembali: tampilkanDaftar });
+			};
+
+			const tampilkanDaftar = () =>
+				Swal.fire({
+					title: `${daftar.length} desa sudah mengunggah Perdes`,
+					html:
+						`<div style="max-height:60vh;overflow:auto"><table style="width:100%;font-size:12.5px;text-align:left">` +
+						`<thead><tr><th style="padding:4px 8px">Kecamatan</th><th style="padding:4px 8px">Desa</th><th style="padding:4px 8px">Keterangan</th><th></th></tr></thead>` +
+						`<tbody>${isi}</tbody></table>` +
+						(daftar.length > 200 ? `<p style="margin-top:8px;color:#64748b;font-size:12px">Menampilkan 200 pertama.</p>` : '') +
+						`</div>`,
+					width: 720,
+					confirmButtonText: 'Tutup',
+					confirmButtonColor: '#0f172a',
+					didOpen: (popup) =>
+						popup.querySelectorAll('button[data-i]').forEach((b) => {
+							b.onclick = () => lihatBerkas(daftar[Number(b.dataset.i)]);
+						}),
+				});
+
+			tampilkanDaftar();
 		} catch (error) {
 			Swal.fire('Gagal memuat', pesanGalat(error, 'Terjadi kesalahan.'), 'error');
 		}
@@ -649,6 +788,8 @@ const KerjasamaMonitoringPage = ({ rapat = false }) => {
 					</div>
 				)}
 			</section>
+
+			{perdesDibuka && <ModalPerdes desa={perdesDibuka.desa} onTutup={tutupPerdes} />}
 		</div>
 	);
 };
