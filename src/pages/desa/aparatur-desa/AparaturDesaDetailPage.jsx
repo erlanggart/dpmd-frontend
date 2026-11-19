@@ -464,7 +464,8 @@ const AparaturDesaDetailPage = () => {
 					</h3>
 					<div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
 						{[
-							{ key: "file_pas_foto", label: "Pas Foto", namaCatatan: "Pas foto", icon: FaUser, color: "blue" },
+							// Pas foto bebas diganti desa: tidak ikut diverifikasi Bidang Pemdes.
+							{ key: "file_pas_foto", label: "Pas Foto", namaCatatan: "Pas foto", icon: FaUser, color: "blue", bebas: true },
 							{ key: "file_sk_terakhir", label: "SK Terakhir", namaCatatan: "SK terakhir", wajib: true, icon: FaFileAlt, color: "amber" },
 							{ key: "file_ktp", label: "KTP", namaCatatan: "KTP", wajib: true, icon: FaIdCard, color: "blue" },
 							{ key: "file_kk", label: "Kartu Keluarga", namaCatatan: "Kartu Keluarga", icon: FaFileAlt, color: "green" },
@@ -472,7 +473,7 @@ const AparaturDesaDetailPage = () => {
 							{ key: "file_ijazah_terakhir", label: "Ijazah Terakhir", namaCatatan: "Ijazah terakhir", icon: FaGraduationCap, color: "amber" },
 							{ key: "file_bpjs_kesehatan", label: "BPJS Kesehatan", namaCatatan: "Kartu BPJS Kesehatan", icon: FaShieldAlt, color: "emerald" },
 							{ key: "file_bpjs_ketenagakerjaan", label: "BPJS Ketenagakerjaan", namaCatatan: "Kartu BPJS Ketenagakerjaan", icon: FaShieldAlt, color: "cyan" },
-						].map(({ key, label, namaCatatan, wajib, icon, color }) => {
+						].map(({ key, label, namaCatatan, wajib, bebas, icon, color }) => {
 							const fname = data?.[key];
 							const url = fileUrl(fname);
 							const isPdf = fname?.toLowerCase().endsWith('.pdf');
@@ -480,7 +481,7 @@ const AparaturDesaDetailPage = () => {
 							const DocIcon = icon;
 							// Wajib tidaknya berkas lain bergantung jabatan dan dinilai server; tandanya ada di catatan DPMD.
 							const wajibKosong = !url && (wajib || String(data?.catatan_verifikasi || "").includes(`${namaCatatan}: belum diunggah`));
-							const merah = wajibKosong || keputusanItem(key)?.status === "tidak_sesuai";
+							const merah = wajibKosong || (!bebas && keputusanItem(key)?.status === "tidak_sesuai");
 
 							return (
 								<div
@@ -517,9 +518,11 @@ const AparaturDesaDetailPage = () => {
 													<span>Lihat Dokumen</span>
 													<FaExternalLinkAlt className="w-3 h-3 group-hover:translate-x-0.5 transition-transform" />
 												</a>
-												<div className="mt-2">
-													<PenandaVerifikasi keputusan={keputusanItem(key)} onPerbaiki={() => lengkapi(key)} />
-												</div>
+												{!bebas && (
+													<div className="mt-2">
+														<PenandaVerifikasi keputusan={keputusanItem(key)} onPerbaiki={() => lengkapi(key)} />
+													</div>
+												)}
 												</>
 											) : (
 												<>
