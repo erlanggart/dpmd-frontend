@@ -185,14 +185,14 @@ const KerjasamaMonitoringPage = ({ rapat = false }) => {
 		setSaring((s) => ({ ...s, [kunci]: nilai }));
 	};
 
-	const lihatDesaBelum = async () => {
+	const lihatDesaSudah = async () => {
 		try {
 			const res = await api.get('/dpmd/kerjasama-desa/desa-belum-legalitas', {
-				params: saring.kecamatan_id ? { kecamatan_id: saring.kecamatan_id } : {},
+				params: { status: 'sudah', ...(saring.kecamatan_id ? { kecamatan_id: saring.kecamatan_id } : {}) },
 			});
 			const daftar = res.data?.data || [];
 			if (daftar.length === 0) {
-				return Swal.fire({ icon: 'success', title: 'Seluruh desa sudah mengunggah Perdes' });
+				return Swal.fire({ icon: 'info', title: 'Belum ada desa yang mengunggah Perdes' });
 			}
 
 			// Semua nilai di-escape: nomor Perdes diketik bebas oleh desa, dan Swal
@@ -204,13 +204,13 @@ const KerjasamaMonitoringPage = ({ rapat = false }) => {
 						`<tr><td style="padding:4px 8px;border-bottom:1px solid #f1f5f9">${escapeHtml(d.kecamatan?.nama || '-')}</td>` +
 						`<td style="padding:4px 8px;border-bottom:1px solid #f1f5f9">${escapeHtml(d.nama)}</td>` +
 						`<td style="padding:4px 8px;border-bottom:1px solid #f1f5f9;color:#64748b">${
-							d.nomor_perdes ? `nomor ${escapeHtml(d.nomor_perdes)}, berkas belum` : 'belum sama sekali'
+							d.nomor_perdes ? `nomor ${escapeHtml(d.nomor_perdes)}` : '-'
 						}</td></tr>`,
 				)
 				.join('');
 
 			Swal.fire({
-				title: `${daftar.length} desa belum mengunggah Perdes`,
+				title: `${daftar.length} desa sudah mengunggah Perdes`,
 				html:
 					`<div style="max-height:60vh;overflow:auto"><table style="width:100%;font-size:12.5px;text-align:left">` +
 					`<thead><tr><th style="padding:4px 8px">Kecamatan</th><th style="padding:4px 8px">Desa</th><th style="padding:4px 8px">Keterangan</th></tr></thead>` +
@@ -391,10 +391,10 @@ const KerjasamaMonitoringPage = ({ rapat = false }) => {
 						nilai={cakupan?.persen === null || cakupan?.persen === undefined ? '—' : `${cakupan.persen}%`}
 						keterangan={
 							cakupan
-								? `${angka(cakupan.sudah)} dari ${angka(cakupan.total_desa)} desa · klik untuk lihat yang belum`
+								? `${angka(cakupan.sudah)} dari ${angka(cakupan.total_desa)} desa · klik untuk lihat yang sudah`
 								: null
 						}
-						aksi={lihatDesaBelum}
+						aksi={lihatDesaSudah}
 					/>
 				</div>
 			</section>
