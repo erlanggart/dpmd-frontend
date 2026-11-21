@@ -13,17 +13,21 @@
  */
 
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { motion } from 'framer-motion';
 import {
   Bar,
   BarChart,
   CartesianGrid,
+  Cell,
+  Pie,
+  PieChart,
   ResponsiveContainer,
   Tooltip,
   XAxis,
   YAxis
 } from 'recharts';
 import { AlertTriangle, Baby, GraduationCap, HeartHandshake, Info, UserRound, Users2 } from 'lucide-react';
-import { DaftarBatang, Galat, KartuAngka, Kosong, Legenda, Memuat, Panel, Tooltip1 } from './ui';
+import { AngkaBergerak, DaftarBatang, Galat, KartuAngka, Kerangka, Kosong, Legenda, Panel, Tooltip1 } from './ui';
 import { GAYA_SUMBU, SERI, angka, persen, rapikanLabel } from './warna';
 import { FilterWilayah, GridKategori } from './KategoriSensus';
 import { TombolEkspor } from './ekspor';
@@ -77,13 +81,13 @@ const AnggotaKeluarga = ({ data, memuat, galat, onUlang, totalKeluarga, onPilih 
   );
 
   if (galat) return <Galat pesan={galat} onUlang={onUlang} />;
-  if (memuat && !data) return <Memuat pesan="Menghitung demografi anggota keluarga…" />;
+  if (memuat && !data) return <Kerangka />;
   if (!data) return <Kosong pesan="Belum ada data anggota keluarga." />;
   // Penyusuran ±1.650 halaman anggota berjalan di latar server. Nol di sini
   // berarti "belum dihitung", bukan "tidak ada" — jangan disajikan sebagai angka.
   if (data.rincian_siap === false) {
     return (
-      <Memuat pesan="Server sedang menghitung data anggota keluarga dari ASTA DESA. Ini bisa memakan beberapa menit — halaman akan terisi sendiri." />
+      <Kerangka pesan="Menyiapkan data anggota keluarga dari ASTA DESA. Biasanya beberapa menit — halaman ini terisi sendiri, tidak perlu dimuat ulang." />
     );
   }
 
@@ -151,7 +155,7 @@ const AnggotaKeluarga = ({ data, memuat, galat, onUlang, totalKeluarga, onPilih 
             onPilih?.({ tipe: 'usia', kelompok: ['15–24', '25–39', '40–54', '55–64'], judul: 'Kelompok usia', sub: 'Usia produktif 15–64' })
           }
           warna={SERI[1]}
-          keterangan={`${persen(produktif, total)} dari seluruh anggota`}
+          keterangan={`${persen(produktif, total)} dari seluruh anggota · rasio ketergantungan ${produktif ? Math.round(((anak + lansia) / produktif) * 100) : '—'}`}
         />
         <KartuAngka
           icon={GraduationCap}
@@ -184,7 +188,12 @@ const AnggotaKeluarga = ({ data, memuat, galat, onUlang, totalKeluarga, onPilih 
           {!adaIsiPiramida ? (
             <Kosong pesan="Kolom usia maupun tanggal lahir tidak ditemukan pada data anggota keluarga." />
           ) : (
-            <div className="h-[320px] w-full">
+            <>
+            <div className="mb-1 flex items-center justify-between px-1">
+              <span className="text-xs font-semibold" style={{ color: WARNA_L }}>← Laki-laki</span>
+              <span className="text-xs font-semibold" style={{ color: WARNA_P }}>Perempuan →</span>
+            </div>
+            <div className="h-[340px] w-full">
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart
                   data={piramida}
@@ -193,23 +202,36 @@ const AnggotaKeluarga = ({ data, memuat, galat, onUlang, totalKeluarga, onPilih 
                   margin={{ top: 4, right: 12, left: 4, bottom: 0 }}
                   barGap={2}
                 >
-                  <CartesianGrid stroke="#eef2f6" horizontal={false} />
+                  <defs>
+                    {/* Batang L tumbuh ke kiri, jadi ujung luarnya (kiri) yang dipudarkan. */}
+                    <linearGradient id="gradL" x1="0" y1="0" x2="1" y2="0">
+                      <stop offset="0%" stopColor={WARNA_L} stopOpacity={0.65} />
+                      <stop offset="100%" stopColor={WARNA_L} stopOpacity={1} />
+                    </linearGradient>
+                    <linearGradient id="gradP" x1="0" y1="0" x2="1" y2="0">
+                      <stop offset="0%" stopColor={WARNA_P} stopOpacity={1} />
+                      <stop offset="100%" stopColor={WARNA_P} stopOpacity={0.65} />
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid stroke="#f1f5f9" horizontal={false} />
                   <XAxis
                     type="number"
                     {...GAYA_SUMBU}
                     tickFormatter={(v) => angka(Math.abs(v))}
                   />
                   <YAxis type="category" dataKey="label" {...GAYA_SUMBU} width={46} />
-                  <Tooltip content={<Tooltip1 satuan="orang" />} cursor={{ fill: '#f1f5f9' }} />
+                  <Tooltip content={<Tooltip1 satuan="orang" warnaSeri={{ 'Laki-laki': WARNA_L, Perempuan: WARNA_P }} />} cursor={{ fill: '#f8fafc' }} />
                   {/* radius 4px hanya di ujung data (menjauhi garis nol) — ujung
                       yang menempel garis tengah dibiarkan lurus agar kedua sisi
                       bertemu rapat. */}
                   <Bar
                     dataKey="L"
                     name="Laki-laki"
-                    fill={WARNA_L}
+                    fill="url(#gradL)"
                     radius={[4, 0, 0, 4]}
-                    barSize={14}
+                    barSize={16}
+                    animationDuration={900}
+                    animationEasing="ease-out"
                     onClick={(d) => {
                       const l = d?.payload?.label ?? d?.label;
                       if (l) onPilih?.({ tipe: 'usia', kelompok: [l], sisi: 'L', judul: 'Piramida usia', sub: `Laki-laki usia ${l}` });
@@ -219,9 +241,11 @@ const AnggotaKeluarga = ({ data, memuat, galat, onUlang, totalKeluarga, onPilih 
                   <Bar
                     dataKey="P"
                     name="Perempuan"
-                    fill={WARNA_P}
+                    fill="url(#gradP)"
                     radius={[0, 4, 4, 0]}
-                    barSize={14}
+                    barSize={16}
+                    animationDuration={900}
+                    animationEasing="ease-out"
                     onClick={(d) => {
                       const l = d?.payload?.label ?? d?.label;
                       if (l) onPilih?.({ tipe: 'usia', kelompok: [l], sisi: 'P', judul: 'Piramida usia', sub: `Perempuan usia ${l}` });
@@ -231,18 +255,43 @@ const AnggotaKeluarga = ({ data, memuat, galat, onUlang, totalKeluarga, onPilih 
                 </BarChart>
               </ResponsiveContainer>
             </div>
+            </>
           )}
         </Panel>
 
         <Panel judul="Jenis kelamin" keterangan="Nilai dari sumber yang tidak seragam disatukan.">
           <div className="space-y-4">
-            <div>
-              <div className="flex h-2.5 gap-[2px] overflow-hidden rounded-full">
-                <div style={{ width: `${(jk.L / Math.max(1, total)) * 100}%`, backgroundColor: WARNA_L }} />
-                <div style={{ width: `${(jk.P / Math.max(1, total)) * 100}%`, backgroundColor: WARNA_P }} />
-                {jk.lain > 0 && (
-                  <div style={{ width: `${(jk.lain / Math.max(1, total)) * 100}%`, backgroundColor: '#cbd5e1' }} />
-                )}
+            <div className="relative h-[200px]">
+              <ResponsiveContainer width="100%" height={200}>
+                <PieChart>
+                  <Pie
+                    data={[
+                      { label: 'Laki-laki', total: jk.L, warna: WARNA_L },
+                      { label: 'Perempuan', total: jk.P, warna: WARNA_P },
+                      ...(jk.lain > 0 ? [{ label: 'Tidak diketahui', total: jk.lain, warna: '#cbd5e1' }] : [])
+                    ]}
+                    dataKey="total"
+                    nameKey="label"
+                    innerRadius={64}
+                    outerRadius={88}
+                    paddingAngle={2}
+                    cornerRadius={8}
+                    stroke="none"
+                    startAngle={90}
+                    endAngle={-270}
+                    onClick={(d) => pilihSifat('jk', 'Jenis kelamin')({ label: d?.payload?.label ?? d?.label })}
+                    style={{ cursor: 'pointer' }}
+                  >
+                    {[WARNA_L, WARNA_P, ...(jk.lain > 0 ? ['#cbd5e1'] : [])].map((w) => (
+                      <Cell key={w} fill={w} />
+                    ))}
+                  </Pie>
+                  <Tooltip content={<Tooltip1 satuan="orang" />} />
+                </PieChart>
+              </ResponsiveContainer>
+              <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
+                <AngkaBergerak nilai={total} className="text-xl font-semibold text-slate-900 tabular-nums" />
+                <span className="text-[11px] text-slate-400">jiwa</span>
               </div>
             </div>
             <DaftarBatang
@@ -355,14 +404,23 @@ const DemografiTab = ({ data, memuat, galat, onUlang, totalKeluarga, kategori, f
         key={kode}
         type="button"
         onClick={() => setPilihan(kode)}
-        className={`inline-flex flex-shrink-0 items-center gap-1.5 rounded-lg px-3 py-2 text-xs font-semibold transition-colors ${
-          terpilih ? 'bg-slate-900 text-white shadow-sm' : 'bg-white text-slate-600 ring-1 ring-slate-200 hover:text-slate-900 hover:ring-slate-300'
+        className={`relative inline-flex flex-shrink-0 items-center gap-1.5 rounded-xl px-3 py-2 text-xs font-semibold transition-colors ${
+          terpilih ? 'text-white' : 'bg-white text-slate-600 ring-1 ring-slate-200 hover:text-slate-900 hover:ring-slate-300'
         }`}
       >
-        {label}
-        {jumlah !== undefined && (
-          <span className={`rounded px-1 text-[10.5px] tabular-nums ${terpilih ? 'bg-white/15' : 'bg-slate-100 text-slate-500'}`}>{jumlah}</span>
+        {terpilih && (
+          <motion.span
+            layoutId="demografi-chip-aktif"
+            className="absolute inset-0 rounded-xl bg-slate-900 shadow-sm"
+            transition={{ type: 'spring', stiffness: 420, damping: 34 }}
+          />
         )}
+        <span className="relative z-10 inline-flex items-center gap-1.5">
+          {label}
+          {jumlah !== undefined && (
+            <span className={`rounded px-1 text-[10.5px] tabular-nums ${terpilih ? 'bg-white/15' : 'bg-slate-100 text-slate-500'}`}>{jumlah}</span>
+          )}
+        </span>
       </button>
     );
   };
@@ -370,7 +428,7 @@ const DemografiTab = ({ data, memuat, galat, onUlang, totalKeluarga, kategori, f
   return (
     <div className="space-y-4">
       {rincian.modal}
-      <div className="space-y-3 rounded-2xl border border-slate-200 bg-white p-3 shadow-sm shadow-slate-900/[0.03] sm:p-4">
+      <div className="space-y-3 rounded-[20px] border border-slate-200/70 bg-white p-3 shadow-[0_1px_2px_rgba(15,23,42,0.04),0_12px_32px_-16px_rgba(15,23,42,0.10)] sm:p-4">
         <FilterWilayah wilayah={dk?.wilayah} filter={filter || {}} onUbah={onFilter} total={dk?.total_keluarga} />
         <div className="flex flex-wrap items-start justify-between gap-3 border-t border-slate-100 pt-3">
           <TombolEkspor
@@ -400,7 +458,7 @@ const DemografiTab = ({ data, memuat, galat, onUlang, totalKeluarga, kategori, f
               angka di bawah memang angka wilayah yang dipilih dan keterangan ini
               justru akan menyesatkan. */}
           {adaFilter && data?.per_wilayah_siap === false && (
-            <p className="flex items-start gap-2 rounded-xl bg-sky-50 px-3 py-2 text-xs leading-relaxed text-sky-800">
+            <p className="flex items-start gap-2 rounded-2xl bg-sky-50 px-3 py-2 text-xs leading-relaxed text-sky-800">
               <Info className="mt-0.5 h-3.5 w-3.5 flex-shrink-0" />
               Data anggota keluarga belum bisa disaring per wilayah — server masih memetakan setiap anggota ke
               keluarganya. Bagian ini sementara menampilkan angka se-kabupaten, dan akan ikut tersaring sendiri begitu
@@ -408,7 +466,7 @@ const DemografiTab = ({ data, memuat, galat, onUlang, totalKeluarga, kategori, f
             </p>
           )}
           {adaFilter && data?.per_wilayah_siap === true && data?.anggota_tanpa_wilayah > 0 && (
-            <p className="flex items-start gap-2 rounded-xl bg-slate-50 px-3 py-2 text-xs leading-relaxed text-slate-600">
+            <p className="flex items-start gap-2 rounded-2xl bg-slate-50 px-3 py-2 text-xs leading-relaxed text-slate-600">
               <Info className="mt-0.5 h-3.5 w-3.5 flex-shrink-0 text-slate-400" />
               {angka(data.anggota_tanpa_wilayah)} anggota keluarga belum bisa ditempatkan ke desa mana pun dan tidak
               ikut terhitung di bagian ini.
@@ -419,7 +477,7 @@ const DemografiTab = ({ data, memuat, galat, onUlang, totalKeluarga, kategori, f
       ) : kategori?.galat ? (
         <Galat pesan={kategori.galat} onUlang={kategori.ambil} />
       ) : !aktif ? (
-        <Memuat pesan="Menghitung profil keluarga per kategori…" />
+        <Kerangka pesan="Menghitung profil keluarga per kategori…" />
       ) : (
         <>
           {dk.sebagian && (

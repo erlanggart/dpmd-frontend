@@ -20,8 +20,9 @@
  * ringkas selalu kalah begitu ada yang mengklik "buka peta penuh".
  */
 
-import React, { Suspense, lazy, useMemo, useState } from 'react';
+import React, { Suspense, lazy, useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
+import { AnimatePresence, MotionConfig, motion } from 'framer-motion';
 import {
   ArrowUpRight,
   Building2,
@@ -156,15 +157,25 @@ const AstaDesaPage = ({ basePath = '/core-dashboard/asta-desa' }) => {
   // membawa kecamatan/desa; sekarang backend menjembataninya lewat rujukan ke
   // keluarga, dan selama jembatan itu belum siap ia membalas angka kabupaten
   // beserta `per_wilayah_siap: false` — bukan diam-diam mengabaikan penyaring.
+  //
+  // Diambil begitu Ringkasan tampil, bukan menunggu tabnya diklik: server
+  // menjawabnya dari cache, jadi tab Demografi terbuka tanpa kerangka pemuatan.
+  // Pembaruan berkala tetap hanya selama tabnya dibuka.
+  const pratinjau = siap && (tab === 'demografi' || Boolean(ringkasan.data));
+  const jedaDemografi = tab === 'demografi' ? jedaRincian : 0;
   const demografi = useAstaDesa('/demografi', paramsWilayah, {
-    aktif: siap && tab === 'demografi',
-    segarkanTiapMs: jedaRincian
+    aktif: pratinjau,
+    segarkanTiapMs: jedaDemografi
   });
   // Profil keluarga per kategori sensus (rumah, bansos, …), penyaring yang sama.
   const kategoriSensus = useAstaDesa('/demografi/kategori', paramsWilayah, {
-    aktif: siap && tab === 'demografi',
-    segarkanTiapMs: jedaRincian
+    aktif: pratinjau,
+    segarkanTiapMs: jedaDemografi
   });
+  // Kode tab ikut dimuat lebih dulu supaya klik pertama tidak menunggu unduhan.
+  useEffect(() => {
+    if (ringkasan.data) import('./DemografiTab');
+  }, [Boolean(ringkasan.data)]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const muatUlang = async () => {
     setMenyegarkan(true);
@@ -206,6 +217,7 @@ const AstaDesaPage = ({ basePath = '/core-dashboard/asta-desa' }) => {
   }, [r]);
 
   return (
+    <MotionConfig reducedMotion="user">
     <div className="min-h-screen bg-slate-50 px-4 py-5 sm:px-6 sm:py-6 lg:px-8">
       <div className={`mx-auto ${LEBAR_CORE} space-y-4`}>
         <PageHeader
@@ -239,14 +251,12 @@ const AstaDesaPage = ({ basePath = '/core-dashboard/asta-desa' }) => {
                 bukan menumpuk jadi enam baris yang mengusir isi halaman ke
                 bawah lipatan. */}
             <nav className="-mx-4 overflow-x-auto px-4 sm:mx-0 sm:px-0">
-              <div className="inline-flex min-w-full gap-1 rounded-xl border border-slate-200 bg-white p-1 shadow-sm shadow-slate-900/[0.03]">
+              <div className="inline-flex min-w-full gap-1 rounded-2xl bg-white/80 p-1.5 shadow-sm ring-1 ring-slate-200/70 backdrop-blur">
                 {TAB.map((t) => {
                   const Ikon = t.ikon;
                   const aktif = tab === t.kunci;
-                  const kelas = `inline-flex flex-shrink-0 items-center gap-2 rounded-lg px-3 py-2 text-xs font-semibold transition-colors ${
-                    aktif
-                      ? 'bg-slate-900 text-white shadow-sm shadow-slate-900/20'
-                      : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
+                  const kelas = `relative inline-flex flex-shrink-0 items-center gap-2 rounded-xl px-3 py-2 text-xs font-semibold transition-colors ${
+                    aktif ? 'text-white' : 'text-slate-600 hover:bg-slate-100/70 hover:text-slate-900'
                   }`;
 
                   // Entri ber-`rute` meninggalkan halaman ini, jadi harus berupa
@@ -256,17 +266,28 @@ const AstaDesaPage = ({ basePath = '/core-dashboard/asta-desa' }) => {
                   if (t.rute) {
                     return (
                       <Link key={t.kunci} to={basePath + t.rute} className={kelas}>
-                        <Ikon className="h-3.5 w-3.5" strokeWidth={2} />
-                        {t.label}
-                        <ArrowUpRight className="h-3 w-3 opacity-60" />
+                        <span className="relative z-10 inline-flex items-center gap-2">
+                          <Ikon className="h-3.5 w-3.5" strokeWidth={2} />
+                          {t.label}
+                          <ArrowUpRight className="h-3 w-3 opacity-60" />
+                        </span>
                       </Link>
                     );
                   }
 
                   return (
                     <button key={t.kunci} type="button" onClick={() => setTab(t.kunci)} className={kelas}>
-                      <Ikon className="h-3.5 w-3.5" strokeWidth={aktif ? 2.3 : 2} />
-                      {t.label}
+                      {aktif && (
+                        <motion.span
+                          layoutId="asta-tab-aktif"
+                          className="absolute inset-0 rounded-xl bg-slate-900 shadow-sm"
+                          transition={{ type: 'spring', stiffness: 420, damping: 34 }}
+                        />
+                      )}
+                      <span className="relative z-10 inline-flex items-center gap-2">
+                        <Ikon className="h-3.5 w-3.5" strokeWidth={aktif ? 2.3 : 2} />
+                        {t.label}
+                      </span>
                     </button>
                   );
                 })}
@@ -276,34 +297,44 @@ const AstaDesaPage = ({ basePath = '/core-dashboard/asta-desa' }) => {
             {/* Capaian target berdiri sendiri di atas Ringkasan, dengan
                 pengambilannya sendiri: endpoint-nya ringan (agregat di ASTA
                 DESA) sehingga tidak perlu menunggu penyusuran ringkasan. */}
-            {tab === 'ringkasan' && (
-              <div className="space-y-4">
-                <CapaianTargetKk aktif={siap} />
-                <RingkasanTab
-                  data={ringkasan.data}
-                  memuat={ringkasan.memuat}
-                  galat={ringkasan.galat}
-                  onUlang={ringkasan.ambil}
-                />
-              </div>
-            )}
-            <Suspense fallback={<Memuat />}>
-              {tab === 'sensus' && <SensusTab ringkasan={ringkasan.data} />}
-              {tab === 'demografi' && (
-                <DemografiTab
-                  data={demografi.data}
-                  memuat={demografi.memuat}
-                  galat={demografi.galat}
-                  onUlang={demografi.ambil}
-                  totalKeluarga={ringkasan.data?.total_sensus}
-                  kategori={kategoriSensus}
-                  filter={filterWilayah}
-                  onFilter={setFilterWilayah}
-                />
-              )}
-              {tab === 'pengguna' && <PenggunaTab ringkasan={ringkasan.data} />}
-              {tab === 'layer' && <LayerPesanTab />}
-            </Suspense>
+            <AnimatePresence mode="wait" initial={false}>
+              <motion.div
+                key={tab}
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -6 }}
+                transition={{ duration: 0.25, ease: [0.22, 1, 0.36, 1] }}
+              >
+                {tab === 'ringkasan' && (
+                  <div className="space-y-4">
+                    <CapaianTargetKk aktif={siap} />
+                    <RingkasanTab
+                      data={ringkasan.data}
+                      memuat={ringkasan.memuat}
+                      galat={ringkasan.galat}
+                      onUlang={ringkasan.ambil}
+                    />
+                  </div>
+                )}
+                <Suspense fallback={<Memuat />}>
+                  {tab === 'sensus' && <SensusTab ringkasan={ringkasan.data} />}
+                  {tab === 'demografi' && (
+                    <DemografiTab
+                      data={demografi.data}
+                      memuat={demografi.memuat}
+                      galat={demografi.galat}
+                      onUlang={demografi.ambil}
+                      totalKeluarga={ringkasan.data?.total_sensus}
+                      kategori={kategoriSensus}
+                      filter={filterWilayah}
+                      onFilter={setFilterWilayah}
+                    />
+                  )}
+                  {tab === 'pengguna' && <PenggunaTab ringkasan={ringkasan.data} />}
+                  {tab === 'layer' && <LayerPesanTab />}
+                </Suspense>
+              </motion.div>
+            </AnimatePresence>
 
             {status.data && (
               <p className="px-1 pb-2 text-[11px] leading-relaxed text-slate-400">
@@ -320,6 +351,7 @@ const AstaDesaPage = ({ basePath = '/core-dashboard/asta-desa' }) => {
         )}
       </div>
     </div>
+    </MotionConfig>
   );
 };
 

@@ -119,7 +119,8 @@ const ModalRincian = ({ pemilih, filter = {}, onTutup }) => {
   useEffect(() => {
     let hidup = true;
     setGalat(null);
-    ambilSekali('/demografi/wilayah', { abaikan_kesegaran: 1 }, ulangKe ? 'segar' : 'cache')
+    // `ringan`: dari potret yang sama dengan kartu, tanpa menyusul ke ASTA DESA.
+    ambilSekali('/demografi/wilayah', { ringan: 1 }, ulangKe ? 'segar' : 'cache')
       .then((b) => hidup && setMuatan(b.data))
       .catch((e) => hidup && setGalat(e.message || 'Gagal memuat rincian wilayah.'));
     return () => {
