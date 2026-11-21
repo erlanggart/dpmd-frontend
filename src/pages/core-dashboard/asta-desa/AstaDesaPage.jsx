@@ -21,7 +21,7 @@
  */
 
 import React, { Suspense, lazy, useEffect, useMemo, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { AnimatePresence, MotionConfig, motion } from 'framer-motion';
 import {
   ArrowUpRight,
@@ -112,7 +112,21 @@ ASTADESA_TOKEN=<token Sanctum milik akun super_admin>`}
 );
 
 const AstaDesaPage = ({ basePath = '/core-dashboard/asta-desa' }) => {
-  const [tab, setTab] = useState('ringkasan');
+  // Tab dan penyaring wilayah tinggal di URL (?tab=&kec=&desa=), bukan state:
+  // kembali dari halaman rincian harus mendarat di tab dan wilayah yang sama.
+  const [sp, setSp] = useSearchParams();
+  const ubahUrl = (perubahan) =>
+    setSp(
+      (lama) => {
+        const n = new URLSearchParams(lama);
+        Object.entries(perubahan).forEach(([k, v]) => (v ? n.set(k, v) : n.delete(k)));
+        return n;
+      },
+      { replace: true }
+    );
+  const tabUrl = sp.get('tab');
+  const tab = TAB.some((t) => t.kunci === tabUrl && !t.rute) ? tabUrl : 'ringkasan';
+  const setTab = (t) => ubahUrl({ tab: t === 'ringkasan' ? null : t });
   const [menyegarkan, setMenyegarkan] = useState(false);
 
   const status = useAstaDesa('/status');
@@ -143,7 +157,10 @@ const AstaDesaPage = ({ basePath = '/core-dashboard/asta-desa' }) => {
   });
   // Penyaring wilayah tab Demografi. Params tanpa kunci kosong supaya kunci
   // cache-nya tetap stabil.
-  const [filterWilayah, setFilterWilayah] = useState({});
+  const kecUrl = sp.get('kec') || undefined;
+  const desaUrl = (kecUrl && sp.get('desa')) || undefined;
+  const filterWilayah = useMemo(() => ({ kecamatan: kecUrl, desa: desaUrl }), [kecUrl, desaUrl]);
+  const setFilterWilayah = (f) => ubahUrl({ kec: f?.kecamatan || null, desa: (f?.kecamatan && f?.desa) || null });
   const paramsWilayah = useMemo(
     () => Object.fromEntries(Object.entries(filterWilayah).filter(([, v]) => v)),
     [filterWilayah]

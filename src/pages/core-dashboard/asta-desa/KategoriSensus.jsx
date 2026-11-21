@@ -17,7 +17,7 @@
 import React, { useMemo, useState } from 'react';
 import { Hash, ListChecks, MapPin, Search, X } from 'lucide-react';
 import { DaftarBatang, Kosong } from './ui';
-import { KOSONG } from './RincianWilayah';
+import { KOSONG } from './useRincianWilayah';
 import { SERI, TANGGA, angka, rapikanLabel } from './warna';
 
 const WARNA_KATEGORI = [SERI[0], SERI[2], SERI[1], SERI[3], SERI[4], TANGGA[3], TANGGA[1]];

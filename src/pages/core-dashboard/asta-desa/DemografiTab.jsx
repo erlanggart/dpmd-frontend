@@ -12,7 +12,8 @@
  * memperlihatkan "-1.204 orang".
  */
 
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import {
   Bar,
@@ -365,8 +366,23 @@ const AnggotaKeluarga = ({ data, memuat, galat, onUlang, totalKeluarga, onPilih 
  * sensus se-kabupaten per desa berjumlah ratusan ribu baris.
  */
 const DemografiTab = ({ data, memuat, galat, onUlang, totalKeluarga, kategori, filter, onFilter }) => {
-  const [pilihan, setPilihan] = useState('anggota');
-  // Pop-up rincian per wilayah untuk setiap grafik yang diklik.
+  // Kategori aktif di URL (?kat=) supaya kembali dari halaman rincian tetap di sini.
+  const [sp, setSp] = useSearchParams();
+  const pilihan = sp.get('kat') || 'anggota';
+  const setPilihan = useCallback(
+    (kode) =>
+      setSp(
+        (lama) => {
+          const n = new URLSearchParams(lama);
+          if (kode === 'anggota') n.delete('kat');
+          else n.set('kat', kode);
+          return n;
+        },
+        { replace: true }
+      ),
+    [setSp]
+  );
+  // Klik grafik membuka halaman rincian per wilayah.
   const rincian = useRincianWilayah(filter || {});
   const dk = kategori?.data;
   const daftar = useMemo(() => dk?.kategori || [], [dk]);
@@ -375,7 +391,7 @@ const DemografiTab = ({ data, memuat, galat, onUlang, totalKeluarga, kategori, f
   // (mis. desa kecil tanpa satu pun kolom sosial terisi) — kembali ke awal.
   useEffect(() => {
     if (pilihan !== 'anggota' && dk && !daftar.some((k) => k.kode === pilihan)) setPilihan('anggota');
-  }, [dk, daftar, pilihan]);
+  }, [dk, daftar, pilihan, setPilihan]);
 
   const aktif = daftar.find((k) => k.kode === pilihan);
   const adaFilter = filter?.kecamatan || filter?.desa;

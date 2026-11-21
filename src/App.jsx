@@ -289,6 +289,7 @@ const AstaDesaPage = lazy(() => import("./pages/core-dashboard/asta-desa/AstaDes
 // kilobyte, dan halaman Asta Desa biasa tidak boleh membayarnya hanya karena peta
 // penuhnya ada satu klik jauhnya.
 const AstaDesaPetaPage = lazy(() => import("./pages/core-dashboard/asta-desa/peta/PetaSebaranPage"));
+const AstaDesaRincianPage = lazy(() => import("./pages/core-dashboard/asta-desa/RincianWilayah"));
 const ProdukHukumDetailPemdesPage = lazy(() => import("./pages/bidang/pemdes/ProdukHukumDetailPage"));
 
 const KelembagaanDesaPage = lazy(
@@ -1889,6 +1890,7 @@ function App() {
                       path="asta-desa/peta-sebaran"
                       element={<AstaDesaPetaPage basePath="/dinas/asta-desa" />}
                     />
+                    <Route path="asta-desa/rincian" element={<AstaDesaRincianPage />} />
                   </Route>
                   <Route path="ganti-password" element={<DinasChangePasswordPage />} />
                 </Route>
@@ -1960,6 +1962,8 @@ function App() {
                       DESA (OpenLayers, panel layer, cetak A3). Halaman sendiri,
                       bukan tab: panelnya saja selebar 384 px. */}
                   <Route path="asta-desa/peta-sebaran" element={<AstaDesaPetaPage />} />
+                  {/* Rincian per wilayah sebuah titik data Demografi (dulu pop-up). */}
+                  <Route path="asta-desa/rincian" element={<AstaDesaRincianPage />} />
                   <Route
                     path="statistik-bumdes"
                     element={<StatistikBumdes />}
