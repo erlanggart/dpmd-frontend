@@ -37,6 +37,10 @@ const DaftarNamaWarga = ({ pemilih, kecamatan, desa, onKembali }) => {
     if (pemilih.label) params.label = pemilih.label;
     if (pemilih.kelompok) params.kelompok = pemilih.kelompok.join(',');
     if (pemilih.sisi) params.sisi = pemilih.sisi;
+    if (pemilih.tipe === 'kolom') {
+      params.kunci = pemilih.kunci;
+      params.nilai = pemilih.nilai;
+    }
     if (q) params.q = q;
     api
       .get('/asta-desa/demografi/nama', { params })

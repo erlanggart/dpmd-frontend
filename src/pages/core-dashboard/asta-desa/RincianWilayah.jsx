@@ -28,8 +28,10 @@ import { angka, persen } from './warna';
 
 export const KOSONG = '__kosong__';
 
-// Hanya tipe ini yang punya indeks nama; 'kolom'/'angka' adalah agregat kolom keluarga.
-const TIPE_NAMA = ['keluarga', 'anggota', 'usia', 'sifat'];
+// Tipe yang punya daftar nama. 'kolom' = keluarga dengan nilai kolom sensus itu
+// (dibaca langsung dari database ASTA DESA); 'angka' tidak, karena tiap nilai
+// angka bukan kategori yang bisa diklik.
+const TIPE_NAMA = ['keluarga', 'anggota', 'usia', 'sifat', 'kolom'];
 
 const cocok = (a, b) => String(a ?? '').trim().toLowerCase() === String(b ?? '').trim().toLowerCase();
 
@@ -344,19 +346,24 @@ const ModalRincian = ({ pemilih, filter = {}, onTutup }) => {
                       >
                         {isiBaris}
                       </button>
+                    ) : bisaNama && b.w.desa ? (
+                      // Seluruh baris desa bisa diklik: membuka siapa saja di balik angkanya.
+                      <button
+                        type="button"
+                        onClick={() => setLihatNama({ kecamatan: b.w.kecamatan, desa: b.w.desa })}
+                        title={`Lihat daftar nama di ${b.w.desa}`}
+                        className={`group flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left transition-colors hover:bg-slate-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-300 ${
+                          sorot ? 'bg-sky-50 ring-1 ring-sky-200' : ''
+                        }`}
+                      >
+                        <div className="min-w-0 flex-1">{isiBaris}</div>
+                        <span className="inline-flex flex-shrink-0 items-center gap-1 rounded-md bg-slate-100 px-2 py-1 text-[11px] font-semibold text-slate-700 transition-colors group-hover:bg-slate-900 group-hover:text-white">
+                          <Users className="h-3 w-3" /> Nama
+                        </span>
+                      </button>
                     ) : (
                       <div className={`flex items-center gap-2 rounded-lg px-2 py-1.5 ${sorot ? 'bg-sky-50 ring-1 ring-sky-200' : ''}`}>
                         <div className="min-w-0 flex-1">{isiBaris}</div>
-                        {bisaNama && b.w.desa && (
-                          <button
-                            type="button"
-                            onClick={() => setLihatNama({ kecamatan: b.w.kecamatan, desa: b.w.desa })}
-                            aria-label={`Lihat daftar nama di Desa ${b.w.desa}`}
-                            className="inline-flex flex-shrink-0 items-center gap-1 rounded-md bg-slate-100 px-2 py-1 text-[11px] font-semibold text-slate-700 hover:bg-slate-200"
-                          >
-                            <Users className="h-3 w-3" /> Nama
-                          </button>
-                        )}
                       </div>
                     )}
                   </li>
