@@ -1,4 +1,5 @@
-import React, { useEffect, useMemo, useRef, useState, useTransition } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState, useTransition } from "react";
+import { Link, useLocation } from "react-router-dom";
 import {
   LuChevronDown,
   LuChevronRight,
@@ -21,7 +22,12 @@ import RtrwImportModal from "./RtrwImportModal";
 
 // Harus sama dengan RTRW_IMPORT_ROLES di routes/kelembagaan.routes.js — kalau
 // berbeda, tombol muncul untuk user yang nanti ditolak 403 oleh backend.
-const IMPORT_ROLES = ["superadmin", "pemerintahan_desa", "kepala_bidang", "kepala_dinas"];
+const IMPORT_ROLES = ["superadmin", "pemberdayaan_masyarakat", "pemerintahan_desa", "kepala_bidang", "kepala_dinas"];
+// Dua nama di atas juga dipakai checkRole() sebagai pseudo-peran berbasis bidang
+// (BIDANG_ROLE_MAP), jadi seluruh pegawai bidang tersebut lolos apa pun perannya
+// — pegawai, ketua_tim, bendahara, kabid. 5 = Pemberdayaan Masyarakat (PM/PMD),
+// 6 = Pemerintahan Desa.
+const IMPORT_BIDANG_IDS = [5, 6];
 
 const STATUS_CONFIG = {
   all_three: {
@@ -74,6 +80,199 @@ const STATUS_CONFIG = {
     color: "bg-rose-100 text-rose-800",
     dotColor: "bg-rose-500",
   },
+};
+
+// Pilihan sumber data yang ikut dikomparasi. Status per baris dihitung ulang di
+// klien dari flag inDb/inAdd/inBpjs yang sudah dikirim backend, jadi memilih
+// "hanya DB + BPJS" tidak perlu request ulang maupun perubahan API.
+const SOURCE_DEFS = [
+  { key: "db", label: "Database", flag: "inDb", on: "bg-blue-600 text-white ring-blue-600", off: "text-blue-700 ring-blue-300 hover:bg-blue-50" },
+  { key: "bpjs", label: "BPJS", flag: "inBpjs", on: "bg-green-600 text-white ring-green-600", off: "text-green-700 ring-green-300 hover:bg-green-50" },
+  { key: "add", label: "ADD", flag: "inAdd", on: "bg-orange-500 text-white ring-orange-500", off: "text-orange-700 ring-orange-300 hover:bg-orange-50" },
+];
+
+// Cermin statusFromSources() di rtrwComparison.controller.js.
+const statusFromSources = (hasDb, hasAdd, hasBpjs) => {
+  if (hasDb && hasAdd && hasBpjs) return "all_three";
+  if (hasDb && hasAdd) return "db_add";
+  if (hasDb && hasBpjs) return "db_bpjs";
+  if (hasAdd && hasBpjs) return "add_bpjs";
+  if (hasDb) return "only_db";
+  if (hasAdd) return "only_add";
+  return "only_bpjs";
+};
+
+// Sumber yang wajib aktif agar sebuah status bisa muncul (untuk menyaring dropdown).
+const STATUS_SOURCES = {
+  all_three: ["db", "add", "bpjs"],
+  db_add: ["db", "add"],
+  db_bpjs: ["db", "bpjs"],
+  add_bpjs: ["add", "bpjs"],
+  only_db: ["db"],
+  only_add: ["add"],
+  only_bpjs: ["bpjs"],
+  nik_mismatch: ["db", "bpjs"],
+  bpjs_tangkil_suspect: ["bpjs"],
+  nik_invalid: ["bpjs"],
+};
+
+/**
+ * Alamat halaman detail pengurus untuk layout yang sedang dipakai. Halaman ini
+ * juga dipasang di layout lain (mis. /bpjs) yang TIDAK punya rute pengurus —
+ * di sana namanya dibiarkan teks biasa daripada menautkan ke rute yang akan
+ * dialihkan balik ke dashboard.
+ */
+const usePengurusHref = () => {
+  const { pathname } = useLocation();
+  return useCallback((id) => {
+    if (!id) return null;
+    if (pathname.startsWith("/superadmin")) return `/superadmin/bidang/pmd/pengurus/${id}`;
+    if (pathname.startsWith("/bidang/pmd")) return `/bidang/pmd/pengurus/${id}`;
+    return null;
+  }, [pathname]);
+};
+
+/** Nama pengurus database sebagai tautan ke detailnya (bila rutenya tersedia). */
+const PengurusLinks = ({ refs, fallback, hrefOf }) => {
+  const list = (refs || []).filter((item) => item?.id);
+  if (!list.length) return <>{fallback || <span className="italic text-gray-300">-</span>}</>;
+  return (
+    <>
+      {list.map((item, index) => {
+        const href = hrefOf?.(item.id);
+        return (
+          <React.Fragment key={item.id}>
+            {index > 0 && ", "}
+            {href ? (
+              <Link
+                to={href}
+                title="Buka detail pengurus"
+                onClick={(event) => event.stopPropagation()}
+                className="text-blue-600 underline decoration-blue-300 underline-offset-2 hover:text-blue-800"
+              >
+                {item.nama}
+              </Link>
+            ) : item.nama}
+          </React.Fragment>
+        );
+      })}
+    </>
+  );
+};
+
+// Persempit SELURUH payload persandingan ke sumber yang dipilih — dipakai sekali
+// di level halaman, sebelum kartu ringkasan, hitungan tab, dan tabel dihitung,
+// supaya semuanya memakai angka yang sama. Backend tak perlu dipanggil ulang:
+// flag inDb/inAdd/inBpjs dan penanda silang tiap baris sudah cukup.
+const rescopeData = (data, sources) => {
+  if (!data) return null;
+  if (sources.db && sources.add && sources.bpjs) return data;
+
+  const fullStatus = statusFromSources(sources.db, sources.add, sources.bpjs);
+  const withBpjs = Boolean(sources.bpjs);
+
+  const comparison = (data.comparison || []).map((desa) => {
+    const items = (desa.items || [])
+      .filter((item) => SOURCE_DEFS.some((def) => sources[def.key] && item[def.flag]))
+      .map((item) => {
+        const inDb = Boolean(sources.db && item.inDb);
+        const inAdd = Boolean(sources.add && item.inAdd);
+        const inBpjs = Boolean(sources.bpjs && item.inBpjs);
+        return {
+          ...item,
+          inDb,
+          inAdd,
+          inBpjs,
+          status: statusFromSources(inDb, inAdd, inBpjs),
+          dbNama: sources.db ? item.dbNama : [],
+          dbRefs: sources.db ? item.dbRefs : [],
+          addNama: sources.add ? item.addNama : [],
+          bpjsNama: withBpjs ? item.bpjsNama : [],
+          bpjsKpj: withBpjs ? item.bpjsKpj : [],
+          addNilai: sources.add ? item.addNilai : 0,
+          bpjsUpah: withBpjs ? item.bpjsUpah : 0,
+          // Penanda silang hanya berlaku bila kedua sumbernya ikut dikomparasi.
+          nikMatch: item.nikMatch && inDb && inBpjs,
+          nikMismatch: item.nikMismatch && inDb && inBpjs,
+          tglLahirMismatch: item.tglLahirMismatch && inDb && inBpjs,
+          norekMatch: item.norekMatch && inDb && inAdd,
+          norekMismatch: item.norekMismatch && inDb && inAdd,
+          // Penanda yang murni berasal dari BPJS ikut padam bila BPJS dilepas.
+          bpjsTangkilSuspect: item.bpjsTangkilSuspect && withBpjs,
+          bpjsTangkilDbConfirmed: item.bpjsTangkilDbConfirmed && withBpjs,
+          bpjsDesaBerbeda: item.bpjsDesaBerbeda && withBpjs,
+          bpjsNikInvalid: item.bpjsNikInvalid && withBpjs,
+          bpjsMembership: withBpjs ? item.bpjsMembership : null,
+          inBaru: Boolean(item.inBaru && withBpjs),
+        };
+      });
+    const countStatus = (status) => items.filter((item) => item.status === status).length;
+    return {
+      ...desa,
+      items,
+      allThree: countStatus(fullStatus),
+      dbAdd: countStatus("db_add"),
+      dbBpjs: countStatus("db_bpjs"),
+      addBpjs: countStatus("add_bpjs"),
+      onlyDb: countStatus("only_db"),
+      onlyAdd: countStatus("only_add"),
+      onlyBpjs: countStatus("only_bpjs"),
+      nikMismatch: items.filter((item) => item.nikMismatch).length,
+      bpjsTangkilSuspect: items.filter((item) => item.bpjsTangkilSuspect).length,
+      bpjsTangkilConfirmed: items.filter((item) => item.bpjsTangkilDbConfirmed).length,
+    };
+  });
+
+  const countItems = (predicate) => comparison.reduce(
+    (sum, desa) => sum + desa.items.filter(predicate).length,
+    0,
+  );
+  const countStatus = (status) => countItems((item) => item.status === status);
+
+  const summary = {
+    ...data.summary,
+    // Angka per sumber (totalDbPengurus, totalAddPenerima, dst.) sengaja dibiarkan:
+    // itu isi berkas sumbernya, dan kartunya disembunyikan saat sumber tak dipilih.
+    totalAllThree: countStatus(fullStatus),
+    totalDbAdd: countStatus("db_add"),
+    totalDbBpjs: countStatus("db_bpjs"),
+    totalAddBpjs: countStatus("add_bpjs"),
+    totalOnlyDb: countStatus("only_db"),
+    totalOnlyAdd: countStatus("only_add"),
+    totalOnlyBpjs: countStatus("only_bpjs"),
+    totalFuzzyMatched: countItems((item) => item.isFuzzy),
+    totalNikMismatch: countItems((item) => item.nikMismatch),
+    totalDesaBerbeda: countItems((item) => item.bpjsDesaBerbeda),
+    totalNikInvalid: countItems((item) => item.bpjsNikInvalid),
+    totalBpjsAktif: countItems((item) => item.bpjsMembership === "aktif"),
+    totalBpjsNonAktif: countItems((item) => item.bpjsMembership === "non_aktif" || item.bpjsMembership === "mixed"),
+    totalBpjsUnmarked: countItems((item) => item.bpjsMembership === "unmarked"),
+    ...(withBpjs ? {} : {
+      totalBpjsTangkilPool: 0,
+      totalBpjsTangkilConfirmed: 0,
+      totalBpjsTangkilUnresolved: 0,
+      totalBpjsUnmappable: 0,
+      totalBaru: 0,
+      totalBaruMatchedDb: 0,
+      totalBaruUnmatched: 0,
+      totalBaruAnomali: 0,
+      totalStatusAktif: 0,
+      totalStatusNonAktif: 0,
+      totalStatusTanpaMaster: 0,
+    }),
+  };
+
+  return {
+    ...data,
+    comparison,
+    summary,
+    // Daftar yang seluruhnya berasal dari BPJS dikosongkan bila BPJS dilepas,
+    // sehingga tab-tab turunannya ikut nol.
+    tangkilUnresolved: withBpjs ? data.tangkilUnresolved : [],
+    baruList: withBpjs ? data.baruList : [],
+    bpjsStatus: withBpjs ? data.bpjsStatus : { aktif: [], nonAktif: [] },
+    bpjsUnmappable: withBpjs ? data.bpjsUnmappable : [],
+  };
 };
 
 // Status kepesertaan BPJS (overlay dari DESK BPJS JULI 2026)
@@ -188,6 +387,7 @@ const buildClassification = (data) => {
         rw: item.rwNomor || "",
         rt: item.rtNomor || "",
         namaDb: (item.dbNama || []).join(", "),
+        dbRefs: item.dbRefs || [],
         namaAdd: (item.addNama || []).join(", "),
         namaBpjs: (item.bpjsNama || []).join(", "),
         nik: (item.nik || []).join(", "),
@@ -196,6 +396,7 @@ const buildClassification = (data) => {
         statusJabatan: (item.dbStatusJabatan || []).join(", "),
         jabatanDb: (item.dbJabatan || []).join(", "),
         nikBpjs: (item.bpjsNik || []).join(", "),
+        kpj: (item.bpjsKpj || []).join(", "),
         nikCocok: item.nikMatch,
         nikBerbeda: item.nikMismatch,
         tglBeda: item.tglLahirMismatch,
@@ -409,6 +610,7 @@ const TAB_DEFS = [
       { key: "namaDb", label: "Nama DB" },
       { key: "namaBpjs", label: "Nama BPJS" },
       { key: "nik", label: "NIK" },
+      { key: "kpj", label: "KPJ" },
       COL_STATUS_JABATAN,
       { key: "nikCocok", label: "NIK Cocok", type: "bool" },
       { key: "tglBeda", label: "Tgl Lahir Beda", type: "bool" },
@@ -429,6 +631,7 @@ const TAB_DEFS = [
       COL_DESA, COL_LOKASI,
       { key: "namaDb", label: "Nama & NIK DB", type: "nameNik", nameKey: "namaDb", nikKey: "nikDb", otherNikKey: "nikBpjs" },
       { key: "namaBpjs", label: "Nama & NIK BPJS", type: "nameNik", nameKey: "namaBpjs", nikKey: "nikBpjs", otherNikKey: "nikDb" },
+      { key: "kpj", label: "KPJ" },
       { key: "keterangan", label: "Keterangan" },
     ],
   },
@@ -444,6 +647,7 @@ const TAB_DEFS = [
       { key: "namaBpjs", label: "Nama BPJS" },
       { key: "nikDb", label: "NIK Database", type: "nikDiff", nikKey: "nikDb", otherNikKey: "nikBpjs" },
       { key: "nikBpjs", label: "NIK BPJS", type: "nikDiff", nikKey: "nikBpjs", otherNikKey: "nikDb" },
+      { key: "kpj", label: "KPJ" },
       { key: "kodeDesaBpjsAsal", label: "Kode Desa BPJS Asal" },
       { key: "desaBerbedaLabel", label: "Sumber Anomali" },
       { key: "keterangan", label: "Keterangan" },
@@ -551,6 +755,7 @@ const TAB_DEFS = [
       { key: "namaDb", label: "Nama DB" },
       { key: "namaBpjs", label: "Nama BPJS" },
       { key: "nik", label: "NIK" },
+      { key: "kpj", label: "KPJ" },
       COL_STATUS_JABATAN,
       { key: "bpjsMembership", label: "Status BPJS", type: "membership" },
       { key: "upahBpjs", label: "Upah BPJS", type: "currency", align: "right" },
@@ -567,6 +772,7 @@ const TAB_DEFS = [
       { key: "namaDb", label: "Nama DB" },
       { key: "namaBpjs", label: "Nama BPJS" },
       { key: "nik", label: "NIK" },
+      { key: "kpj", label: "KPJ" },
       COL_STATUS_JABATAN,
       { key: "bpjsNonAktifSebab", label: "Sebab Non-Aktif" },
       { key: "bpjsMembership", label: "Status BPJS", type: "membership" },
@@ -767,6 +973,7 @@ const POOLS = [
   {
     id: "db_and_bpjs",
     label: "Database dan BPJS",
+    needs: ["db", "bpjs"],
     color: "green",
     mainTab: "db_bpjs",
     subTabs: ["nik_berbeda", "desa_berbeda", "db_bpjs_aktif", "db_bpjs_non_aktif"],
@@ -776,6 +983,7 @@ const POOLS = [
   {
     id: "bpjs_no_db_pool",
     label: "BPJS Tidak Ada di Database",
+    needs: ["bpjs"],
     color: "amber",
     mainTab: "bpjs_no_db",
     subTabs: ["bpjs_no_db", "bpjs_add", "bpjs_nodb_aktif", "bpjs_nodb_non_aktif", "bpjs_nik_invalid"],
@@ -784,6 +992,7 @@ const POOLS = [
   {
     id: "bpjs_unmappable_pool",
     label: "Data Tidak Terpetakan",
+    needs: ["bpjs"],
     subtitle: "ID_PEGAWAI tak dikenal database — di luar seluruh perhitungan",
     color: "rose",
     mainTab: "bpjs_unmappable",
@@ -793,6 +1002,7 @@ const POOLS = [
   {
     id: "db_no_bpjs_pool",
     label: "Database Tidak Ada di BPJS",
+    needs: ["db", "bpjs"],
     color: "gray",
     mainTab: "db_no_bpjs",
     subTabs: ["db_no_bpjs_no_add", "db_no_bpjs_with_add", "db_no_bpjs_baru_ada", "db_no_bpjs_baru_tidak"],
@@ -801,6 +1011,7 @@ const POOLS = [
   {
     id: "bpjs_status_pool",
     label: "Data Status BPJS",
+    needs: ["bpjs"],
     subtitle: "Sumber: rtrwbpjsstatus.json (AKTIF / NON AKTIF / BARU)",
     color: "sky",
     mainTab: "status_aktif",
@@ -810,6 +1021,31 @@ const POOLS = [
 ];
 
 const poolTabs = (pool) => [...new Set([pool.mainTab, ...pool.subTabs])];
+
+// Pool hanya relevan bila seluruh sumber yang dibutuhkannya ikut disandingkan.
+const poolAvailable = (pool, sources) => (pool.needs || []).every((key) => sources[key]);
+
+// Jumlah kolom disesuaikan dengan banyaknya kartu yang tampil supaya tidak ada
+// sel sisa maupun kartu yang melar dua kali lipat. Ditulis sebagai kelas utuh,
+// bukan string dirangkai, karena Tailwind memindai nama kelas secara literal.
+// Kartu ringkasan atas: jumlahnya juga berubah mengikuti sumber terpilih.
+const SUMMARY_GRID_COLS = {
+  1: "grid-cols-1",
+  2: "grid-cols-2",
+  3: "grid-cols-2 lg:grid-cols-3",
+  4: "grid-cols-2 lg:grid-cols-4",
+  5: "grid-cols-2 lg:grid-cols-3 xl:grid-cols-5",
+};
+
+const POOL_GRID_COLS = {
+  // 1-2 kartu tetap memakai raster 3 kolom supaya kartunya tidak melebar penuh.
+  1: "grid-cols-1 sm:grid-cols-2 xl:grid-cols-3",
+  2: "grid-cols-1 sm:grid-cols-2 xl:grid-cols-3",
+  3: "grid-cols-1 sm:grid-cols-2 xl:grid-cols-3",
+  4: "grid-cols-1 sm:grid-cols-2 xl:grid-cols-4",
+  5: "grid-cols-1 sm:grid-cols-2 xl:grid-cols-5",
+  6: "grid-cols-1 sm:grid-cols-2 xl:grid-cols-3",
+};
 
 const TAB_DEF_BY_ID = Object.fromEntries(TAB_DEFS.map((tab) => [tab.id, tab]));
 
@@ -858,12 +1094,9 @@ const SUBTAB_SECOND_ROW = new Set([
 // Sub-tab yang ditaruh di BARIS KETIGA (di bawah Aktif/Non-Aktif).
 const SUBTAB_THIRD_ROW = new Set(["bpjs_nik_invalid"]);
 
-const loadAllDetailsForExport = async (filteredData) => {
-  const hasAllDetails = filteredData.every((desa) =>
-    desa.items.every((item) => item.detailsLoaded),
-  );
-  if (hasAllDetails) return filteredData;
-
+// Satu kali ambil seluruh persandingan beserta detail sumbernya, dipetakan per
+// `${desaKode}::${itemKey}` — kunci yang sama dipakai baris tabel klasifikasi.
+const fetchDetailItemMap = async () => {
   const response = await api.get("/kelembagaan/rtrw-comparison", {
     params: { includeDetails: 1, waitForCache: 1 },
     timeout: 300000,
@@ -875,29 +1108,50 @@ const loadAllDetailsForExport = async (filteredData) => {
     throw new Error(response.data?.message || "Gagal memuat detail data");
   }
 
-  const fullComparison = response.data.data.comparison || [];
   const itemMap = new Map();
-  fullComparison.forEach((desa) => {
+  (response.data.data.comparison || []).forEach((desa) => {
     desa.items.forEach((item) => {
       itemMap.set(`${desa.desaKode}::${item.key}`, item);
     });
   });
+  return itemMap;
+};
 
+const loadAllDetailsForExport = async (filteredData) => {
+  const hasAllDetails = filteredData.every((desa) =>
+    desa.items.every((item) => item.detailsLoaded),
+  );
+  if (hasAllDetails) return filteredData;
+
+  const itemMap = await fetchDetailItemMap();
+
+  // Ambil DETAIL-nya saja dari server; status & penanda tetap versi yang tampil
+  // (sudah mengikuti pilihan sumber), supaya isi Excel sama dengan layar.
   return filteredData.map((desa) => ({
     ...desa,
-    items: desa.items.map((item) => itemMap.get(`${desa.desaKode}::${item.key}`) || item),
+    items: desa.items.map((item) => {
+      const full = itemMap.get(`${desa.desaKode}::${item.key}`);
+      if (!full) return item;
+      return {
+        ...item,
+        dbDetails: full.dbDetails,
+        addDetails: full.addDetails,
+        bpjsDetails: full.bpjsDetails,
+        detailsLoaded: true,
+      };
+    }),
   }));
 };
 
-const buildExportRows = (filteredData) => {
-  const rows = [];
-  filteredData.forEach((desa) => {
-    desa.items.forEach((item) => {
-      const db = item.dbDetails || [];
-      const bpjs = item.bpjsDetails || [];
-      const add = item.addDetails || [];
+// Seluruh kolom data pengurus (Database + BPJS + ADD) untuk satu baris
+// persandingan. Dipakai export tab Perbandingan DAN export tiap tab klasifikasi
+// supaya isinya seragam dan hanya ditulis sekali.
+const pengurusExportColumns = (item, desaNama = "", kecamatanNama = "") => {
+  const db = item.dbDetails || [];
+  const bpjs = item.bpjsDetails || [];
+  const add = item.addDetails || [];
 
-      rows.push({
+  return {
         // 17 kolom Database
         "NAMA": joinValues(db.map((d) => d.namaLengkap || d.nama)) || item.dbNama?.join("; ") || "",
         "NIK": joinValues(db.map((d) => d.nik)),
@@ -909,8 +1163,8 @@ const buildExportRows = (filteredData) => {
         "NOMOR RW": joinValues(db.map((d) => d.rwNomor)) || item.rwNomor || "",
         "NOMOR RT": joinValues(db.map((d) => d.rtNomor)) || item.rtNomor || "",
         "ALAMAT": joinValues(db.map((d) => d.alamat)),
-        "DESA": desa.desaNama,
-        "KECAMATAN": desa.kecamatanNama,
+        "DESA": desaNama,
+        "KECAMATAN": kecamatanNama,
         "PENDIDIKAN": joinValues(db.map((d) => d.pendidikan)),
         "STATUS PERNIKAHAN": joinValues(db.map((d) => d.statusPerkawinan)),
         "NO HP": joinValues(db.map((d) => d.noTelepon)),
@@ -941,14 +1195,24 @@ const buildExportRows = (filteredData) => {
         "NIK BERBEDA": item.nikMismatch ? "Ya" : "Tidak",
         "TANGGAL LAHIR BERBEDA": item.tglLahirMismatch ? "Ya" : "Tidak",
         "NO REK BERBEDA": item.norekMismatch ? "Ya" : "Tidak",
-      });
+  };
+};
+
+// Kolom yang sudah pasti ada di export tab klasifikasi, jadi tidak diulang.
+const KOLOM_PENGURUS_DILEWATI = ["NOMOR RW", "NOMOR RT"];
+
+const buildExportRows = (filteredData) => {
+  const rows = [];
+  filteredData.forEach((desa) => {
+    desa.items.forEach((item) => {
+      rows.push(pengurusExportColumns(item, desa.desaNama, desa.kecamatanNama));
     });
   });
   return rows;
 };
 
 const RtrwComparisonPage = () => {
-  const [data, setData] = useState(null);
+  const [rawData, setRawData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [activeTab, setActiveTab] = useState("comparison");
@@ -960,13 +1224,17 @@ const RtrwComparisonPage = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [filterKecamatan, setFilterKecamatan] = useState("");
   const [filterStatus, setFilterStatus] = useState("");
+  // Bawaan: Database + BPJS. ADD tidak diikutkan karena insentif ADD bukan acuan
+  // utama persandingan — nyalakan manual bila memang mau disandingkan.
+  const [sources, setSources] = useState({ db: true, bpjs: true, add: false });
   const [showOnlyDiscrepancy, setShowOnlyDiscrepancy] = useState(false);
   const [expandedDesa, setExpandedDesa] = useState(new Set());
   const [listModal, setListModal] = useState(null);
   const [exporting, setExporting] = useState(false);
   const [showImport, setShowImport] = useState(false);
   const { user } = useAuth();
-  const canImport = IMPORT_ROLES.includes(String(user?.role || "").trim().toLowerCase());
+  const canImport = IMPORT_ROLES.includes(String(user?.role || "").trim().toLowerCase())
+    || IMPORT_BIDANG_IDS.includes(Number(user?.bidang_id));
 
   useEffect(() => {
     fetchData();
@@ -984,7 +1252,7 @@ const RtrwComparisonPage = () => {
         return;
       }
       if (response.data.success) {
-        setData(response.data.data);
+        setRawData(response.data.data);
       } else {
         throw new Error(response.data.message || "Gagal memuat data");
       }
@@ -995,15 +1263,37 @@ const RtrwComparisonPage = () => {
     }
   };
 
+  // Status "lengkap" menurut sumber yang dipilih (3 sumber -> all_three).
+  const fullStatus = statusFromSources(sources.db, sources.add, sources.bpjs);
+  const allSourcesOn = sources.db && sources.add && sources.bpjs;
+  const selectedSourceLabels = SOURCE_DEFS.filter((def) => sources[def.key]).map((def) => def.label);
+
+  // Semua turunan halaman (kartu, tab, tabel, export) memakai data yang sudah
+  // dipersempit ini — bukan respons mentah. Harus dideklarasikan sebelum memo
+  // mana pun yang memakainya.
+  const data = useMemo(() => rescopeData(rawData, sources), [rawData, sources]);
+
   const kecamatanList = useMemo(() => {
     if (!data) return [];
     return [...new Set(data.comparison.map((desa) => desa.kecamatanNama))].sort();
   }, [data]);
 
+  const toggleSource = (key) => {
+    const next = { ...sources, [key]: !sources[key] };
+    if (!SOURCE_DEFS.some((def) => next[def.key])) return; // minimal satu sumber
+    setSources(next);
+    // Status terpilih bisa jadi mustahil pada kombinasi baru -> reset agar tabel tak kosong tanpa sebab.
+    if (filterStatus && !(STATUS_SOURCES[filterStatus] || []).every((src) => next[src])) setFilterStatus("");
+    // Tab aktif bisa ikut hilang (pool-nya butuh sumber yang baru dilepas).
+    const activePool = POOLS.find((pool) => poolTabs(pool).includes(activeTab));
+    if (activePool && !poolAvailable(activePool, next)) selectTab("comparison");
+  };
+
   const filteredData = useMemo(() => {
     if (!data) return [];
 
     let result = data.comparison;
+
     if (filterKecamatan) {
       result = result.filter((desa) => desa.kecamatanNama === filterKecamatan);
     }
@@ -1026,7 +1316,7 @@ const RtrwComparisonPage = () => {
 
     if (showOnlyDiscrepancy) {
       result = result.filter((desa) => {
-        return desa.items.some((item) => item.status !== "all_three" || item.nikMismatch || item.bpjsTangkilSuspect);
+        return desa.items.some((item) => item.status !== fullStatus || item.nikMismatch || item.bpjsTangkilSuspect);
       });
     }
 
@@ -1045,7 +1335,7 @@ const RtrwComparisonPage = () => {
     }
 
     return [...result].sort((a, b) => a.desaKode.localeCompare(b.desaKode));
-  }, [data, filterKecamatan, filterStatus, searchTerm, showOnlyDiscrepancy]);
+  }, [data, filterKecamatan, filterStatus, searchTerm, showOnlyDiscrepancy, fullStatus]);
 
   const filteredSummary = useMemo(() => {
     const countStatus = (status) => filteredData.reduce(
@@ -1055,7 +1345,7 @@ const RtrwComparisonPage = () => {
 
     return {
       totalDesa: filteredData.length,
-      totalAllThree: countStatus("all_three"),
+      totalAllThree: countStatus(fullStatus),
       totalDbAdd: countStatus("db_add"),
       totalDbBpjs: countStatus("db_bpjs"),
       totalAddBpjs: countStatus("add_bpjs"),
@@ -1071,7 +1361,7 @@ const RtrwComparisonPage = () => {
         0,
       ),
     };
-  }, [filteredData]);
+  }, [filteredData, fullStatus]);
 
   const classification = useMemo(() => buildClassification(data), [data]);
 
@@ -1100,6 +1390,9 @@ const RtrwComparisonPage = () => {
 
   const activeTabDef = TAB_DEFS.find((tab) => tab.id === activeTab);
   const activePoolDef = POOLS.find((pool) => poolTabs(pool).includes(activeTab)) || POOLS[0];
+  const visiblePools = POOLS.filter((pool) => poolAvailable(pool, sources));
+  // Kartu ringkasan: 1 kartu "Cocok" + kartu per sumber (BPJS membawa 2: master & status).
+  const summaryCardCount = 1 + (sources.db ? 1 : 0) + (sources.add ? 1 : 0) + (sources.bpjs ? 2 : 0);
 
   const wilayahSplit = useMemo(() => {
     const list = data?.comparison || [];
@@ -1193,8 +1486,34 @@ const RtrwComparisonPage = () => {
         )}
       </div>
 
-      <div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-5">
-        <SummaryCard
+      {/* Pemilih sumber: berlaku untuk seluruh halaman — kartu, tab, dan tabel. */}
+      <div className="flex flex-wrap items-center gap-3 rounded-xl border border-blue-200 bg-blue-50/60 p-3">
+        <span className="text-sm font-semibold text-gray-700">Data yang disandingkan</span>
+        <div className="flex flex-wrap items-center gap-1.5">
+          {SOURCE_DEFS.map((def) => (
+            <button
+              key={def.key}
+              type="button"
+              onClick={() => toggleSource(def.key)}
+              aria-pressed={sources[def.key]}
+              title={sources[def.key] ? `Klik untuk mengeluarkan ${def.label}` : `Klik untuk menyertakan ${def.label}`}
+              className={`rounded-lg px-3 py-1.5 text-sm font-semibold ring-1 ring-inset transition-colors ${
+                sources[def.key] ? `${def.on} shadow-sm` : `bg-white ${def.off}`
+              }`}
+            >
+              {def.label}
+            </button>
+          ))}
+        </div>
+        <span className="text-xs text-gray-500">
+          {allSourcesOn
+            ? "Semua sumber disandingkan. Nonaktifkan salah satu untuk menyandingkan sebagian saja."
+            : `Hanya ${selectedSourceLabels.join(" + ")} yang disandingkan — seluruh kartu, tab, dan tabel di bawah mengikuti pilihan ini (minimal satu sumber).`}
+        </span>
+      </div>
+
+      <div className={`grid gap-3 auto-rows-fr ${SUMMARY_GRID_COLS[summaryCardCount] || SUMMARY_GRID_COLS[5]}`}>
+        {sources.db && <SummaryCard
           icon={<LuDatabase />}
           label="Database"
           value={data.summary.totalDbPengurus}
@@ -1204,8 +1523,8 @@ const RtrwComparisonPage = () => {
             label: emptyLabel(data.summary.desaWithoutDb),
             onClick: () => setListModal({ title: "Wilayah Tanpa Data Database", list: data.summary.desaWithoutDb }),
           } : null}
-        />
-        <SummaryCard
+        />}
+        {sources.add && <SummaryCard
           icon={<LuFileSpreadsheet />}
           label="ADD"
           value={data.summary.totalAddPenerima}
@@ -1215,8 +1534,8 @@ const RtrwComparisonPage = () => {
             label: emptyLabel(data.summary.desaWithoutAdd),
             onClick: () => setListModal({ title: "Wilayah Tanpa Data ADD", list: data.summary.desaWithoutAdd }),
           } : null}
-        />
-        <SummaryCard
+        />}
+        {sources.bpjs && <SummaryCard
           icon={<LuShieldCheck />}
           label="BPJS"
           value={data.summary.totalBpjsPenerima}
@@ -1226,46 +1545,48 @@ const RtrwComparisonPage = () => {
             label: emptyLabel(data.summary.desaWithoutBpjs),
             onClick: () => setListModal({ title: "Wilayah Tanpa Data BPJS", list: data.summary.desaWithoutBpjs }),
           } : null}
-        />
-        <SummaryCard
+        />}
+        {sources.bpjs && <SummaryCard
           icon={<LuShieldCheck />}
           label="Status BPJS"
           value={(data.summary.totalStatusAktif || 0) + (data.summary.totalStatusNonAktif || 0) + (data.summary.totalBaru || 0)}
           color="sky"
           subtitle={`${(data.summary.totalStatusAktif || 0).toLocaleString("id-ID")} aktif · ${(data.summary.totalStatusNonAktif || 0).toLocaleString("id-ID")} non-aktif · ${(data.summary.totalBaru || 0).toLocaleString("id-ID")} baru`}
-        />
+        />}
         <SummaryCard
           icon={<LuCircleCheck />}
-          label="Lengkap"
+          label={selectedSourceLabels.length > 1 ? "Cocok" : "Baris"}
           value={data.summary.totalAllThree}
           color="green"
-          subtitle={data.summary.totalNikMismatch ? `${data.summary.totalNikMismatch} NIK berbeda` : "3 sumber cocok"}
+          subtitle={data.summary.totalNikMismatch
+            ? `${data.summary.totalNikMismatch} NIK berbeda`
+            : `${selectedSourceLabels.length} sumber: ${selectedSourceLabels.join(" + ")}`}
         />
       </div>
 
       <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
         <h3 className="mb-3 text-sm font-semibold text-gray-700">Rincian Persandingan</h3>
         <div className="grid grid-cols-1 gap-x-8 gap-y-1 sm:grid-cols-2 lg:grid-cols-3">
-          <InfoRow label="DB + ADD" value={data.summary.totalDbAdd} />
-          <InfoRow label="DB + BPJS" value={data.summary.totalDbBpjs} />
-          <InfoRow label="ADD + BPJS" value={data.summary.totalAddBpjs} />
-          <InfoRow label="Hanya DB" value={data.summary.totalOnlyDb} />
-          <InfoRow label="Hanya ADD" value={data.summary.totalOnlyAdd} />
-          <InfoRow label="Hanya BPJS" value={data.summary.totalOnlyBpjs} />
-          <InfoRow label="NIK Berbeda" value={data.summary.totalNikMismatch} valueClass="text-red-600" />
-          <InfoRow
+          {sources.db && sources.add && <InfoRow label="DB + ADD" value={data.summary.totalDbAdd} />}
+          {sources.db && sources.bpjs && <InfoRow label="DB + BPJS" value={data.summary.totalDbBpjs} />}
+          {sources.add && sources.bpjs && <InfoRow label="ADD + BPJS" value={data.summary.totalAddBpjs} />}
+          {sources.db && fullStatus !== "only_db" && <InfoRow label="Hanya DB" value={data.summary.totalOnlyDb} />}
+          {sources.add && fullStatus !== "only_add" && <InfoRow label="Hanya ADD" value={data.summary.totalOnlyAdd} />}
+          {sources.bpjs && fullStatus !== "only_bpjs" && <InfoRow label="Hanya BPJS" value={data.summary.totalOnlyBpjs} />}
+          {sources.db && sources.bpjs && <InfoRow label="NIK Berbeda" value={data.summary.totalNikMismatch} valueClass="text-red-600" />}
+          {sources.bpjs && <InfoRow
             label="BPJS Tangkil ✓ (dikonfirmasi)"
             value={data.summary.totalBpjsTangkilConfirmed}
             hint={`${data.summary.totalBpjsTangkilPool || 0} pool Tangkil`}
             valueClass="text-green-600"
-          />
-          <InfoRow
+          />}
+          {sources.bpjs && <InfoRow
             label="BPJS Tangkil ? (tidak terselesaikan)"
             value={data.summary.totalBpjsTangkilUnresolved}
             valueClass="text-violet-600"
             onClick={data.summary.totalBpjsTangkilUnresolved ? () => selectTab("bpjs_no_db") : null}
-          />
-          {data.summary.statusOverlayAvailable && (
+          />}
+          {sources.bpjs && data.summary.statusOverlayAvailable && (
             <>
               <InfoRow
                 label="Status BPJS — Aktif"
@@ -1295,8 +1616,10 @@ const RtrwComparisonPage = () => {
         />
       )}
 
-      <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-5">
-        {POOLS.map((pool) => {
+      {/* Kolom mengikuti jumlah kartu (lihat POOL_GRID_COLS) dan auto-rows-fr
+          menyamakan tinggi antar kartu, jadi tidak ada sel sisa atau ujung ragged. */}
+      <div className={`grid gap-3 auto-rows-fr ${POOL_GRID_COLS[visiblePools.length] || POOL_GRID_COLS[3]}`}>
+        {visiblePools.map((pool) => {
           const count = pool.count(tabCounts, data.summary);
           const poolActive = activePoolDef.id === pool.id;
           const color = pool.color;
@@ -1304,26 +1627,29 @@ const RtrwComparisonPage = () => {
           return (
             <div
               key={pool.id}
-              className={`flex h-full flex-col rounded-xl border p-3 transition-all ${poolActive
-                ? `${TAB_ACTIVE_CLASS[color]} shadow-sm`
-                : "border-gray-200 bg-white hover:border-gray-300 hover:shadow-sm"}`}
+              className={`flex h-full flex-col rounded-2xl border p-4 shadow-sm transition-all ${poolActive
+                ? TAB_ACTIVE_CLASS[color]
+                : "border-slate-200 bg-white hover:border-slate-300 hover:shadow"}`}
             >
               <button onClick={() => selectTab(pool.mainTab)} className="block text-left">
-                <span className="block text-xs font-medium leading-tight text-gray-500">{pool.label}</span>
+                <span className="block text-[11px] font-semibold uppercase tracking-wider leading-tight text-slate-500">{pool.label}</span>
                 <CountUp
                   value={count}
-                  className={`mt-1 block text-2xl font-bold ${mainActive ? TAB_VALUE_CLASS[color] : "text-gray-800"}`}
+                  className={`mt-1.5 block text-3xl font-bold tracking-tight tabular-nums ${mainActive ? TAB_VALUE_CLASS[color] : "text-slate-900"}`}
                 />
               </button>
 
               {pool.showWilayahSplit && (
-                <span className="mt-1 block text-[11px] text-gray-500">
-                  {wilayahSplit.desa.toLocaleString("id-ID")} Desa · {wilayahSplit.kelurahan.toLocaleString("id-ID")} Kelurahan
+                <span className="mt-auto block pt-2 text-[11px] text-slate-500">
+                  {wilayahSplit.desa.toLocaleString("id-ID")} Desa
+                  {wilayahSplit.kelurahan > 0
+                    ? ` · ${wilayahSplit.kelurahan.toLocaleString("id-ID")} Kelurahan`
+                    : " (kelurahan dikecualikan)"}
                 </span>
               )}
 
               {pool.subtitle && (
-                <span className="mt-1 block text-[11px] text-gray-500">{pool.subtitle}</span>
+                <span className={`block text-[11px] leading-snug text-slate-500 ${pool.subTabs.length > 0 ? "mt-1" : "mt-auto pt-2"}`}>{pool.subtitle}</span>
               )}
 
               {pool.subTabs.length > 0 && (() => {
@@ -1336,17 +1662,18 @@ const RtrwComparisonPage = () => {
                     <button
                       key={tabId}
                       onClick={() => selectTab(tabId)}
-                      className={`flex flex-1 items-center justify-between gap-2 rounded-lg border px-2 py-1 text-left text-[11px] transition-all ${subActive
+                      title={label}
+                      className={`flex min-w-[118px] flex-1 items-center justify-between gap-2 rounded-lg border px-2.5 py-1.5 text-left text-[11px] transition-all ${subActive
                         ? `${TAB_ACTIVE_CLASS[subColor]} font-semibold`
-                        : "border-gray-200 bg-white/70 text-gray-600 hover:border-gray-300"}`}
+                        : "border-slate-200 bg-white text-slate-600 hover:border-slate-300 hover:bg-slate-50"}`}
                     >
-                      <span className="flex items-center gap-1.5 leading-tight">
+                      <span className="flex min-w-0 items-center gap-1.5 leading-tight">
                         {accent && <span className={`h-1.5 w-1.5 shrink-0 rounded-full ${accent.dot}`} />}
-                        {label}
+                        <span className="truncate">{label}</span>
                       </span>
                       <CountUp
                         value={tabCounts[tabId]}
-                        className={`shrink-0 text-sm font-bold ${subActive ? TAB_VALUE_CLASS[subColor] : "text-gray-700"}`}
+                        className={`shrink-0 text-sm font-bold tabular-nums ${subActive ? TAB_VALUE_CLASS[subColor] : "text-slate-800"}`}
                       />
                     </button>
                   );
@@ -1355,12 +1682,12 @@ const RtrwComparisonPage = () => {
                 const secondTabs = pool.subTabs.filter((t) => SUBTAB_SECOND_ROW.has(t));
                 const thirdTabs = pool.subTabs.filter((t) => SUBTAB_THIRD_ROW.has(t));
                 return (
-                  <div className="mt-2 flex flex-1 flex-col gap-2">
+                  <div className="mt-3 flex flex-1 flex-col gap-2">
                     {baseTabs.length > 0 && (
                       <div className="flex flex-1 flex-wrap gap-2">{baseTabs.map(renderSubTab)}</div>
                     )}
                     {secondTabs.length > 0 && (
-                      <div className="flex flex-1 flex-wrap gap-2 border-t border-gray-100 pt-2">{secondTabs.map(renderSubTab)}</div>
+                      <div className="flex flex-1 flex-wrap gap-2 border-t border-slate-100 pt-2">{secondTabs.map(renderSubTab)}</div>
                     )}
                     {thirdTabs.length > 0 && (
                       <div className="flex flex-1 flex-wrap gap-2">{thirdTabs.map(renderSubTab)}</div>
@@ -1434,9 +1761,11 @@ const RtrwComparisonPage = () => {
                 className="rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500"
               >
                 <option value="">Semua Status</option>
-                {Object.entries(STATUS_CONFIG).map(([key, cfg]) => (
-                  <option key={key} value={key}>{cfg.label}</option>
-                ))}
+                {Object.entries(STATUS_CONFIG)
+                  .filter(([key]) => (STATUS_SOURCES[key] || []).every((src) => sources[src]))
+                  .map(([key, cfg]) => (
+                    <option key={key} value={key}>{cfg.label}</option>
+                  ))}
               </select>
 
               <label className="flex cursor-pointer items-center gap-2 text-sm text-gray-600">
@@ -1482,13 +1811,18 @@ const RtrwComparisonPage = () => {
 
             <div className="mt-3 flex flex-wrap gap-4 text-xs text-gray-500">
               <span>{filteredSummary.totalDesa} desa</span>
-              <span className="text-green-600">{filteredSummary.totalAllThree} lengkap</span>
-              <span className="text-teal-600">{filteredSummary.totalDbAdd} DB+ADD</span>
-              <span className="text-emerald-600">{filteredSummary.totalDbBpjs} DB+BPJS</span>
-              <span className="text-indigo-600">{filteredSummary.totalAddBpjs} ADD+BPJS</span>
-              <span className="text-blue-600">{filteredSummary.totalOnlyAdd} hanya ADD</span>
-              <span className="text-amber-600">{filteredSummary.totalOnlyBpjs} hanya BPJS</span>
-              <span className="text-red-600">{filteredSummary.totalNikMismatch} NIK berbeda</span>
+              <span className="text-green-600">
+                {filteredSummary.totalAllThree}
+                {" "}
+                {selectedSourceLabels.length > 1 ? `cocok ${selectedSourceLabels.join(" + ")}` : `baris ${selectedSourceLabels[0]}`}
+              </span>
+              {allSourcesOn && <span className="text-teal-600">{filteredSummary.totalDbAdd} DB+ADD</span>}
+              {allSourcesOn && <span className="text-emerald-600">{filteredSummary.totalDbBpjs} DB+BPJS</span>}
+              {allSourcesOn && <span className="text-indigo-600">{filteredSummary.totalAddBpjs} ADD+BPJS</span>}
+              {sources.db && fullStatus !== "only_db" && <span className="text-gray-600">{filteredSummary.totalOnlyDb} hanya DB</span>}
+              {sources.add && fullStatus !== "only_add" && <span className="text-blue-600">{filteredSummary.totalOnlyAdd} hanya ADD</span>}
+              {sources.bpjs && fullStatus !== "only_bpjs" && <span className="text-amber-600">{filteredSummary.totalOnlyBpjs} hanya BPJS</span>}
+              {sources.db && sources.bpjs && <span className="text-red-600">{filteredSummary.totalNikMismatch} NIK berbeda</span>}
             </div>
           </div>
 
@@ -1503,6 +1837,8 @@ const RtrwComparisonPage = () => {
                 <DesaRow
                   key={desa.desaId}
                   desa={desa}
+                  sources={sources}
+                  fullStatus={fullStatus}
                   expanded={expandedDesa.has(desa.desaId)}
                   onToggle={() => toggleDesa(desa.desaId)}
                 />
@@ -1574,7 +1910,9 @@ const EmptyListModal = ({ title, list, onClose }) => {
         <div className="flex items-center justify-between border-b border-gray-200 px-4 py-3">
           <div>
             <h3 className="font-semibold text-gray-900">{title}</h3>
-            <p className="text-xs text-gray-500">{desa.length} desa · {kelurahan.length} kelurahan</p>
+            <p className="text-xs text-gray-500">
+              {desa.length} desa{kelurahan.length > 0 ? ` · ${kelurahan.length} kelurahan` : ""}
+            </p>
           </div>
           <button onClick={onClose} className="rounded-lg p-1 hover:bg-gray-100">
             <LuX className="h-5 w-5 text-gray-500" />
@@ -1582,7 +1920,9 @@ const EmptyListModal = ({ title, list, onClose }) => {
         </div>
         <div className="flex flex-1 gap-4 overflow-y-auto px-4 py-3">
           <Column heading="Desa" items={desa} accent="bg-gray-100 text-gray-600" />
-          <Column heading="Kelurahan" items={kelurahan} accent="bg-blue-100 text-blue-700" />
+          {kelurahan.length > 0 && (
+            <Column heading="Kelurahan" items={kelurahan} accent="bg-blue-100 text-blue-700" />
+          )}
         </div>
       </div>
     </div>
@@ -1618,9 +1958,12 @@ const InfoRow = ({ label, value, hint, valueClass, onClick }) => {
   );
 };
 
+// Mengikuti gaya kartu bidang (components/bidang/BidangUI.jsx): sudut 2xl,
+// label kapital kecil, angka tabular. Melebar mengisi baris supaya tidak ada
+// sel kosong saat sebagian sumber tidak dipilih.
 const SummaryCard = ({ icon, label, value, color, subtitle, extraInfo }) => {
   const colorMap = {
-    gray: "bg-gray-50 text-gray-600 border-gray-200",
+    gray: "bg-slate-50 text-slate-600 border-slate-200",
     blue: "bg-blue-50 text-blue-600 border-blue-200",
     amber: "bg-amber-50 text-amber-600 border-amber-200",
     green: "bg-green-50 text-green-600 border-green-200",
@@ -1632,15 +1975,16 @@ const SummaryCard = ({ icon, label, value, color, subtitle, extraInfo }) => {
   };
 
   return (
-    <div className={`rounded-xl border p-3 ${colorMap[color] || colorMap.gray}`}>
-      <div className="mb-1 flex items-center gap-2">
+    <div className={`flex h-full flex-col rounded-2xl border p-4 shadow-sm ${colorMap[color] || colorMap.gray}`}>
+      <div className="flex items-center gap-2">
         {icon && <span className="text-lg">{icon}</span>}
-        <span className="text-xs font-medium opacity-75">{label}</span>
+        <span className="text-[11px] font-semibold uppercase tracking-wider opacity-75">{label}</span>
       </div>
-      <p className="text-2xl font-bold"><CountUp value={value} /></p>
-      {subtitle && <p className="mt-0.5 text-xs opacity-60">{subtitle}</p>}
+      <p className="mt-2 text-3xl font-bold tracking-tight tabular-nums"><CountUp value={value} /></p>
+      {subtitle && <p className="mt-1 text-xs leading-snug opacity-70">{subtitle}</p>}
+      <div className="flex-1" />
       {extraInfo && (
-        <button onClick={extraInfo.onClick} className="mt-1 text-[10px] underline opacity-60 hover:opacity-100">
+        <button onClick={extraInfo.onClick} className="mt-auto pt-1 text-left text-[10px] underline opacity-60 hover:opacity-100">
           {extraInfo.label}
         </button>
       )}
@@ -1648,8 +1992,10 @@ const SummaryCard = ({ icon, label, value, color, subtitle, extraInfo }) => {
   );
 };
 
-const DesaRow = ({ desa, expanded, onToggle }) => {
-  const hasDiscrepancy = desa.items.some((item) => item.status !== "all_three" || item.nikMismatch || item.bpjsTangkilSuspect);
+const DesaRow = ({ desa, expanded, onToggle, sources = { db: true, add: true, bpjs: true }, fullStatus = "all_three" }) => {
+  const hasDiscrepancy = desa.items.some((item) => item.status !== fullStatus || item.nikMismatch || item.bpjsTangkilSuspect);
+  // Kolom sumber yang tidak dikomparasi disembunyikan (ADD membawa kolom Nilai ADD).
+  const colCount = 3 + (sources.db ? 1 : 0) + (sources.bpjs ? 1 : 0) + (sources.add ? 2 : 0);
 
   return (
     <div className={`overflow-hidden rounded-xl border bg-white shadow-sm ${hasDiscrepancy ? "border-yellow-300" : "border-gray-200"}`}>
@@ -1662,17 +2008,17 @@ const DesaRow = ({ desa, expanded, onToggle }) => {
           <span className="block truncate text-xs text-gray-400">{desa.kecamatanNama}</span>
         </div>
         <div className="flex shrink-0 items-center gap-1.5">
-          <Badge count={desa.totalDb} label="DB" variant="gray" />
-          <Badge count={desa.totalAdd} label="ADD" variant="blue" />
-          <Badge count={desa.totalBpjs} label="BPJS" variant="amber" />
+          {sources.db && <Badge count={desa.totalDb} label="DB" variant="gray" />}
+          {sources.add && <Badge count={desa.totalAdd} label="ADD" variant="blue" />}
+          {sources.bpjs && <Badge count={desa.totalBpjs} label="BPJS" variant="amber" />}
         </div>
         <div className="hidden shrink-0 items-center gap-1.5 lg:flex">
-          <Badge count={desa.allThree} label="Lengkap" variant="green" />
-          <Badge count={desa.onlyAdd} label="Hanya ADD" variant="blue" />
-          <Badge count={desa.onlyBpjs} label="Hanya BPJS" variant="amber" />
-          <Badge count={desa.nikMismatch} label="NIK beda" variant="red" />
-          <Badge count={desa.bpjsTangkilSuspect} label="BPJS ?" variant="violet" />
-          <Badge count={desa.bpjsTangkilConfirmed} label="BPJS DB" variant="green" />
+          <Badge count={desa.allThree} label={fullStatus === "all_three" ? "Lengkap" : "Cocok"} variant="green" />
+          {sources.add && fullStatus !== "only_add" && <Badge count={desa.onlyAdd} label="Hanya ADD" variant="blue" />}
+          {sources.bpjs && fullStatus !== "only_bpjs" && <Badge count={desa.onlyBpjs} label="Hanya BPJS" variant="amber" />}
+          {sources.db && sources.bpjs && <Badge count={desa.nikMismatch} label="NIK beda" variant="red" />}
+          {sources.bpjs && <Badge count={desa.bpjsTangkilSuspect} label="BPJS ?" variant="violet" />}
+          {sources.bpjs && <Badge count={desa.bpjsTangkilConfirmed} label="BPJS DB" variant="green" />}
         </div>
       </button>
 
@@ -1683,22 +2029,22 @@ const DesaRow = ({ desa, expanded, onToggle }) => {
               <thead>
                 <tr className="bg-gray-50 text-xs uppercase text-gray-500">
                   <th className="w-12 px-4 py-2 text-left font-medium">No</th>
-                  <th className="px-4 py-2 text-left font-medium">Database</th>
-                  <th className="px-4 py-2 text-left font-medium">ADD</th>
-                  <th className="px-4 py-2 text-left font-medium">BPJS</th>
+                  {sources.db && <th className="px-4 py-2 text-left font-medium">Database</th>}
+                  {sources.add && <th className="px-4 py-2 text-left font-medium">ADD</th>}
+                  {sources.bpjs && <th className="px-4 py-2 text-left font-medium">BPJS</th>}
                   <th className="w-32 px-4 py-2 text-left font-medium">RT/RW</th>
                   <th className="w-40 px-4 py-2 text-left font-medium">Status</th>
-                  <th className="w-36 px-4 py-2 text-right font-medium">Nilai ADD</th>
+                  {sources.add && <th className="w-36 px-4 py-2 text-right font-medium">Nilai ADD</th>}
                 </tr>
               </thead>
               <tbody>
                 {desa.items.length === 0 ? (
                   <tr>
-                    <td colSpan={7} className="px-4 py-6 text-center text-gray-400">Tidak ada data RT/RW</td>
+                    <td colSpan={colCount} className="px-4 py-6 text-center text-gray-400">Tidak ada data RT/RW</td>
                   </tr>
                 ) : (
                   desa.items.map((item, index) => (
-                    <RtrwItemRow key={`${item.key}-${index}`} item={item} index={index} desaKode={desa.desaKode} />
+                    <RtrwItemRow key={`${item.key}-${index}`} item={item} index={index} desaKode={desa.desaKode} sources={sources} colCount={colCount} />
                   ))
                 )}
               </tbody>
@@ -1710,7 +2056,8 @@ const DesaRow = ({ desa, expanded, onToggle }) => {
   );
 };
 
-const RtrwItemRow = ({ item, index, desaKode }) => {
+const RtrwItemRow = ({ item, index, desaKode, sources = { db: true, add: true, bpjs: true }, colCount = 7 }) => {
+  const pengurusHref = usePengurusHref();
   const [expanded, setExpanded] = useState(false);
   const [detailItem, setDetailItem] = useState(item);
   const [detailLoading, setDetailLoading] = useState(false);
@@ -1764,7 +2111,14 @@ const RtrwItemRow = ({ item, index, desaKode }) => {
       if (!response.data?.success || !loadedItem) {
         throw new Error(response.data?.message || "Detail tidak ditemukan");
       }
-      setDetailItem(loadedItem);
+      // Hanya detail yang diambil dari server; sisanya tetap item hasil pemilihan sumber.
+      setDetailItem({
+        ...item,
+        dbDetails: loadedItem.dbDetails,
+        addDetails: loadedItem.addDetails,
+        bpjsDetails: loadedItem.bpjsDetails,
+        detailsLoaded: true,
+      });
     } catch (err) {
       setDetailError(err.response?.data?.message || err.message || "Gagal memuat detail");
     } finally {
@@ -1781,9 +2135,9 @@ const RtrwItemRow = ({ item, index, desaKode }) => {
             {index + 1}
           </div>
         </td>
-        <SourceCell names={item.dbNama} />
-        <SourceCell names={item.addNama} />
-        <SourceCell names={item.bpjsNama} nik={item.nik} suspect={item.bpjsTangkilSuspect} confirmed={item.bpjsTangkilDbConfirmed} suspectText={bpjsSuspectText || bpjsConfirmedText} />
+        {sources.db && <SourceCell names={item.dbNama} refs={item.dbRefs} hrefOf={pengurusHref} />}
+        {sources.add && <SourceCell names={item.addNama} />}
+        {sources.bpjs && <SourceCell names={item.bpjsNama} nik={item.nik} kpj={item.bpjsKpj} suspect={item.bpjsTangkilSuspect} confirmed={item.bpjsTangkilDbConfirmed} suspectText={bpjsSuspectText || bpjsConfirmedText} />}
         <td className="px-4 py-2 text-gray-600">
           <div className="text-xs font-medium text-gray-800">{item.jenis || "-"}</div>
           <div className="text-xs text-gray-500">
@@ -1872,13 +2226,15 @@ const RtrwItemRow = ({ item, index, desaKode }) => {
             </span>
           )}
         </td>
-        <td className="px-4 py-2 text-right text-gray-600">
-          {item.addNilai ? formatCurrency(item.addNilai) : "-"}
-        </td>
+        {sources.add && (
+          <td className="px-4 py-2 text-right text-gray-600">
+            {item.addNilai ? formatCurrency(item.addNilai) : "-"}
+          </td>
+        )}
       </tr>
       {expanded && (
         <tr>
-          <td colSpan={7} className="bg-slate-50 px-4 py-3">
+          <td colSpan={colCount} className="bg-slate-50 px-4 py-3">
             {detailLoading ? (
               <div className="py-6 text-center text-xs text-gray-500">Memuat detail sumber data...</div>
             ) : detailError ? (
@@ -1927,12 +2283,12 @@ const RtrwItemRow = ({ item, index, desaKode }) => {
   );
 };
 
-const SourceCell = ({ names, nik, suspect, confirmed, suspectText }) => (
+const SourceCell = ({ names, nik, kpj, refs, hrefOf, suspect, confirmed, suspectText }) => (
   <td className="px-4 py-2">
     {names && names.length > 0 ? (
       <div>
         <span className="inline-flex items-center gap-1 font-medium text-gray-900">
-          {names.join(", ")}
+          {refs?.length ? <PengurusLinks refs={refs} fallback={names.join(", ")} hrefOf={hrefOf} /> : names.join(", ")}
           {suspect && (
             <LuCircleHelp title={suspectText} className="h-4 w-4 shrink-0 text-violet-600" />
           )}
@@ -1941,6 +2297,7 @@ const SourceCell = ({ names, nik, suspect, confirmed, suspectText }) => (
           )}
         </span>
         {nik?.length > 0 && <p className="mt-0.5 text-[11px] text-gray-400">NIK: {nik.join(", ")}</p>}
+        {kpj?.length > 0 && <p className="mt-0.5 text-[11px] text-gray-400">KPJ: {kpj.join(", ")}</p>}
       </div>
     ) : (
       <span className="text-xs italic text-gray-400">(tidak ada)</span>
@@ -2054,13 +2411,19 @@ const renderNikDiff = (nik, otherNik) => {
   );
 };
 
-const renderClassifiedCell = (col, row) => {
+const renderClassifiedCell = (col, row, hrefOf) => {
   const value = row[col.key];
+  // Kolom nama dari Database ditautkan ke halaman detail pengurusnya.
+  const namaDbCol = (col.nameKey || col.key) === "namaDb";
   switch (col.type) {
     case "nameNik":
       return (
         <div className="min-w-[11rem]">
-          <div className="font-medium text-gray-800">{row[col.nameKey] || "-"}</div>
+          <div className="font-medium text-gray-800">
+            {namaDbCol
+              ? <PengurusLinks refs={row.dbRefs} fallback={row[col.nameKey] || "-"} hrefOf={hrefOf} />
+              : (row[col.nameKey] || "-")}
+          </div>
           <div className="mt-0.5 text-xs">{renderNikDiff(row[col.nikKey], row[col.otherNikKey])}</div>
         </div>
       );
@@ -2118,6 +2481,13 @@ const renderClassifiedCell = (col, row) => {
     case "currency":
       return <span className="tabular-nums text-gray-700">{value ? formatCurrency(value) : "-"}</span>;
     default:
+      if (namaDbCol) {
+        return (
+          <span className="text-gray-700">
+            <PengurusLinks refs={row.dbRefs} fallback={value} hrefOf={hrefOf} />
+          </span>
+        );
+      }
       return <span className="text-gray-700">{value || <span className="italic text-gray-300">-</span>}</span>;
   }
 };
@@ -2131,6 +2501,8 @@ const ClassifiedTable = ({ title, description, rows, columns, kecamatanList, fil
   const [openKec, setOpenKec] = useState(() => new Set());
   const [openDesa, setOpenDesa] = useState(() => new Set());
   const [detailRow, setDetailRow] = useState(null);
+  const [exporting, setExporting] = useState(false);
+  const pengurusHref = usePengurusHref();
 
   // Kolom "Desa" tak perlu ditampilkan per baris karena sudah jadi grup dropdown
   const displayColumns = useMemo(() => columns.filter((col) => col.type !== "desa"), [columns]);
@@ -2205,8 +2577,31 @@ const ClassifiedTable = ({ title, description, rows, columns, kecamatanList, fil
     setOpenDesa(new Set());
   };
 
-  const exportTab = () => {
-    if (!filtered.length) return;
+  // Baris yang berasal dari persandingan memakai kunci `<kode desa>::<key item>`;
+  // baris tab lain (Data Baru, Status BPJS, Tidak Terpetakan) tidak, jadi detail
+  // pengurus hanya diambil bila memang ada yang bisa dicocokkan.
+  const KUNCI_ITEM = /^\d{2}\.\d{2}\.\d{2}\.\d{4}::/;
+
+  const exportTab = async () => {
+    if (!filtered.length || exporting) return;
+    setExporting(true);
+    try {
+      await exportTabRows();
+    } catch (err) {
+      console.error("Export Excel gagal:", err);
+      alert(err?.response?.data?.message || err?.message || "Gagal mengekspor Excel");
+    } finally {
+      setExporting(false);
+    }
+  };
+
+  const exportTabRows = async () => {
+    // Detail pengurus (Database/BPJS/ADD) tidak ikut di response ringkas, jadi
+    // diambil sekali di sini supaya tiap baris bisa dilengkapi.
+    const itemMap = filtered.some((row) => KUNCI_ITEM.test(row.key || ""))
+      ? await fetchDetailItemMap()
+      : new Map();
+
     const exportRows = filtered.map((row) => {
       const out = {
         "KODE DESA": row.desaKode,
@@ -2254,6 +2649,16 @@ const ClassifiedTable = ({ title, description, rows, columns, kecamatanList, fil
         out["PENDIDIKAN (BARU)"] = row.pendidikan || "";
         out["PENDIDIKAN (DB)"] = row.dbPendidikan || "";
       }
+
+      // Lengkapi dengan seluruh data pengurus (Database) + data BPJS/ADD bila
+      // barisnya memang hasil persandingan. Kolom milik tab tidak ditimpa.
+      const item = itemMap.get(row.key);
+      if (item) {
+        Object.entries(pengurusExportColumns(item, row.desaNama, row.kecamatanNama)).forEach(([key, value]) => {
+          if (key in out || KOLOM_PENGURUS_DILEWATI.includes(key)) return;
+          out[key] = value;
+        });
+      }
       return out;
     });
 
@@ -2277,11 +2682,20 @@ const ClassifiedTable = ({ title, description, rows, columns, kecamatanList, fil
           </div>
           <button
             onClick={exportTab}
-            disabled={filtered.length === 0}
+            disabled={filtered.length === 0 || exporting}
             className="flex items-center gap-1.5 rounded-lg bg-green-600 px-3 py-2 text-xs text-white transition-colors hover:bg-green-700 disabled:cursor-not-allowed disabled:opacity-40"
           >
-            <LuDownload className="h-3.5 w-3.5" />
-            Export Excel
+            {exporting ? (
+              <>
+                <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-white/40 border-t-white" />
+                Menyiapkan...
+              </>
+            ) : (
+              <>
+                <LuDownload className="h-3.5 w-3.5" />
+                Export Excel
+              </>
+            )}
           </button>
         </div>
 
@@ -2391,7 +2805,7 @@ const ClassifiedTable = ({ title, description, rows, columns, kecamatanList, fil
                               <td className="px-4 py-2 text-xs text-gray-400">{index + 1}</td>
                               {displayColumns.map((col) => (
                                 <td key={col.key} className={`px-4 py-2 align-top ${col.align === "right" ? "text-right" : "text-left"}`}>
-                                  {renderClassifiedCell(col, row)}
+                                  {renderClassifiedCell(col, row, pengurusHref)}
                                 </td>
                               ))}
                             </tr>
