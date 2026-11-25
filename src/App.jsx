@@ -284,6 +284,7 @@ const ProdukHukumBidangPage = lazy(() => import("./pages/bidang/ProdukHukumBidan
 const CoreProdukHukumPage = lazy(() => import("./pages/core-dashboard/ProdukHukumPage"));
 const CoreKerjasamaDesaPage = lazy(() => import("./pages/core-dashboard/KerjasamaDesaPage"));
 const GemaPage = lazy(() => import("./pages/core-dashboard/GemaPage"));
+const RaporWilayahPage = lazy(() => import("./pages/core-dashboard/rapor/RaporWilayahPage"));
 const AstaDesaPage = lazy(() => import("./pages/core-dashboard/asta-desa/AstaDesaPage"));
 // Dimuat malas terpisah dari AstaDesaPage: OpenLayers + ol-ext berukuran ratusan
 // kilobyte, dan halaman Asta Desa biasa tidak boleh membayarnya hanya karena peta
@@ -461,9 +462,6 @@ const KepalaBidangDashboard = lazy(
 );
 const SekretarisDinasDashboard = lazy(
   () => import("./pages/sekretaris-dinas/SekretarisDinasDashboard"),
-);
-const DashboardOverview = lazy(
-  () => import("./pages/kepala-dinas/DashboardOverview"),
 );
 const StatistikBumdes = lazy(
   () => import("./pages/kepala-dinas/StatistikBumdes"),
@@ -1953,6 +1951,7 @@ function App() {
                 >
                   <Route index element={<Navigate to="dashboard" replace />} />
                   <Route path="dashboard" element={<WelcomeDashboard />} />
+                  <Route path="rapor-wilayah" element={<RaporWilayahPage />} />
                   {/* Gema — asisten suara. Purwarupa, hanya membaca data. */}
                   <Route path="gema" element={<GemaPage />} />
                   {/* Asta Desa — cermin data pendataan keluarga dari aplikasi

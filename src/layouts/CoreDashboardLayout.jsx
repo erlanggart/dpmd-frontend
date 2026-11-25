@@ -20,6 +20,7 @@ import {
   AudioLines,
   Satellite,
   Handshake,
+  FileText,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
@@ -34,7 +35,8 @@ const ROLE_BASE_PATH = {
 };
 
 const MENU_ITEMS = [
-  { path: '/core-dashboard/dashboard', icon: LayoutDashboard, label: 'Dashboard', end: true },
+  { path: '/core-dashboard/dashboard', icon: LayoutDashboard, label: 'Ringkasan', end: true },
+  { path: '/core-dashboard/rapor-wilayah', icon: FileText, label: 'Rapor Wilayah' },
   { path: '/core-dashboard/gema', icon: AudioLines, label: 'Gema' },
   { path: '/core-dashboard/asta-desa', icon: Satellite, label: 'Asta Desa' },
   { path: '/core-dashboard/statistik-bumdes', icon: Store, label: 'Statistik BUMDes' },
@@ -88,11 +90,11 @@ const CoreDashboardLayout = () => {
   const roleLabel = user?.role?.replace(/_/g, ' ') || 'Pengguna';
 
   return (
-    <div className="flex h-screen overflow-hidden bg-slate-100">
+    <div className="flex h-screen overflow-hidden bg-slate-100 print:block print:h-auto print:overflow-visible">
       {/* Overlay mobile */}
       {sidebarOpen && (
         <div
-          className="fixed inset-0 z-40 bg-slate-950/60 backdrop-blur-sm transition-opacity duration-200 lg:hidden"
+          className="fixed inset-0 z-40 bg-slate-950/60 backdrop-blur-sm transition-opacity duration-200 lg:hidden print:hidden"
           onClick={toggleSidebar}
           aria-hidden="true"
         />
@@ -100,7 +102,7 @@ const CoreDashboardLayout = () => {
 
       {/* Sidebar */}
       <aside
-        className={`rounded-r-3xl fixed z-50 flex h-full flex-col border-r border-slate-200 bg-white
+        className={`print:hidden rounded-r-3xl fixed z-50 flex h-full flex-col border-r border-slate-200 bg-white
           transition-[transform,width] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] lg:relative
           ${sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
           ${sidebarOpen ? 'w-64' : 'lg:w-[76px]'}
@@ -209,10 +211,10 @@ const CoreDashboardLayout = () => {
       </aside>
 
       {/* Konten */}
-      <main className="flex-1 overflow-y-auto">
+      <main className="flex-1 overflow-y-auto print:overflow-visible">
         {/* Tombol menu mobile */}
         {!sidebarOpen && (
-          <div className="fixed left-4 top-4 z-30 lg:hidden">
+          <div className="fixed left-4 top-4 z-30 lg:hidden print:hidden">
             <button
               onClick={toggleSidebar}
               className="rounded-xl border border-slate-200 bg-white p-3 text-slate-700 shadow-lg shadow-slate-900/5 transition-colors hover:bg-slate-50"
