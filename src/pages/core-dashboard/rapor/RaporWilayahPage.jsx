@@ -1,5 +1,5 @@
 // Rapor Wilayah: semua data satu kecamatan atau satu desa dalam satu halaman.
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import {
   FileText, Printer, Search, RefreshCw, FileSpreadsheet, Wallet, Store, UserCheck, MapPin,
@@ -457,7 +457,13 @@ const RaporWilayahPage = () => {
   const desaId = params.get('desa');
   const kecId = desaId ? null : params.get('kecamatan');
   const [wilayah, setWilayah] = useState([]);
-  const [rapor, setRapor] = useState(null);
+  const jalur = desaId ? `/core-dashboard/rapor/desa/${desaId}` : kecId ? `/core-dashboard/rapor/kecamatan/${kecId}` : null;
+  // Rapor disimpan bersama jalurnya: saat URL berganti kecamatan→desa, data lama tidak boleh dirender
+  // sebagai rapor desa (dulu memicu "Cannot read properties of undefined (reading 'aktif')").
+  const [simpanan, setSimpanan] = useState(null); // { jalur, data }
+  const rapor = simpanan?.jalur === jalur ? simpanan.data : null;
+  const jalurKini = useRef(jalur);
+  jalurKini.current = jalur;
   const [memuat, setMemuat] = useState(false);
   const [galat, setGalat] = useState(null); // { tidakAda, pesan }
 
@@ -466,20 +472,20 @@ const RaporWilayahPage = () => {
   }, []);
 
   const muat = useCallback(async () => {
-    const jalur = desaId ? `/core-dashboard/rapor/desa/${desaId}` : kecId ? `/core-dashboard/rapor/kecamatan/${kecId}` : null;
     setGalat(null);
-    setRapor(null);
+    setSimpanan(null);
+    setMemuat(Boolean(jalur));
     if (!jalur) return;
-    setMemuat(true);
     try {
       const res = await api.get(jalur);
-      setRapor(res.data?.data || null);
+      // Jawaban permintaan lama yang datang terlambat diabaikan.
+      if (jalurKini.current === jalur) setSimpanan({ jalur, data: res.data?.data || null });
     } catch (e) {
-      setGalat({ tidakAda: e?.response?.status === 404, pesan: e?.response?.data?.message || 'Gagal memuat rapor.' });
+      if (jalurKini.current === jalur) setGalat({ tidakAda: e?.response?.status === 404, pesan: e?.response?.data?.message || 'Gagal memuat rapor.' });
     } finally {
-      setMemuat(false);
+      if (jalurKini.current === jalur) setMemuat(false);
     }
-  }, [desaId, kecId]);
+  }, [jalur]);
 
   useEffect(() => {
     muat();
