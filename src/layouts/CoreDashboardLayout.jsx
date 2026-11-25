@@ -35,7 +35,7 @@ const ROLE_BASE_PATH = {
 };
 
 const MENU_ITEMS = [
-  { path: '/core-dashboard/dashboard', icon: LayoutDashboard, label: 'Ringkasan', end: true },
+  { path: '/core-dashboard/dashboard', icon: LayoutDashboard, label: 'Dashboard', end: true },
   { path: '/core-dashboard/rapor-wilayah', icon: FileText, label: 'Rapor Wilayah' },
   { path: '/core-dashboard/gema', icon: AudioLines, label: 'Gema' },
   { path: '/core-dashboard/asta-desa', icon: Satellite, label: 'Asta Desa' },
