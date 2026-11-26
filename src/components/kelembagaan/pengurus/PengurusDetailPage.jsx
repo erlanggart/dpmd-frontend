@@ -48,6 +48,7 @@ import {
 	FaEllipsisV,
 	FaToggleOn,
 	FaToggleOff,
+	FaExclamationTriangle,
 } from "react-icons/fa";
 import Swal from "sweetalert2";
 import TransferPengurusModal from "./TransferPengurusModal";
@@ -56,6 +57,17 @@ import PengurusBpjsCard from "./PengurusBpjsCard";
 import { getPengurusActivityLogs } from "../../../services/activityLogs";
 
 const imageBaseUrl = import.meta.env.VITE_IMAGE_BASE_URL;
+
+// Petunjuk letak kesalahan NIK, dipasangkan dengan `nik_error.sebab` dari API
+// detail pengurus (aturannya di backend src/utils/nikAnomali.js — sama dengan
+// tab "NIK Error Database" pada Persandingan RT/RW).
+const NIK_ERROR_PETUNJUK = {
+	kosong: "NIK belum terisi. Minta fotokopi KTP pengurus, lalu lengkapi lewat menu Edit.",
+	digit_kurang: "Jumlah digit kurang dari 16 — kemungkinan ada angka yang terpotong saat penginputan.",
+	digit_lebih: "Jumlah digit lebih dari 16 — kemungkinan ada angka yang terketik dua kali.",
+	nol_belakang: "Enam angka terakhir NIK semuanya nol — biasanya tanda NIK diisi sementara, belum sesuai KTP.",
+	tgl_lahir: "Digit ke-7 sampai ke-12 NIK adalah tanggal-bulan-tahun lahir (perempuan: tanggal + 40), dan itu tidak sama dengan Tanggal Lahir yang tercatat di sini. Salah satu di antaranya salah — cocokkan ulang dengan KTP.",
+};
 
 const pesanError = (error, fallback) => {
 	const { message, error: alasan } = error?.response?.data || {};
@@ -1409,6 +1421,15 @@ const PengurusDetailPage = () => {
 										iconClass="bg-purple-50 text-purple-500"
 									/>
 								</div>
+								{pengurus.nik_error && (
+									<div className="flex items-start gap-2 rounded-lg border border-rose-200 bg-rose-50 px-3 py-2">
+										<FaExclamationTriangle className="mt-0.5 w-3.5 h-3.5 flex-shrink-0 text-rose-500" />
+										<p className="text-xs leading-snug text-rose-700">
+											<span className="font-semibold">NIK perlu diperiksa — {pengurus.nik_error.label}.</span>{" "}
+											{NIK_ERROR_PETUNJUK[pengurus.nik_error.sebab] || ""}
+										</p>
+									</div>
+								)}
 								<ProfileItem
 									icon={FaCalendarAlt}
 									label="Tempat, Tanggal Lahir"
