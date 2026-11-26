@@ -17,6 +17,7 @@ import BumdesDetailModal from './BumdesDetailModal';
 import TombolEkspor from '../../../components/shared/TombolEkspor';
 import { nf, rupiahRingkas } from './bumdesFormat';
 import { omsetTerbaru, tahapBadanHukum } from './bumdesFilter';
+import { eksporDirektoriExcel } from './bumdesEksporExcel';
 
 const PER_HALAMAN = 12;
 
@@ -63,27 +64,32 @@ const jenisUsahaTampil = (d) => {
  * kolom "Omset" diam-diam mencampur 2024 dan 2025.
  */
 const KOLOM_EKSPOR = [
-  { label: 'Kecamatan', nilai: (d) => d.kecamatan },
-  { label: 'Desa', nilai: (d) => d.desa },
-  { label: 'Nama BUMDes', nilai: (d) => d.nama },
-  { label: 'Status', nilai: (d) => d.status },
-  { label: 'Tahun Pendirian', nilai: (d) => d.tahun_pendirian },
-  { label: 'Badan Hukum', nilai: (d) => tahapBadanHukum(d) },
-  { label: 'Pemeringkatan', nilai: (d) => d.pemeringkatan },
-  { label: 'NIB', nilai: (d) => d.nib },
-  { label: 'NPWP', nilai: (d) => d.npwp },
-  { label: 'Kategori Usaha', nilai: (d) => jenisUsahaTampil(d) },
-  { label: 'Jenis Usaha Utama', nilai: (d) => d.jenis_usaha_utama || d.jenis_usaha },
-  { label: 'Unit Usaha', nilai: (d) => (Array.isArray(d.unit_usaha) ? d.unit_usaha.join('; ') : null) },
-  { label: 'Tenaga Kerja', nilai: (d) => d.tenaga_kerja },
-  { label: 'Direktur', nilai: (d) => d.direktur },
-  { label: 'Aset (Rp)', nilai: (d) => d.aset },
-  { label: 'Omset (Rp)', nilai: (d) => omsetTerbaru(d) },
-  { label: 'Tahun Omset', nilai: (d) => d.tahun_omset_terbaru },
-  { label: 'Laba/SHU (Rp)', nilai: (d) => d.laba_terbaru ?? d.laba_2025 ?? d.laba_2024 },
-  { label: 'Kontribusi PADes (Rp)', nilai: (d) => d.pades_terbaru ?? d.pades_2025 },
-  { label: 'Penyertaan Modal (Rp)', nilai: (d) => d.total_penyertaan_modal },
-  { label: 'Jumlah Produk', nilai: (d) => d.jumlah_produk },
+  // Identitas
+  { kelompok: 'Identitas', label: 'Kecamatan', lebar: 16, nilai: (d) => d.kecamatan },
+  { kelompok: 'Identitas', label: 'Desa', lebar: 18, nilai: (d) => d.desa },
+  { kelompok: 'Identitas', label: 'Nama BUMDes', lebar: 30, format: 'panjang', nilai: (d) => d.nama },
+  { kelompok: 'Identitas', label: 'Status', lebar: 12, nilai: (d) => d.status },
+  { kelompok: 'Identitas', label: 'Tahun Pendirian', lebar: 11, format: 'tahun', nilai: (d) => d.tahun_pendirian },
+  { kelompok: 'Identitas', label: 'Direktur', lebar: 22, format: 'panjang', nilai: (d) => d.direktur },
+  // Legalitas & pembinaan
+  { kelompok: 'Legalitas & Pembinaan', label: 'Badan Hukum', lebar: 18, format: 'panjang', nilai: (d) => tahapBadanHukum(d) },
+  { kelompok: 'Legalitas & Pembinaan', label: 'Pemeringkatan', lebar: 14, nilai: (d) => d.pemeringkatan },
+  { kelompok: 'Legalitas & Pembinaan', label: 'NIB', lebar: 17, nilai: (d) => d.nib },
+  { kelompok: 'Legalitas & Pembinaan', label: 'NPWP', lebar: 21, nilai: (d) => d.npwp },
+  // Usaha
+  { kelompok: 'Usaha', label: 'Kategori Usaha', lebar: 26, format: 'panjang', nilai: (d) => jenisUsahaTampil(d) },
+  { kelompok: 'Usaha', label: 'Jenis Usaha Utama', lebar: 30, format: 'panjang', nilai: (d) => d.jenis_usaha_utama || d.jenis_usaha },
+  { kelompok: 'Usaha', label: 'Unit Usaha', lebar: 26, format: 'panjang', nilai: (d) => (Array.isArray(d.unit_usaha) ? d.unit_usaha.join('; ') : null) },
+  { kelompok: 'Usaha', label: 'Keterangan Ketahanan Pangan', lebar: 34, format: 'panjang', nilai: (d) => d.keterangan_ketahanan_pangan },
+  { kelompok: 'Usaha', label: 'Tenaga Kerja', lebar: 10, format: 'angka', nilai: (d) => d.tenaga_kerja },
+  { kelompok: 'Usaha', label: 'Jumlah Produk', lebar: 10, format: 'angka', nilai: (d) => d.jumlah_produk },
+  // Keuangan
+  { kelompok: 'Keuangan', label: 'Aset (Rp)', lebar: 17, format: 'rupiah', nilai: (d) => d.aset },
+  { kelompok: 'Keuangan', label: 'Omset (Rp)', lebar: 17, format: 'rupiah', nilai: (d) => omsetTerbaru(d) },
+  { kelompok: 'Keuangan', label: 'Tahun Omset', lebar: 9, format: 'tahun', nilai: (d) => d.tahun_omset_terbaru },
+  { kelompok: 'Keuangan', label: 'Laba/SHU (Rp)', lebar: 17, format: 'rupiah', nilai: (d) => d.laba_terbaru ?? d.laba_2025 ?? d.laba_2024 },
+  { kelompok: 'Keuangan', label: 'Kontribusi PADes (Rp)', lebar: 17, format: 'rupiah', nilai: (d) => d.pades_terbaru ?? d.pades_2025 },
+  { kelompok: 'Keuangan', label: 'Penyertaan Modal (Rp)', lebar: 17, format: 'rupiah', nilai: (d) => d.total_penyertaan_modal },
 ];
 
 const KOLOM_URUT = [
@@ -147,6 +153,8 @@ const BumdesDirectory = ({ data = [], adaFilter = false, onReset, onUbah, namaWi
       : <ArrowDown className="h-3.5 w-3.5 text-slate-700" />;
   };
 
+  const subjudulEkspor = `${nf.format(hasil.length)} BUM Desa${adaFilter ? ' (tersaring)' : ` se-${namaWilayah}`}`;
+
   return (
     <section className="rounded-2xl border border-slate-200 bg-white">
       {/* Kepala: jumlah baris — penyaringnya ada di atas halaman, bukan di sini */}
@@ -166,9 +174,13 @@ const BumdesDirectory = ({ data = [], adaFilter = false, onReset, onUbah, namaWi
         <TombolEkspor
           kolom={KOLOM_EKSPOR}
           baris={hasil}
-          namaBerkas="bumdes"
-          judul="Data BUMDes"
-          subjudul={`${nf.format(hasil.length)} BUM Desa${adaFilter ? ' (tersaring)' : ` se-${namaWilayah}`}`}
+          namaBerkas="direktori-bumdes"
+          judul="Direktori BUMDes"
+          subjudul={subjudulEkspor}
+          penyusun={{
+            excel: (isi) =>
+              eksporDirektoriExcel({ kolom: KOLOM_EKSPOR, baris: isi, namaBerkas: 'direktori-bumdes', judul: 'Direktori BUMDes', subjudul: subjudulEkspor }),
+          }}
         />
       </div>
 
