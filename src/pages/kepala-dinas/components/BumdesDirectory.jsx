@@ -73,16 +73,16 @@ const kategoriTeks = (daftar, teksLama) => {
 const KOLOM_EKSPOR = [
   // Identitas
   { kelompok: 'Identitas', label: 'Kecamatan', lebar: 16, nilai: (d) => d.kecamatan },
-  { kelompok: 'Identitas', label: 'Desa', lebar: 18, nilai: (d) => d.desa },
-  { kelompok: 'Identitas', label: 'Nama BUMDes', lebar: 30, format: 'panjang', nilai: (d) => d.nama },
-  { kelompok: 'Identitas', label: 'Status', lebar: 12, nilai: (d) => d.status },
-  { kelompok: 'Identitas', label: 'Tahun Pendirian', lebar: 11, format: 'tahun', nilai: (d) => d.tahun_pendirian },
-  { kelompok: 'Identitas', label: 'Direktur', lebar: 22, format: 'panjang', nilai: (d) => d.direktur },
+  { kelompok: 'Identitas', label: 'Nama Desa', lebar: 18, nilai: (d) => d.desa },
+  { kelompok: 'Identitas', label: 'Nama BUM Desa', lebar: 30, format: 'panjang', nilai: (d) => d.nama },
+  { kelompok: 'Identitas', label: 'Status Keaktifan BUM Desa', lebar: 12, nilai: (d) => d.status },
+  { kelompok: 'Identitas', label: 'Tahun Pendirian BUM Desa', lebar: 11, format: 'tahun', nilai: (d) => d.tahun_pendirian },
+  { kelompok: 'Identitas', label: 'Nama Direktur', lebar: 22, format: 'panjang', nilai: (d) => d.direktur },
   // Legalitas & pembinaan
-  { kelompok: 'Legalitas & Pembinaan', label: 'Badan Hukum', lebar: 18, format: 'panjang', nilai: (d) => tahapBadanHukum(d) },
+  { kelompok: 'Legalitas & Pembinaan', label: 'Status Badan Hukum', lebar: 18, format: 'panjang', nilai: (d) => tahapBadanHukum(d) },
   { kelompok: 'Legalitas & Pembinaan', label: 'Pemeringkatan', lebar: 14, nilai: (d) => d.pemeringkatan },
-  { kelompok: 'Legalitas & Pembinaan', label: 'NIB', lebar: 17, nilai: (d) => d.nib },
-  { kelompok: 'Legalitas & Pembinaan', label: 'NPWP', lebar: 21, nilai: (d) => d.npwp },
+  { kelompok: 'Legalitas & Pembinaan', label: 'Nomor NIB', lebar: 17, nilai: (d) => d.nib },
+  { kelompok: 'Legalitas & Pembinaan', label: 'Nomor NPWP', lebar: 21, nilai: (d) => d.npwp },
   // Usaha
   // Empat kolom ini sama dengan isian formulir, masing-masing dari kolomnya
   // sendiri: kategori TIDAK diisi dari keterangan dan sebaliknya, supaya kolom
@@ -90,9 +90,9 @@ const KOLOM_EKSPOR = [
   { kelompok: 'Usaha', label: 'Kategori Usaha Utama', lebar: 26, format: 'panjang', nilai: (d) => kategoriTeks(d.kategori_usaha, d.jenis_usaha) },
   { kelompok: 'Usaha', label: 'Keterangan Jenis Usaha Utama', lebar: 32, format: 'panjang', nilai: (d) => d.jenis_usaha_utama },
   { kelompok: 'Usaha', label: 'Kategori Usaha Ketahanan Pangan', lebar: 24, format: 'panjang', nilai: (d) => kategoriTeks(d.kategori_usaha_pangan, d.jenis_usaha_ketahanan_pangan) },
-  { kelompok: 'Usaha', label: 'Keterangan Usaha Ketahanan Pangan', lebar: 34, format: 'panjang', nilai: (d) => d.keterangan_ketahanan_pangan },
-  { kelompok: 'Usaha', label: 'Unit Usaha', lebar: 26, format: 'panjang', nilai: (d) => (Array.isArray(d.unit_usaha) ? d.unit_usaha.join('; ') : null) },
-  { kelompok: 'Usaha', label: 'Tenaga Kerja', lebar: 10, format: 'angka', nilai: (d) => d.tenaga_kerja },
+  { kelompok: 'Usaha', label: 'Keterangan Jenis Usaha Ketahanan Pangan', lebar: 34, format: 'panjang', nilai: (d) => d.keterangan_ketahanan_pangan },
+  { kelompok: 'Usaha', label: 'Unit Usaha BUM Desa', lebar: 26, format: 'panjang', nilai: (d) => (Array.isArray(d.unit_usaha) ? d.unit_usaha.join('; ') : null) },
+  { kelompok: 'Usaha', label: 'Jumlah Tenaga Kerja', lebar: 10, format: 'angka', nilai: (d) => d.tenaga_kerja },
   { kelompok: 'Usaha', label: 'Jumlah Produk', lebar: 10, format: 'angka', nilai: (d) => d.jumlah_produk },
   // Keuangan
   { kelompok: 'Keuangan', label: 'Aset (Rp)', lebar: 17, format: 'rupiah', nilai: (d) => d.aset },

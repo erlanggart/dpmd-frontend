@@ -198,7 +198,7 @@ export const susunBukuDirektori = (ExcelJS, { kolom, baris, judul, subjudul, dic
 	rJumlah.height = 20;
 
 	// Kepala + kolom No s.d. Nama BUMDes tetap terlihat saat digulir.
-	const xSplit = Math.max(1, semua.findIndex((k) => k.label === 'Nama BUMDes') + 1);
+	const xSplit = Math.max(1, semua.findIndex((k) => /^Nama BUM ?Des/i.test(k.label)) + 1);
 	ws.views = [{ state: 'frozen', xSplit, ySplit: BARIS_KEPALA, activeCell: `A${awalIsi}`, showGridLines: false }];
 	ws.autoFilter = { from: { row: BARIS_KEPALA, column: 1 }, to: { row: akhirIsi, column: n } };
 
