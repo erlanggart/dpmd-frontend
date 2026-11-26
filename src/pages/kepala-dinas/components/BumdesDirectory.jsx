@@ -63,6 +63,13 @@ const jenisUsahaTampil = (d) => {
  * bisa berbeda antar baris, tahunnya ikut jadi kolom sendiri — tanpa itu satu
  * kolom "Omset" diam-diam mencampur 2024 dan 2025.
  */
+/** Kategori centang (formulir baru), atau teks gabungan hasil impor lama bila belum ada. */
+const kategoriTeks = (daftar, teksLama) => {
+  const isi = Array.isArray(daftar) ? daftar.filter(Boolean) : [];
+  if (isi.length) return isi.join(', ');
+  return (teksLama && String(teksLama).trim()) || null;
+};
+
 const KOLOM_EKSPOR = [
   // Identitas
   { kelompok: 'Identitas', label: 'Kecamatan', lebar: 16, nilai: (d) => d.kecamatan },
@@ -77,10 +84,14 @@ const KOLOM_EKSPOR = [
   { kelompok: 'Legalitas & Pembinaan', label: 'NIB', lebar: 17, nilai: (d) => d.nib },
   { kelompok: 'Legalitas & Pembinaan', label: 'NPWP', lebar: 21, nilai: (d) => d.npwp },
   // Usaha
-  { kelompok: 'Usaha', label: 'Kategori Usaha', lebar: 26, format: 'panjang', nilai: (d) => jenisUsahaTampil(d) },
-  { kelompok: 'Usaha', label: 'Jenis Usaha Utama', lebar: 30, format: 'panjang', nilai: (d) => d.jenis_usaha_utama || d.jenis_usaha },
+  // Empat kolom ini sama dengan isian formulir, masing-masing dari kolomnya
+  // sendiri: kategori TIDAK diisi dari keterangan dan sebaliknya, supaya kolom
+  // yang kosong memang berarti belum diisi desa.
+  { kelompok: 'Usaha', label: 'Kategori Usaha Utama', lebar: 26, format: 'panjang', nilai: (d) => kategoriTeks(d.kategori_usaha, d.jenis_usaha) },
+  { kelompok: 'Usaha', label: 'Keterangan Jenis Usaha Utama', lebar: 32, format: 'panjang', nilai: (d) => d.jenis_usaha_utama },
+  { kelompok: 'Usaha', label: 'Kategori Usaha Ketahanan Pangan', lebar: 24, format: 'panjang', nilai: (d) => kategoriTeks(d.kategori_usaha_pangan, d.jenis_usaha_ketahanan_pangan) },
+  { kelompok: 'Usaha', label: 'Keterangan Usaha Ketahanan Pangan', lebar: 34, format: 'panjang', nilai: (d) => d.keterangan_ketahanan_pangan },
   { kelompok: 'Usaha', label: 'Unit Usaha', lebar: 26, format: 'panjang', nilai: (d) => (Array.isArray(d.unit_usaha) ? d.unit_usaha.join('; ') : null) },
-  { kelompok: 'Usaha', label: 'Keterangan Ketahanan Pangan', lebar: 34, format: 'panjang', nilai: (d) => d.keterangan_ketahanan_pangan },
   { kelompok: 'Usaha', label: 'Tenaga Kerja', lebar: 10, format: 'angka', nilai: (d) => d.tenaga_kerja },
   { kelompok: 'Usaha', label: 'Jumlah Produk', lebar: 10, format: 'angka', nilai: (d) => d.jumlah_produk },
   // Keuangan
