@@ -501,6 +501,9 @@ export default function KelembagaanDetailPage({
 								<input type="checkbox" value="SK Pembentukan tidak sesuai" class="swal-check rounded"> SK Pembentukan tidak sesuai
 							</label>
 							<label class="flex items-center gap-2 text-sm">
+								<input type="checkbox" value="SK Pembentukan belum ditautkan" class="swal-check rounded"> SK Pembentukan belum ditautkan
+							</label>
+							<label class="flex items-center gap-2 text-sm">
 								<input type="checkbox" value="Data pengurus belum lengkap" class="swal-check rounded"> Data pengurus belum lengkap
 							</label>
 							<label class="flex items-center gap-2 text-sm">
@@ -593,8 +596,8 @@ export default function KelembagaanDetailPage({
 		if (!pengurusCount || pengurusCount === 0) missing.push("Data Pengurus (minimal 1 orang)");
 
 		if (missing.length > 0) {
-			// Data tidak lengkap → hanya tampilkan info, tidak bisa verifikasi
-			await Swal.fire({
+			// Data tidak lengkap → verifikasi tidak bisa disetujui, tapi penolakan tetap boleh
+			const { isConfirmed } = await Swal.fire({
 				title: "Data Belum Lengkap",
 				html: `
 					<div class="text-left">
@@ -606,14 +609,16 @@ export default function KelembagaanDetailPage({
 									${m}
 								</li>`).join("")}
 						</ul>
-						<p class="text-xs text-gray-400">Hubungi pihak desa untuk melengkapi data terlebih dahulu.</p>
+						<p class="text-xs text-gray-400">Hubungi pihak desa untuk melengkapi data, atau tolak verifikasi dengan catatan.</p>
 					</div>`,
 				icon: "warning",
-				showConfirmButton: false,
 				showCancelButton: true,
+				confirmButtonText: "Tolak Verifikasi",
+				confirmButtonColor: "#ef4444",
 				cancelButtonText: "Tutup",
 				cancelButtonColor: "#6b7280",
 			});
+			if (isConfirmed) await showTundaVerifikasiModal(kelembagaanId);
 			return;
 		}
 
