@@ -73,14 +73,15 @@ const ProfilCard = ({
 	produkHukumList = [],
 	onUpdatePenduduk,
 }) => {
-	const { isSuperAdmin, isAdminBidangPMD, isUserDesa, isKecamatan, canVerifyKelembagaan, canEditKelembagaan } = useAuth();
+	const { isSuperAdmin, isAdminBidangPMD, isUserDesa, isKecamatan, isKelembagaanAdmin, canVerifyKelembagaan, canEditKelembagaan } = useAuth();
 	const { isEditMode } = useEditMode();
 	const navigate = useNavigate();
 
-	const isAdmin = isSuperAdmin() || isAdminBidangPMD();
+	// Semua staf DPMD lewat /bidang/pmd: /pemdes menolak bendahara & ketua_tim,
+	// dan /desa/produk-hukum hanya untuk akun desa — keduanya berujung /forbidden.
 	const getProdukHukumUrl = (id) =>
-		isAdmin
-			? `/pemdes/produk-hukum/${id}`
+		isKelembagaanAdmin?.()
+			? `/bidang/pmd/produk-hukum/${id}`
 			: isKecamatan?.()
 				? `/kecamatan/produk-hukum/${id}`
 				: `/desa/produk-hukum/${id}`;

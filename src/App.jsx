@@ -1425,6 +1425,7 @@ function App() {
                         "kepala_bidang",
                         "ketua_tim",
                         "kepala_dinas",
+                        "sekretaris_dinas",
                         "bendahara",
                         "superadmin",
                       ]}
