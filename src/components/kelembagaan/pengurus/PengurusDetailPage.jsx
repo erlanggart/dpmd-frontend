@@ -66,8 +66,13 @@ const NIK_ERROR_PETUNJUK = {
 	digit_kurang: "Jumlah digit kurang dari 16 — kemungkinan ada angka yang terpotong saat penginputan.",
 	digit_lebih: "Jumlah digit lebih dari 16 — kemungkinan ada angka yang terketik dua kali.",
 	nol_belakang: "Enam angka terakhir NIK semuanya nol — biasanya tanda NIK diisi sementara, belum sesuai KTP.",
-	tgl_lahir: "Digit ke-7 sampai ke-12 NIK adalah tanggal-bulan-tahun lahir (perempuan: tanggal + 40), dan itu tidak sama dengan Tanggal Lahir yang tercatat di sini. Salah satu di antaranya salah — cocokkan ulang dengan KTP.",
+	tgl_lahir: "Digit ke-7 sampai ke-12 NIK adalah tanggal-bulan-tahun lahir (perempuan: tanggal + 40), dan itu tidak sama dengan Tanggal Lahir yang tercatat di sini. Bobotnya ringan — penomoran Dukcapil tidak selalu mengikuti tanggal lahir — tapi ada baiknya dicocokkan ulang dengan KTP.",
+	tgl_lahir_tertukar: "Tanggal dan bulan pada NIK tertukar dengan Tanggal Lahir di sini (mis. NIK 10-09-93 vs tercatat 9 Oktober 1993). Biasanya NIK-nya yang benar dan Tanggal Lahir-lah yang salah urut saat diinput — perbaiki Tanggal Lahir sesuai KTP.",
 };
+
+// Sebab yang berbobot ringan (soal kecocokan tanggal lahir, bukan bentuk NIK)
+// ditampilkan kuning, bukan merah. Sejalan dengan tab "Tgl Lahir vs NIK".
+const NIK_ERROR_RINGAN = new Set(["tgl_lahir", "tgl_lahir_tertukar"]);
 
 const pesanError = (error, fallback) => {
 	const { message, error: alasan } = error?.response?.data || {};
@@ -1421,15 +1426,18 @@ const PengurusDetailPage = () => {
 										iconClass="bg-purple-50 text-purple-500"
 									/>
 								</div>
-								{pengurus.nik_error && (
-									<div className="flex items-start gap-2 rounded-lg border border-rose-200 bg-rose-50 px-3 py-2">
-										<FaExclamationTriangle className="mt-0.5 w-3.5 h-3.5 flex-shrink-0 text-rose-500" />
-										<p className="text-xs leading-snug text-rose-700">
-											<span className="font-semibold">NIK perlu diperiksa — {pengurus.nik_error.label}.</span>{" "}
-											{NIK_ERROR_PETUNJUK[pengurus.nik_error.sebab] || ""}
-										</p>
-									</div>
-								)}
+								{pengurus.nik_error && (() => {
+									const ringan = NIK_ERROR_RINGAN.has(pengurus.nik_error.sebab);
+									return (
+										<div className={`flex items-start gap-2 rounded-lg border px-3 py-2 ${ringan ? "border-amber-200 bg-amber-50" : "border-rose-200 bg-rose-50"}`}>
+											<FaExclamationTriangle className={`mt-0.5 w-3.5 h-3.5 flex-shrink-0 ${ringan ? "text-amber-500" : "text-rose-500"}`} />
+											<p className={`text-xs leading-snug ${ringan ? "text-amber-700" : "text-rose-700"}`}>
+												<span className="font-semibold">{ringan ? "NIK perlu dicocokkan" : "NIK perlu diperiksa"} — {pengurus.nik_error.label}.</span>{" "}
+												{NIK_ERROR_PETUNJUK[pengurus.nik_error.sebab] || ""}
+											</p>
+										</div>
+									);
+								})()}
 								<ProfileItem
 									icon={FaCalendarAlt}
 									label="Tempat, Tanggal Lahir"

@@ -357,6 +357,21 @@ const NIK_ERROR_LABEL = {
   digit_lebih: "Digit > 16",
   nol_belakang: "6 Nol di Belakang",
   tgl_lahir: "Tgl Lahir Tak Sesuai",
+  tgl_lahir_tertukar: "Tanggal & Bulan Tertukar",
+};
+
+// Cacat tanggal lahir dipisah dari cacat bentuk NIK: bobotnya jauh lebih ringan
+// (penomoran Dukcapil tidak selalu mengikuti tanggal lahir), dan yang "tertukar"
+// justru menunjuk tanggal lahir di database yang salah urut, bukan NIK-nya.
+const NIK_ERROR_TGL = new Set(["tgl_lahir", "tgl_lahir_tertukar"]);
+
+// DDMMYY pada NIK (digit 7-12; perempuan: tanggal + 40) sebagai "DD-MM-YY",
+// supaya selisihnya dengan Tgl Lahir database terbaca langsung di tabel.
+const tglLahirDariNik = (rawNik) => {
+  const digits = String(rawNik ?? "").replace(/\D/g, "");
+  if (digits.length !== 16) return "";
+  const hari = Number(digits.slice(6, 8)) % 40;
+  return `${String(hari).padStart(2, "0")}-${digits.slice(8, 10)}-${digits.slice(10, 12)}`;
 };
 
 // Bangun klasifikasi (7 golongan) langsung dari data.comparison — semua field
@@ -367,6 +382,7 @@ const buildClassification = (data) => {
   const desaBerbeda = [];
   const nikInvalid = [];
   const nikErrorDb = [];
+  const nikTglLahir = [];
   const bpjsNoDb = [];
   const dbNoBpjs = [];
   const bpjsCocokAdd = [];
@@ -393,6 +409,7 @@ const buildClassification = (data) => {
         nikDbRaw: (item.dbNikRaw || []).join(", "),
         tglLahirDb: (item.dbTglLahir || []).join(", "),
         nikErrorLabel: (item.dbNikError || []).map((s) => NIK_ERROR_LABEL[s] || s).join(", "),
+        tglLahirNik: (item.dbNikRaw || []).map(tglLahirDariNik).filter(Boolean).join(", "),
         // Status jabatan dari database. Nilai jamak (merge >1 record) → tampil apa adanya.
         statusJabatan: (item.dbStatusJabatan || []).join(", "),
         jabatanDb: (item.dbJabatan || []).join(", "),
@@ -425,7 +442,10 @@ const buildClassification = (data) => {
       };
 
       // Cacat NIK di sisi database — tidak bergantung ada/tidaknya padanan BPJS.
-      if (item.inDb && (item.dbNikError || []).length > 0) nikErrorDb.push(base);
+      // Bentuk NIK dan ketidakcocokan tanggal lahir dipisah ke dua tab.
+      const sebabNik = item.inDb ? (item.dbNikError || []) : [];
+      if (sebabNik.some((sebab) => !NIK_ERROR_TGL.has(sebab))) nikErrorDb.push(base);
+      if (sebabNik.some((sebab) => NIK_ERROR_TGL.has(sebab))) nikTglLahir.push(base);
 
       if (item.inDb && item.inBpjs) {
         dbBpjs.push(base);
@@ -485,7 +505,7 @@ const buildClassification = (data) => {
     || String(a.rt).localeCompare(String(b.rt))
     || String(a.namaDb || a.namaBpjs).localeCompare(String(b.namaDb || b.namaBpjs));
 
-  [dbBpjs, nikBerbeda, desaBerbeda, nikInvalid, nikErrorDb, bpjsNoDb, dbNoBpjs, bpjsCocokAdd].forEach((arr) => arr.sort(bySortKey));
+  [dbBpjs, nikBerbeda, desaBerbeda, nikInvalid, nikErrorDb, nikTglLahir, bpjsNoDb, dbNoBpjs, bpjsCocokAdd].forEach((arr) => arr.sort(bySortKey));
 
   // Pecah "DB tidak ada di BPJS" berdasarkan ada/tidaknya referensi ADD.
   const dbNoBpjsAdd = dbNoBpjs.filter((row) => row.adaAdd);
@@ -505,7 +525,7 @@ const buildClassification = (data) => {
   }));
 
   return {
-    dbBpjs, nikBerbeda, desaBerbeda, nikInvalid, nikErrorDb, bpjsNoDb, dbNoBpjs, dbNoBpjsAdd, dbNoBpjsNoAdd, bpjsCocokAdd,
+    dbBpjs, nikBerbeda, desaBerbeda, nikInvalid, nikErrorDb, nikTglLahir, bpjsNoDb, dbNoBpjs, dbNoBpjsAdd, dbNoBpjsNoAdd, bpjsCocokAdd,
     bpjsUnmappable,
   };
 };
@@ -638,12 +658,28 @@ const TAB_DEFS = [
     label: "NIK Error Database",
     bucket: "nikErrorDb",
     title: "NIK Error Database",
-    description: "Ketua RT/RW di Database yang NIK-nya cacat bentuk: kosong, digit kurang/lebih dari 16, enam angka nol di belakang, atau DDMMYY-nya tidak sesuai tanggal lahir di Database. Tidak bergantung pada BPJS/ADD — murni mutu data Database.",
+    description: "Ketua RT/RW di Database yang NIK-nya cacat bentuk: kosong, digit kurang/lebih dari 16, atau enam angka nol di belakang. Ketidakcocokan dengan tanggal lahir dipisah ke tab Tgl Lahir vs NIK karena bobotnya lebih ringan. Tidak bergantung pada BPJS/ADD — murni mutu data Database.",
     columns: [
       COL_DESA, COL_LOKASI,
       { key: "namaDb", label: "Nama DB" },
       { key: "nikDbRaw", label: "NIK Database" },
       { key: "tglLahirDb", label: "Tgl Lahir DB" },
+      { key: "nikErrorLabel", label: "Sebab" },
+      COL_STATUS_JABATAN,
+    ],
+  },
+  {
+    id: "nik_tgl_lahir",
+    label: "Tgl Lahir vs NIK",
+    bucket: "nikTglLahir",
+    title: "Tgl Lahir vs NIK (Database)",
+    description: "Bentuk NIK-nya sudah benar 16 digit, tapi DDMMYY di dalamnya (digit 7-12; perempuan: tanggal + 40) tidak sama dengan Tanggal Lahir yang tercatat di Database. Bobotnya ringan — penomoran Dukcapil memang tidak selalu mengikuti tanggal lahir. Perhatikan sebab \"Tanggal & Bulan Tertukar\": di situ NIK-nya justru benar dan tanggal lahir di Database yang salah urut.",
+    columns: [
+      COL_DESA, COL_LOKASI,
+      { key: "namaDb", label: "Nama DB" },
+      { key: "nikDbRaw", label: "NIK Database" },
+      { key: "tglLahirNik", label: "Tgl Lahir pada NIK" },
+      { key: "tglLahirDb", label: "Tgl Lahir Database" },
       { key: "nikErrorLabel", label: "Sebab" },
       COL_STATUS_JABATAN,
     ],
@@ -701,6 +737,7 @@ const TAB_COLOR = {
   bpjs_add: "indigo",
   bpjs_nik_invalid: "red",
   nik_error_db: "rose",
+  nik_tgl_lahir: "amber",
   bpjs_unmappable: "rose",
 };
 
@@ -736,7 +773,7 @@ const POOLS = [
     label: "Perbandingan RT/RW",
     color: "blue",
     mainTab: "comparison",
-    subTabs: ["nik_error_db"],
+    subTabs: ["nik_error_db", "nik_tgl_lahir"],
     showWilayahSplit: true,
     count: (_tc, summary) => summary.totalDesa,
   },
@@ -819,12 +856,14 @@ const SUBTAB_SHORT = {
   db_no_bpjs_with_add: "ADD",
   bpjs_nik_invalid: "NIK Invalid",
   nik_error_db: "NIK Error Database",
+  nik_tgl_lahir: "Tgl Lahir vs NIK",
 };
 
 // Aksen warna khusus tombol sub-tab: merah/rose untuk sub-tab anomali.
 const SUBTAB_ACCENT = {
   bpjs_nik_invalid: { color: "red", dot: "bg-rose-500" },
   nik_error_db: { color: "rose", dot: "bg-rose-500" },
+  nik_tgl_lahir: { color: "amber", dot: "bg-amber-500" },
 };
 
 // Sub-tab anomali NIK -> ditaruh di BARIS KEDUA (di bawah sub-tab asli pool).
@@ -1107,6 +1146,7 @@ const RtrwComparisonPage = () => {
     desa_berbeda: classification.desaBerbeda.length,
     bpjs_nik_invalid: classification.nikInvalid.length,
     nik_error_db: classification.nikErrorDb.length,
+    nik_tgl_lahir: classification.nikTglLahir.length,
     bpjs_unmappable: classification.bpjsUnmappable.length,
     bpjs_no_db: classification.bpjsNoDb.length,
     db_no_bpjs: classification.dbNoBpjs.length,
