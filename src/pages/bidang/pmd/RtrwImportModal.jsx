@@ -365,12 +365,6 @@ const RtrwImportModal = ({ onClose, onImported }) => {
                   <p className="mt-2 text-green-700">
                     Arsip: <code>{job.archivedAs}</code> · cadangan lama di <code>data/backups/</code>
                   </p>
-                  {job.jenis === "bpjs" && (
-                    <p className="mt-1.5 text-amber-700">
-                      Catatan: overlay status aktif/non-aktif punya sumber terpisah (folder DESK BPJS)
-                      dan tidak ikut terupdate.
-                    </p>
-                  )}
                 </div>
               </div>
             </div>

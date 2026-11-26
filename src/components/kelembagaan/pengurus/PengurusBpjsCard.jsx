@@ -89,10 +89,6 @@ const PengurusBpjsCard = ({ pengurusId, nik }) => {
 							<dt className="text-xs text-gray-500">Upah</dt>
 							<dd className="font-medium text-gray-900">{rupiah(data.peserta.upah)}</dd>
 						</div>
-						<div>
-							<dt className="text-xs text-gray-500">Status Desk BPJS</dt>
-							<dd className="font-medium text-gray-900 capitalize">{data.status_desk?.status?.replace(/_/g, " ") || "-"}</dd>
-						</div>
 					</dl>
 				)}
 			</div>

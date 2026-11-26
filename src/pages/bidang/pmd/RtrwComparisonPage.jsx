@@ -186,6 +186,7 @@ const rescopeData = (data, sources) => {
           status: statusFromSources(inDb, inAdd, inBpjs),
           dbNama: sources.db ? item.dbNama : [],
           dbRefs: sources.db ? item.dbRefs : [],
+          dbNikError: sources.db ? item.dbNikError : [],
           addNama: sources.add ? item.addNama : [],
           bpjsNama: withBpjs ? item.bpjsNama : [],
           bpjsKpj: withBpjs ? item.bpjsKpj : [],
@@ -202,8 +203,6 @@ const rescopeData = (data, sources) => {
           bpjsTangkilDbConfirmed: item.bpjsTangkilDbConfirmed && withBpjs,
           bpjsDesaBerbeda: item.bpjsDesaBerbeda && withBpjs,
           bpjsNikInvalid: item.bpjsNikInvalid && withBpjs,
-          bpjsMembership: withBpjs ? item.bpjsMembership : null,
-          inBaru: Boolean(item.inBaru && withBpjs),
         };
       });
     const countStatus = (status) => items.filter((item) => item.status === status).length;
@@ -244,21 +243,11 @@ const rescopeData = (data, sources) => {
     totalNikMismatch: countItems((item) => item.nikMismatch),
     totalDesaBerbeda: countItems((item) => item.bpjsDesaBerbeda),
     totalNikInvalid: countItems((item) => item.bpjsNikInvalid),
-    totalBpjsAktif: countItems((item) => item.bpjsMembership === "aktif"),
-    totalBpjsNonAktif: countItems((item) => item.bpjsMembership === "non_aktif" || item.bpjsMembership === "mixed"),
-    totalBpjsUnmarked: countItems((item) => item.bpjsMembership === "unmarked"),
     ...(withBpjs ? {} : {
       totalBpjsTangkilPool: 0,
       totalBpjsTangkilConfirmed: 0,
       totalBpjsTangkilUnresolved: 0,
       totalBpjsUnmappable: 0,
-      totalBaru: 0,
-      totalBaruMatchedDb: 0,
-      totalBaruUnmatched: 0,
-      totalBaruAnomali: 0,
-      totalStatusAktif: 0,
-      totalStatusNonAktif: 0,
-      totalStatusTanpaMaster: 0,
     }),
   };
 
@@ -269,18 +258,8 @@ const rescopeData = (data, sources) => {
     // Daftar yang seluruhnya berasal dari BPJS dikosongkan bila BPJS dilepas,
     // sehingga tab-tab turunannya ikut nol.
     tangkilUnresolved: withBpjs ? data.tangkilUnresolved : [],
-    baruList: withBpjs ? data.baruList : [],
-    bpjsStatus: withBpjs ? data.bpjsStatus : { aktif: [], nonAktif: [] },
     bpjsUnmappable: withBpjs ? data.bpjsUnmappable : [],
   };
-};
-
-// Status kepesertaan BPJS (overlay dari DESK BPJS JULI 2026)
-const MEMBERSHIP_CONFIG = {
-  aktif: { label: "Aktif", color: "bg-green-100 text-green-800", dotColor: "bg-green-500" },
-  non_aktif: { label: "Non-Aktif", color: "bg-red-100 text-red-800", dotColor: "bg-red-500" },
-  mixed: { label: "Campuran", color: "bg-orange-100 text-orange-800", dotColor: "bg-orange-500" },
-  unmarked: { label: "Belum ditandai", color: "bg-gray-100 text-gray-500", dotColor: "bg-gray-300" },
 };
 
 // Status jabatan pengurus di database (kolom pengurus.status_jabatan)
@@ -363,6 +342,23 @@ const CountUp = ({ value = 0, duration = 800, className }) => {
 
 const TANGKIL_KODE = "32.01.03.2011";
 
+// Dasar saran kodefikasi pada tab "Data Tidak Terpetakan" (backend: petunjuk()).
+const PETUNJUK_DASAR_LABEL = {
+  nik: "NIK cocok Database",
+  nama: "Nama cocok Database",
+  nama_tgl: "Nama + Tgl Lahir cocok",
+  ragu: "Perlu verifikasi",
+};
+
+// Sebab cacat NIK database (dihitung backend: nikErrorSebab()).
+const NIK_ERROR_LABEL = {
+  kosong: "NIK Kosong",
+  digit_kurang: "Digit < 16",
+  digit_lebih: "Digit > 16",
+  nol_belakang: "6 Nol di Belakang",
+  tgl_lahir: "Tgl Lahir Tak Sesuai",
+};
+
 // Bangun klasifikasi (7 golongan) langsung dari data.comparison — semua field
 // yang dibutuhkan sudah tersedia di respons dasar tanpa perlu memuat detail.
 const buildClassification = (data) => {
@@ -370,6 +366,7 @@ const buildClassification = (data) => {
   const nikBerbeda = [];
   const desaBerbeda = [];
   const nikInvalid = [];
+  const nikErrorDb = [];
   const bpjsNoDb = [];
   const dbNoBpjs = [];
   const bpjsCocokAdd = [];
@@ -392,6 +389,10 @@ const buildClassification = (data) => {
         namaBpjs: (item.bpjsNama || []).join(", "),
         nik: (item.nik || []).join(", "),
         nikDb: (item.dbNik || []).join(", "),
+        // NIK Error Database: NIK apa adanya + tgl lahir pembanding + sebabnya.
+        nikDbRaw: (item.dbNikRaw || []).join(", "),
+        tglLahirDb: (item.dbTglLahir || []).join(", "),
+        nikErrorLabel: (item.dbNikError || []).map((s) => NIK_ERROR_LABEL[s] || s).join(", "),
         // Status jabatan dari database. Nilai jamak (merge >1 record) → tampil apa adanya.
         statusJabatan: (item.dbStatusJabatan || []).join(", "),
         jabatanDb: (item.dbJabatan || []).join(", "),
@@ -412,11 +413,6 @@ const buildClassification = (data) => {
         keterangan: item.keterangan || "",
         sumber: "",
         kandidatDesa: "",
-        // Crosscheck Data Status BPJS (DESK BPJS JULI 2026)
-        bpjsMembership: item.bpjsMembership || null,
-        bpjsNonAktifSebab: item.bpjsNonAktifSebab || "",
-        inBaru: Boolean(item.inBaru),
-        baruJabatan: item.baruJabatan || "",
         // Desa Berbeda (Tangkil / NIK lintas-desa) & klasifikasi NIK Invalid.
         desaBerbedaSumber: item.bpjsDesaBerbedaSumber || "",
         desaBerbedaLabel: item.bpjsDesaBerbedaSumber === "nik_lintas_desa" ? "NIK Lintas-Desa"
@@ -427,6 +423,9 @@ const buildClassification = (data) => {
           .map((c) => `${c.nama || ""} — ${c.desaNama || c.desaKode}${c.kecamatanNama ? ` (${c.kecamatanNama})` : ""}`)
           .join("; "),
       };
+
+      // Cacat NIK di sisi database — tidak bergantung ada/tidaknya padanan BPJS.
+      if (item.inDb && (item.dbNikError || []).length > 0) nikErrorDb.push(base);
 
       if (item.inDb && item.inBpjs) {
         dbBpjs.push(base);
@@ -486,78 +485,11 @@ const buildClassification = (data) => {
     || String(a.rt).localeCompare(String(b.rt))
     || String(a.namaDb || a.namaBpjs).localeCompare(String(b.namaDb || b.namaBpjs));
 
-  [dbBpjs, nikBerbeda, desaBerbeda, nikInvalid, bpjsNoDb, dbNoBpjs, bpjsCocokAdd].forEach((arr) => arr.sort(bySortKey));
+  [dbBpjs, nikBerbeda, desaBerbeda, nikInvalid, nikErrorDb, bpjsNoDb, dbNoBpjs, bpjsCocokAdd].forEach((arr) => arr.sort(bySortKey));
 
   // Pecah "DB tidak ada di BPJS" berdasarkan ada/tidaknya referensi ADD.
   const dbNoBpjsAdd = dbNoBpjs.filter((row) => row.adaAdd);
   const dbNoBpjsNoAdd = dbNoBpjs.filter((row) => !row.adaAdd);
-
-  // Crosscheck keanggotaan (Cek Aktif / Non-Aktif) pada dua kelompok Data BPJS.
-  const isAktif = (row) => row.bpjsMembership === "aktif";
-  const isNonAktif = (row) => row.bpjsMembership === "non_aktif" || row.bpjsMembership === "mixed";
-  const bpjsNoDbAll = [...bpjsNoDb, ...bpjsCocokAdd].sort(bySortKey); // semua BPJS tanpa DB (± ADD)
-
-  const dbBpjsAktif = dbBpjs.filter(isAktif);
-  const dbBpjsNonAktif = dbBpjs.filter(isNonAktif);
-  const bpjsNoDbAktif = bpjsNoDbAll.filter(isAktif);
-  const bpjsNoDbNonAktif = bpjsNoDbAll.filter(isNonAktif);
-
-  // "Data Baru": pengurus di sheet BARU. Dipisah 2: yang cocok Database
-  // (disandingkan dgn record DB) & yang tidak — keduanya hanya untuk yang BELUM
-  // ada di BPJS master (anomaliBpjs=false). Sumber: baruList.
-  const baruMapped = [...(data?.baruList || [])]
-    .map((b, index) => ({
-      key: `baru::${b.desaKode}::${b.nik || b.nama}::${index}`,
-      desaKode: b.desaKode,
-      desaNama: b.desaNama || b.desaKode,
-      kecamatanNama: b.kecamatanNama || "",
-      jenis: b.jenis || "",
-      rw: b.rwNomor || "",
-      rt: b.rtNomor || "",
-      nama: b.nama || "",
-      nik: b.nik || "",
-      jabatan: b.jabatan || "",
-      tglLahir: b.tglLahir || "",
-      pendidikan: b.pendidikan || "",
-      alamat: b.alamat || "",
-      matchedDb: Boolean(b.matchedDb),
-      matchType: b.matchType || "",
-      anomaliBpjs: Boolean(b.anomaliBpjs),
-      // Sandingan record Database (bila cocok)
-      dbNama: b.db?.nama || "",
-      dbNik: b.db?.nik || "",
-      dbJenis: b.db?.jenis || "",
-      dbRw: b.db?.rwNomor || "",
-      dbRt: b.db?.rtNomor || "",
-      dbJabatan: b.db?.jabatan || "",
-      dbTglLahir: b.db?.tglLahir || "",
-      dbAlamat: b.db?.alamat || "",
-      dbPendidikan: b.db?.pendidikan || "",
-    }));
-  const byBaruSort = (a, b) => a.desaKode.localeCompare(b.desaKode) || String(a.nama).localeCompare(String(b.nama));
-  const baruBelumBpjs = baruMapped.filter((r) => !r.anomaliBpjs);
-  const dbNoBpjsBaruAda = baruBelumBpjs.filter((r) => r.matchedDb).sort(byBaruSort);
-  const dbNoBpjsBaruTidak = baruBelumBpjs.filter((r) => !r.matchedDb).sort(byBaruSort);
-
-  // Data Status BPJS sebagai sumber tersendiri (rtrwbpjsstatus.json), apa adanya —
-  // bukan hasil persandingan. Sheet AKTIF / NON AKTIF / BARU.
-  const statusAktif = (data?.bpjsStatus?.aktif || []).map((r, index) => ({
-    ...r,
-    key: `status-aktif::${r.desaKode}::${r.nik || r.kpj}::${index}`,
-    bpjsMembership: "aktif",
-  }));
-  const statusNonAktif = (data?.bpjsStatus?.nonAktif || []).map((r, index) => ({
-    ...r,
-    key: `status-nonaktif::${r.desaKode}::${r.nama}::${index}`,
-    bpjsMembership: "non_aktif",
-    bpjsNonAktifSebab: r.sebab || "",
-  }));
-  const statusBaru = [...baruMapped].sort(byBaruSort);
-  // Selisih: peserta Data Status BPJS (sheet AKTIF/NON AKTIF) yang tidak ketemu
-  // di master Data BPJS. Sheet BARU tidak dihitung — memang belum di master.
-  const statusSelisih = [...statusAktif, ...statusNonAktif]
-    .filter((r) => !r.adaDiMaster)
-    .sort((a, b) => a.desaKode.localeCompare(b.desaKode) || String(a.nama).localeCompare(String(b.nama)));
 
   // Peserta BPJS yang tidak bisa dipetakan ke desa mana pun di database, jadi
   // tidak pernah muncul di persandingan. Baris ini tidak punya desa/kecamatan,
@@ -565,6 +497,7 @@ const buildClassification = (data) => {
   // kecamatanNama -> sebab, desaKode/desaNama -> ID_PEGAWAI.
   const bpjsUnmappable = (data?.bpjsUnmappable || []).map((r) => ({
     ...r,
+    petunjukDasarLabel: PETUNJUK_DASAR_LABEL[r.petunjukDasar] || "",
     kecamatanNama: r.sebabLabel || "Tidak diketahui",
     desaKode: r.idPegawai || "(kosong)",
     desaNama: r.idPegawai || "(kosong)",
@@ -572,11 +505,7 @@ const buildClassification = (data) => {
   }));
 
   return {
-    dbBpjs, nikBerbeda, desaBerbeda, nikInvalid, bpjsNoDb, dbNoBpjs, dbNoBpjsAdd, dbNoBpjsNoAdd, bpjsCocokAdd,
-    dbBpjsAktif, dbBpjsNonAktif,
-    bpjsNoDbAktif, bpjsNoDbNonAktif,
-    dbNoBpjsBaruAda, dbNoBpjsBaruTidak,
-    statusAktif, statusNonAktif, statusBaru, statusSelisih,
+    dbBpjs, nikBerbeda, desaBerbeda, nikInvalid, nikErrorDb, bpjsNoDb, dbNoBpjs, dbNoBpjsAdd, dbNoBpjsNoAdd, bpjsCocokAdd,
     bpjsUnmappable,
   };
 };
@@ -615,7 +544,6 @@ const TAB_DEFS = [
       { key: "nikCocok", label: "NIK Cocok", type: "bool" },
       { key: "tglBeda", label: "Tgl Lahir Beda", type: "bool" },
       { key: "desaBedaTangkil", label: "Desa Beda", type: "bool" },
-      { key: "bpjsMembership", label: "Status BPJS", type: "membership" },
       { key: "adaAdd", label: "Ada ADD", type: "bool" },
       { key: "nilaiAdd", label: "Nilai ADD", type: "currency", align: "right" },
       { key: "upahBpjs", label: "Upah BPJS", type: "currency", align: "right" },
@@ -672,7 +600,7 @@ const TAB_DEFS = [
     label: "Tidak Terpetakan",
     bucket: "bpjsUnmappable",
     title: "Data BPJS Tidak Terpetakan",
-    description: "Peserta BPJS yang ID_PEGAWAI-nya tidak bisa dipetakan ke desa mana pun di database, sehingga tidak ikut terhitung di seluruh persandingan. Dikelompokkan per sebab, lalu per ID_PEGAWAI. Perlu perbaikan data di sumber BPJS.",
+    description: "Peserta BPJS yang ID_PEGAWAI-nya tidak bisa dipetakan ke desa mana pun di database, sehingga tidak ikut terhitung di seluruh persandingan. Dikelompokkan per sebab, lalu per ID_PEGAWAI. Kolom Saran Kodefikasi menunjukkan kode desa yang seharusnya dipakai, dicocokkan ke Database lewat NIK — bila NIK kosong atau tak dikenal, lewat nama (dipertegas tanggal lahir bila namanya kembar antar desa). Perlu perbaikan data di sumber BPJS.",
     groupAllLabel: "Semua Sebab",
     searchPlaceholder: "Cari nama, NIK, atau ID_PEGAWAI...",
     columns: [
@@ -685,7 +613,9 @@ const TAB_DEFS = [
       { key: "upah", label: "Upah", type: "currency", align: "right" },
       { key: "barisExcelLabel", label: "Baris Excel" },
       { key: "sebabLabel", label: "Sebab" },
-      { key: "petunjukLabel", label: "NIK ada di Database" },
+      { key: "petunjukKode", label: "Saran Kodefikasi" },
+      { key: "petunjukLabel", label: "Saran Desa" },
+      { key: "petunjukDasarLabel", label: "Dasar Saran" },
     ],
   },
   {
@@ -701,6 +631,21 @@ const TAB_DEFS = [
       { key: "upahBpjs", label: "Upah BPJS", type: "currency", align: "right" },
       { key: "sumber", label: "Sumber" },
       { key: "kandidatDesa", label: "Kandidat Desa" },
+    ],
+  },
+  {
+    id: "nik_error_db",
+    label: "NIK Error Database",
+    bucket: "nikErrorDb",
+    title: "NIK Error Database",
+    description: "Ketua RT/RW di Database yang NIK-nya cacat bentuk: kosong, digit kurang/lebih dari 16, enam angka nol di belakang, atau DDMMYY-nya tidak sesuai tanggal lahir di Database. Tidak bergantung pada BPJS/ADD — murni mutu data Database.",
+    columns: [
+      COL_DESA, COL_LOKASI,
+      { key: "namaDb", label: "Nama DB" },
+      { key: "nikDbRaw", label: "NIK Database" },
+      { key: "tglLahirDb", label: "Tgl Lahir DB" },
+      { key: "nikErrorLabel", label: "Sebab" },
+      COL_STATUS_JABATAN,
     ],
   },
   {
@@ -743,172 +688,6 @@ const TAB_DEFS = [
       { key: "fuzzy", label: "Cocok Fuzzy", type: "bool" },
     ],
   },
-  // --- Crosscheck Data Status BPJS pada pool "Database & BPJS" ---
-  {
-    id: "db_bpjs_aktif",
-    label: "Cek Aktif",
-    bucket: "dbBpjsAktif",
-    title: "Database & BPJS — Cek Aktif",
-    description: "Pengurus yang ada di Database & Data BPJS, dan pada Data Status BPJS ditandai MASIH AKTIF.",
-    columns: [
-      COL_DESA, COL_LOKASI,
-      { key: "namaDb", label: "Nama DB" },
-      { key: "namaBpjs", label: "Nama BPJS" },
-      { key: "nik", label: "NIK" },
-      { key: "kpj", label: "KPJ" },
-      COL_STATUS_JABATAN,
-      { key: "bpjsMembership", label: "Status BPJS", type: "membership" },
-      { key: "upahBpjs", label: "Upah BPJS", type: "currency", align: "right" },
-    ],
-  },
-  {
-    id: "db_bpjs_non_aktif",
-    label: "Cek Non-Aktif",
-    bucket: "dbBpjsNonAktif",
-    title: "Database & BPJS — Cek Non-Aktif",
-    description: "Pengurus yang ada di Database & Data BPJS, namun pada Data Status BPJS ditandai TIDAK AKTIF (berakhir masa bakti / mengundurkan diri / meninggal, dll).",
-    columns: [
-      COL_DESA, COL_LOKASI,
-      { key: "namaDb", label: "Nama DB" },
-      { key: "namaBpjs", label: "Nama BPJS" },
-      { key: "nik", label: "NIK" },
-      { key: "kpj", label: "KPJ" },
-      COL_STATUS_JABATAN,
-      { key: "bpjsNonAktifSebab", label: "Sebab Non-Aktif" },
-      { key: "bpjsMembership", label: "Status BPJS", type: "membership" },
-    ],
-  },
-  // --- Crosscheck Data Status BPJS pada pool "BPJS Tidak Ada di Database" ---
-  {
-    id: "bpjs_nodb_aktif",
-    label: "Cek Aktif",
-    bucket: "bpjsNoDbAktif",
-    title: "BPJS Tanpa Database — Cek Aktif",
-    description: "Peserta Data BPJS yang tidak ada di Database, dan pada Data Status BPJS ditandai MASIH AKTIF.",
-    columns: [
-      COL_DESA, COL_LOKASI,
-      { key: "namaBpjs", label: "Nama BPJS" },
-      { key: "nik", label: "NIK" },
-      { key: "bpjsMembership", label: "Status", type: "membership" },
-      { key: "status", label: "Sumber" },
-      { key: "upahBpjs", label: "Upah BPJS", type: "currency", align: "right" },
-    ],
-  },
-  {
-    id: "bpjs_nodb_non_aktif",
-    label: "Cek Non-Aktif",
-    bucket: "bpjsNoDbNonAktif",
-    title: "BPJS Tanpa Database — Cek Non-Aktif",
-    description: "Peserta Data BPJS yang tidak ada di Database, namun pada Data Status BPJS ditandai TIDAK AKTIF.",
-    columns: [
-      COL_DESA, COL_LOKASI,
-      { key: "namaBpjs", label: "Nama BPJS" },
-      { key: "nik", label: "NIK" },
-      { key: "bpjsNonAktifSebab", label: "Sebab Non-Aktif" },
-      { key: "bpjsMembership", label: "Status", type: "membership" },
-    ],
-  },
-  // --- "Data Baru" pada pool "Database Tidak Ada di BPJS" ---
-  {
-    id: "db_no_bpjs_baru_ada",
-    label: "Data Baru — Ada di DB",
-    bucket: "dbNoBpjsBaruAda",
-    title: "Data Baru — Ada di Database",
-    description: "Pengurus dari sheet BARU (Data Status BPJS) yang belum di BPJS master, TAPI identitasnya cocok dengan Database. Klik baris untuk melihat penyandingan Database ↔ Data Baru.",
-    detail: "baru",
-    columns: [
-      COL_DESA, COL_LOKASI,
-      { key: "nama", label: "Nama (Baru)" },
-      { key: "nik", label: "NIK", type: "nikDiff", nikKey: "nik", otherNikKey: "dbNik" },
-      { key: "matchType", label: "Cocok Via", type: "matchType" },
-      { key: "_detail", label: "", type: "detail" },
-    ],
-  },
-  {
-    id: "db_no_bpjs_baru_tidak",
-    label: "Data Baru — Tidak di DB",
-    bucket: "dbNoBpjsBaruTidak",
-    title: "Data Baru — Tidak Ada di Database",
-    description: "Pengurus dari sheet BARU (Data Status BPJS) yang belum di BPJS master dan TIDAK ditemukan di Database. Kandidat pendaftaran baru sepenuhnya.",
-    columns: [
-      COL_DESA, COL_LOKASI,
-      { key: "nama", label: "Nama" },
-      { key: "nik", label: "NIK" },
-      { key: "jabatan", label: "Jabatan" },
-      { key: "tglLahir", label: "Tgl Lahir" },
-      { key: "pendidikan", label: "Pendidikan" },
-      { key: "alamat", label: "Alamat" },
-    ],
-  },
-  // --- Data Status BPJS sebagai sumber tersendiri (rtrwbpjsstatus.json) ---
-  {
-    id: "status_aktif",
-    label: "Status BPJS — Aktif",
-    bucket: "statusAktif",
-    title: "Data Status BPJS — AKTIF",
-    description: "Isi sheet AKTIF pada Data Status BPJS (rtrwbpjsstatus.json), apa adanya — belum disandingkan dengan Database/ADD. Nama diambil dari master Data BPJS via NIK/KPJ. Baris di-dedup per NIK/KPJ sehingga bisa lebih sedikit dari jumlah baris mentah sheet.",
-    columns: [
-      COL_DESA,
-      { key: "nama", label: "Nama" },
-      { key: "nik", label: "NIK" },
-      { key: "kpj", label: "KPJ" },
-      { key: "kodeTk", label: "Kode TK" },
-      { key: "tglLahir", label: "Tgl Lahir" },
-      { key: "bpjsMembership", label: "Status", type: "membership" },
-      { key: "upah", label: "Upah", type: "currency", align: "right" },
-    ],
-  },
-  {
-    id: "status_non_aktif",
-    label: "Status BPJS — Non-Aktif",
-    bucket: "statusNonAktif",
-    title: "Data Status BPJS — NON AKTIF",
-    description: "Isi sheet NON AKTIF pada Data Status BPJS (rtrwbpjsstatus.json). Sheet ini tidak memuat NIK — NIK/KPJ dilengkapi dari master Data BPJS bila nama & desa cocok. Baris di-dedup per nama+desa.",
-    columns: [
-      COL_DESA,
-      { key: "nama", label: "Nama" },
-      { key: "nik", label: "NIK" },
-      { key: "kpj", label: "KPJ" },
-      { key: "tglLahir", label: "Tgl Lahir" },
-      { key: "sebab", label: "Sebab Non-Aktif" },
-      { key: "bpjsMembership", label: "Status", type: "membership" },
-    ],
-  },
-  {
-    id: "status_baru",
-    label: "Status BPJS — Baru",
-    bucket: "statusBaru",
-    title: "Data Status BPJS — BARU",
-    description: "Isi sheet BARU pada Data Status BPJS (rtrwbpjsstatus.json): pengurus RT/RW yang diajukan baru. Klik baris untuk penyandingan dengan Database.",
-    detail: "baru",
-    columns: [
-      COL_DESA, COL_LOKASI,
-      { key: "nama", label: "Nama" },
-      { key: "nik", label: "NIK" },
-      { key: "jabatan", label: "Jabatan" },
-      { key: "tglLahir", label: "Tgl Lahir" },
-      { key: "matchedDb", label: "Ada di DB", type: "bool" },
-      { key: "anomaliBpjs", label: "Sudah di BPJS", type: "bool" },
-      { key: "_detail", label: "", type: "detail" },
-    ],
-  },
-  {
-    id: "status_selisih",
-    label: "Selisih vs Master BPJS",
-    bucket: "statusSelisih",
-    title: "Data Status BPJS — Selisih terhadap Master Data BPJS",
-    description: "Peserta pada sheet AKTIF / NON AKTIF Data Status BPJS yang TIDAK ditemukan di master Data BPJS (rtrwbpjs.json). AKTIF dicari via NIK lalu KPJ; NON AKTIF via nama + kode desa (sheet-nya tidak memuat NIK). Baris AKTIF di sini tampil tanpa nama karena namanya memang hanya ada di master. Sheet BARU tidak dihitung — memang belum terdaftar di master.",
-    columns: [
-      COL_DESA,
-      { key: "sheet", label: "Sheet" },
-      { key: "nama", label: "Nama" },
-      { key: "nik", label: "NIK" },
-      { key: "kpj", label: "KPJ" },
-      { key: "tglLahir", label: "Tgl Lahir" },
-      { key: "sebab", label: "Sebab Non-Aktif" },
-      { key: "bpjsMembership", label: "Status", type: "membership" },
-    ],
-  },
 ];
 
 // Warna kartu tab (dipakai saat tab aktif)
@@ -921,17 +700,8 @@ const TAB_COLOR = {
   db_no_bpjs: "gray",
   bpjs_add: "indigo",
   bpjs_nik_invalid: "red",
+  nik_error_db: "rose",
   bpjs_unmappable: "rose",
-  db_bpjs_aktif: "green",
-  db_bpjs_non_aktif: "green",
-  bpjs_nodb_aktif: "amber",
-  bpjs_nodb_non_aktif: "amber",
-  db_no_bpjs_baru_ada: "gray",
-  db_no_bpjs_baru_tidak: "gray",
-  status_aktif: "sky",
-  status_non_aktif: "sky",
-  status_baru: "sky",
-  status_selisih: "sky",
 };
 
 const TAB_ACTIVE_CLASS = {
@@ -966,7 +736,7 @@ const POOLS = [
     label: "Perbandingan RT/RW",
     color: "blue",
     mainTab: "comparison",
-    subTabs: [],
+    subTabs: ["nik_error_db"],
     showWilayahSplit: true,
     count: (_tc, summary) => summary.totalDesa,
   },
@@ -976,7 +746,7 @@ const POOLS = [
     needs: ["db", "bpjs"],
     color: "green",
     mainTab: "db_bpjs",
-    subTabs: ["nik_berbeda", "desa_berbeda", "db_bpjs_aktif", "db_bpjs_non_aktif"],
+    subTabs: ["nik_berbeda", "desa_berbeda"],
     // Angka unik: sub-tab adalah subset dari DB+BPJS, jadi jangan dijumlah.
     count: (tc) => tc.db_bpjs,
   },
@@ -986,7 +756,7 @@ const POOLS = [
     needs: ["bpjs"],
     color: "amber",
     mainTab: "bpjs_no_db",
-    subTabs: ["bpjs_no_db", "bpjs_add", "bpjs_nodb_aktif", "bpjs_nodb_non_aktif", "bpjs_nik_invalid"],
+    subTabs: ["bpjs_no_db", "bpjs_add", "bpjs_nik_invalid"],
     count: (tc) => (tc.bpjs_no_db || 0) + (tc.bpjs_add || 0),
   },
   {
@@ -1005,18 +775,8 @@ const POOLS = [
     needs: ["db", "bpjs"],
     color: "gray",
     mainTab: "db_no_bpjs",
-    subTabs: ["db_no_bpjs_no_add", "db_no_bpjs_with_add", "db_no_bpjs_baru_ada", "db_no_bpjs_baru_tidak"],
+    subTabs: ["db_no_bpjs_no_add", "db_no_bpjs_with_add"],
     count: (tc) => tc.db_no_bpjs,
-  },
-  {
-    id: "bpjs_status_pool",
-    label: "Data Status BPJS",
-    needs: ["bpjs"],
-    subtitle: "Sumber: rtrwbpjsstatus.json (AKTIF / NON AKTIF / BARU)",
-    color: "sky",
-    mainTab: "status_aktif",
-    subTabs: ["status_aktif", "status_non_aktif", "status_baru", "status_selisih"],
-    count: (tc) => (tc.status_aktif || 0) + (tc.status_non_aktif || 0) + (tc.status_baru || 0),
   },
 ];
 
@@ -1057,42 +817,18 @@ const SUBTAB_SHORT = {
   bpjs_add: "BPJS ada di ADD",
   db_no_bpjs_no_add: "Database",
   db_no_bpjs_with_add: "ADD",
-  db_bpjs_aktif: "Cek Aktif",
-  db_bpjs_non_aktif: "Cek Non-Aktif",
-  bpjs_nodb_aktif: "Cek Aktif",
-  bpjs_nodb_non_aktif: "Cek Non-Aktif",
   bpjs_nik_invalid: "NIK Invalid",
-  db_no_bpjs_baru_ada: "Baru • di DB",
-  db_no_bpjs_baru_tidak: "Baru • tak di DB",
-  status_aktif: "Aktif",
-  status_non_aktif: "Non-Aktif",
-  status_baru: "Baru",
-  status_selisih: "Selisih vs Master",
+  nik_error_db: "NIK Error Database",
 };
 
-// Aksen warna khusus tombol sub-tab crosscheck: hijau utk Aktif, merah utk Non-Aktif.
+// Aksen warna khusus tombol sub-tab: merah/rose untuk sub-tab anomali.
 const SUBTAB_ACCENT = {
-  db_bpjs_aktif: { color: "green", dot: "bg-green-500" },
-  bpjs_nodb_aktif: { color: "green", dot: "bg-green-500" },
-  db_bpjs_non_aktif: { color: "red", dot: "bg-red-500" },
-  bpjs_nodb_non_aktif: { color: "red", dot: "bg-red-500" },
   bpjs_nik_invalid: { color: "red", dot: "bg-rose-500" },
-  status_aktif: { color: "green", dot: "bg-green-500" },
-  status_non_aktif: { color: "red", dot: "bg-red-500" },
-  status_baru: { color: "sky", dot: "bg-sky-500" },
-  status_selisih: { color: "amber", dot: "bg-amber-500" },
+  nik_error_db: { color: "rose", dot: "bg-rose-500" },
 };
 
-// Sub-tab crosscheck Data Status BPJS -> ditaruh di BARIS KEDUA (di bawah sub-tab asli pool).
-const SUBTAB_SECOND_ROW = new Set([
-  "db_bpjs_aktif", "db_bpjs_non_aktif",
-  "bpjs_nodb_aktif", "bpjs_nodb_non_aktif",
-  "db_no_bpjs_baru_ada", "db_no_bpjs_baru_tidak",
-  "status_selisih",
-]);
-
-// Sub-tab yang ditaruh di BARIS KETIGA (di bawah Aktif/Non-Aktif).
-const SUBTAB_THIRD_ROW = new Set(["bpjs_nik_invalid"]);
+// Sub-tab anomali NIK -> ditaruh di BARIS KEDUA (di bawah sub-tab asli pool).
+const SUBTAB_SECOND_ROW = new Set(["bpjs_nik_invalid"]);
 
 // Satu kali ambil seluruh persandingan beserta detail sumbernya, dipetakan per
 // `${desaKode}::${itemKey}` — kunci yang sama dipakai baris tabel klasifikasi.
@@ -1370,29 +1106,20 @@ const RtrwComparisonPage = () => {
     nik_berbeda: classification.nikBerbeda.length,
     desa_berbeda: classification.desaBerbeda.length,
     bpjs_nik_invalid: classification.nikInvalid.length,
+    nik_error_db: classification.nikErrorDb.length,
     bpjs_unmappable: classification.bpjsUnmappable.length,
     bpjs_no_db: classification.bpjsNoDb.length,
     db_no_bpjs: classification.dbNoBpjs.length,
     db_no_bpjs_no_add: classification.dbNoBpjsNoAdd.length,
     db_no_bpjs_with_add: classification.dbNoBpjsAdd.length,
     bpjs_add: classification.bpjsCocokAdd.length,
-    db_bpjs_aktif: classification.dbBpjsAktif.length,
-    db_bpjs_non_aktif: classification.dbBpjsNonAktif.length,
-    bpjs_nodb_aktif: classification.bpjsNoDbAktif.length,
-    bpjs_nodb_non_aktif: classification.bpjsNoDbNonAktif.length,
-    db_no_bpjs_baru_ada: classification.dbNoBpjsBaruAda.length,
-    db_no_bpjs_baru_tidak: classification.dbNoBpjsBaruTidak.length,
-    status_aktif: classification.statusAktif.length,
-    status_non_aktif: classification.statusNonAktif.length,
-    status_baru: classification.statusBaru.length,
-    status_selisih: classification.statusSelisih.length,
   }), [classification]);
 
   const activeTabDef = TAB_DEFS.find((tab) => tab.id === activeTab);
   const activePoolDef = POOLS.find((pool) => poolTabs(pool).includes(activeTab)) || POOLS[0];
   const visiblePools = POOLS.filter((pool) => poolAvailable(pool, sources));
-  // Kartu ringkasan: 1 kartu "Cocok" + kartu per sumber (BPJS membawa 2: master & status).
-  const summaryCardCount = 1 + (sources.db ? 1 : 0) + (sources.add ? 1 : 0) + (sources.bpjs ? 2 : 0);
+  // Kartu ringkasan: 1 kartu "Cocok" + 1 kartu per sumber terpilih.
+  const summaryCardCount = 1 + (sources.db ? 1 : 0) + (sources.add ? 1 : 0) + (sources.bpjs ? 1 : 0);
 
   const wilayahSplit = useMemo(() => {
     const list = data?.comparison || [];
@@ -1546,13 +1273,6 @@ const RtrwComparisonPage = () => {
             onClick: () => setListModal({ title: "Wilayah Tanpa Data BPJS", list: data.summary.desaWithoutBpjs }),
           } : null}
         />}
-        {sources.bpjs && <SummaryCard
-          icon={<LuShieldCheck />}
-          label="Status BPJS"
-          value={(data.summary.totalStatusAktif || 0) + (data.summary.totalStatusNonAktif || 0) + (data.summary.totalBaru || 0)}
-          color="sky"
-          subtitle={`${(data.summary.totalStatusAktif || 0).toLocaleString("id-ID")} aktif · ${(data.summary.totalStatusNonAktif || 0).toLocaleString("id-ID")} non-aktif · ${(data.summary.totalBaru || 0).toLocaleString("id-ID")} baru`}
-        />}
         <SummaryCard
           icon={<LuCircleCheck />}
           label={selectedSourceLabels.length > 1 ? "Cocok" : "Baris"}
@@ -1586,22 +1306,6 @@ const RtrwComparisonPage = () => {
             valueClass="text-violet-600"
             onClick={data.summary.totalBpjsTangkilUnresolved ? () => selectTab("bpjs_no_db") : null}
           />}
-          {sources.bpjs && data.summary.statusOverlayAvailable && (
-            <>
-              <InfoRow
-                label="Status BPJS — Aktif"
-                value={data.summary.totalBpjsAktif}
-                valueClass="text-green-600"
-                onClick={() => selectTab("db_bpjs_aktif")}
-              />
-              <InfoRow
-                label="Status BPJS — Non-Aktif"
-                value={data.summary.totalBpjsNonAktif}
-                valueClass="text-red-600"
-                onClick={() => selectTab("db_bpjs_non_aktif")}
-              />
-            </>
-          )}
         </div>
       </div>
 
@@ -1640,7 +1344,7 @@ const RtrwComparisonPage = () => {
               </button>
 
               {pool.showWilayahSplit && (
-                <span className="mt-auto block pt-2 text-[11px] text-slate-500">
+                <span className={`block pt-2 text-[11px] text-slate-500 ${pool.subTabs.length > 0 ? "" : "mt-auto"}`}>
                   {wilayahSplit.desa.toLocaleString("id-ID")} Desa
                   {wilayahSplit.kelurahan > 0
                     ? ` · ${wilayahSplit.kelurahan.toLocaleString("id-ID")} Kelurahan`
@@ -1678,9 +1382,8 @@ const RtrwComparisonPage = () => {
                     </button>
                   );
                 };
-                const baseTabs = pool.subTabs.filter((t) => !SUBTAB_SECOND_ROW.has(t) && !SUBTAB_THIRD_ROW.has(t));
+                const baseTabs = pool.subTabs.filter((t) => !SUBTAB_SECOND_ROW.has(t));
                 const secondTabs = pool.subTabs.filter((t) => SUBTAB_SECOND_ROW.has(t));
-                const thirdTabs = pool.subTabs.filter((t) => SUBTAB_THIRD_ROW.has(t));
                 return (
                   <div className="mt-3 flex flex-1 flex-col gap-2">
                     {baseTabs.length > 0 && (
@@ -1688,9 +1391,6 @@ const RtrwComparisonPage = () => {
                     )}
                     {secondTabs.length > 0 && (
                       <div className="flex flex-1 flex-wrap gap-2 border-t border-slate-100 pt-2">{secondTabs.map(renderSubTab)}</div>
-                    )}
-                    {thirdTabs.length > 0 && (
-                      <div className="flex flex-1 flex-wrap gap-2">{thirdTabs.map(renderSubTab)}</div>
                     )}
                   </div>
                 );
@@ -1725,7 +1425,6 @@ const RtrwComparisonPage = () => {
           groupAllLabel={activeTabDef.groupAllLabel}
           searchPlaceholder={activeTabDef.searchPlaceholder}
           filenameBase={activeTabDef.id}
-          detailType={activeTabDef.detail}
         />
       )}
 
@@ -2180,24 +1879,6 @@ const RtrwItemRow = ({ item, index, desaKode, sources = { db: true, add: true, b
               TGL ?
             </span>
           )}
-          {(item.bpjsMembership === "aktif" || item.bpjsMembership === "non_aktif" || item.bpjsMembership === "mixed") && (
-            <span
-              title={item.bpjsNonAktifSebab || `Status kepesertaan BPJS: ${MEMBERSHIP_CONFIG[item.bpjsMembership]?.label}`}
-              className={`ml-1 inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium ${MEMBERSHIP_CONFIG[item.bpjsMembership]?.color}`}
-            >
-              <span className={`h-1.5 w-1.5 rounded-full ${MEMBERSHIP_CONFIG[item.bpjsMembership]?.dotColor}`} />
-              BPJS {MEMBERSHIP_CONFIG[item.bpjsMembership]?.label}
-            </span>
-          )}
-          {item.inBaru && !item.inBpjs && (
-            <span
-              title={`Terdaftar sebagai pengurus BARU${item.baruJabatan ? ` (${item.baruJabatan})` : ""} — belum di BPJS`}
-              className="ml-1 inline-flex items-center gap-1 rounded-full bg-sky-100 px-2 py-0.5 text-[11px] font-medium text-sky-700"
-            >
-              <LuCircleHelp className="h-3 w-3" />
-              BARU
-            </span>
-          )}
           {item.nikMatch && (
             <span
               title="NIK BPJS sama dengan NIK di database"
@@ -2429,17 +2110,6 @@ const renderClassifiedCell = (col, row, hrefOf) => {
       );
     case "nikDiff":
       return <span className="text-xs">{renderNikDiff(row[col.nikKey], row[col.otherNikKey])}</span>;
-    case "matchType": {
-      if (value === "nik") return <span className="rounded-full bg-green-100 px-2 py-0.5 text-[11px] font-medium text-green-700">NIK</span>;
-      if (value === "nama") return <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-medium text-amber-700">Nama</span>;
-      return <span className="italic text-gray-300">-</span>;
-    }
-    case "detail":
-      return (
-        <span className="inline-flex items-center gap-1 whitespace-nowrap rounded-lg border border-gray-200 px-2 py-1 text-[11px] font-medium text-gray-600">
-          <LuSearch className="h-3 w-3" /> Detail
-        </span>
-      );
     case "desa":
       return (
         <div className="min-w-[10rem]">
@@ -2468,16 +2138,6 @@ const renderClassifiedCell = (col, row, hrefOf) => {
         </span>
       );
     }
-    case "membership": {
-      const cfg = MEMBERSHIP_CONFIG[value];
-      if (!cfg) return <span className="italic text-gray-300">-</span>;
-      return (
-        <span title={row.bpjsNonAktifSebab || undefined} className={`inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-xs font-medium ${cfg.color}`}>
-          <span className={`h-1.5 w-1.5 rounded-full ${cfg.dotColor}`} />
-          {cfg.label}
-        </span>
-      );
-    }
     case "currency":
       return <span className="tabular-nums text-gray-700">{value ? formatCurrency(value) : "-"}</span>;
     default:
@@ -2492,7 +2152,7 @@ const renderClassifiedCell = (col, row, hrefOf) => {
   }
 };
 
-const ClassifiedTable = ({ title, description, rows, columns, kecamatanList, filenameBase, detailType,
+const ClassifiedTable = ({ title, description, rows, columns, kecamatanList, filenameBase,
   // Tab "Tidak Terpetakan" memakai tabel ini tapi datanya tidak punya desa;
   // pengelompokan dua tingkatnya dipakai ulang untuk sebab -> ID_PEGAWAI.
   groupAllLabel = "Semua Kecamatan", searchPlaceholder = "Cari desa, nama, atau NIK..." }) => {
@@ -2500,7 +2160,6 @@ const ClassifiedTable = ({ title, description, rows, columns, kecamatanList, fil
   const [kecamatan, setKecamatan] = useState("");
   const [openKec, setOpenKec] = useState(() => new Set());
   const [openDesa, setOpenDesa] = useState(() => new Set());
-  const [detailRow, setDetailRow] = useState(null);
   const [exporting, setExporting] = useState(false);
   const pengurusHref = usePengurusHref();
 
@@ -2578,8 +2237,8 @@ const ClassifiedTable = ({ title, description, rows, columns, kecamatanList, fil
   };
 
   // Baris yang berasal dari persandingan memakai kunci `<kode desa>::<key item>`;
-  // baris tab lain (Data Baru, Status BPJS, Tidak Terpetakan) tidak, jadi detail
-  // pengurus hanya diambil bila memang ada yang bisa dicocokkan.
+  // baris tab lain (mis. Tidak Terpetakan) tidak, jadi detail pengurus hanya
+  // diambil bila memang ada yang bisa dicocokkan.
   const KUNCI_ITEM = /^\d{2}\.\d{2}\.\d{2}\.\d{4}::/;
 
   const exportTab = async () => {
@@ -2612,7 +2271,7 @@ const ClassifiedTable = ({ title, description, rows, columns, kecamatanList, fil
         "RT": row.rt || "",
       };
       columns.forEach((col) => {
-        if (col.type === "desa" || col.type === "lokasi" || col.type === "detail") return;
+        if (col.type === "desa" || col.type === "lokasi") return;
         if (col.type === "nameNik") {
           const nameHeader = col.label.toUpperCase();
           out[nameHeader] = row[col.nameKey] ?? "";
@@ -2623,32 +2282,15 @@ const ClassifiedTable = ({ title, description, rows, columns, kecamatanList, fil
           out[col.label.toUpperCase()] = row[col.nikKey] ?? "";
           return;
         }
-        if (col.type === "matchType") {
-          out[col.label.toUpperCase()] = row[col.key] === "nik" ? "NIK" : row[col.key] === "nama" ? "Nama" : "";
-          return;
-        }
         const value = row[col.key];
         out[col.label.toUpperCase()] = col.type === "bool"
           ? (value ? "Ya" : "Tidak")
           : col.type === "currency"
             ? Number(value || 0)
-            : col.type === "membership"
-              ? (MEMBERSHIP_CONFIG[value]?.label || "")
-              : col.type === "statusJabatan"
-                ? (statusJabatanConfig(value)?.label || "")
-                : (value ?? "");
+            : col.type === "statusJabatan"
+              ? (statusJabatanConfig(value)?.label || "")
+              : (value ?? "");
       });
-      // Tab "Data Baru — Ada di DB": sertakan sandingan record Database di export.
-      if (detailType === "baru") {
-        out["NAMA (DB)"] = row.dbNama || "";
-        out["NIK (DB)"] = row.dbNik || "";
-        out["JABATAN (BARU)"] = row.jabatan || "";
-        out["JABATAN (DB)"] = row.dbJabatan || "";
-        out["TGL LAHIR (BARU)"] = row.tglLahir || "";
-        out["TGL LAHIR (DB)"] = row.dbTglLahir || "";
-        out["PENDIDIKAN (BARU)"] = row.pendidikan || "";
-        out["PENDIDIKAN (DB)"] = row.dbPendidikan || "";
-      }
 
       // Lengkapi dengan seluruh data pengurus (Database) + data BPJS/ADD bila
       // barisnya memang hasil persandingan. Kolom milik tab tidak ditimpa.
@@ -2799,8 +2441,7 @@ const ClassifiedTable = ({ title, description, rows, columns, kecamatanList, fil
                           {desaOpen && desa.rows.map((row, index) => (
                             <tr
                               key={row.key}
-                              className={`border-t border-gray-50 hover:bg-blue-50/40 ${detailType ? "cursor-pointer" : ""}`}
-                              onClick={detailType ? () => setDetailRow(row) : undefined}
+                              className="border-t border-gray-50 hover:bg-blue-50/40"
                             >
                               <td className="px-4 py-2 text-xs text-gray-400">{index + 1}</td>
                               {displayColumns.map((col) => (
@@ -2821,61 +2462,6 @@ const ClassifiedTable = ({ title, description, rows, columns, kecamatanList, fil
         </table>
       </div>
 
-      {detailType === "baru" && detailRow && (
-        <BaruDetailModal row={detailRow} onClose={() => setDetailRow(null)} />
-      )}
-    </div>
-  );
-};
-
-// Modal penyandingan Data Baru (sheet DESK) <-> Database, dua kolom kiri-kanan.
-const BaruDetailModal = ({ row, onClose }) => {
-  const norm = (v) => String(v ?? "").trim().toUpperCase();
-  const fields = [
-    { label: "Nama", db: row.dbNama, baru: row.nama },
-    { label: "NIK", db: row.dbNik, baru: row.nik, nik: true },
-    { label: "Jenis", db: row.dbJenis, baru: row.jenis },
-    { label: "RW", db: row.dbRw, baru: row.rw },
-    { label: "RT", db: row.dbRt, baru: row.rt },
-    { label: "Jabatan", db: row.dbJabatan, baru: row.jabatan },
-    { label: "Tgl Lahir", db: row.dbTglLahir, baru: row.tglLahir },
-    { label: "Alamat", db: row.dbAlamat, baru: row.alamat },
-    { label: "Pendidikan", db: row.dbPendidikan, baru: row.pendidikan },
-  ];
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={onClose}>
-      <div className="max-h-[85vh] w-full max-w-2xl overflow-y-auto rounded-xl bg-white shadow-xl" onClick={(e) => e.stopPropagation()}>
-        <div className="flex items-start justify-between gap-3 border-b border-gray-100 p-4">
-          <div>
-            <h3 className="text-base font-semibold text-gray-900">Penyandingan Data Baru ↔ Database</h3>
-            <p className="mt-0.5 text-xs text-gray-500">
-            {row.desaNama} · {row.kecamatanNama} · {row.matchType === "nik" ? "cocok via NIK" : row.matchType === "nama" ? "cocok via nama" : "tidak ada padanan di Database"}
-          </p>
-          </div>
-          <button onClick={onClose} className="rounded-lg p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-600">
-            <LuX className="h-5 w-5" />
-          </button>
-        </div>
-        <div className="grid grid-cols-[7rem_1fr_1fr] gap-x-3 p-4 text-sm">
-          <div className="pb-2 text-xs font-semibold uppercase text-gray-400">Kolom</div>
-          <div className="pb-2 text-xs font-semibold uppercase text-blue-600">Database</div>
-          <div className="pb-2 text-xs font-semibold uppercase text-sky-600">Data Baru</div>
-          {fields.map((f) => {
-            const diff = norm(f.db) !== norm(f.baru);
-            return (
-              <React.Fragment key={f.label}>
-                <div className={`border-t border-gray-100 py-2 text-xs font-medium ${diff ? "text-red-500" : "text-gray-500"}`}>{f.label}</div>
-                <div className="border-t border-gray-100 py-2 text-gray-800">
-                  {f.nik ? renderNikDiff(f.db, f.baru) : (f.db || <span className="italic text-gray-300">-</span>)}
-                </div>
-                <div className={`border-t border-gray-100 py-2 ${diff ? "bg-red-50/60" : ""} text-gray-800`}>
-                  {f.nik ? renderNikDiff(f.baru, f.db) : (f.baru || <span className="italic text-gray-300">-</span>)}
-                </div>
-              </React.Fragment>
-            );
-          })}
-        </div>
-      </div>
     </div>
   );
 };
