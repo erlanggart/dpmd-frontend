@@ -77,7 +77,11 @@ const getDeviceType = () => {
 };
 
 // ═══════════════════════════════════════════════════════════════
-const AbsensiPage = () => {
+// kelompok: 'pegawai' (PPPK/TAD DPMD, /absensi) atau 'perangkat_desa' (/absensi-perangkat).
+const AbsensiPage = ({ kelompok = "pegawai" }) => {
+	const perangkat = kelompok === "perangkat_desa";
+	const base = perangkat ? "/absensi-perangkat" : "/absensi";
+	const [perangkatTerkunci, setPerangkatTerkunci] = useState(null);
 	const [searchParams, setSearchParams] = useSearchParams();
 	const [user] = useState(JSON.parse(localStorage.getItem("user") || "{}"));
 	const [todayData, setTodayData] = useState(null);
@@ -130,37 +134,40 @@ const AbsensiPage = () => {
 		const check = async () => {
 			try {
 				// Cache-bust agar service worker tidak serve response lama
-				const res = await api.get(`/absensi/check-eligible?_t=${Date.now()}`);
+				const res = await api.get(`${base}/check-eligible?_t=${Date.now()}`);
 				const data = res.data.data;
 				setEligible(data);
 				if (data?.eligible && !data?.device_registered && deviceId) {
 					try {
-						await api.post("/absensi/register-device", { device_id: deviceId, device_type: getDeviceType() });
-						const res2 = await api.get(`/absensi/check-eligible?_t=${Date.now()}`);
+						await api.post(`${base}/register-device`, { device_id: deviceId, device_type: getDeviceType() });
+						const res2 = await api.get(`${base}/check-eligible?_t=${Date.now()}`);
 						setEligible(res2.data.data);
-					} catch (err) { console.error("Auto device registration failed:", err); }
+					} catch (err) {
+						console.error("Auto device registration failed:", err);
+						if (err.response?.data?.code === "PERANGKAT_TERKUNCI") setPerangkatTerkunci(err.response.data.message || "Akun ini sudah terikat ke HP lain.");
+					}
 				}
 			} catch { setEligible({ eligible: false }); }
 		};
 		check();
-	}, [deviceId]);
+	}, [deviceId, base]);
 
 	const fetchToday = useCallback(async () => {
 		try {
-			const res = await api.get("/absensi/today");
+			const res = await api.get(`${base}/today`);
 			setTodayData(res.data.data);
 			if (res.data.settings) setAbsensiSettings(res.data.settings);
 			setTelatMasukMenit(res.data.telat_masuk_menit || 0);
 			setPulangLebihAwalMenit(res.data.pulang_lebih_awal_menit || 0);
 		} catch (err) { console.error("Error fetching today:", err); }
-	}, []);
+	}, [base]);
 
 	const fetchHistory = useCallback(async () => {
 		try {
-			const res = await api.get(`/absensi/history?bulan=${selectedMonth}&tahun=${selectedYear}`);
+			const res = await api.get(`${base}/history?bulan=${selectedMonth}&tahun=${selectedYear}`);
 			setHistory(res.data.data || { records: [], summary: {} });
 		} catch (err) { console.error("Error fetching history:", err); }
-	}, [selectedMonth, selectedYear]);
+	}, [base, selectedMonth, selectedYear]);
 
 	useEffect(() => {
 		const init = async () => { setLoading(true); await Promise.all([fetchToday(), fetchHistory()]); setLoading(false); };
@@ -169,11 +176,11 @@ const AbsensiPage = () => {
 
 	useEffect(() => {
 		const fetchSuccessMessages = async () => {
-			try { const res = await api.get("/absensi/success-messages"); setSuccessMessages(res.data.data || {}); }
+			try { const res = await api.get(`${base}/success-messages`); setSuccessMessages(res.data.data || {}); }
 			catch (err) { console.error("Error fetching success messages:", err); }
 		};
 		fetchSuccessMessages();
-	}, []);
+	}, [base]);
 
 	const checkDevice = () => {
 		if (!eligible?.device_registered) {
@@ -184,6 +191,8 @@ const AbsensiPage = () => {
 	};
 
 	const handleRemoveDevice = async () => {
+		// Perangkat desa tidak boleh melepas HP sendiri; reset lewat Bidang Pemdes.
+		if (perangkat) return;
 		const confirm = await showAlert({
 			icon: "warning",
 			title: "Hapus Perangkat Lama?",
@@ -242,7 +251,7 @@ const AbsensiPage = () => {
 		setShowCameraModal(null);
 		setClockLoading(true);
 		try {
-			const endpoint = type === "masuk" ? "/absensi/clock-in" : "/absensi/clock-out";
+			const endpoint = type === "masuk" ? `${base}/clock-in` : `${base}/clock-out`;
 			const body = { foto, latitude: coords.latitude, longitude: coords.longitude, device_id: deviceId };
 			if (type === "masuk") {
 				body.mode = absensiMode;
@@ -265,7 +274,9 @@ const AbsensiPage = () => {
 			const errMsg = err.response?.data?.message || "Gagal absensi";
 			const errCode = err.response?.data?.code;
 			const isJarak = errMsg.toLowerCase().includes("meter");
-			if (errCode === "DEVICE_MISMATCH") {
+			if (perangkat && (errCode === "DEVICE_MISMATCH" || errCode === "PERANGKAT_TERKUNCI")) {
+				showAlert({ icon: "error", title: "Perangkat Berbeda", text: errMsg });
+			} else if (errCode === "DEVICE_MISMATCH") {
 				const registeredDevice = err.response?.data?.registered_device || "Tidak dikenal";
 				const confirm = await showAlert({
 					icon: "error",
@@ -293,8 +304,10 @@ const AbsensiPage = () => {
 
 	const handleSubmitIzin = async (status, keterangan) => {
 		try {
-			const today = new Date().toISOString().split("T")[0];
-			await api.post("/absensi/izin", { tanggal: today, status, keterangan });
+			// Tanggal lokal, bukan toISOString (UTC): lewat tengah malam WIB bisa mundur sehari.
+			const d = new Date();
+			const today = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+			await api.post(`${base}/izin`, { tanggal: today, status, keterangan });
 			await fetchToday(); await fetchHistory(); setShowIzinModal(false);
 			const msgData = successMessages[status];
 			if (msgData) {
@@ -364,7 +377,9 @@ const AbsensiPage = () => {
 					<FiAlertCircle className="h-12 w-12 mx-auto text-slate-200 mb-3" />
 					<h2 className="text-lg font-bold text-slate-800 mb-1">Tidak Tersedia</h2>
 					<p className="text-slate-400 text-xs leading-relaxed">
-						Fitur presensi hanya untuk PPPK Paruh Waktu, Tenaga Alih Daya, Tenaga Keamanan, atau Tenaga Kebersihan.
+						{perangkat
+							? (eligible.alasan || "Akun ini belum dapat melakukan presensi.")
+							: "Fitur presensi hanya untuk PPPK Paruh Waktu, Tenaga Alih Daya, Tenaga Keamanan, atau Tenaga Kebersihan."}
 					</p>
 				</div>
 			</div>
@@ -593,6 +608,11 @@ const AbsensiPage = () => {
 						<div className="min-w-0">
 							<p className="text-sm font-bold text-slate-800 truncate leading-tight">{eligible?.nama || user.name}</p>
 							<p className="text-[10px] text-slate-400 truncate">{eligible?.jabatan || eligible?.status_kepegawaian?.replace(/_/g, " ")}</p>
+							{perangkat && (eligible?.desa || eligible?.nipd) && (
+								<p className="text-[10px] text-slate-400 truncate">
+									{[eligible.desa && `Desa ${eligible.desa.nama}, Kec. ${eligible.desa.kecamatan}`, eligible.nipd && `NIPD ${eligible.nipd}`].filter(Boolean).join(" · ")}
+								</p>
+							)}
 						</div>
 					</div>
 					<div className="flex items-center gap-2 flex-shrink-0">
@@ -609,11 +629,13 @@ const AbsensiPage = () => {
 								? <><FiClock className="h-3.5 w-3.5" /> Presensi</>
 								: <><FiCalendar className="h-3.5 w-3.5" /> Riwayat</>}
 						</button>
+						{!perangkat && (
 						<button onClick={() => setShowLeaderboard(true)}
 							className="flex items-center gap-1 px-2.5 py-1 bg-gradient-to-r from-orange-500 to-amber-500 rounded-lg text-[10px] font-bold text-white shadow-sm active:scale-95 transition"
 							title="Peringkat Absen Terbaik">
 							<LuTrophy className="h-3.5 w-3.5" /> Peringkat
 						</button>
+						)}
 						{eligible?.device_registered ? (
 							<span className="flex items-center gap-1 px-2 py-0.5 bg-emerald-50 rounded-lg text-[9px] font-bold text-emerald-600">
 								<LuShieldCheck className="h-3 w-3" />
@@ -678,7 +700,18 @@ const AbsensiPage = () => {
 					{eligible && !eligible.device_registered && (
 						<div className="bg-amber-50 rounded-xl p-2.5 mb-2 flex items-center gap-2 flex-shrink-0">
 							<FiSmartphone className="h-3.5 w-3.5 text-amber-500 flex-shrink-0" />
-							<p className="text-[10px] text-amber-700 font-medium">Device belum terdaftar — logout lalu login kembali</p>
+							<p className="text-[10px] text-amber-700 font-medium">
+								{perangkatTerkunci
+									? `${perangkatTerkunci} Hubungi Bidang Pemdes DPMD untuk mengatur ulang akun.`
+									: "Device belum terdaftar — logout lalu login kembali"}
+							</p>
+						</div>
+					)}
+					{/* Presensi perangkat desa butuh titik kantor desa dari Profil Desa */}
+					{perangkat && eligible?.eligible && eligible.kantor_berkoordinat === false && (
+						<div className="bg-red-50 rounded-xl p-2.5 mb-2 flex items-start gap-2 flex-shrink-0">
+							<FiAlertCircle className="h-3.5 w-3.5 text-red-500 flex-shrink-0 mt-0.5" />
+							<p className="text-[10px] text-red-700 font-medium">Presensi belum bisa dilakukan: titik lokasi kantor desa belum diisi. Minta operator desa mengisinya di Profil Desa.</p>
 						</div>
 					)}
 
@@ -1071,7 +1104,8 @@ const AbsensiPage = () => {
 									</motion.button>
 									</div>
 
-									{/* Mode buttons */}
+									{/* Mode buttons (perangkat desa hanya Hadir) */}
+									{!perangkat && (
 									<div className="w-full bg-white rounded-2xl shadow-[0_2px_16px_rgba(0,0,0,0.07)] p-3">
 									<div className="grid grid-cols-3 gap-2">
 										<motion.button
@@ -1103,6 +1137,7 @@ const AbsensiPage = () => {
 										</motion.button>
 									</div>
 									</div>
+									)}
 
 									{/* Izin / Sakit / Cuti */}
 									<div className="w-full bg-white rounded-2xl shadow-[0_2px_16px_rgba(0,0,0,0.07)]">
@@ -1291,7 +1326,7 @@ const AbsensiPage = () => {
 
 			<AbsensiSuccessPopup show={successPopup.show} data={successPopup.data} onClose={() => setSuccessPopup({ show: false, data: null })} />
 
-			<AttendanceLeaderboardModal open={showLeaderboard} onClose={() => setShowLeaderboard(false)} highlightUserId={user?.id} />
+			{!perangkat && <AttendanceLeaderboardModal open={showLeaderboard} onClose={() => setShowLeaderboard(false)} highlightUserId={user?.id} />}
 
 			<style>{`.scrollbar-none::-webkit-scrollbar{display:none}.scrollbar-none{-ms-overflow-style:none;scrollbar-width:none}`}</style>
 		</div>

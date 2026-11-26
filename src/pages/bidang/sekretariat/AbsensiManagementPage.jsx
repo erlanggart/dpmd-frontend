@@ -272,11 +272,34 @@ const renderChartToImage = async (config, width, height) => {
   return img;
 };
 
-const AbsensiManagementPage = () => {
+// kelompok: 'pegawai' (Sekretariat, /absensi/admin) atau 'perangkat_desa' (Bidang Pemdes, /absensi-perangkat/admin).
+const AbsensiManagementPage = ({ kelompok = "pegawai" }) => {
   const { user } = useAuth();
   const canManageAbsensiRecords = user?.role === "superadmin";
+  const perangkat = kelompok === "perangkat_desa";
+  const BASE = perangkat ? "/absensi-perangkat/admin" : "/absensi/admin";
+  const bolehAkses = user?.role === 'superadmin'
+    || (perangkat ? (user?.role === 'sekretaris_dinas' || Number(user?.bidang_id) === 6) : Number(user?.bidang_id) === 2);
 
-  if (user?.role !== 'superadmin' && Number(user?.bidang_id) !== 2) {
+  // Hook filter wilayah di atas penjaga akses agar tidak menambah hook bersyarat.
+  const [filterKec, setFilterKec] = useState("");
+  const [filterDesa, setFilterDesa] = useState("");
+  const [kecList, setKecList] = useState([]);
+  const [desaList, setDesaList] = useState([]);
+  const [desaTanpaKoordinat, setDesaTanpaKoordinat] = useState([]);
+  useEffect(() => {
+    if (!perangkat) return;
+    api.get("/kecamatans").then((r) => setKecList(r.data?.data || [])).catch((e) => console.error("Gagal memuat kecamatan:", e));
+  }, [perangkat]);
+
+  useEffect(() => {
+    setFilterDesa("");
+    setDesaList([]);
+    if (!perangkat || !filterKec) return;
+    api.get(`/desas/kecamatan/${filterKec}`).then((r) => setDesaList(r.data?.data || [])).catch((e) => console.error("Gagal memuat desa:", e));
+  }, [perangkat, filterKec]);
+
+  if (!bolehAkses) {
     return <Navigate to="/forbidden" replace />;
   }
 
@@ -365,103 +388,119 @@ const AbsensiManagementPage = () => {
   const [reminderSaving, setReminderSaving] = useState(false);
   const [reminderTesting, setReminderTesting] = useState(null);
 
+  // Filter wilayah (khusus perangkat desa): dikirim sebagai kecamatan_id/desa_id ke endpoint admin.
+  const wilQs = perangkat
+    ? `${filterKec ? `&kecamatan_id=${filterKec}` : ""}${filterDesa ? `&desa_id=${filterDesa}` : ""}`
+    : "";
+  // Rekap butuh kecamatan (server menolak tanpa filter): jangan panggil API sebelum dipilih.
+  const perluKecamatan = perangkat && !filterKec && (activeTab === "rekap" || activeTab === "rekap-pegawai");
+  const labelDesa = (d) => (d ? `${d.nama}${d.kecamatan?.nama ? `, ${d.kecamatan.nama}` : ""}` : "");
+
   // ─── Data Fetchers ────────────────────────────────────────
   const fetchRekap = useCallback(async () => {
+    if (perangkat && !filterKec) { setRecords([]); setLoading(false); return; }
     try {
       setLoading(true);
-      let url = "/absensi/admin/rekap?";
+      let url = `${BASE}/rekap?`;
       if (filterMode === "harian") url += `tanggal=${filterDate}`;
       else url += `bulan=${filterMonth}&tahun=${filterYear}`;
-      const res = await api.get(url);
+      const res = await api.get(url + wilQs);
       setRecords(res.data.data || []);
     } catch (err) {
       console.error("Error fetching rekap:", err);
     } finally {
       setLoading(false);
     }
-  }, [filterDate, filterMonth, filterYear, filterMode]);
+  }, [filterDate, filterMonth, filterYear, filterMode, perangkat, filterKec, wilQs, BASE]);
 
   const fetchPegawai = useCallback(async () => {
     try {
-      const res = await api.get("/absensi/admin/pegawai-absensi");
+      const res = await api.get(`${BASE}/pegawai-absensi${wilQs.replace(/^&/, "?")}`);
       setPegawai(res.data.data || []);
     } catch (err) {
       console.error("Error fetching pegawai:", err);
     }
-  }, []);
+  }, [BASE, wilQs]);
 
   const fetchSettings = useCallback(async () => {
     try {
-      const res = await api.get("/absensi/admin/settings");
+      const res = await api.get(`${BASE}/settings`);
       setSettings(res.data.data || {});
     } catch (err) {
       console.error("Error fetching settings:", err);
     }
-  }, []);
+  }, [BASE]);
 
   const fetchPopupMessages = useCallback(async () => {
     try {
       setPopupLoading(true);
-      const res = await api.get("/absensi/admin/success-messages");
+      const res = await api.get(`${BASE}/success-messages`);
       setPopupMessages(res.data.data || []);
     } catch (err) {
       console.error("Error fetching popup messages:", err);
     } finally {
       setPopupLoading(false);
     }
-  }, []);
+  }, [BASE]);
 
   const fetchReminderTemplates = useCallback(async () => {
     try {
       setReminderLoading(true);
-      const res = await api.get("/absensi/admin/reminder-templates");
+      const res = await api.get(`${BASE}/reminder-templates`);
       setReminderTemplates(res.data.data || []);
     } catch (err) {
       console.error("Error fetching reminder templates:", err);
     } finally {
       setReminderLoading(false);
     }
-  }, []);
+  }, [BASE]);
 
   // ─── Dashboard Fetcher ────────────────────────────────────
   const fetchDashboard = useCallback(async () => {
     try {
       setDashboardLoading(true);
-      let url = `/absensi/admin/dashboard-hari-ini?periode=${dashboardPeriode}`;
+      let url = `${BASE}/dashboard-hari-ini?periode=${dashboardPeriode}`;
       if (dashboardPeriode === 'minggu') url += `&tanggal=${filterDate}`;
       else if (dashboardPeriode === 'bulan') url += `&bulan=${filterMonth}&tahun=${filterYear}`;
       else if (dashboardPeriode === 'tahun') url += `&tahun=${filterYear}`;
       else url += `&tanggal=${filterDate}`;
-      const res = await api.get(url);
+      const res = await api.get(url + wilQs);
       setDashboardData(res.data.data || null);
+      if (perangkat) {
+        try {
+          const r2 = await api.get(`${BASE}/desa-tanpa-koordinat${filterKec ? `?kecamatan_id=${filterKec}` : ""}`);
+          setDesaTanpaKoordinat(r2.data?.data || []);
+        } catch (e) { console.error("Error fetching desa tanpa koordinat:", e); }
+      }
     } catch (err) {
       console.error("Error fetching dashboard:", err);
     } finally {
       setDashboardLoading(false);
     }
-  }, [dashboardPeriode, filterDate, filterMonth, filterYear]);
+  }, [dashboardPeriode, filterDate, filterMonth, filterYear, perangkat, filterKec, wilQs, BASE]);
 
   // ─── Rekap Pegawai Fetcher ────────────────────────────────
   const fetchRekapPegawai = useCallback(async () => {
+    if (perangkat && !filterKec) { setRekapPegawaiData(null); setRekapLoading(false); return; }
     try {
       setRekapLoading(true);
-      let url = `/absensi/admin/rekap-pegawai?periode=${rekapPeriode}`;
+      let url = `${BASE}/rekap-pegawai?periode=${rekapPeriode}`;
       if (rekapPeriode === 'minggu') url += `&tanggal=${filterDate}`;
       else if (rekapPeriode === 'tahun') url += `&tahun=${filterYear}`;
       else url += `&bulan=${filterMonth}&tahun=${filterYear}`;
-      const res = await api.get(url);
+      const res = await api.get(url + wilQs);
       setRekapPegawaiData(res.data.data || null);
     } catch (err) {
       console.error("Error fetching rekap pegawai:", err);
     } finally {
       setRekapLoading(false);
     }
-  }, [rekapPeriode, filterDate, filterMonth, filterYear]);
+  }, [rekapPeriode, filterDate, filterMonth, filterYear, perangkat, filterKec, wilQs, BASE]);
 
   const fetchPeringkat = useCallback(async () => {
     try {
       setPeringkatLoading(true);
-      let url = `/absensi/admin/rekap-pegawai?periode=${peringkatPeriode}`;
+      let url = `${BASE}/rekap-pegawai?periode=${peringkatPeriode}`;
       if (peringkatPeriode === 'minggu') url += `&tanggal=${filterDate}`;
       else if (peringkatPeriode === 'tahun') url += `&tahun=${filterYear}`;
       else url += `&bulan=${filterMonth}&tahun=${filterYear}`;
@@ -472,13 +511,13 @@ const AbsensiManagementPage = () => {
     } finally {
       setPeringkatLoading(false);
     }
-  }, [peringkatPeriode, filterDate, filterMonth, filterYear]);
+  }, [peringkatPeriode, filterDate, filterMonth, filterYear, BASE]);
 
   // ─── User History Fetcher ─────────────────────────────────
   const fetchUserHistory = useCallback(async (userId) => {
     try {
       setHistoryLoading(true);
-      let url = `/absensi/admin/history/${userId}?periode=${historyPeriode}`;
+      let url = `${BASE}/history/${userId}?periode=${historyPeriode}`;
       if (historyPeriode === 'minggu') url += `&tanggal=${filterDate}`;
       else url += `&bulan=${filterMonth}&tahun=${filterYear}`;
       const res = await api.get(url);
@@ -488,7 +527,7 @@ const AbsensiManagementPage = () => {
     } finally {
       setHistoryLoading(false);
     }
-  }, [historyPeriode, filterDate, filterMonth, filterYear]);
+  }, [historyPeriode, filterDate, filterMonth, filterYear, BASE]);
 
   useEffect(() => {
     if (activeTab === "dashboard") fetchDashboard();
@@ -531,7 +570,7 @@ const AbsensiManagementPage = () => {
     });
     if (!confirm.isConfirmed) return;
     try {
-      await api.delete(`/absensi/admin/${id}`);
+      await api.delete(`${BASE}/${id}`);
       showAlert({ icon: "success", title: "Berhasil", text: "Data absensi berhasil dihapus", timer: 1500 });
       fetchRekap();
     } catch (err) {
@@ -546,7 +585,7 @@ const AbsensiManagementPage = () => {
     }
 
     try {
-      await api.put(`/absensi/admin/${id}`, data);
+      await api.put(`${BASE}/${id}`, data);
       showAlert({ icon: "success", title: "Berhasil", text: "Data absensi berhasil diupdate", timer: 1500 });
       setEditingRecord(null);
       fetchRekap();
@@ -567,7 +606,7 @@ const AbsensiManagementPage = () => {
 
   const handleCreateManualAttendance = async (data) => {
     try {
-      await api.post("/absensi/admin/manual", data);
+      await api.post(`${BASE}/manual`, data);
       showAlert({
         icon: "success",
         title: "Berhasil",
@@ -590,7 +629,7 @@ const AbsensiManagementPage = () => {
 
   const handleSaveSettings = async (newSettings) => {
     try {
-      await api.put("/absensi/admin/settings", newSettings);
+      await api.put(`${BASE}/settings`, newSettings);
       showAlert({ icon: "success", title: "Berhasil", text: "Settings berhasil disimpan", timer: 1500 });
       setShowSettingsModal(false);
       fetchSettings();
@@ -622,7 +661,7 @@ const AbsensiManagementPage = () => {
     try {
       const body = { title: popupEditForm.title, message: popupEditForm.message, is_active: popupEditForm.is_active };
       if (popupImageBase64) body.image_base64 = popupImageBase64;
-      await api.put(`/absensi/admin/success-messages/${popupEditingType}`, body);
+      await api.put(`${BASE}/success-messages/${popupEditingType}`, body);
       await fetchPopupMessages(); cancelPopupEdit();
       showAlert({ icon: "success", title: "Berhasil!", text: "Popup berhasil diupdate", timer: 1500 });
     } catch (err) { showAlert({ icon: "error", title: "Gagal", text: err.response?.data?.message || "Gagal menyimpan" }); }
@@ -633,14 +672,14 @@ const AbsensiManagementPage = () => {
     const result = await showAlert({ title: "Hapus Gambar?", text: "Gambar popup akan dihapus", icon: "warning", showCancelButton: true, confirmButtonText: "Ya, Hapus", cancelButtonText: "Batal" });
     if (!result.isConfirmed) return; setPopupSaving(true);
     try {
-      await api.put(`/absensi/admin/success-messages/${popupEditingType}`, { remove_image: true });
+      await api.put(`${BASE}/success-messages/${popupEditingType}`, { remove_image: true });
       await fetchPopupMessages(); setPopupPreviewImage(null); setPopupImageBase64(null);
       showAlert({ icon: "success", title: "Berhasil!", text: "Gambar berhasil dihapus", timer: 1500 });
     } catch (err) { showAlert({ icon: "error", title: "Gagal", text: "Gagal menghapus gambar" }); }
     finally { setPopupSaving(false); }
   };
   const togglePopupActive = async (msg) => {
-    try { await api.put(`/absensi/admin/success-messages/${msg.type}`, { is_active: !msg.is_active }); await fetchPopupMessages(); }
+    try { await api.put(`${BASE}/success-messages/${msg.type}`, { is_active: !msg.is_active }); await fetchPopupMessages(); }
     catch (err) { showAlert({ icon: "error", title: "Gagal", text: "Gagal mengubah status" }); }
   };
 
@@ -654,11 +693,29 @@ const AbsensiManagementPage = () => {
       });
       if (!result.isConfirmed) return;
       try {
-        await api.put(`/absensi/admin/set-device/${pegawaiUser.id}`, { device_id: null });
+        await api.put(`${BASE}/set-device/${pegawaiUser.id}`, { device_id: null });
         showAlert({ icon: "success", title: "Berhasil", text: "Device berhasil dihapus.", timer: 2000 }); fetchPegawai();
       } catch (err) { showAlert({ icon: "error", title: "Gagal", text: err.response?.data?.message || "Gagal menghapus device" }); }
     } else {
       showAlert({ icon: "info", title: "Device Belum Terdaftar", text: `Pegawai: ${pegawaiUser.pegawai?.nama_pegawai || pegawaiUser.name}\n\nDevice akan otomatis terdaftar saat pegawai login.` });
+    }
+  };
+
+  // Perangkat desa: kembalikan sandi ke sandi awal dan lepas HP terikat (hanya bila HP hilang/diganti).
+  const handleResetAkun = async (u) => {
+    const nama = u.pegawai?.nama_pegawai || u.name;
+    const konfirmasi = await showAlert({
+      title: "Reset Akun?",
+      text: `Akun ${nama} akan dikembalikan ke sandi awal, HP yang terdaftar dilepas, dan 2FA (Google Authenticator) harus dipasang ulang.`,
+      icon: "warning", showCancelButton: true, cancelButtonText: "Batal", confirmButtonText: "Reset Akun",
+    });
+    if (!konfirmasi.isConfirmed) return;
+    try {
+      const res = await api.post(`${BASE}/reset-akun/${u.id}`);
+      showAlert({ icon: "success", title: "Berhasil", text: res.data?.message || "Akun berhasil direset.", timer: 2500 });
+      fetchPegawai();
+    } catch (err) {
+      showAlert({ icon: "error", title: "Gagal", text: err.response?.data?.message || "Gagal mereset akun" });
     }
   };
 
@@ -721,7 +778,7 @@ const AbsensiManagementPage = () => {
     setHistoryData(null);
     setHistoryLoading(true);
     try {
-      let url = `/absensi/admin/history/${userData.id}?periode=bulan&bulan=${filterMonth}&tahun=${filterYear}`;
+      let url = `${BASE}/history/${userData.id}?periode=bulan&bulan=${filterMonth}&tahun=${filterYear}`;
       const res = await api.get(url);
       setHistoryData(res.data.data || null);
     } catch (err) {
@@ -734,14 +791,14 @@ const AbsensiManagementPage = () => {
   // Dua kelompok: Pantau (lihat data) dan Atur (kelola); pemisah digambar dari field group.
   const tabs = [
     { key: "dashboard", label: "Ringkasan", icon: LuLayoutDashboard, group: "pantau" },
-    { key: "rekap-pegawai", label: "Rekap Pegawai", icon: LuChartColumn, group: "pantau" },
+    { key: "rekap-pegawai", label: perangkat ? "Rekap Perangkat" : "Rekap Pegawai", icon: LuChartColumn, group: "pantau" },
     { key: "rekap", label: "Rekap Harian", icon: FiCalendar, count: records.length, group: "pantau" },
-    { key: "peringkat", label: "Peringkat", icon: LuTrophy, group: "pantau" },
-    { key: "pegawai", label: "Daftar Pegawai", icon: FiUsers, count: pegawai.length, group: "atur" },
+    ...(perangkat ? [] : [{ key: "peringkat", label: "Peringkat", icon: LuTrophy, group: "pantau" }]),
+    { key: "pegawai", label: perangkat ? "Daftar Perangkat Desa" : "Daftar Pegawai", icon: FiUsers, count: pegawai.length, group: "atur" },
     { key: "popup", label: "Popup", icon: FiImage, count: popupMessages.length, group: "atur" },
     { key: "reminder", label: "Reminder", icon: FiBell, group: "atur" },
     // Menentukan titik absen menyangkut keabsahan presensi — superadmin saja.
-    ...(canManageAbsensiRecords ? [{ key: "lokasi", label: "Lokasi Khusus", icon: FiMapPin, group: "atur" }] : []),
+    ...(canManageAbsensiRecords && !perangkat ? [{ key: "lokasi", label: "Lokasi Khusus", icon: FiMapPin, group: "atur" }] : []),
   ];
 
   // ─── Export Functions ─────────────────────────────────────
@@ -807,7 +864,7 @@ const AbsensiManagementPage = () => {
       const XLSX = await import("xlsx");
       const data = getExportData();
       const ws = XLSX.utils.json_to_sheet(data.map(d => ({
-        "No": d.no, "Nama Pegawai": d.nama, "Jabatan": d.jabatan,
+        "No": d.no, [perangkat ? "Nama Perangkat Desa" : "Nama Pegawai"]: d.nama, "Jabatan": d.jabatan,
         "Tanggal": d.tanggal, "Status": d.status, "Jam Masuk": d.jamMasuk,
         "Jam Keluar": d.jamKeluar, "Jarak": d.jarak, "Keterangan": d.keterangan,
       })));
@@ -923,6 +980,8 @@ const AbsensiManagementPage = () => {
         dicetak: prep.dicetak,
         grafik,
         hari: rekapCalendarDays.map((d) => ({ kepala: `${d.day_label}\n${String(d.day).padStart(2, "0")}` })),
+        labelNama: perangkat ? "Nama Perangkat Desa" : "Nama Pegawai",
+        labelNip: perangkat ? "NIPD" : "NIP",
         baris: filteredRekapPegawai.map((p) => {
           const { masuk, tidakMasuk } = computeKehadiran(p, rekapCalendarDays, todayKey);
           return {
@@ -1003,7 +1062,7 @@ const AbsensiManagementPage = () => {
 
       // ── Tabel kalender presensi ──
       const head = [[
-        "Nama Pegawai",
+        perangkat ? "Nama Perangkat Desa" : "Nama Pegawai",
         ...rekapCalendarDays.map((d) => `${d.day_label}\n${String(d.day).padStart(2, "0")}`),
         "Masuk",
         "Tdk\nMasuk",
@@ -1272,7 +1331,7 @@ const AbsensiManagementPage = () => {
         <div className="max-w-[1800px] mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between gap-3 py-4">
             <div className="min-w-0">
-              <h1 className="text-xl font-bold text-slate-900">Kelola Absensi</h1>
+              <h1 className="text-xl font-bold text-slate-900">{perangkat ? "Kelola Presensi Perangkat Desa" : "Kelola Absensi"}</h1>
               <p className="text-sm text-slate-500">
                 {new Date().toLocaleDateString("id-ID", { weekday: "long", day: "numeric", month: "long", year: "numeric" })}
               </p>
@@ -1314,6 +1373,33 @@ const AbsensiManagementPage = () => {
 
       {/* ═══ Main Content ═══════════════════════════════════ */}
       <div className="max-w-[1800px] mx-auto px-4 sm:px-6 lg:px-8 py-6">
+
+        {/* Filter wilayah (perangkat desa) */}
+        {perangkat && ["dashboard", "rekap", "rekap-pegawai", "pegawai"].includes(activeTab) && (
+          <div className="mb-5 bg-white rounded-2xl border border-slate-200 p-4 sm:p-5">
+            <div className="flex flex-wrap items-end gap-3">
+              <div>
+                <label className="block text-xs font-medium text-slate-500 mb-1.5">Kecamatan</label>
+                <select value={filterKec} onChange={(e) => setFilterKec(e.target.value)}
+                  className="px-3 h-10 border border-slate-200 rounded-lg bg-white text-sm min-w-[12rem] focus:outline-none focus:ring-2 focus:ring-orange-500/30 focus:border-orange-500">
+                  <option value="">{activeTab === "dashboard" || activeTab === "pegawai" ? "Semua kecamatan" : "Pilih kecamatan"}</option>
+                  {kecList.map((k) => <option key={k.id} value={k.id}>{k.nama}</option>)}
+                </select>
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-slate-500 mb-1.5">Desa</label>
+                <select value={filterDesa} onChange={(e) => setFilterDesa(e.target.value)} disabled={!filterKec}
+                  className="px-3 h-10 border border-slate-200 rounded-lg bg-white text-sm min-w-[12rem] disabled:bg-slate-50 disabled:text-slate-400 focus:outline-none focus:ring-2 focus:ring-orange-500/30 focus:border-orange-500">
+                  <option value="">Semua desa</option>
+                  {desaList.map((d) => <option key={d.id} value={d.id}>{d.nama}</option>)}
+                </select>
+              </div>
+            </div>
+            {perluKecamatan && (
+              <p className="mt-3 text-sm text-amber-700">Pilih kecamatan terlebih dahulu untuk menampilkan rekap (data dipisah per kecamatan agar tidak terlalu berat).</p>
+            )}
+          </div>
+        )}
 
         {/* ─── TAB: DASHBOARD ──────────────────────────────── */}
         {activeTab === "dashboard" && (
@@ -1366,6 +1452,21 @@ const AbsensiManagementPage = () => {
                 )}
               </div>
             </div>
+
+            {perangkat && desaTanpaKoordinat.length > 0 && (
+              <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 sm:p-5">
+                <h3 className="text-sm font-semibold text-amber-900">Desa belum berkoordinat ({desaTanpaKoordinat.length})</h3>
+                <p className="text-xs text-amber-800 mt-1">Perangkat di desa berikut belum bisa presensi sampai operator desa mengisi titik kantor desa di Profil Desa.</p>
+                <ul className="mt-3 grid gap-1.5 sm:grid-cols-2 lg:grid-cols-3 max-h-64 overflow-auto">
+                  {desaTanpaKoordinat.map((d) => (
+                    <li key={d.desa_id} className="flex items-center justify-between gap-2 rounded-lg bg-white/70 px-3 py-1.5 text-xs text-slate-700">
+                      <span className="truncate">{d.nama}{d.kecamatan?.nama ? `, ${d.kecamatan.nama}` : ""}</span>
+                      <span className="shrink-0 font-semibold text-amber-700">{d.jumlah_perangkat} perangkat</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
 
             {dashboardLoading ? (
               <div className="flex flex-col justify-center items-center py-20 gap-3">
@@ -1839,7 +1940,7 @@ const AbsensiManagementPage = () => {
         )}
 
         {/* ─── TAB: REKAP PEGAWAI ─────────────────────────── */}
-        {activeTab === "rekap-pegawai" && (
+        {activeTab === "rekap-pegawai" && !perluKecamatan && (
           <div className="space-y-4">
             {/* Filter */}
             <div className="bg-white rounded-2xl border border-slate-200 p-4">
@@ -1997,6 +2098,7 @@ const AbsensiManagementPage = () => {
                                     <div className="min-w-0">
                                       <p className="font-semibold text-slate-900 text-xs sm:text-sm truncate sm:max-w-[11rem]">{p.user?.pegawai?.nama_pegawai || p.user?.name || "-"}</p>
                                       <p className="text-[11px] sm:text-xs text-slate-500 truncate sm:max-w-[11rem]">{p.user?.pegawai?.jabatan || p.user?.pegawai?.status_kepegawaian?.replace(/_/g, " ") || "-"}</p>
+                                      {perangkat && p.user?.desa && <p className="text-[11px] text-slate-400 truncate sm:max-w-[11rem]">{labelDesa(p.user.desa)}</p>}
                                     </div>
                                   </div>
                                 </td>
@@ -2062,7 +2164,7 @@ const AbsensiManagementPage = () => {
         )}
 
         {/* ─── TAB: REKAP ──────────────────────────────────── */}
-        {activeTab === "rekap" && (
+        {activeTab === "rekap" && !perluKecamatan && (
           <div className="space-y-4">
             {/* ══ Filter Bar ══ */}
             <div className="bg-white rounded-2xl border border-slate-200 p-4">
@@ -2268,7 +2370,8 @@ const AbsensiManagementPage = () => {
                   <table className="w-full text-sm">
                     <thead>
                       <tr className="bg-slate-50 border-b border-slate-200 sticky top-0 z-10">
-                        <th className="text-left px-4 py-2.5 font-medium text-xs text-slate-500 w-[30%]">Pegawai</th>
+                        <th className="text-left px-4 py-2.5 font-medium text-xs text-slate-500 w-[30%]">{perangkat ? "Perangkat Desa" : "Pegawai"}</th>
+                        {perangkat && <th className="text-left px-3 py-2.5 font-medium text-xs text-slate-500">Desa</th>}
                         <th className="text-left px-3 py-2.5 font-medium text-xs text-slate-500">Tanggal</th>
                         <th className="text-center px-3 py-2.5 font-medium text-xs text-slate-500">Status</th>
                         <th className="text-center px-3 py-2.5 font-medium text-xs text-slate-500">Jam Masuk</th>
@@ -2302,6 +2405,7 @@ const AbsensiManagementPage = () => {
                                 </div>
                               </div>
                             </td>
+                            {perangkat && <td className="px-3 py-2 text-slate-600 text-xs">{labelDesa(record.user?.desa) || "-"}</td>}
                             <td className="px-3 py-2 text-slate-600 whitespace-nowrap text-xs">{formatDate(record.tanggal)}</td>
                             <td className="px-3 py-2 text-center">
                               <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md text-xs font-semibold ${c.badge}`}>
@@ -2482,8 +2586,8 @@ const AbsensiManagementPage = () => {
                   <FiUsers className="h-5 w-5 text-slate-600" />
                 </div>
                 <div>
-                  <h3 className="font-bold text-slate-800">Daftar Pegawai Wajib Absensi</h3>
-                  <p className="text-xs text-slate-400 mt-0.5">PPPK Paruh Waktu, Tenaga Alih Daya, Keamanan, Kebersihan</p>
+                  <h3 className="font-bold text-slate-800">{perangkat ? "Daftar Perangkat Desa" : "Daftar Pegawai Wajib Absensi"}</h3>
+                  <p className="text-xs text-slate-400 mt-0.5">{perangkat ? "Akun perangkat desa yang presensi lewat HP" : "PPPK Paruh Waktu, Tenaga Alih Daya, Keamanan, Kebersihan"}</p>
                 </div>
               </div>
             </div>
@@ -2495,7 +2599,7 @@ const AbsensiManagementPage = () => {
                   <div className="w-14 h-14 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-3">
                     <FiUsers className="h-6 w-6 text-slate-300" />
                   </div>
-                  <p className="text-slate-500 font-medium text-sm">Tidak ada pegawai</p>
+                  <p className="text-slate-500 font-medium text-sm">{perangkat ? "Tidak ada perangkat desa" : "Tidak ada pegawai"}</p>
                 </div>
               ) : (
                 pegawai.map((p, i) => (
@@ -2511,7 +2615,7 @@ const AbsensiManagementPage = () => {
                       <div className="flex items-center gap-2 mt-0.5">
                         <p className="text-[11px] text-slate-400 truncate">{p.pegawai?.jabatan || "-"}</p>
                         <span className="text-slate-200">•</span>
-                        <p className="text-[11px] text-slate-400 truncate">{p.pegawai?.status_kepegawaian?.replace(/_/g, " ") || "-"}</p>
+                        <p className="text-[11px] text-slate-400 truncate">{perangkat ? [labelDesa(p.desa), p.pegawai?.nip && `NIPD ${p.pegawai.nip}`].filter(Boolean).join(" · ") || "-" : p.pegawai?.status_kepegawaian?.replace(/_/g, " ") || "-"}</p>
                       </div>
                     </div>
 
@@ -2534,6 +2638,13 @@ const AbsensiManagementPage = () => {
                         }`} title={p.device_id ? "Kelola Device" : "Info Device"}>
                         <FiSmartphone className="h-4 w-4" />
                       </button>
+                      {perangkat && (
+                        <button onClick={() => handleResetAkun(p)} title="Reset akun (sandi awal, lepas HP, reset 2FA)"
+                          className="flex items-center px-2.5 py-2 rounded-xl transition-all text-red-600 bg-red-50 hover:bg-red-100 border border-red-200">
+                          <LuRefreshCw className="h-4 w-4" />
+                          <span className="ml-1.5 text-[11px] font-bold">Reset akun</span>
+                        </button>
+                      )}
                     </div>
                   </div>
                 ))
@@ -2543,7 +2654,7 @@ const AbsensiManagementPage = () => {
             {pegawai.length > 0 && (
               <div className="px-5 py-3 border-t border-slate-100 bg-slate-50/50">
                 <div className="flex items-center justify-between text-xs text-slate-500">
-                  <span>Total: <strong className="text-slate-700">{pegawai.length}</strong> pegawai</span>
+                  <span>Total: <strong className="text-slate-700">{pegawai.length}</strong> {perangkat ? "perangkat desa" : "pegawai"}</span>
                   <span className="text-emerald-600 font-semibold">
                     {pegawai.filter(p => p.device_id).length} device terdaftar
                   </span>
@@ -2721,7 +2832,7 @@ const AbsensiManagementPage = () => {
                         <div className="flex items-center gap-1">
                           <button onClick={async () => {
                             try {
-                              await api.put(`/absensi/admin/reminder-templates/${tmpl.type}`, { is_active: !tmpl.is_active });
+                              await api.put(`${BASE}/reminder-templates/${tmpl.type}`, { is_active: !tmpl.is_active });
                               await fetchReminderTemplates();
                             } catch { showAlert({ icon: "error", title: "Gagal", text: "Gagal mengubah status" }); }
                           }}
@@ -2759,7 +2870,7 @@ const AbsensiManagementPage = () => {
                               <button onClick={async () => {
                                 setReminderSaving(true);
                                 try {
-                                  await api.put(`/absensi/admin/reminder-templates/${reminderEditingType}`, {
+                                  await api.put(`${BASE}/reminder-templates/${reminderEditingType}`, {
                                     title: reminderEditForm.title,
                                     message: reminderEditForm.message,
                                   });
@@ -2783,7 +2894,7 @@ const AbsensiManagementPage = () => {
                             <button onClick={async () => {
                               setReminderTesting(tmpl.type);
                               try {
-                                const res = await api.post(`/absensi/admin/test-reminder/${tmpl.type}`);
+                                const res = await api.post(`${BASE}/test-reminder/${tmpl.type}`);
                                 showAlert({ icon: "success", title: "Berhasil", text: `Test reminder terkirim ke ${res.data.data?.total || 0} pegawai`, timer: 2000 });
                               } catch { showAlert({ icon: "error", title: "Gagal", text: "Gagal mengirim test reminder" }); }
                               finally { setReminderTesting(null); }
@@ -2826,6 +2937,8 @@ const AbsensiManagementPage = () => {
       )}
       {showManualAttendanceModal && (
         <ManualAttendanceModal
+          basePath={BASE}
+          wilQs={wilQs}
           initialDate={manualAttendanceDefaults.date || filterDate}
           initialEmployeeId={manualAttendanceDefaults.employeeId}
           settings={settings}
@@ -2837,7 +2950,7 @@ const AbsensiManagementPage = () => {
         />
       )}
       {showSettingsModal && (
-        <SettingsModal settings={settings} onClose={() => setShowSettingsModal(false)} onSave={handleSaveSettings} />
+        <SettingsModal perangkat={perangkat} settings={settings} onClose={() => setShowSettingsModal(false)} onSave={handleSaveSettings} />
       )}
       {/* User History Modal */}
       {historyUser && (
@@ -2861,7 +2974,7 @@ const AbsensiManagementPage = () => {
 };
 
 // ═══ Edit Absensi Modal ═══════════════════════════════════════
-const ManualAttendanceModal = ({ initialDate, initialEmployeeId, settings, onClose, onSave }) => {
+const ManualAttendanceModal = ({ basePath, wilQs, initialDate, initialEmployeeId, settings, onClose, onSave }) => {
   const [date, setDate] = useState(initialDate);
   const [employees, setEmployees] = useState([]);
   const [loadingEmployees, setLoadingEmployees] = useState(true);
@@ -2880,8 +2993,8 @@ const ManualAttendanceModal = ({ initialDate, initialEmployeeId, settings, onClo
       setLoadingEmployees(true);
       setEmployeeId("");
       try {
-        const response = await api.get("/absensi/admin/presensi-kosong", {
-          params: { tanggal: date },
+        const response = await api.get(`${basePath}/presensi-kosong`, {
+          params: { tanggal: date, ...Object.fromEntries(new URLSearchParams(wilQs)) },
         });
         if (active) {
           const missingEmployees = response.data.data || [];
@@ -2909,7 +3022,7 @@ const ManualAttendanceModal = ({ initialDate, initialEmployeeId, settings, onClo
 
     loadMissingEmployees();
     return () => { active = false; };
-  }, [date, initialEmployeeId]);
+  }, [date, initialEmployeeId, basePath, wilQs]);
 
   const isPresent = PRESENT_STATUSES.includes(status);
   const filteredEmployees = employees.filter((employee) => {
@@ -3175,12 +3288,13 @@ const EditAbsensiModal = ({ record, onClose, onSave }) => {
 };
 
 // ═══ Settings Modal ═══════════════════════════════════════════
-const SettingsModal = ({ settings, onClose, onSave }) => {
+const SettingsModal = ({ perangkat, settings, onClose, onSave }) => {
   const [jamMasuk, setJamMasuk] = useState(settings.jam_masuk || "08:00");
   const [jamPulang, setJamPulang] = useState(settings.jam_pulang || "16:00");
   const [toleransi, setToleransi] = useState(settings.toleransi_terlambat || "15");
   const [jamBukaAbsen, setJamBukaAbsen] = useState(settings.jam_buka_absen || "06:00");
   const [jamTutupAbsen, setJamTutupAbsen] = useState(settings.jam_tutup_absen || "17:00");
+  const [radius, setRadius] = useState(settings.radius_meter || 200);
   const [saving, setSaving] = useState(false);
 
   const handleSave = async () => {
@@ -3191,6 +3305,8 @@ const SettingsModal = ({ settings, onClose, onSave }) => {
       toleransi_terlambat: toleransi,
       jam_buka_absen: jamBukaAbsen,
       jam_tutup_absen: jamTutupAbsen,
+      // Hanya perangkat desa: radius dari titik kantor desa; server menerima 20-2000.
+      ...(perangkat ? { radius_meter: Math.min(2000, Math.max(20, Math.round(Number(radius)) || 200)) } : {}),
     });
     setSaving(false);
   };
@@ -3265,6 +3381,15 @@ const SettingsModal = ({ settings, onClose, onSave }) => {
               </div>
               <p className="text-[10px] text-slate-400 mt-1.5 text-center">Menit dispensasi setelah jam masuk</p>
             </div>
+
+            {perangkat && (
+              <div>
+                <label className="block text-xs font-medium text-slate-500 mb-1.5">Radius kantor desa (meter)</label>
+                <input type="number" value={radius} onChange={(e) => setRadius(e.target.value)} min="20" max="2000" step="1"
+                  className="w-full px-3 h-10 border border-slate-200 rounded-lg bg-white text-sm font-mono font-bold text-center focus:outline-none focus:ring-2 focus:ring-orange-500/30 focus:border-orange-500" />
+                <p className="text-[10px] text-slate-400 mt-1.5 text-center">Jarak maksimum dari titik kantor desa (20-2000 m)</p>
+              </div>
+            )}
 
             {/* Preview */}
             <div className="bg-slate-50 rounded-lg p-4 border border-slate-200">

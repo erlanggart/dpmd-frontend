@@ -25,7 +25,7 @@ export default function CerminSubjek() {
 	useEffect(() => {
 		const token = ambilToken();
 		// layar sesama superadmin tidak bisa ditonton, jadi tak perlu soket
-		if (!token || token === "VPN_ACCESS_TOKEN" || peran === "superadmin") return;
+		if (!token || token === "VPN_ACCESS_TOKEN" || peran === "superadmin" || peran === "perangkat_desa") return;
 
 		let dibuang = false;
 		let soket = null;

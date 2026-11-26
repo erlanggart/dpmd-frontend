@@ -391,7 +391,7 @@ export const AuthProvider = ({ children }) => {
 	// (superadmin, admin bidang PMD, atau internal DPMD staff lainnya)
 	const isKelembagaanAdmin = () => {
 		if (!user) return false;
-		const nonAdminRoles = ['desa', 'admin_desa', 'kecamatan', 'dinas_terkait', 'verifikator_dinas', 'bpjs', 'tenaga_ahli'];
+		const nonAdminRoles = ['desa', 'admin_desa', 'kecamatan', 'dinas_terkait', 'verifikator_dinas', 'bpjs', 'tenaga_ahli', 'perangkat_desa'];
 		return !nonAdminRoles.includes(user.role);
 	};
 

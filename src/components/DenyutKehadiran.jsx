@@ -1,5 +1,6 @@
 import { useEffect } from "react";
 import { useLocation } from "react-router-dom";
+import { useAuth } from "../context/AuthContext";
 import { API_ENDPOINTS } from "../config/apiConfig";
 import { ambilToken } from "../utils/tokenSesi";
 
@@ -16,8 +17,12 @@ const SELANG_MS = 2 * 60 * 1000;
  */
 export default function DenyutKehadiran() {
 	const { pathname } = useLocation();
+	const { user } = useAuth();
+	const peran = user?.role;
 
 	useEffect(() => {
+		// Perangkat desa hanya boleh memanggil API presensi; endpoint ini dibalas 403.
+		if (peran === "perangkat_desa") return undefined;
 		const berdenyut = () => {
 			const token = ambilToken();
 			if (!token || token === "VPN_ACCESS_TOKEN" || document.visibilityState !== "visible") return;
@@ -35,7 +40,7 @@ export default function DenyutKehadiran() {
 			clearInterval(pengatur);
 			document.removeEventListener("visibilitychange", berdenyut);
 		};
-	}, [pathname]);
+	}, [pathname, peran]);
 
 	return null;
 }

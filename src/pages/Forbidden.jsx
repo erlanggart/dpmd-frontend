@@ -26,6 +26,7 @@ export default function Forbidden() {
 			verifikator_dinas: "/dinas/dashboard",
 			bpjs: "/bpjs/dashboard",
 			tenaga_ahli: "/tenaga-ahli/ikhtisar",
+			perangkat_desa: "/presensi-desa",
 		};
 
 		try {

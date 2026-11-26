@@ -106,6 +106,7 @@ function HomeRedirect() {
       verifikator_dinas: "/dinas/dashboard",
       bpjs: "/bpjs/dashboard",
       tenaga_ahli: "/tenaga-ahli/ikhtisar",
+      perangkat_desa: "/presensi-desa",
     };
 
     const dashboardPath = roleDashboardMap[user.role] || "/dashboard";
@@ -234,6 +235,7 @@ const MessagingPage = lazy(() => import("./pages/messaging/MessagingPage"));
 const HelpdeskPanelPage = lazy(() => import("./pages/helpdesk/HelpdeskPanelPage"));
 const HelpdeskWidget = lazy(() => import("./components/helpdesk/HelpdeskWidget"));
 const AbsensiManagementPage = lazy(() => import("./pages/bidang/sekretariat/AbsensiManagementPage"));
+const PresensiPerangkatDesaPage = lazy(() => import("./pages/perangkat-desa/PresensiPerangkatDesaPage"));
 const AnggaranPage = lazy(() => import("./pages/bidang/sekretariat/anggaran/AnggaranPage"));
 const ProgramKegiatanPage = lazy(() => import("./pages/bidang/sekretariat/anggaran/ProgramKegiatanPage"));
 const ItemAnggaranPage = lazy(() => import("./pages/bidang/sekretariat/anggaran/ItemAnggaranPage"));
@@ -819,6 +821,7 @@ const ThemeColorWrapper = ({ children }) => {
                 dinas_terkait: "/dinas/dashboard",
                 verifikator_dinas: "/dinas/dashboard",
                 tenaga_ahli: "/tenaga-ahli/ikhtisar",
+                perangkat_desa: "/presensi-desa",
               };
 
               const dashboardPath = roleDashboardMap[userRole] || "/dpmd/dashboard";
@@ -1381,6 +1384,7 @@ function App() {
                   <Route path="pemdes/perangkat-desa" element={<PemdesAparaturDesaPage jenis="perangkat" />} />
                   <Route path="pemdes/staf-desa" element={<PemdesAparaturDesaPage jenis="staf" />} />
                   <Route path="pemdes/bpd" element={<PemdesAparaturDesaPage jenis="bpd" />} />
+                  <Route path="pemdes/presensi-perangkat" element={<AbsensiManagementPage kelompok="perangkat_desa" />} />
                   <Route path="pemdes/aparatur/:id" element={<PemdesAparaturDetailPage />} />
                   <Route path="pemdes/produk-hukum" element={<ProdukHukumPemdesPage detailBasePath="/bidang/pemdes/produk-hukum" />} />
                   <Route path="pemdes/produk-hukum/:id" element={<ProdukHukumDetailPemdesPage backPath="/bidang/pemdes/produk-hukum" />} />
@@ -1523,6 +1527,7 @@ function App() {
                   <Route path="perangkat-desa" element={<PemdesAparaturDesaPage jenis="perangkat" detailBasePath="/pemdes/aparatur" />} />
                   <Route path="staf-desa" element={<PemdesAparaturDesaPage jenis="staf" detailBasePath="/pemdes/aparatur" />} />
                   <Route path="bpd" element={<PemdesAparaturDesaPage jenis="bpd" detailBasePath="/pemdes/aparatur" />} />
+                  <Route path="presensi-perangkat" element={<AbsensiManagementPage kelompok="perangkat_desa" />} />
                   <Route path="aparatur/:id" element={<PemdesAparaturDetailPage />} />
                   <Route path="produk-hukum" element={<ProdukHukumPemdesPage />} />
                   <Route path="produk-hukum/:id" element={<ProdukHukumDetailPemdesPage />} />
@@ -1766,6 +1771,7 @@ function App() {
                   <Route path="bidang/pemdes/perangkat-desa" element={<PemdesAparaturDesaPage jenis="perangkat" />} />
                   <Route path="bidang/pemdes/staf-desa" element={<PemdesAparaturDesaPage jenis="staf" />} />
                   <Route path="bidang/pemdes/bpd" element={<PemdesAparaturDesaPage jenis="bpd" />} />
+                  <Route path="bidang/pemdes/presensi-perangkat" element={<AbsensiManagementPage kelompok="perangkat_desa" />} />
                   <Route path="bidang/pemdes/aparatur/:id" element={<PemdesAparaturDetailPage />} />
                   <Route path="bidang/pemdes/produk-hukum" element={<ProdukHukumPemdesPage />} />
                   <Route path="bidang/pemdes/produk-hukum/:id" element={<ProdukHukumDetailPemdesPage />} />
@@ -1928,6 +1934,17 @@ function App() {
                   <Route path="kerjasama" element={<TenagaAhliKerjasamaPage />} />
                   <Route path="*" element={<Navigate to="ikhtisar" replace />} />
                 </Route>
+
+                {/* Presensi perangkat desa - halaman mandiri tanpa layout; akun
+                    perangkat_desa hanya boleh ke sini (server membalas 403 untuk API lain) */}
+                <Route
+                  path="/presensi-desa/*"
+                  element={
+                    <RoleProtectedRoute allowedRoles={["perangkat_desa"]}>
+                      <PresensiPerangkatDesaPage />
+                    </RoleProtectedRoute>
+                  }
+                />
 
                 {/* Rute Core Dashboard - DPMD Internal Only */}
                 {/* HANYA untuk: Super Admin, Kepala Dinas, Sekretaris Dinas, Kepala Bidang, Ketua Tim, Pegawai */}

@@ -43,7 +43,7 @@ const pitaJudul = (ws, kolomAkhir, { judul, periode, dicetak }) => {
 };
 
 /** Lembar utama: tampilannya mengikuti halaman PDF. */
-const lembarKalender = (wb, { periode, dicetak, hari, baris, total, grafik }) => {
+const lembarKalender = (wb, { periode, dicetak, hari, baris, total, grafik, labelNama = "Nama Pegawai" }) => {
   const kolomAkhir = hari.length + 3;
   const ws = wb.addWorksheet("Rekap Absensi", {
     views: [{ state: "frozen", xSplit: 1, showGridLines: false }],
@@ -81,7 +81,7 @@ const lembarKalender = (wb, { periode, dicetak, hari, baris, total, grafik }) =>
   }
 
   const kepala = ws.getRow(barisTabel);
-  kepala.values = ["Nama Pegawai", ...hari.map((d) => d.kepala), "Masuk", "Tdk\nMasuk"];
+  kepala.values = [labelNama, ...hari.map((d) => d.kepala), "Masuk", "Tdk\nMasuk"];
   kepala.height = 30;
   kepala.eachCell({ includeEmpty: true }, (sel, c) => {
     sel.fill = isi(WARNA.pita);
@@ -127,12 +127,12 @@ const lembarKalender = (wb, { periode, dicetak, hari, baris, total, grafik }) =>
 };
 
 /** Lembar kedua: daftar yang bisa disaring dan diurutkan, memuat NIP & jabatan yang tidak muat di kalender. */
-const lembarRingkasan = (wb, { periode, dicetak, baris, total }) => {
+const lembarRingkasan = (wb, { periode, dicetak, baris, total, labelNama = "Nama Pegawai", labelNip = "NIP" }) => {
   const ws = wb.addWorksheet("Ringkasan Pegawai", {
     views: [{ showGridLines: false }],
     pageSetup: { paperSize: 9, orientation: "portrait", fitToPage: true, fitToWidth: 1, fitToHeight: 0 },
   });
-  const kolom = [["No", 5], ["Nama Pegawai", 32], ["NIP", 22], ["Jabatan", 26], ["Masuk", 9], ["Tidak Masuk", 9], ["Telat", 8], ["Total", 8]];
+  const kolom = [["No", 5], [labelNama, 32], [labelNip, 22], ["Jabatan", 26], ["Masuk", 9], ["Tidak Masuk", 9], ["Telat", 8], ["Total", 8]];
   ws.columns = kolom.map(([, width]) => ({ width }));
   pitaJudul(ws, kolom.length, { judul: "RINGKASAN ABSENSI PEGAWAI", periode, dicetak });
 

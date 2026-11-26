@@ -129,6 +129,8 @@ const LoginPage = () => {
 			navigate("/dinas/dashboard");
 		} else if (newUser.role === "bpjs") {
 			navigate("/bpjs/dashboard");
+		} else if (newUser.role === "perangkat_desa") {
+			navigate("/presensi-desa");
 		} else if (newUser.role === "tenaga_ahli") {
 			navigate("/tenaga-ahli/ikhtisar");
 		} else if (newUser.role === "superadmin") {
@@ -263,14 +265,14 @@ const LoginPage = () => {
 					<form onSubmit={handleLogin} className="mt-8 space-y-5">
 						<div>
 							<label htmlFor="email" className="mb-2 block text-sm font-semibold text-slate-700">
-								Email
+								Email atau NIPD
 							</label>
 							<input
-								type="email"
+								type="text"
 								id="email"
 								name="email"
 								autoComplete="username"
-								placeholder="nama@domain.go.id"
+								placeholder="Email atau NIPD"
 								className={`w-full rounded-2xl border bg-white px-4 py-3.5 text-slate-900 outline-none transition placeholder:text-slate-400 focus:ring-4 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:opacity-60 ${emailError ? 'border-red-300 focus:border-red-500 focus:ring-red-100' : 'border-slate-200 focus:border-[rgb(var(--color-primary))] focus:ring-slate-200'}`}
 								value={email}
 								onChange={(e) => { setEmail(e.target.value); setEmailError(null); }}

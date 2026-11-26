@@ -19,6 +19,7 @@ export const ROLE_LABEL = {
 	verifikator_dinas: 'Verifikator Dinas',
 	bpjs: 'BPJS',
 	tenaga_ahli: 'Tenaga Ahli',
+	perangkat_desa: 'Perangkat Desa',
 };
 
 export const ROLE_DOT = {
@@ -39,6 +40,7 @@ export const ROLE_DOT = {
 	// ketua_tim, dan dua titik berwarna sama tidak membedakan apa pun di daftar
 	// dua belas peran. Titik ini penanda pembeda, bukan tema halaman.
 	tenaga_ahli: '#db2777',
+	perangkat_desa: '#ca8a04',
 };
 
 export const getRoleInfo = (role) => ({

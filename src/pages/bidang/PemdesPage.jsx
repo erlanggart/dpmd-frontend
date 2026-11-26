@@ -162,6 +162,15 @@ const PemdesPage = () => {
 				angka: { nilai: angkaAtau(stats.total_staf), label: 'staf terdaftar' },
 			},
 			{
+				id: 'presensi-perangkat',
+				accent: '#0891b2',
+				judul: 'Presensi Perangkat Desa',
+				deskripsi: 'Rekap presensi & pengaturan presensi perangkat desa lewat HP',
+				icon: ClipboardList,
+				route: getPath('/pemdes/presensi-perangkat'),
+				angka: { nilai: null, label: 'rekap & pengaturan' },
+			},
+			{
 				id: 'bpd',
 				accent: '#4a3aa7',
 				judul: 'BPD',
