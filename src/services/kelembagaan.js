@@ -79,6 +79,8 @@ export const deleteLembagaLainnya = (id) =>
 
 // Kelembagaan Summary - Lightweight endpoint for counts only
 export const getKelembagaanSummary = () => api.get("/desa/kelembagaan/summary");
+// Peta status lembaga + daftar yang perlu diperbaiki (ditolak, NIK, BPJS)
+export const getKelembagaanMasalah = () => api.get("/desa/kelembagaan/masalah");
 export const getKelembagaanDetailedSummary = () =>
 	api.get("/desa/kelembagaan/detailed-summary");
 

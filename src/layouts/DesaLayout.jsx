@@ -329,7 +329,7 @@ const DesaLayout = () => {
             : 'pb-20'
         }`}
       >
-        <div className={`mx-auto w-full p-4 sm:p-6 ${location.pathname === '/desa/produk-hukum' ? '' : 'max-w-[1600px]'}`}>
+        <div className={`mx-auto w-full p-4 sm:p-6 ${['/desa/produk-hukum', '/desa/kelembagaan'].includes(location.pathname) ? '' : 'max-w-[1600px]'}`}>
           <Outlet />
         </div>
       </main>

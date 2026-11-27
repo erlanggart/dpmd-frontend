@@ -1,8 +1,9 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useEditMode } from "../../../context/EditModeContext";
 import {
 	getKelembagaanSummary,
+	getKelembagaanMasalah,
 	createKarangTaruna,
 	createLpm,
 	createSatlinmas,
@@ -12,6 +13,7 @@ import {
 } from "../../../services/kelembagaan";
 import { getProdukHukums } from "../../../services/api";
 import AktivitasLog from "../../../components/kelembagaan/AktivitasLog";
+import { PetaLembaga, VerifikasiDitolak, TombolPeringatan } from "../../../components/kelembagaan/MasalahKelembagaan";
 import {
 	LuUsers,
 	LuBuilding,
@@ -21,26 +23,18 @@ import {
 	LuBuilding2,
 	LuPlus,
 	LuCheck,
-	LuArrowRight,
 	LuInfo,
 	LuX,
 	LuChevronDown,
 	LuChevronUp,
-	LuBookOpen,
-	LuScale,
-	LuFileText,
+	LuChevronRight,
 	LuDownload,
+	LuBookOpen,
 	LuLock,
 	LuLockOpen,
-	LuTriangleAlert,
 	LuMapPin,
-	LuFileCheck,
-	LuUserCheck,
-	LuClipboardList,
-	LuShieldCheck,
 	LuSearch,
 	LuLandmark,
-	LuPowerOff,
 } from "react-icons/lu";
 import DesaPageHeader from "../../../components/desa/DesaPageHeader";
 
@@ -217,7 +211,29 @@ export default function KelembagaanDesaPage() {
 	const [produkHukumSearchTerm, setProdukHukumSearchTerm] = useState('');
 	const [showProdukHukumDropdown, setShowProdukHukumDropdown] = useState(false);
 	const [loadingProdukHukum, setLoadingProdukHukum] = useState(false);
+	const [masalah, setMasalah] = useState(null);
+	const [masalahLoading, setMasalahLoading] = useState(true);
+	const [masalahError, setMasalahError] = useState(false);
 	const navigate = useNavigate();
+
+	// Peta & daftar masalah dimuat terpisah dari ringkasan: perhitungan BPJS-nya
+	// lebih lambat, dan halaman tetap bisa dipakai bila endpoint ini gagal.
+	const loadMasalah = useCallback(async () => {
+		try {
+			const res = await getKelembagaanMasalah();
+			setMasalah(res.data.data);
+			setMasalahError(false);
+		} catch (err) {
+			console.error('Gagal memuat masalah kelembagaan:', err);
+			setMasalahError(true);
+		} finally {
+			setMasalahLoading(false);
+		}
+	}, []);
+
+	useEffect(() => {
+		loadMasalah();
+	}, [loadMasalah]);
 	
 	// Get desa name and status from summary
 	const desaName = summary.desa_nama || "Desa";
@@ -378,13 +394,6 @@ A			pakah Anda yakin ingin membentuk Karang Taruna ${wilayahLabel} ${desaName}?`
 	const lpmFormed = summary.lpm_formed;
 	const satlinmasFormed = summary.satlinmas_formed;
 	const pkkFormed = summary.pkk_formed;
-	// Sudah dibentuk tapi dinonaktifkan — tidak dihitung, tapi tetap ditampilkan.
-	const ktNonaktif = summary.karang_taruna_status === 'nonaktif';
-	const lpmNonaktif = summary.lpm_status === 'nonaktif';
-	const satlinmasNonaktif = summary.satlinmas_status === 'nonaktif';
-	const pkkNonaktif = summary.pkk_status === 'nonaktif';
-	const labelSingleton = (formed, nonaktif) =>
-		!formed ? 'Belum terbentuk' : nonaktif ? 'Terbentuk, sedang nonaktif' : 'Sudah terbentuk';
 	const modalRequiresProdukHukum = requiresProdukHukum(modalConfig.type);
 	const selectedProdukHukum = produkHukumOptions.find((item) => item.id === selectedProdukHukumId) || null;
 	const filteredProdukHukumOptions = produkHukumOptions.filter((item) => {
@@ -589,6 +598,7 @@ A			pakah Anda yakin ingin membentuk Karang Taruna ${wilayahLabel} ${desaName}?`
 			
 			const lembagaItems = lembagaRes?.data?.data || [];
 			setLembagaLainnyaItems(Array.isArray(lembagaItems) ? lembagaItems : []);
+			loadMasalah();
 		} catch (err) {
 			console.error(err);
 			
@@ -608,69 +618,92 @@ A			pakah Anda yakin ingin membentuk Karang Taruna ${wilayahLabel} ${desaName}?`
 		);
 	}
 
-	// Helper: verification badge for multi-instance types (RT/RW, Posyandu)
-	const renderMultiVerifBadge = (verifData) => {
-		if (!verifData) return null;
-		const unverified = verifData.unverified || 0;
-		const ditolak = verifData.ditolak || 0;
-		if (unverified === 0 && ditolak === 0) {
-			return (
-				<span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-slate-50 text-slate-700 border border-slate-200">
-					<LuCheck className="w-3 h-3" /> Terverifikasi
-				</span>
-			);
-		}
-		return (
-			<div className="flex items-center gap-1.5 flex-wrap">
-				{unverified > 0 && (
-					<span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-amber-50 text-amber-700 border border-amber-200">
-						<LuTriangleAlert className="w-3 h-3" /> {unverified} Belum
-					</span>
-				)}
-				{ditolak > 0 && (
-					<span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-rose-50 text-rose-700 border border-rose-200">
-						<LuX className="w-3 h-3" /> {ditolak} Ditolak
-					</span>
-				)}
-			</div>
-		);
+	const v = summary.verifikasi || {};
+
+	// Berapa lembaga aktif yang belum memenuhi tiap syarat verifikasi (dari ringkasan).
+	const detailMulti = [v.rw, v.rt, v.posyandu, v.lembaga_lainnya].filter(Boolean);
+	const detailTunggal = [v.karang_taruna, v.lpm, v.pkk, v.satlinmas].filter(Boolean);
+	const kurang = (kolomMulti, kurangTunggal) =>
+		detailMulti.reduce((s, d) => s + (d[kolomMulti] || 0), 0) + detailTunggal.filter(kurangTunggal).length;
+	const syarat = [
+		{ judul: "SK pembentukan terhubung", ket: "Produk hukum dikaitkan ke tiap lembaga", satuan: "lembaga", kurang: kurang("missing_sk", (d) => !d.has_sk) },
+		{ judul: "Alamat sekretariat terisi", ket: "Alamat lengkap sekretariat lembaga", satuan: "lembaga", kurang: kurang("missing_alamat", (d) => !d.has_alamat) },
+		{ judul: "Minimal satu pengurus", ket: "Pengurus terdaftar di setiap lembaga", satuan: "lembaga", kurang: kurang("missing_pengurus", (d) => !d.pengurus_count) },
+		{ judul: "Data penduduk RT", ket: "Jumlah jiwa dan KK di setiap RT", satuan: "RT", kurang: v.rt?.missing_data_penduduk || 0 },
+	];
+	const syaratLengkap = syarat.filter((s) => s.kurang === 0).length;
+
+	// Status satu baris register: hal pertama yang perlu diketahui operator.
+	const statusMulti = (...parts) => {
+		const d = parts.filter(Boolean);
+		if (d.length === 0) return null;
+		const ditolak = d.reduce((s, x) => s + (x.ditolak || 0), 0);
+		const menunggu = d.reduce((s, x) => s + (x.unverified || 0), 0);
+		if (ditolak > 0) return { tone: "bad", text: `${ditolak} ditolak` };
+		if (menunggu > 0) return { tone: "wait", text: `${menunggu} menunggu verifikasi` };
+		return { tone: "ok", text: "Semua terverifikasi" };
+	};
+	const rasioMulti = (...parts) => {
+		const d = parts.filter(Boolean);
+		if (d.length === 0) return null;
+		return { verified: d.reduce((s, x) => s + (x.verified || 0), 0), total: d.reduce((s, x) => s + (x.total || 0), 0) };
+	};
+	// Lembaga nonaktif tidak ikut dihitung di ringkasan, jadi diberi label sendiri
+	// supaya tidak terlihat seolah datanya hilang.
+	const statusTunggal = (detail, statusKelembagaan) => {
+		if (statusKelembagaan === "nonaktif") return { tone: "off", text: "Nonaktif" };
+		if (!detail) return null;
+		if (detail.status_verifikasi === "verified") return { tone: "ok", text: "Terverifikasi" };
+		if (detail.status_verifikasi === "ditolak") return { tone: "bad", text: "Ditolak" };
+		if (!detail.has_sk) return { tone: "wait", text: "SK belum terhubung" };
+		if (!detail.has_alamat) return { tone: "wait", text: "Alamat sekretariat kosong" };
+		if (!detail.pengurus_count) return { tone: "wait", text: "Belum ada pengurus" };
+		return { tone: "wait", text: "Menunggu verifikasi" };
+	};
+	const statusLainnya = (item) => {
+		if (item.status_kelembagaan === "nonaktif") return { tone: "off", text: "Nonaktif, tidak dihitung" };
+		if (item.status_verifikasi === "verified") return { tone: "ok", text: "Terverifikasi" };
+		if (item.status_verifikasi === "ditolak") return { tone: "bad", text: "Ditolak" };
+		return { tone: "wait", text: "Menunggu verifikasi" };
 	};
 
-	// Helper: verification badge for singleton types (KT, LPM, PKK, Satlinmas)
-	const renderSingletonVerifBadge = (verifData, formed, statusKelembagaan) => {
-		// Lembaga nonaktif tidak ikut dihitung di ringkasan, jadi kartunya diberi
-		// label sendiri supaya tidak terlihat seolah datanya hilang begitu saja.
-		if (formed && statusKelembagaan === 'nonaktif') {
-			return (
-				<span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-slate-100 text-slate-600 border border-slate-200">
-					<LuPowerOff className="w-3 h-3" /> Nonaktif
-				</span>
-			);
-		}
-		if (!verifData || !formed) return null;
-		if (verifData.status_verifikasi === 'verified') {
-			return (
-				<span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-slate-50 text-slate-700 border border-slate-200">
-					<LuCheck className="w-3 h-3" /> Terverifikasi
-				</span>
-			);
-		}
-		if (verifData.status_verifikasi === 'ditolak') {
-			return (
-				<span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-rose-50 text-rose-700 border border-rose-200">
-					<LuX className="w-3 h-3" /> Verifikasi Ditolak
-				</span>
-			);
-		}
-		return (
-			<span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-amber-50 text-amber-700 border border-amber-200">
-				<LuTriangleAlert className="w-3 h-3" /> Belum Terverifikasi
-			</span>
+	const renderTunggal = ({ type, nama, icon, formed, detail, statusKelembagaan }) =>
+		formed ? (
+			<RegisterRow
+				key={type}
+				icon={icon}
+				nama={nama}
+				jumlah={detail ? `${detail.pengurus_count} pengurus` : "–"}
+				rasio={detail ? { verified: detail.status_verifikasi === "verified" ? 1 : 0, total: 1 } : null}
+				status={statusTunggal(detail, statusKelembagaan)}
+				onOpen={() => navigate(`/desa/kelembagaan/${type}/detail`)}
+			/>
+		) : (
+			<RegisterRow
+				key={type}
+				icon={icon}
+				nama={nama}
+				muted
+				jumlah="Belum dibentuk"
+				action={
+					isEditMode ? (
+						<button
+							type="button"
+							onClick={() => handleOpenModal(type)}
+							className="inline-flex min-h-9 items-center gap-1.5 rounded-md border border-slate-300 bg-white px-3 text-[13px] font-medium text-slate-900 transition-colors hover:border-slate-400 hover:bg-slate-50"
+						>
+							<LuPlus className="h-4 w-4" />
+							Bentuk {nama}
+						</button>
+					) : (
+						<span className="text-[13px] text-slate-500">Pengisian data ditutup</span>
+					)
+				}
+			/>
 		);
-	};
 
 	return (
-		<div className="space-y-5">
+		<div className="space-y-6">
 			<DesaPageHeader
 				icon={LuLandmark}
 				eyebrow="Data Desa"
@@ -705,416 +738,95 @@ A			pakah Anda yakin ingin membentuk Karang Taruna ${wilayahLabel} ${desaName}?`
 				</p>
 			</DesaPageHeader>
 
-			{/* 2 Column Layout */}
-			<div className="grid grid-cols-1 gap-5 lg:grid-cols-3">
-				<div className="lg:col-span-2 space-y-5">
-			{/* ═══ Ringkasan Verifikasi ═══ */}
-			{summary.verifikasi && (() => {
-				const v = summary.verifikasi;
-				// Build verification items
-				const items = [];
+			<PetaLembaga masalah={masalah} loading={masalahLoading} error={masalahError} />
+			<TombolPeringatan masalah={masalah} loading={masalahLoading} error={masalahError} />
+			<VerifikasiDitolak masalah={masalah} loading={masalahLoading} error={masalahError} />
 
-				// Multi-type: RW
-				if (v.rw) items.push({ label: "RW", verified: v.rw.verified || 0, ditolak: v.rw.ditolak || 0, total: v.rw.total || 0, icon: LuBuilding, color: "blue" });
-				// Multi-type: RT
-				if (v.rt) items.push({ label: "RT", verified: v.rt.verified || 0, ditolak: v.rt.ditolak || 0, total: v.rt.total || 0, icon: LuBuilding, color: "blue" });
-				// Multi-type: Posyandu
-				if (v.posyandu) items.push({ label: "Posyandu", verified: v.posyandu.verified || 0, ditolak: v.posyandu.ditolak || 0, total: v.posyandu.total || 0, icon: LuHeart, color: "purple" });
-				// Singleton: Karang Taruna
-				if (v.karang_taruna && ktFormed) items.push({ label: "Karang Taruna", verified: v.karang_taruna.status_verifikasi === "verified" ? 1 : 0, ditolak: v.karang_taruna.status_verifikasi === "ditolak" ? 1 : 0, total: 1, icon: LuUsers, color: "orange" });
-				// Singleton: LPM
-				if (v.lpm && lpmFormed) items.push({ label: "LPM", verified: v.lpm.status_verifikasi === "verified" ? 1 : 0, ditolak: v.lpm.status_verifikasi === "ditolak" ? 1 : 0, total: 1, icon: LuBuilding2, color: "yellow" });
-				// Singleton: PKK
-				if (v.pkk && pkkFormed) items.push({ label: "PKK", verified: v.pkk.status_verifikasi === "verified" ? 1 : 0, ditolak: v.pkk.status_verifikasi === "ditolak" ? 1 : 0, total: 1, icon: LuSprout, color: "pink" });
-				// Singleton: Satlinmas
-				if (v.satlinmas && satlinmasFormed) items.push({ label: "Satlinmas", verified: v.satlinmas.status_verifikasi === "verified" ? 1 : 0, ditolak: v.satlinmas.status_verifikasi === "ditolak" ? 1 : 0, total: 1, icon: LuShield, color: "emerald" });
-				// Multi-type: Lembaga Lainnya
-				if (v.lembaga_lainnya) items.push({ label: "Lembaga Lainnya", verified: v.lembaga_lainnya.verified || 0, ditolak: v.lembaga_lainnya.ditolak || 0, total: v.lembaga_lainnya.total || 0, icon: LuBuilding, color: "slate" });
-
-				const totalVerified = items.reduce((sum, i) => sum + i.verified, 0);
-				const totalAll = items.reduce((sum, i) => sum + i.total, 0);
-
-				if (totalAll === 0) return null;
-
-				return (
-					<div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
-						<div className="px-4 py-3 border-b border-slate-100 flex items-center justify-between">
-							<div className="flex items-center gap-3">
-								<div className="p-2 bg-slate-100 rounded-lg">
-									<LuShieldCheck className="w-5 h-5 text-slate-700" />
-								</div>
-								<div>
-									<h3 className="font-bold text-slate-900">Data Terverifikasi Kabupaten</h3>
-									<p className="text-xs text-slate-500">Data lembaga yang sudah masuk dan diverifikasi oleh kabupaten</p>
-								</div>
-							</div>
-							<div className="text-right">
-								<div className="text-2xl font-bold text-slate-700">{totalVerified}<span className="text-base font-normal text-slate-400">/{totalAll}</span></div>
-								<p className="text-xs text-slate-500">Lembaga Terverifikasi</p>
+			<div className="flex flex-wrap items-start gap-8">
+				<div className="flex min-w-0 flex-[999_1_640px] flex-col gap-8">
+					{/* ═══ Lembaga Kemasyarakatan Desa ═══ */}
+					<section className="flex flex-col gap-3">
+						<h2 className="text-base font-semibold text-slate-900">Lembaga Kemasyarakatan Desa</h2>
+						<div className="overflow-x-auto rounded-lg border border-slate-200 bg-white">
+							<div className="min-w-[680px]">
+								<RegisterHeader />
+								<RegisterRow
+									icon={LuBuilding}
+									nama="RT & RW"
+									jumlah={`${summary.rw} RW, ${summary.rt} RT`}
+									rasio={rasioMulti(v.rw, v.rt)}
+									status={statusMulti(v.rw, v.rt)}
+									onOpen={() => navigate("/desa/kelembagaan/rw")}
+								/>
+								<RegisterRow
+									icon={LuHeart}
+									nama="Posyandu"
+									jumlah={summary.posyandu}
+									rasio={rasioMulti(v.posyandu)}
+									status={statusMulti(v.posyandu)}
+									onOpen={() => navigate("/desa/kelembagaan/posyandu")}
+								/>
+								{renderTunggal({ type: "karang-taruna", nama: "Karang Taruna", icon: LuUsers, formed: ktFormed, detail: v.karang_taruna, statusKelembagaan: summary.karang_taruna_status })}
+								{renderTunggal({ type: "lpm", nama: "LPM", icon: LuBuilding2, formed: lpmFormed, detail: v.lpm, statusKelembagaan: summary.lpm_status })}
+								{renderTunggal({ type: "pkk", nama: "PKK", icon: LuSprout, formed: pkkFormed, detail: v.pkk, statusKelembagaan: summary.pkk_status })}
 							</div>
 						</div>
-						<div className="px-4 py-2">
-							{/* Progress bar */}
-							<div className="w-full bg-slate-100 rounded-full h-2 mb-2">
-								<div
-									className={`h-2 rounded-full transition-all duration-500 ${totalVerified === totalAll ? "bg-slate-500" : "bg-slate-500"}`}
-									style={{ width: `${totalAll > 0 ? (totalVerified / totalAll) * 100 : 0}%` }}
-								/>
+					</section>
+
+					{/* ═══ Kelembagaan Lainnya ═══ */}
+					<section className="flex flex-col gap-3">
+						<div className="flex flex-wrap items-end justify-between gap-3">
+							<div>
+								<h2 className="text-base font-semibold text-slate-900">Kelembagaan lainnya</h2>
+								<p className="mt-1 text-[13px] text-slate-500">Satlinmas dan lembaga tambahan sesuai kebutuhan desa</p>
 							</div>
-							<div className="space-y-1.5">
-								{items.map((item) => {
-									const Icon = item.icon;
-									const isComplete = item.verified === item.total;
-									const hasDitolak = item.ditolak > 0;
+							{isEditMode && (
+								<button
+									type="button"
+									onClick={() => handleOpenModal("lembaga-lainnya")}
+									className="inline-flex min-h-10 items-center gap-2 rounded-md bg-slate-900 px-4 text-sm font-medium text-white transition-colors hover:bg-slate-800"
+								>
+									<LuPlus className="h-4 w-4" />
+									Tambah lembaga lainnya
+								</button>
+							)}
+						</div>
+						<div className="overflow-x-auto rounded-lg border border-slate-200 bg-white">
+							<div className="min-w-[680px]">
+								<RegisterHeader />
+								{renderTunggal({ type: "satlinmas", nama: "Satlinmas", icon: LuShield, formed: satlinmasFormed, detail: v.satlinmas, statusKelembagaan: summary.satlinmas_status })}
+								{lembagaLainnyaItems.map((item) => {
+									const nonaktif = item.status_kelembagaan === "nonaktif";
 									return (
-										<div key={item.label} className={`flex items-center gap-2.5 px-3 py-1.5 rounded-lg border ${isComplete ? "bg-slate-50 border-slate-200" : hasDitolak ? "bg-rose-50 border-rose-200" : "bg-slate-50 border-slate-200"}`}>
-											<Icon className={`w-4 h-4 flex-shrink-0 ${isComplete ? "text-slate-600" : hasDitolak ? "text-rose-500" : "text-slate-400"}`} />
-											<div className="min-w-0">
-												<p className="text-xs text-slate-500 truncate">{item.label}</p>
-												<p className={`text-sm font-bold ${isComplete ? "text-slate-700" : hasDitolak ? "text-rose-700" : "text-slate-700"}`}>
-													{item.verified}/{item.total}
-													{hasDitolak && <span className="text-xs font-normal text-rose-500 ml-1">({item.ditolak} ditolak)</span>}
-												</p>
-											</div>
-											{isComplete && <LuCheck className="w-3.5 h-3.5 text-slate-600 flex-shrink-0 ml-auto" />}
-										</div>
+										<RegisterRow
+											key={item.id}
+											icon={LuBuilding}
+											nama={item.nama}
+											muted={nonaktif}
+											jumlah="Lembaga tambahan"
+											rasio={nonaktif ? null : { verified: item.status_verifikasi === "verified" ? 1 : 0, total: 1 }}
+											status={statusLainnya(item)}
+											onOpen={() => navigate(`/desa/kelembagaan/lembaga-lainnya/${item.id}`)}
+										/>
 									);
 								})}
 							</div>
 						</div>
-					</div>
-				);
-			})()}
+					</section>
 
-			{/* Persyaratan Verifikasi Info Box */}
-			{summary.verifikasi && (
-				<div className="rounded-xl border border-amber-100 bg-amber-50/60 p-5">
-					<div className="flex items-start gap-3 mb-4">
-						<div className="p-2 bg-amber-100 rounded-lg">
-							<LuClipboardList className="w-5 h-5 text-amber-700" />
-						</div>
-						<div>
-							<h3 className="font-bold text-amber-900 text-base">Persyaratan Verifikasi Kelembagaan</h3>
-							<p className="text-sm text-amber-700 mt-1">
-								Agar kelembagaan dapat diverifikasi oleh Admin, pastikan data berikut sudah dilengkapi pada setiap lembaga:
-							</p>
-						</div>
-					</div>
-					<div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-						<div className="flex items-start gap-2 bg-white rounded-lg p-3 border border-amber-100">
-							<LuFileCheck className="w-4 h-4 text-amber-600 mt-0.5 flex-shrink-0" />
-							<div>
-								<p className="text-sm font-semibold text-slate-800">Kaitkan SK / Produk Hukum</p>
-								<p className="text-xs text-slate-500">Lampirkan Surat Keputusan pembentukan atau produk hukum terkait</p>
-							</div>
-						</div>
-						<div className="flex items-start gap-2 bg-white rounded-lg p-3 border border-amber-100">
-							<LuMapPin className="w-4 h-4 text-amber-600 mt-0.5 flex-shrink-0" />
-							<div>
-								<p className="text-sm font-semibold text-slate-800">Isi Alamat Sekretariat</p>
-								<p className="text-xs text-slate-500">Berikan alamat lengkap sekretariat lembaga</p>
-							</div>
-						</div>
-						<div className="flex items-start gap-2 bg-white rounded-lg p-3 border border-amber-100">
-							<LuUserCheck className="w-4 h-4 text-amber-600 mt-0.5 flex-shrink-0" />
-							<div>
-								<p className="text-sm font-semibold text-slate-800">Tambah Minimal 1 Pengurus</p>
-								<p className="text-xs text-slate-500">Setiap lembaga wajib memiliki setidaknya satu pengurus yang terdaftar</p>
-							</div>
-						</div>
-						<div className="flex items-start gap-2 bg-white rounded-lg p-3 border border-amber-100">
-							<LuUsers className="w-4 h-4 text-amber-600 mt-0.5 flex-shrink-0" />
-							<div>
-								<p className="text-sm font-semibold text-slate-800">Data Penduduk (RT)</p>
-								<p className="text-xs text-slate-500">Untuk RT, masukkan jumlah jiwa dan jumlah KK di wilayah RT tersebut</p>
-							</div>
-						</div>
-					</div>
-				</div>
-			)}
-			{/* ═══ SECTION 1: Lembaga Kemasyarakatan Desa ═══ */}
-			<div>
-				<div className="flex items-center gap-3 mb-4">
-					<div className="p-2 bg-slate-100 rounded-lg">
-						<LuBuilding2 className="w-5 h-5 text-slate-700" />
-					</div>
-					<div>
-						<h2 className="text-lg font-bold text-slate-800">Lembaga Kemasyarakatan Desa</h2>
-						<p className="text-sm text-slate-500">RT/RW, Posyandu, Karang Taruna, LPM, dan PKK</p>
-					</div>
-				</div>
-
-				<div className="bg-white rounded-xl border border-slate-200 overflow-hidden divide-y divide-slate-100">
-					{/* RT & RW */}
-					<div
-						className="flex items-center justify-between px-5 py-4 hover:bg-slate-50 cursor-pointer transition-colors"
-						onClick={() => navigate("/desa/kelembagaan/rw")}
-					>
-						<div className="flex items-center gap-4">
-							<div className="p-2.5 bg-slate-50 rounded-xl">
-								<LuBuilding className="w-5 h-5 text-slate-600" />
-							</div>
-							<div>
-								<h4 className="font-semibold text-slate-900">RT & RW</h4>
-								<p className="text-sm text-slate-500">{summary.rw} RW • {summary.rt} RT</p>
-							</div>
-						</div>
-						<div className="flex items-center gap-3">
-							{(() => {
-								const v = summary.verifikasi;
-								if (!v?.rw && !v?.rt) return null;
-								const combined = {
-									unverified: (v.rw?.unverified || 0) + (v.rt?.unverified || 0),
-									ditolak: (v.rw?.ditolak || 0) + (v.rt?.ditolak || 0),
-								};
-								return renderMultiVerifBadge(combined);
-							})()}
-							<LuArrowRight className="w-4 h-4 text-slate-400" />
-						</div>
-					</div>
-
-					{/* Posyandu */}
-					<div
-						className="flex items-center justify-between px-5 py-4 hover:bg-slate-50 cursor-pointer transition-colors"
-						onClick={() => navigate("/desa/kelembagaan/posyandu")}
-					>
-						<div className="flex items-center gap-4">
-							<div className="p-2.5 bg-slate-50 rounded-xl">
-								<LuHeart className="w-5 h-5 text-slate-600" />
-							</div>
-							<div>
-								<h4 className="font-semibold text-slate-900">Posyandu</h4>
-								<p className="text-sm text-slate-500">{summary.posyandu} Posyandu</p>
-							</div>
-						</div>
-						<div className="flex items-center gap-3">
-							{renderMultiVerifBadge(summary.verifikasi?.posyandu)}
-							<LuArrowRight className="w-4 h-4 text-slate-400" />
-						</div>
-					</div>
-
-					{/* Karang Taruna */}
-					<div
-						className={`flex items-center justify-between px-5 py-4 transition-colors ${ktFormed ? 'hover:bg-slate-50 cursor-pointer' : ''}`}
-						onClick={ktFormed ? () => navigate("/desa/kelembagaan/karang-taruna/detail") : undefined}
-					>
-						<div className="flex items-center gap-4">
-							<div className="p-2.5 bg-amber-50 rounded-xl">
-								<LuUsers className="w-5 h-5 text-amber-600" />
-							</div>
-							<div>
-								<h4 className="font-semibold text-slate-900">Karang Taruna</h4>
-								<p className={`text-sm ${ktFormed ? 'text-slate-500' : 'text-amber-600'}`}>
-									{labelSingleton(ktFormed, ktNonaktif)}
-								</p>
-							</div>
-						</div>
-						<div className="flex items-center gap-3">
-							{ktFormed ? (
-								<>
-									{renderSingletonVerifBadge(summary.verifikasi?.karang_taruna, ktFormed, summary.karang_taruna_status)}
-									<LuArrowRight className="w-4 h-4 text-slate-400" />
-								</>
-							) : (
-								isEditMode && (
-									<button
-										onClick={(e) => { e.stopPropagation(); handleOpenModal("karang-taruna"); }}
-										className="px-3 py-1.5 bg-amber-500 text-white text-xs font-medium rounded-lg hover:bg-amber-600 transition-colors flex items-center gap-1"
-									>
-										<LuPlus className="w-3 h-3" /> Bentuk
-									</button>
-								)
-							)}
-						</div>
-					</div>
-
-					{/* LPM */}
-					<div
-						className={`flex items-center justify-between px-5 py-4 transition-colors ${lpmFormed ? 'hover:bg-slate-50 cursor-pointer' : ''}`}
-						onClick={lpmFormed ? () => navigate("/desa/kelembagaan/lpm/detail") : undefined}
-					>
-						<div className="flex items-center gap-4">
-							<div className="p-2.5 bg-yellow-50 rounded-xl">
-								<LuBuilding2 className="w-5 h-5 text-yellow-600" />
-							</div>
-							<div>
-								<h4 className="font-semibold text-slate-900">LPM</h4>
-								<p className={`text-sm ${lpmFormed ? 'text-slate-500' : 'text-amber-600'}`}>
-									{labelSingleton(lpmFormed, lpmNonaktif)}
-								</p>
-							</div>
-						</div>
-						<div className="flex items-center gap-3">
-							{lpmFormed ? (
-								<>
-									{renderSingletonVerifBadge(summary.verifikasi?.lpm, lpmFormed, summary.lpm_status)}
-									<LuArrowRight className="w-4 h-4 text-slate-400" />
-								</>
-							) : (
-								isEditMode && (
-									<button
-										onClick={(e) => { e.stopPropagation(); handleOpenModal("lpm"); }}
-										className="px-3 py-1.5 bg-yellow-500 text-white text-xs font-medium rounded-lg hover:bg-yellow-600 transition-colors flex items-center gap-1"
-									>
-										<LuPlus className="w-3 h-3" /> Bentuk
-									</button>
-								)
-							)}
-						</div>
-					</div>
-
-					{/* PKK */}
-					<div
-						className={`flex items-center justify-between px-5 py-4 transition-colors ${pkkFormed ? 'hover:bg-slate-50 cursor-pointer' : ''}`}
-						onClick={pkkFormed ? () => navigate("/desa/kelembagaan/pkk/detail") : undefined}
-					>
-						<div className="flex items-center gap-4">
-							<div className="p-2.5 bg-slate-50 rounded-xl">
-								<LuSprout className="w-5 h-5 text-slate-600" />
-							</div>
-							<div>
-								<h4 className="font-semibold text-slate-900">PKK</h4>
-								<p className={`text-sm ${pkkFormed ? 'text-slate-500' : 'text-amber-600'}`}>
-									{labelSingleton(pkkFormed, pkkNonaktif)}
-								</p>
-							</div>
-						</div>
-						<div className="flex items-center gap-3">
-							{pkkFormed ? (
-								<>
-									{renderSingletonVerifBadge(summary.verifikasi?.pkk, pkkFormed, summary.pkk_status)}
-									<LuArrowRight className="w-4 h-4 text-slate-400" />
-								</>
-							) : (
-								isEditMode && (
-									<button
-										onClick={(e) => { e.stopPropagation(); handleOpenModal("pkk"); }}
-										className="px-3 py-1.5 bg-slate-500 text-white text-xs font-medium rounded-lg hover:bg-slate-600 transition-colors flex items-center gap-1"
-									>
-										<LuPlus className="w-3 h-3" /> Bentuk
-									</button>
-								)
-							)}
-						</div>
-					</div>
-				</div>
-			</div>
-
-			{/* ═══ SECTION 2: Kelembagaan Lainnya ═══ */}
-			<div>
-				<div className="flex items-center justify-between mb-4">
-					<div className="flex items-center gap-3">
-						<div className="p-2 bg-slate-100 rounded-lg">
-							<LuShield className="w-5 h-5 text-slate-700" />
-						</div>
-						<div>
-							<h2 className="text-lg font-bold text-slate-800">Kelembagaan Lainnya</h2>
-							<p className="text-sm text-slate-500">Satlinmas dan kelembagaan tambahan sesuai kebutuhan desa</p>
-						</div>
-					</div>
-					{isEditMode && (
-						<button
-							className="flex items-center space-x-2 rounded-lg bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-slate-800"
-							onClick={() => handleOpenModal("lembaga-lainnya")}
-						>
-							<LuPlus className="w-4 h-4" />
-							<span>Tambah Lembaga</span>
-						</button>
-					)}
-				</div>
-
-				<div className="bg-white rounded-xl border border-slate-200 overflow-hidden divide-y divide-slate-100">
-					{/* Satlinmas */}
-					<div
-						className={`flex items-center justify-between px-5 py-4 transition-colors ${satlinmasFormed ? 'hover:bg-slate-50 cursor-pointer' : ''}`}
-						onClick={satlinmasFormed ? () => navigate("/desa/kelembagaan/satlinmas/detail") : undefined}
-					>
-						<div className="flex items-center gap-4">
-							<div className="p-2.5 bg-slate-50 rounded-xl">
-								<LuShield className="w-5 h-5 text-slate-600" />
-							</div>
-							<div>
-								<h4 className="font-semibold text-slate-900">Satlinmas</h4>
-								<p className={`text-sm ${satlinmasFormed ? 'text-slate-500' : 'text-amber-600'}`}>
-									{labelSingleton(satlinmasFormed, satlinmasNonaktif)}
-								</p>
-							</div>
-						</div>
-						<div className="flex items-center gap-3">
-							{satlinmasFormed ? (
-								<>
-									{renderSingletonVerifBadge(summary.verifikasi?.satlinmas, satlinmasFormed, summary.satlinmas_status)}
-									<LuArrowRight className="w-4 h-4 text-slate-400" />
-								</>
-							) : (
-								isEditMode && (
-									<button
-										onClick={(e) => { e.stopPropagation(); handleOpenModal("satlinmas"); }}
-										className="px-3 py-1.5 bg-slate-500 text-white text-xs font-medium rounded-lg hover:bg-slate-600 transition-colors flex items-center gap-1"
-									>
-										<LuPlus className="w-3 h-3" /> Bentuk
-									</button>
-								)
-							)}
-						</div>
-					</div>
-
-					{/* Individual Lembaga Lainnya Items */}
-					{lembagaLainnyaItems.map((item) => (
-						<div
-							key={item.id}
-							className="flex items-center justify-between px-5 py-4 hover:bg-slate-50 cursor-pointer transition-colors"
-							onClick={() => navigate(`/desa/kelembagaan/lembaga-lainnya/${item.id}`)}
-						>
-							<div className="flex items-center gap-4">
-								<div className="p-2.5 bg-slate-50 rounded-xl">
-									<LuBuilding className="w-5 h-5 text-slate-600" />
-								</div>
-								<div>
-									<h4 className="font-semibold text-slate-900">{item.nama}</h4>
-									<p className="text-sm text-slate-500">Kelembagaan tambahan</p>
-								</div>
-							</div>
-							<div className="flex items-center gap-3">
-								{/* Item nonaktif tidak ikut dihitung, jadi diberi label agar
-								    daftarnya tidak terbaca bertentangan dengan angkanya. */}
-								{item.status_kelembagaan === "nonaktif" && (
-									<span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-slate-100 text-slate-600 border border-slate-200">
-										<LuPowerOff className="w-3 h-3" /> Nonaktif
-									</span>
-								)}
-								<LuArrowRight className="w-4 h-4 text-slate-400" />
-							</div>
-						</div>
-					))}
-
-					{/* Empty state when no items in list */}
-					{!satlinmasFormed && lembagaLainnyaItems.length === 0 && (
-						<div className="px-5 py-8 text-center text-slate-400 text-sm">
-							Belum ada kelembagaan lainnya
-						</div>
-					)}
-				</div>
-			</div>
-
-			{/* Info Section - Tentang Lembaga Kemasyarakatan Desa */}
-			<div className="overflow-hidden rounded-xl border border-slate-200 bg-white">
-				<div className="p-6">
-					<div className="flex items-start space-x-4 mb-4">
-						<div className="p-3 bg-slate-500 rounded-xl flex-shrink-0">
-							<LuInfo className="w-6 h-6 text-white" />
-						</div>
-						<div>
-							<h3 className="text-xl font-bold text-slate-900 mb-2">
+					{/* ═══ Panduan (dilipat agar data utama tidak terdorong ke bawah) ═══ */}
+					<section className="flex flex-col">
+						<h2 className="mb-2 text-base font-semibold text-slate-900">Panduan</h2>
+						<details className="group border-t border-slate-200">
+							<summary className="flex min-h-12 cursor-pointer list-none items-center justify-between gap-3 text-sm font-medium text-slate-900 [&::-webkit-details-marker]:hidden">
 								Tentang Lembaga Kemasyarakatan Desa
-							</h3>
-							<p className="text-slate-700 leading-relaxed mb-4">
-								Lembaga Kemasyarakatan Desa (LKD) adalah organisasi yang dibentuk oleh Pemerintah Desa bersama masyarakat untuk membantu tugas-tugas pemerintahan dan pembangunan desa. 
-								LKD bekerja secara partisipatif dalam meningkatkan kesejahteraan masyarakat desa.
-							</p>
-						</div>
-					</div>
-
+								<LuChevronDown className="h-4 w-4 text-slate-500 transition-transform group-open:rotate-180" />
+							</summary>
+							<div className="pb-6">
+								<p className="mb-4 text-sm leading-relaxed text-slate-700">
+									Lembaga Kemasyarakatan Desa (LKD) adalah organisasi yang dibentuk oleh Pemerintah Desa bersama masyarakat untuk membantu tugas-tugas pemerintahan dan pembangunan desa.
+									LKD bekerja secara partisipatif dalam meningkatkan kesejahteraan masyarakat desa.
+								</p>
 					<div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
 						{/* Tugas Utama */}
 						<div className="bg-white rounded-xl p-4 shadow-sm border border-slate-100">
@@ -1215,25 +927,14 @@ A			pakah Anda yakin ingin membentuk Karang Taruna ${wilayahLabel} ${desaName}?`
 							<p>Pengurus LKD menjabat selama <strong>5 tahun</strong> dan dapat dipilih kembali maksimal <strong>2 kali masa jabatan</strong>. Pengurus tidak boleh merangkap jabatan di LKD lain atau menjadi anggota partai politik.</p>
 						</div>
 					</div>
-				</div>
-			</div>
-
-			
-
-			{/* Ketentuan Hukum Accordion Section */}
-			<div className="mt-12">
-				<div className="rounded-t-xl bg-slate-900 p-6">
-					<div className="flex items-center space-x-3">
-						<div className="p-3 bg-white/10 rounded-xl backdrop-blur-sm">
-							<LuScale className="w-6 h-6 text-white" />
-						</div>
-						<div>
-							<h2 className="text-2xl font-bold text-white">Ketentuan Hukum</h2>
-							<p className="text-slate-200 text-sm mt-1">Lembaga Kemasyarakatan Desa</p>
-						</div>
-					</div>
-				</div>
-
+							</div>
+						</details>
+						<details className="group border-y border-slate-200">
+							<summary className="flex min-h-12 cursor-pointer list-none items-center justify-between gap-3 text-sm font-medium text-slate-900 [&::-webkit-details-marker]:hidden">
+								Ketentuan hukum Lembaga Kemasyarakatan Desa
+								<LuChevronDown className="h-4 w-4 text-slate-500 transition-transform group-open:rotate-180" />
+							</summary>
+							<div className="pb-6">
 				<div className="bg-white rounded-b-2xl shadow-lg border border-slate-200 overflow-hidden">
 					<AccordionSection
 						title="Pembentukan dan Penetapan"
@@ -1487,108 +1188,86 @@ A			pakah Anda yakin ingin membentuk Karang Taruna ${wilayahLabel} ${desaName}?`
 						</div>
 					</AccordionSection>
 				</div>
-			</div>
+							</div>
+						</details>
+					</section>
+				</div>
 
-			{/* ═══ Dokumen Peraturan ═══ */}
-			<div className="bg-white rounded-xl shadow-lg border border-slate-200 overflow-hidden">
-				<div className="bg-slate-900 p-5">
-					<div className="flex items-center space-x-3">
-						<div className="p-2 bg-white/10 rounded-lg backdrop-blur-sm">
-							<LuFileText className="w-5 h-5 text-white" />
+				<aside className="flex min-w-0 flex-[1_1_300px] flex-col gap-8">
+					{/* ═══ Syarat verifikasi, dihitung dari data lembaga aktif ═══ */}
+					<section className="overflow-hidden rounded-lg border border-slate-200 bg-white">
+						<div className="flex items-start justify-between gap-3 px-5 pb-4 pt-5">
+							<div>
+								<h2 className="text-base font-semibold text-slate-900">Syarat verifikasi</h2>
+								<p className="mt-1 text-[13px] text-slate-500">Dihitung dari semua lembaga aktif</p>
+							</div>
+							<p className="text-sm tabular-nums text-slate-500">
+								<span className="text-xl font-medium text-slate-900">{syaratLengkap}</span> / {syarat.length}
+							</p>
 						</div>
-						<div>
-							<h2 className="text-lg font-bold text-white">Dokumen Peraturan</h2>
-							<p className="text-slate-300 text-xs mt-0.5">Regulasi Lembaga Kemasyarakatan</p>
+						<div className="flex h-1 gap-0.5 px-5">
+							{syarat.map((s) => (
+								<span key={s.judul} className={`flex-1 rounded-[1px] ${s.kurang === 0 ? "bg-emerald-600" : "bg-slate-200"}`} />
+							))}
 						</div>
-					</div>
-				</div>
-				<div className="p-4">
-					<div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-						<a href="/peraturan/Permendagri No. 18 Tahun 2018.pdf" target="_blank" rel="noopener noreferrer" className="group flex items-center justify-between p-3 border-l-4 border-slate-500 bg-slate-50 hover:bg-slate-100 rounded-r transition-all">
-							<div className="flex items-center space-x-3 flex-1 min-w-0">
-								<LuFileText className="w-4 h-4 text-slate-600 flex-shrink-0" />
-								<div className="min-w-0">
-									<p className="font-semibold text-sm text-slate-900 truncate">Permendagri No. 18/2018</p>
-									<p className="text-xs text-slate-500">Lembaga Kemasyarakatan Desa</p>
-								</div>
-							</div>
-							<LuDownload className="w-4 h-4 text-slate-400 group-hover:text-slate-600 flex-shrink-0 ml-2" />
-						</a>
-						<a href="/peraturan/Permendagri-26-Thn-2020-ttg-Linmas.pdf" target="_blank" rel="noopener noreferrer" className="group flex items-center justify-between p-3 border-l-4 border-amber-500 bg-amber-50 hover:bg-amber-100 rounded-r transition-all">
-							<div className="flex items-center space-x-3 flex-1 min-w-0">
-								<LuFileText className="w-4 h-4 text-amber-600 flex-shrink-0" />
-								<div className="min-w-0">
-									<p className="font-semibold text-sm text-slate-900 truncate">Permendagri No. 26/2020</p>
-									<p className="text-xs text-slate-500">Tibum Tranmas & Linmas</p>
-								</div>
-							</div>
-							<LuDownload className="w-4 h-4 text-slate-400 group-hover:text-amber-600 flex-shrink-0 ml-2" />
-						</a>
-						<a href="/peraturan/PERMENDAGRI_36_TAHUN_2020 (1).pdf" target="_blank" rel="noopener noreferrer" className="group flex items-center justify-between p-3 border-l-4 border-slate-500 bg-slate-50 hover:bg-slate-100 rounded-r transition-all">
-							<div className="flex items-center space-x-3 flex-1 min-w-0">
-								<LuFileText className="w-4 h-4 text-slate-600 flex-shrink-0" />
-								<div className="min-w-0">
-									<p className="font-semibold text-sm text-slate-900 truncate">Permendagri No. 36/2020</p>
-									<p className="text-xs text-slate-500">Gerakan PKK</p>
-								</div>
-							</div>
-							<LuDownload className="w-4 h-4 text-slate-400 group-hover:text-slate-600 flex-shrink-0 ml-2" />
-						</a>
-						<a href="/peraturan/Permendagri Nomor 11 Tahun 2023.pdf" target="_blank" rel="noopener noreferrer" className="group flex items-center justify-between p-3 border-l-4 border-slate-500 bg-slate-50 hover:bg-slate-100 rounded-r transition-all">
-							<div className="flex items-center space-x-3 flex-1 min-w-0">
-								<LuFileText className="w-4 h-4 text-slate-600 flex-shrink-0" />
-								<div className="min-w-0">
-									<p className="font-semibold text-sm text-slate-900 truncate">Permendagri No. 11/2023</p>
-									<p className="text-xs text-slate-500">Sarana Prasarana Linmas</p>
-								</div>
-							</div>
-							<LuDownload className="w-4 h-4 text-slate-400 group-hover:text-slate-600 flex-shrink-0 ml-2" />
-						</a>
-						<a href="/peraturan/Permendagri No 13 Tahun 2024.pdf" target="_blank" rel="noopener noreferrer" className="group flex items-center justify-between p-3 border-l-4 border-slate-500 bg-slate-50 hover:bg-slate-100 rounded-r transition-all">
-							<div className="flex items-center space-x-3 flex-1 min-w-0">
-								<LuFileText className="w-4 h-4 text-slate-600 flex-shrink-0" />
-								<div className="min-w-0">
-									<p className="font-semibold text-sm text-slate-900 truncate">Permendagri No. 13/2024</p>
-									<p className="text-xs text-slate-500">Pos Pelayanan Terpadu (Posyandu)</p>
-								</div>
-							</div>
-							<LuDownload className="w-4 h-4 text-slate-400 group-hover:text-slate-600 flex-shrink-0 ml-2" />
-						</a>
-						<a href="/peraturan/perda no 9 tahun 2011.pdf" target="_blank" rel="noopener noreferrer" className="group flex items-center justify-between p-3 border-l-4 border-slate-500 bg-slate-50 hover:bg-slate-100 rounded-r transition-all">
-							<div className="flex items-center space-x-3 flex-1 min-w-0">
-								<LuFileText className="w-4 h-4 text-slate-600 flex-shrink-0" />
-								<div className="min-w-0">
-									<p className="font-semibold text-sm text-slate-900 truncate">Perda No. 9/2011</p>
-									<p className="text-xs text-slate-500">Lembaga Kemasyarakatan Kab. Bogor</p>
-								</div>
-							</div>
-							<LuDownload className="w-4 h-4 text-slate-400 group-hover:text-slate-600 flex-shrink-0 ml-2" />
-						</a>
-						<a href="/peraturan/Perbup 31 Tahun 2012 - Tata Cara Pembentukan LPM Desa, Kel, RW dan RT.pdf" target="_blank" rel="noopener noreferrer" className="group flex items-center justify-between p-3 border-l-4 border-slate-500 bg-slate-50 hover:bg-slate-100 rounded-r transition-all md:col-span-2">
-							<div className="flex items-center space-x-3 flex-1 min-w-0">
-								<LuFileText className="w-4 h-4 text-slate-600 flex-shrink-0" />
-								<div className="min-w-0">
-									<p className="font-semibold text-sm text-slate-900 truncate">Perbup No. 31/2012</p>
-									<p className="text-xs text-slate-500">Tata Cara Pembentukan LPM & RT/RW</p>
-								</div>
-							</div>
-							<LuDownload className="w-4 h-4 text-slate-400 group-hover:text-slate-600 flex-shrink-0 ml-2" />
-						</a>
-					</div>
-				</div>
+						<ul className="mt-4 divide-y divide-slate-100 border-t border-slate-100">
+							{syarat.map((s) => {
+								const ok = s.kurang === 0;
+								return (
+									<li key={s.judul} className="flex items-start gap-3 px-5 py-4">
+										<span
+											className={`mt-0.5 flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-[4px] ${
+												ok ? "bg-emerald-600 text-white" : "bg-white ring-1 ring-inset ring-slate-300"
+											}`}
+										>
+											{ok && <LuCheck className="h-3.5 w-3.5" strokeWidth={2.5} />}
+										</span>
+										<div className="min-w-0 flex-1">
+											<p className={`text-sm font-medium ${ok ? "text-slate-500" : "text-slate-900"}`}>{s.judul}</p>
+											<p className="mt-0.5 text-[13px] text-slate-500">{s.ket}</p>
+										</div>
+										<span className={`whitespace-nowrap text-[13px] tabular-nums ${ok ? "text-emerald-700" : "font-medium text-brand-700"}`}>
+											{ok ? "Lengkap" : `${s.kurang} ${s.satuan}`}
+										</span>
+									</li>
+								);
+							})}
+						</ul>
+					</section>
+
+					<AktivitasLog mode="all" />
+
+					{/* ═══ Dokumen peraturan ═══ */}
+					<section className="overflow-hidden rounded-lg border border-slate-200 bg-white">
+						<div className="px-5 pb-3 pt-5">
+							<h2 className="text-base font-semibold text-slate-900">Dokumen peraturan</h2>
+							<p className="mt-1 text-[13px] text-slate-500">Dasar hukum lembaga kemasyarakatan</p>
+						</div>
+						<ul className="divide-y divide-slate-100 border-t border-slate-100">
+							{DOKUMEN_PERATURAN.map((d) => (
+								<li key={d.href}>
+									<a
+										href={d.href}
+										target="_blank"
+										rel="noopener noreferrer"
+										className="group flex items-center gap-4 px-5 py-3 transition-colors hover:bg-slate-50 focus-visible:bg-slate-50 focus-visible:outline-none"
+									>
+										<span className="w-16 flex-shrink-0 font-mono text-[13px] font-medium tabular-nums text-slate-900">{d.nomor}</span>
+										<span className="min-w-0 flex-1">
+											<span className="block truncate text-sm text-slate-900">{d.judul}</span>
+											<span className="block text-xs text-slate-500">{d.jenis}</span>
+										</span>
+										<LuDownload
+											aria-hidden="true"
+											className="h-4 w-4 flex-shrink-0 text-slate-400 transition-colors group-hover:text-slate-900"
+										/>
+									</a>
+								</li>
+							))}
+						</ul>
+					</section>
+				</aside>
 			</div>
-
-				</div>
-				{/* End of Left Column */}
-
-				<div className="lg:col-span-1">
-					<div className="sticky top-4">
-						<AktivitasLog mode="all" />
-					</div>
-				</div>
-
-			</div>
-			{/* End of Grid Layout */}
 
 			{/* Confirmation Modal */}
 			<ConfirmationModal
@@ -1799,4 +1478,79 @@ function AccordionSection({ title, children, icon: Icon, color = "blue" }) {
 			)}
 		</div>
 	);
+}
+
+const DOKUMEN_PERATURAN = [
+	{ jenis: "Permendagri", nomor: "18/2018", judul: "Lembaga Kemasyarakatan Desa", href: "/peraturan/Permendagri No. 18 Tahun 2018.pdf" },
+	{ jenis: "Permendagri", nomor: "26/2020", judul: "Tibum, Tranmas, dan Linmas", href: "/peraturan/Permendagri-26-Thn-2020-ttg-Linmas.pdf" },
+	{ jenis: "Permendagri", nomor: "36/2020", judul: "Gerakan PKK", href: "/peraturan/PERMENDAGRI_36_TAHUN_2020 (1).pdf" },
+	{ jenis: "Permendagri", nomor: "11/2023", judul: "Sarana prasarana Linmas", href: "/peraturan/Permendagri Nomor 11 Tahun 2023.pdf" },
+	{ jenis: "Permendagri", nomor: "13/2024", judul: "Posyandu", href: "/peraturan/Permendagri No 13 Tahun 2024.pdf" },
+	{ jenis: "Perda Kab. Bogor", nomor: "9/2011", judul: "Lembaga Kemasyarakatan", href: "/peraturan/perda no 9 tahun 2011.pdf" },
+	{ jenis: "Perbup Bogor", nomor: "31/2012", judul: "Pembentukan LPM, RT, dan RW", href: "/peraturan/Perbup 31 Tahun 2012 - Tata Cara Pembentukan LPM Desa, Kel, RW dan RT.pdf" },
+];
+
+// Kotak status: bentuk yang sama dengan Peta Lembaga, jadi register dan peta terbaca satu bahasa.
+const STATUS_TONE = {
+	ok: { text: "text-emerald-700", box: "bg-emerald-600" },
+	wait: { text: "text-slate-700", box: "ring-1 ring-inset ring-slate-400" },
+	bad: { text: "text-brand-700", box: "bg-brand-500" },
+	off: { text: "text-slate-500", box: "bg-slate-300" },
+};
+
+const REGISTER_GRID =
+	"grid grid-cols-[minmax(180px,2fr)_minmax(100px,1fr)_minmax(100px,0.8fr)_minmax(180px,1.5fr)_16px] items-center gap-4 px-5";
+
+function RegisterHeader() {
+	return (
+		<div className={`${REGISTER_GRID} min-h-10 text-[13px] text-slate-500`}>
+			<span>Lembaga</span>
+			<span>Jumlah</span>
+			<span>Terverifikasi</span>
+			<span>Status</span>
+			<span />
+		</div>
+	);
+}
+
+/** Satu baris register lembaga. Bisa dibuka (onOpen) atau membawa tombol aksi sendiri. */
+function RegisterRow({ icon: Icon, nama, jumlah, rasio, status, onOpen, action, muted = false }) {
+	const tone = status ? STATUS_TONE[status.tone] : null;
+	const isi = (
+		<>
+			<span className={`flex min-w-0 items-center gap-3 font-medium ${muted ? "text-slate-500" : "text-slate-900"}`}>
+				<Icon className="h-[18px] w-[18px] flex-shrink-0 text-slate-500" />
+				<span className="truncate">{nama}</span>
+			</span>
+			<span className={`text-sm tabular-nums ${muted ? "text-slate-500" : "text-slate-700"}`}>{jumlah}</span>
+			<span className="text-sm tabular-nums text-slate-900">
+				{rasio ? (
+					<>
+						{rasio.verified} <span className="text-slate-500">/ {rasio.total}</span>
+					</>
+				) : (
+					<span className="text-slate-400">–</span>
+				)}
+			</span>
+			<span className="min-w-0">
+				{action ||
+					(tone && (
+						<span className={`inline-flex items-center gap-2 text-[13px] ${tone.text}`}>
+							<span className={`inline-block h-2.5 w-2.5 flex-shrink-0 rounded-[2px] ${tone.box}`} />
+							<span className="truncate">{status.text}</span>
+						</span>
+					))}
+			</span>
+			{onOpen ? <LuChevronRight className="h-4 w-4 text-slate-400" /> : <span />}
+		</>
+	);
+	const cls = `${REGISTER_GRID} min-h-[60px] w-full border-t border-slate-100 text-left`;
+	if (onOpen) {
+		return (
+			<button type="button" onClick={onOpen} className={`${cls} transition-colors hover:bg-slate-50 focus-visible:bg-slate-50 focus-visible:outline-none`}>
+				{isi}
+			</button>
+		);
+	}
+	return <div className={cls}>{isi}</div>;
 }
