@@ -5,7 +5,7 @@ import { useAuth } from '../../context/AuthContext';
 import {
   Users, Activity, Clock, HardDrive, ClipboardList, Clapperboard, UserCheck, Scale,
   Building2, ChevronRight, ArrowUpRight, BarChart3, GitMerge, RotateCcw,
-	Gavel, UserPlus,
+	Gavel, UserPlus, ShieldCheck,
 } from 'lucide-react';
 import api from '../../api';
 import toast from 'react-hot-toast';
@@ -325,6 +325,14 @@ const PMDPage = () => {
       icon: GitMerge,
       route: getPath('/bidang/pmd/kelembagaan/rtrw-comparison'),
       stat: { value: 'Komparatif', label: 'RT · RW · ADD · BPJS' },
+    },
+    {
+      id: 'bpjs', tone: 'amber',
+      title: 'Data BPJS', short: 'BPJS',
+      desc: 'Data peserta BPJS Ketenagakerjaan RT/RW per bulan, import & riwayat',
+      icon: ShieldCheck,
+      route: getPath('/bidang/pmd/kelembagaan/bpjs-arsip'),
+      stat: { value: 'Bulanan', label: 'arsip & perbandingan' },
     },
     {
       id: 'drive', tone: 'sky',

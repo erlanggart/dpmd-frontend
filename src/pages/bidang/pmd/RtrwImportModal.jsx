@@ -48,8 +48,9 @@ const formatNumber = (value) =>
  * /import/status sampai job selesai → tampilkan delta → onImported() agar
  * halaman memuat ulang data dari cache yang baru.
  */
-const RtrwImportModal = ({ onClose, onImported }) => {
-  const [jenis, setJenis] = useState("bpjs");
+const RtrwImportModal = ({ onClose, onImported, jenisOnly = null }) => {
+  const [jenis, setJenis] = useState(jenisOnly || "bpjs");
+  const jenisPilihan = jenisOnly ? JENIS.filter((item) => item.id === jenisOnly) : JENIS;
   const [file, setFile] = useState(null);
   const [info, setInfo] = useState(null);
   const [dragging, setDragging] = useState(false);
@@ -175,9 +176,13 @@ const RtrwImportModal = ({ onClose, onImported }) => {
       >
         <div className="flex items-start justify-between border-b border-gray-200 px-5 py-4">
           <div>
-            <h3 className="font-semibold text-gray-900">Import Excel Sumber Data</h3>
+            <h3 className="font-semibold text-gray-900">
+              {jenisOnly ? `Import Excel ${activeJenis?.label}` : "Import Excel Sumber Data"}
+            </h3>
             <p className="mt-0.5 text-xs text-gray-500">
-              Ganti master BPJS atau ADD. Cache persandingan otomatis diregenerasi setelah upload.
+              {jenisOnly === "bpjs"
+                ? "Data tiap bulan disimpan permanen di database. Persandingan RT/RW otomatis memakai bulan terbaru."
+                : "Ganti master BPJS atau ADD. Data BPJS tiap bulan disimpan permanen di riwayat database."}
             </p>
           </div>
           <button
@@ -191,12 +196,12 @@ const RtrwImportModal = ({ onClose, onImported }) => {
         </div>
 
         <div className="flex-1 space-y-4 overflow-y-auto px-5 py-4">
-          <div>
+          {jenisPilihan.length > 1 && <div>
             <label className="mb-2 block text-xs font-semibold uppercase tracking-wide text-gray-500">
               Jenis data
             </label>
             <div className="grid gap-2 sm:grid-cols-2">
-              {JENIS.map((item) => (
+              {jenisPilihan.map((item) => (
                 <button
                   key={item.id}
                   onClick={() => { setJenis(item.id); setError(null); }}
@@ -212,7 +217,7 @@ const RtrwImportModal = ({ onClose, onImported }) => {
                 </button>
               ))}
             </div>
-          </div>
+          </div>}
 
           {currentSource && (
             <div className="rounded-lg border border-gray-200 bg-gray-50 px-3 py-2.5 text-xs">
@@ -361,6 +366,17 @@ const RtrwImportModal = ({ onClose, onImported }) => {
                         </div>
                       )}
                     </dl>
+                  )}
+                  {job.result?.arsip?.length > 0 && (
+                    <p className="mt-2 font-medium">
+                      Tersimpan di riwayat database:{" "}
+                      {job.result.arsip.map((p) => `${p.periode} (${formatNumber(p.totalBaris)} peserta)`).join(", ")}
+                    </p>
+                  )}
+                  {job.result?.cacheDiperbarui === false && (
+                    <p className="mt-1 text-amber-700">
+                      Bukan bulan terbaru — persandingan tetap memakai periode {job.result.periodeTerbaru}.
+                    </p>
                   )}
                   <p className="mt-2 text-green-700">
                     Arsip: <code>{job.archivedAs}</code> · cadangan lama di <code>data/backups/</code>

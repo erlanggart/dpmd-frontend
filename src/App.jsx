@@ -168,6 +168,7 @@ const PengurusDashboardPage = lazy(() => import("./pages/bidang/pmd/PengurusDash
 const PengurusImportPage = lazy(() => import("./pages/bidang/pmd/PengurusImportPage"));
 const PosyanduComparisonPage = lazy(() => import("./pages/bidang/pmd/PosyanduComparisonPage"));
 const RtrwComparisonPage = lazy(() => import("./pages/bidang/pmd/RtrwComparisonPage"));
+const BpjsArsipPage = lazy(() => import("./pages/bidang/pmd/BpjsArsipPage"));
 const BpjsLayout = lazy(() => import("./layouts/BpjsLayout"));
 const BpjsDashboardPage = lazy(() => import("./pages/bpjs/BpjsDashboardPage"));
 // Tenaga Ahli: pendamping di luar DPMD, lihat & ekspor BUM Desa + Kerja Sama Desa.
@@ -1442,6 +1443,7 @@ function App() {
                   <Route path="kelembagaan/lainnya" element={<KelembagaanLainnyaPage />} />
                   <Route path="kelembagaan/posyandu-comparison" element={<PosyanduComparisonPage />} />
                   <Route path="kelembagaan/rtrw-comparison" element={<RtrwComparisonPage />} />
+                  <Route path="kelembagaan/bpjs-arsip" element={<BpjsArsipPage />} />
                   <Route
                     path="kelembagaan/admin/:desaId"
                     element={<AdminKelembagaanDetailPage />}
@@ -1751,6 +1753,7 @@ function App() {
                   <Route path="bidang/pmd/kelembagaan/lainnya" element={<KelembagaanLainnyaPage />} />
                   <Route path="bidang/pmd/kelembagaan/posyandu-comparison" element={<PosyanduComparisonPage />} />
                   <Route path="bidang/pmd/kelembagaan/rtrw-comparison" element={<RtrwComparisonPage />} />
+                  <Route path="bidang/pmd/kelembagaan/bpjs-arsip" element={<BpjsArsipPage />} />
                   <Route path="bidang/pmd/kelembagaan/admin/:desaId" element={<AdminKelembagaanDetailPage />} />
                   <Route path="bidang/pmd/kelembagaan/admin/:desaId/:type" element={<KelembagaanList />} />
                   <Route path="bidang/pmd/kelembagaan/:type" element={<KelembagaanList />} />
@@ -1912,6 +1915,7 @@ function App() {
                   <Route index element={<Navigate to="dashboard" replace />} />
                   <Route path="dashboard" element={<BpjsDashboardPage />} />
                   <Route path="rtrw-comparison" element={<RtrwComparisonPage />} />
+                  <Route path="bpjs-arsip" element={<BpjsArsipPage />} />
                   <Route path="*" element={<Navigate to="dashboard" replace />} />
                 </Route>
 

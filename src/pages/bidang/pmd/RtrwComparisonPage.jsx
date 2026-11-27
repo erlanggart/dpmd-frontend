@@ -19,15 +19,7 @@ import * as XLSX from "xlsx";
 import api from "../../../api";
 import { useAuth } from "../../../context/AuthContext";
 import RtrwImportModal from "./RtrwImportModal";
-
-// Harus sama dengan RTRW_IMPORT_ROLES di routes/kelembagaan.routes.js — kalau
-// berbeda, tombol muncul untuk user yang nanti ditolak 403 oleh backend.
-const IMPORT_ROLES = ["superadmin", "pemberdayaan_masyarakat", "pemerintahan_desa", "kepala_bidang", "kepala_dinas"];
-// Dua nama di atas juga dipakai checkRole() sebagai pseudo-peran berbasis bidang
-// (BIDANG_ROLE_MAP), jadi seluruh pegawai bidang tersebut lolos apa pun perannya
-// — pegawai, ketua_tim, bendahara, kabid. 5 = Pemberdayaan Masyarakat (PM/PMD),
-// 6 = Pemerintahan Desa.
-const IMPORT_BIDANG_IDS = [5, 6];
+import { canImportRtrw } from "./rtrwImportAccess";
 
 const STATUS_CONFIG = {
   all_three: {
@@ -1011,8 +1003,7 @@ const RtrwComparisonPage = () => {
   const [exporting, setExporting] = useState(false);
   const [showImport, setShowImport] = useState(false);
   const { user } = useAuth();
-  const canImport = IMPORT_ROLES.includes(String(user?.role || "").trim().toLowerCase())
-    || IMPORT_BIDANG_IDS.includes(Number(user?.bidang_id));
+  const canImport = canImportRtrw(user);
 
   useEffect(() => {
     fetchData();
@@ -1245,15 +1236,25 @@ const RtrwComparisonPage = () => {
             Perbandingan Ketua RT/RW dari Database, penerima insentif ADD, dan peserta BPJS
           </p>
         </div>
-        {canImport && (
-          <button
-            onClick={() => setShowImport(true)}
-            className="flex items-center gap-1.5 rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 text-xs font-medium text-blue-700 transition-colors hover:bg-blue-100"
+        <div className="flex gap-2">
+          <Link
+            to="../bpjs-arsip"
+            relative="path"
+            className="flex items-center gap-1.5 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-medium text-amber-700 transition-colors hover:bg-amber-100"
           >
-            <LuUpload className="h-3.5 w-3.5" />
-            Import Excel
-          </button>
-        )}
+            <LuShieldCheck className="h-3.5 w-3.5" />
+            Data BPJS
+          </Link>
+          {canImport && (
+            <button
+              onClick={() => setShowImport(true)}
+              className="flex items-center gap-1.5 rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 text-xs font-medium text-blue-700 transition-colors hover:bg-blue-100"
+            >
+              <LuUpload className="h-3.5 w-3.5" />
+              Import Excel
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Pemilih sumber: berlaku untuk seluruh halaman — kartu, tab, dan tabel. */}
