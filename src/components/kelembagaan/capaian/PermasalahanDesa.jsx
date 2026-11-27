@@ -15,6 +15,12 @@ const MASALAH = {
   belum_ada_lembaga: { label: "Jenis lembaga belum dibentuk", satuan: "jenis", tingkat: "sedang", ket: "Desa punya lembaga, tetapi ada jenis yang belum ada sama sekali" },
   ketua_ganda: { label: "Ketua lebih dari satu", satuan: "lembaga", tingkat: "ringan", ket: "Lembaga dengan lebih dari satu ketua aktif" },
   rw_tanpa_rt: { label: "RW tanpa RT", satuan: "RW", tingkat: "ringan", ket: "RW aktif yang tidak membawahi RT aktif" },
+  penomoran_rt: {
+    label: "Penomoran RT tidak sesuai",
+    satuan: "RW",
+    tingkat: "sedang",
+    ket: "Penomoran RT/RW tidak sesuai peraturan perundang-undangan: RT di setiap RW harus dimulai dari 1 dan berurutan (RW 1: RT 1, 2, 3; RW 2: RT 1, 2, 3, dst.)",
+  },
   pengurus_tanpa_sk: { label: "Pengurus belum terhubung SK", satuan: "pengurus", tingkat: "ringan", ket: "Pengurus aktif yang belum dihubungkan ke produk hukum" },
 };
 const KODE = Object.keys(MASALAH);
@@ -81,6 +87,12 @@ const RincianDesa = ({ desa, lembaga, onDesaClick }) => (
       <span>
         Produk hukum desa: {desa.produk_hukum.total} dokumen, {desa.produk_hukum.sk_kades} SK Kepala Desa
         {desa.rw_tanpa_rt > 0 && ` · ${desa.rw_tanpa_rt} RW tanpa RT`}
+        {desa.rt_penomoran?.length > 0 && (
+          <span className="block mt-1 text-amber-800">
+            Penomoran RT tidak sesuai peraturan perundang-undangan:{" "}
+            {desa.rt_penomoran.map((p) => `RW ${p.rw} (RT ${p.rts})`).join(" · ")}
+          </span>
+        )}
       </span>
       {onDesaClick && (
         <button
@@ -165,6 +177,10 @@ const PermasalahanDesa = ({ onDesaClick }) => {
       { label: "Produk Hukum (dokumen)", nilai: (d) => d.produk_hukum.total },
       { label: "SK Kepala Desa", nilai: (d) => d.produk_hukum.sk_kades },
       { label: "RW tanpa RT", nilai: (d) => d.rw_tanpa_rt },
+      {
+        label: "Penomoran RT tidak sesuai",
+        nilai: (d) => (d.rt_penomoran || []).map((p) => `RW ${p.rw} (RT ${p.rts})`).join("; "),
+      },
     ],
     []
   );

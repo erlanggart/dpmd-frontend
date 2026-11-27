@@ -75,6 +75,34 @@ const PengurusBpjsCard = ({ pengurusId, nik }) => {
 					</div>
 				</div>
 
+				{data.nik_berbeda && (
+					<div className="rounded-xl border border-orange-200 bg-orange-50 p-3 text-orange-800">
+						<p className="text-sm font-bold">Kemungkinan terdaftar dengan NIK berbeda</p>
+						<p className="text-xs mt-0.5 opacity-90">
+							Data BPJS di desa ini memuat peserta dengan nama yang sama tetapi NIK-nya berbeda. Bisa jadi NIK
+							salah tulis di database, atau BPJS mendaftarkan dengan NIK yang salah. Mohon dicek dan diperbaiki.
+						</p>
+						<dl className="grid grid-cols-2 gap-3 text-sm mt-3">
+							<div>
+								<dt className="text-xs opacity-75">Nama di BPJS</dt>
+								<dd className="font-medium break-words">{data.nik_berbeda.nama_bpjs.join(" / ") || "-"}</dd>
+							</div>
+							<div>
+								<dt className="text-xs opacity-75">NIK di BPJS</dt>
+								<dd className="font-mono break-all">{data.nik_berbeda.nik_bpjs.join(", ") || "-"}</dd>
+							</div>
+							<div>
+								<dt className="text-xs opacity-75">NIK di Database</dt>
+								<dd className="font-mono break-all">{nik || "-"}</dd>
+							</div>
+							<div>
+								<dt className="text-xs opacity-75">No. KPJ</dt>
+								<dd className="font-mono break-all">{data.nik_berbeda.kpj.join(", ") || "-"}</dd>
+							</div>
+						</dl>
+					</div>
+				)}
+
 				{data.peserta && (
 					<dl className="grid grid-cols-2 gap-3 text-sm">
 						<div>
