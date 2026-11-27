@@ -30,6 +30,15 @@ const PengurusBpjsCard = ({ pengurusId, nik }) => {
 	let status;
 	if (data.nik_kosong) {
 		status = { tone: "amber", icon: FaExclamationTriangle, title: "Tidak dapat dicek", desc: "NIK pengurus belum diisi." };
+	} else if (data.nik_dipakai_lain) {
+		status = {
+			tone: "red",
+			icon: FaTimesCircle,
+			title: "NIK terdaftar atas nama orang lain",
+			desc: `Di BPJS, NIK ini tercatat atas nama ${data.nik_dipakai_lain.nama}${
+				data.nik_dipakai_lain.kpj ? ` (KPJ ${data.nik_dipakai_lain.kpj})` : ""
+			}, bukan pengurus ini. Mohon periksa kembali NIK di database maupun di BPJS.`,
+		};
 	} else if (data.tercover) {
 		status = { tone: "green", icon: FaCheckCircle, title: "Tercover BPJS", desc: `Terdaftar pada iuran ${namaBulan(data.bulan)}.` };
 	} else if (!data.data_bulan_ini_tersedia) {

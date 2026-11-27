@@ -447,6 +447,10 @@ const buildClassification = (data) => {
       if (sebabNik.some((sebab) => !NIK_ERROR_TGL.has(sebab))) nikErrorDb.push(base);
       if (sebabNik.some((sebab) => NIK_ERROR_TGL.has(sebab))) nikTglLahir.push(base);
 
+      // NIK Invalid ditampilkan walau baris BPJS-nya tergabung dengan data DB (nama mirip),
+      // supaya tanda NIK Invalid tidak hilang dari tab.
+      if (item.inBpjs && item.bpjsNikInvalid) nikInvalid.push(base);
+
       if (item.inDb && item.inBpjs) {
         dbBpjs.push(base);
         if (item.nikMismatch) nikBerbeda.push(base);
@@ -454,7 +458,6 @@ const buildClassification = (data) => {
       }
 
       if (item.inBpjs && !item.inDb) {
-        if (item.bpjsNikInvalid) nikInvalid.push(base);
         if (item.inAdd) bpjsCocokAdd.push(base);
         else bpjsNoDb.push({ ...base, sumber: "BPJS (tanpa DB & ADD)" });
       }
