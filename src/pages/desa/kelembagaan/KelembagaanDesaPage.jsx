@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useEditMode } from "../../../context/EditModeContext";
 import {
@@ -35,6 +35,7 @@ import {
 	LuMapPin,
 	LuSearch,
 	LuLandmark,
+	LuFileText,
 } from "react-icons/lu";
 import DesaPageHeader from "../../../components/desa/DesaPageHeader";
 
@@ -215,6 +216,7 @@ export default function KelembagaanDesaPage() {
 	const [masalahLoading, setMasalahLoading] = useState(true);
 	const [masalahError, setMasalahError] = useState(false);
 	const navigate = useNavigate();
+	const peraturanRef = useRef(null);
 
 	// Peta & daftar masalah dimuat terpisah dari ringkasan: perhitungan BPJS-nya
 	// lebih lambat, dan halaman tetap bisa dipakai bila endpoint ini gagal.
@@ -814,421 +816,155 @@ A			pakah Anda yakin ingin membentuk Karang Taruna ${wilayahLabel} ${desaName}?`
 						</div>
 					</section>
 
-					{/* ═══ Panduan (dilipat agar data utama tidak terdorong ke bawah) ═══ */}
-					<section className="flex flex-col">
-						<h2 className="mb-2 text-base font-semibold text-slate-900">Panduan</h2>
-						<details className="group border-t border-slate-200">
-							<summary className="flex min-h-12 cursor-pointer list-none items-center justify-between gap-3 text-sm font-medium text-slate-900 [&::-webkit-details-marker]:hidden">
-								Tentang Lembaga Kemasyarakatan Desa
-								<LuChevronDown className="h-4 w-4 text-slate-500 transition-transform group-open:rotate-180" />
-							</summary>
-							<div className="pb-6">
-								<p className="mb-4 text-sm leading-relaxed text-slate-700">
-									Lembaga Kemasyarakatan Desa (LKD) adalah organisasi yang dibentuk oleh Pemerintah Desa bersama masyarakat untuk membantu tugas-tugas pemerintahan dan pembangunan desa.
-									LKD bekerja secara partisipatif dalam meningkatkan kesejahteraan masyarakat desa.
-								</p>
-					<div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-						{/* Tugas Utama */}
-						<div className="bg-white rounded-xl p-4 shadow-sm border border-slate-100">
-							<h4 className="font-semibold text-slate-900 mb-3 flex items-center">
-								<LuCheck className="w-5 h-5 mr-2 text-slate-600" />
-								Tugas Utama LKD
-							</h4>
-							<ul className="space-y-2 text-sm text-slate-700">
-								<li className="flex items-start">
-									<span className="text-slate-500 mr-2">•</span>
-									<span>Memberdayakan masyarakat desa dalam berbagai bidang</span>
-								</li>
-								<li className="flex items-start">
-									<span className="text-slate-500 mr-2">•</span>
-									<span>Ikut serta dalam perencanaan dan pelaksanaan pembangunan</span>
-								</li>
-								<li className="flex items-start">
-									<span className="text-slate-500 mr-2">•</span>
-									<span>Meningkatkan pelayanan kepada masyarakat desa</span>
-								</li>
-								<li className="flex items-start">
-									<span className="text-slate-500 mr-2">•</span>
-									<span>Menampung dan menyalurkan aspirasi masyarakat</span>
-								</li>
-							</ul>
-						</div>
-
-						{/* Jenis LKD */}
-						<div className="bg-white rounded-xl p-4 shadow-sm border border-slate-100">
-							<h4 className="font-semibold text-slate-900 mb-3 flex items-center">
-								<LuUsers className="w-5 h-5 mr-2 text-slate-600" />
-								Jenis Lembaga Wajib
-							</h4>
-							<ul className="space-y-2 text-sm text-slate-700">
-								<li className="flex items-start">
-									<span className="text-slate-500 mr-2">•</span>
-									<span><strong>RT & RW</strong> - Membantu pelayanan pemerintahan dan data kependudukan</span>
-								</li>
-								<li className="flex items-start">
-									<span className="text-slate-500 mr-2">•</span>
-									<span><strong>PKK</strong> - Pemberdayaan kesejahteraan keluarga</span>
-								</li>
-								<li className="flex items-start">
-									<span className="text-slate-500 mr-2">•</span>
-									<span><strong>Karang Taruna</strong> - Pengembangan generasi muda dan kesejahteraan sosial</span>
-								</li>
-								<li className="flex items-start">
-									<span className="text-slate-500 mr-2">•</span>
-									<span><strong>Posyandu</strong> - Peningkatan pelayanan kesehatan masyarakat</span>
-								</li>
-								<li className="flex items-start">
-									<span className="text-slate-500 mr-2">•</span>
-									<span><strong>LPM</strong> - Perencanaan pembangunan dan swadaya gotong-royong</span>
-								</li>
-							</ul>
-						</div>
-					</div>
-
-					{/* Persyaratan Pembentukan */}
-					<div className="rounded-xl border border-amber-100 bg-amber-50/60 p-4">
-						<h4 className="font-semibold text-amber-900 mb-3 flex items-center">
-							<LuBuilding2 className="w-5 h-5 mr-2" />
-							Persyaratan Pembentukan
-						</h4>
-						<div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-sm text-slate-700">
-							<div className="flex items-start">
-								<LuCheck className="w-4 h-4 mr-2 text-slate-600 flex-shrink-0 mt-0.5" />
-								<span>Berasaskan Pancasila dan UUD 1945</span>
-							</div>
-							<div className="flex items-start">
-								<LuCheck className="w-4 h-4 mr-2 text-slate-600 flex-shrink-0 mt-0.5" />
-								<span>Bermanfaat bagi masyarakat desa</span>
-							</div>
-							<div className="flex items-start">
-								<LuCheck className="w-4 h-4 mr-2 text-slate-600 flex-shrink-0 mt-0.5" />
-								<span>Memiliki kepengurusan tetap</span>
-							</div>
-							<div className="flex items-start">
-								<LuCheck className="w-4 h-4 mr-2 text-slate-600 flex-shrink-0 mt-0.5" />
-								<span>Memiliki sekretariat tetap</span>
-							</div>
-							<div className="flex items-start">
-								<LuCheck className="w-4 h-4 mr-2 text-slate-600 flex-shrink-0 mt-0.5" />
-								<span>Tidak berafiliasi partai politik</span>
-							</div>
-							<div className="flex items-start">
-								<LuCheck className="w-4 h-4 mr-2 text-slate-600 flex-shrink-0 mt-0.5" />
-								<span>Ditetapkan dengan Peraturan Desa</span>
-							</div>
-						</div>
-					</div>
-
-					{/* Info Pengurus */}
-					<div className="mt-4 flex items-start space-x-2 bg-slate-100 rounded-lg p-3">
-						<LuInfo className="w-5 h-5 text-slate-600 flex-shrink-0 mt-0.5" />
-						<div className="text-sm text-slate-800">
-							<p className="font-medium mb-1">Ketentuan Pengurus:</p>
-							<p>Pengurus LKD menjabat selama <strong>5 tahun</strong> dan dapat dipilih kembali maksimal <strong>2 kali masa jabatan</strong>. Pengurus tidak boleh merangkap jabatan di LKD lain atau menjadi anggota partai politik.</p>
-						</div>
-					</div>
-							</div>
-						</details>
-						<details className="group border-y border-slate-200">
-							<summary className="flex min-h-12 cursor-pointer list-none items-center justify-between gap-3 text-sm font-medium text-slate-900 [&::-webkit-details-marker]:hidden">
-								Ketentuan hukum Lembaga Kemasyarakatan Desa
-								<LuChevronDown className="h-4 w-4 text-slate-500 transition-transform group-open:rotate-180" />
-							</summary>
-							<div className="pb-6">
-				<div className="bg-white rounded-b-2xl shadow-lg border border-slate-200 overflow-hidden">
-					<AccordionSection
-						title="Pembentukan dan Penetapan"
-						icon={LuBookOpen}
-						color="blue"
-					>
-						<div className="space-y-4">
-							<p className="font-bold text-slate-900 mb-3">Pasal 3</p>
+					{/* ═══ Panduan: ringkasan di depan, teks pasal dilipat ═══ */}
+					<section className="flex flex-col gap-3">
+						<div className="flex flex-wrap items-end justify-between gap-3">
 							<div>
-								<p className="font-medium text-slate-800 mb-2">(1) LKD dibentuk atas prakarsa Pemerintah Desa dan masyarakat.</p>
+								<h2 className="text-base font-semibold text-slate-900">Panduan</h2>
+								<p className="mt-1 text-[13px] text-slate-500">Ringkasan Permendagri 18/2018 tentang Lembaga Kemasyarakatan Desa</p>
 							</div>
-							<div>
-								<p className="font-medium text-slate-800 mb-2">(2) Pembentukan LKD sebagaimana dimaksud pada ayat (1) dengan memenuhi persyaratan:</p>
-								<div className="ml-4 space-y-2">
-									<div className="flex items-start">
-										<span className="font-semibold text-slate-600 mr-2 flex-shrink-0">a.</span>
-										<span className="text-slate-700">berasaskan Pancasila dan Undang-Undang Dasar Negara Republik Indonesia Tahun 1945;</span>
-									</div>
-									<div className="flex items-start">
-										<span className="font-semibold text-slate-600 mr-2 flex-shrink-0">b.</span>
-										<span className="text-slate-700">berkedudukan di Desa setempat;</span>
-									</div>
-									<div className="flex items-start">
-										<span className="font-semibold text-slate-600 mr-2 flex-shrink-0">c.</span>
-										<span className="text-slate-700">keberadaannya bermanfaat dan dibutuhkan masyarakat Desa;</span>
-									</div>
-									<div className="flex items-start">
-										<span className="font-semibold text-slate-600 mr-2 flex-shrink-0">d.</span>
-										<span className="text-slate-700">memiliki kepengurusan yang tetap;</span>
-									</div>
-									<div className="flex items-start">
-										<span className="font-semibold text-slate-600 mr-2 flex-shrink-0">e.</span>
-										<span className="text-slate-700">memiliki sekretariat yang bersifat tetap; dan</span>
-									</div>
-									<div className="flex items-start">
-										<span className="font-semibold text-slate-600 mr-2 flex-shrink-0">f.</span>
-										<span className="text-slate-700">tidak berafiliasi kepada partai politik.</span>
-									</div>
-								</div>
-							</div>
-							<div>
-								<p className="font-medium text-slate-800">(3) Ketentuan lebih lanjut mengenai Pembentukan LKD sebagaimana dimaksud pada ayat (1) diatur dengan Peraturan Desa</p>
-							</div>
+							<button
+								type="button"
+								onClick={() => peraturanRef.current?.showModal()}
+								className="inline-flex min-h-10 items-center gap-2 rounded-md border border-slate-300 bg-white px-4 text-sm font-medium text-slate-900 transition-colors hover:border-slate-400 hover:bg-slate-50"
+							>
+								<LuFileText className="h-4 w-4 text-slate-500" />
+								Lihat peraturan terkait kelembagaan
+							</button>
 						</div>
-					</AccordionSection>
-
-					<AccordionSection
-						title="Tugas dan Fungsi"
-						icon={LuBookOpen}
-						color="indigo"
-					>
-						<div className="space-y-6">
-							{/* Pasal 4 - Tugas */}
-							<div>
-								<p className="font-bold text-slate-900 mb-3">Pasal 4</p>
-								<div className="space-y-3">
-									<div>
-										<p className="font-medium text-slate-800 mb-2">(1) LKD bertugas:</p>
-										<div className="ml-4 space-y-2">
-											<div className="flex items-start">
-												<span className="font-semibold text-slate-600 mr-2 flex-shrink-0">a.</span>
-												<span className="text-slate-700">melakukan pemberdayaan masyarakat Desa;</span>
+						<DokumenPeraturanModal dialogRef={peraturanRef} />
+						<div className="overflow-hidden rounded-lg border border-slate-200 bg-white">
+							<p className="px-5 py-4 text-sm leading-relaxed text-slate-700">
+								Lembaga Kemasyarakatan Desa (LKD) dibentuk Pemerintah Desa bersama masyarakat untuk membantu pelayanan pemerintahan,
+								pembangunan, dan pemberdayaan masyarakat desa secara partisipatif.
+							</p>
+							<div className="grid border-t border-slate-100 md:grid-cols-2">
+								<div className="px-5 py-4 md:border-r md:border-slate-100">
+									<h3 className="text-[13px] font-medium text-slate-500">Lembaga wajib</h3>
+									<dl className="mt-3 space-y-2.5 text-sm">
+										{LEMBAGA_WAJIB.map(([nama, tugas]) => (
+											<div key={nama} className="grid grid-cols-[104px_1fr] gap-3">
+												<dt className="font-medium text-slate-900">{nama}</dt>
+												<dd className="text-slate-600">{tugas}</dd>
 											</div>
-											<div className="flex items-start">
-												<span className="font-semibold text-slate-600 mr-2 flex-shrink-0">b.</span>
-												<span className="text-slate-700">ikut serta dalam perencanaan dan pelaksanaan pembangunan; dan</span>
+										))}
+									</dl>
+								</div>
+								<div className="border-t border-slate-100 px-5 py-4 md:border-t-0">
+									<h3 className="text-[13px] font-medium text-slate-500">Syarat pembentukan</h3>
+									<ul className="mt-3 space-y-2 text-sm text-slate-700">
+										{SYARAT_PEMBENTUKAN.map((s) => (
+											<li key={s} className="flex items-start gap-2.5">
+												<LuCheck className="mt-0.5 h-4 w-4 flex-shrink-0 text-emerald-600" />
+												<span>{s}</span>
+											</li>
+										))}
+									</ul>
+								</div>
+							</div>
+							<div className="grid divide-y divide-slate-100 border-t border-slate-100 sm:grid-cols-3 sm:divide-x sm:divide-y-0">
+								{KETENTUAN_PENGURUS.map(([nilai, ket]) => (
+									<div key={ket} className="px-5 py-4">
+										<p className="text-lg font-semibold text-slate-900">{nilai}</p>
+										<p className="mt-0.5 text-[13px] text-slate-500">{ket}</p>
+									</div>
+								))}
+							</div>
+							<details className="group border-t border-slate-200">
+								<summary className="flex min-h-12 cursor-pointer list-none items-center justify-between gap-3 px-5 text-sm font-medium text-slate-900 transition-colors hover:bg-slate-50 [&::-webkit-details-marker]:hidden">
+									<span className="flex items-center gap-2">
+										<LuBookOpen className="h-4 w-4 text-slate-500" />
+										Baca teks pasal
+									</span>
+									<LuChevronDown className="h-4 w-4 text-slate-500 transition-transform group-open:rotate-180" />
+								</summary>
+								<div className="divide-y divide-slate-100 border-t border-slate-100">
+									{PASAL_LKD.map((bab) => (
+										<details key={bab.judul} className="group/bab">
+											<summary className="flex min-h-11 cursor-pointer list-none items-center justify-between gap-3 px-5 text-sm text-slate-800 transition-colors hover:bg-slate-50 [&::-webkit-details-marker]:hidden">
+												<span>
+													{bab.judul}
+													<span className="ml-2 text-[13px] text-slate-400">Pasal {bab.pasal.map((p) => p.no).join(", ")}</span>
+												</span>
+												<LuChevronRight className="h-4 w-4 flex-shrink-0 text-slate-400 transition-transform group-open/bab:rotate-90" />
+											</summary>
+											<div className="space-y-5 bg-slate-50 px-5 py-4 text-sm leading-relaxed text-slate-700">
+												{bab.pasal.map((p) => (
+													<div key={p.no}>
+														<p className="mb-2 font-semibold text-slate-900">Pasal {p.no}</p>
+														<ol className="space-y-2">
+															{p.ayat.map((a, i) => (
+																<li key={i} className="flex gap-2">
+																	{p.ayat.length > 1 && <span className="flex-shrink-0 tabular-nums text-slate-500">({i + 1})</span>}
+																	<div className="min-w-0">
+																		<p>{a.t}</p>
+																		{a.butir && (
+																			<ol className="mt-1.5 list-[lower-alpha] space-y-1 pl-5 marker:text-slate-500">
+																				{a.butir.map((b) => (
+																					<li key={b}>{b}</li>
+																				))}
+																			</ol>
+																		)}
+																	</div>
+																</li>
+															))}
+														</ol>
+													</div>
+												))}
 											</div>
-											<div className="flex items-start">
-												<span className="font-semibold text-slate-600 mr-2 flex-shrink-0">c.</span>
-												<span className="text-slate-700">meningkatkan pelayanan masyarakat Desa.</span>
-											</div>
-										</div>
-									</div>
-									<div>
-										<p className="font-medium text-slate-800">(2) Dalam melaksanakan tugas sebagaimana dimaksud pada ayat (1) huruf b, LKD mengusulkan program dan kegiatan kepada Pemerintah Desa.</p>
-									</div>
+										</details>
+									))}
 								</div>
-							</div>
-
-							{/* Fungsi */}
-							<div className="pt-4 border-t border-slate-200">
-								<p className="font-bold text-slate-900 mb-3">Pasal 5</p>
-								<p className="font-medium text-slate-800 mb-2">Dalam melaksanakan tugas sebagaimana dimaksud dalam Pasal 4, LKD memiliki fungsi:</p>
-								<div className="ml-4 space-y-2">
-									<div className="flex items-start">
-										<span className="font-semibold text-slate-600 mr-2 flex-shrink-0">a.</span>
-										<span className="text-slate-700">menampung dan menyalurkan aspirasi masyarakat;</span>
-									</div>
-									<div className="flex items-start">
-										<span className="font-semibold text-slate-600 mr-2 flex-shrink-0">b.</span>
-										<span className="text-slate-700">menanamkan dan memupuk rasa persatuan dan kesatuan masyarakat;</span>
-									</div>
-									<div className="flex items-start">
-										<span className="font-semibold text-slate-600 mr-2 flex-shrink-0">c.</span>
-										<span className="text-slate-700">meningkatkan kualitas dan mempercepat pelayanan Pemerintah Desa kepada masyarakat Desa;</span>
-									</div>
-									<div className="flex items-start">
-										<span className="font-semibold text-slate-600 mr-2 flex-shrink-0">d.</span>
-										<span className="text-slate-700">menyusun rencana, melaksanakan, mengendalikan, melestarikan, dan mengembangkan hasil pembangunan secara partisipatif;</span>
-									</div>
-									<div className="flex items-start">
-										<span className="font-semibold text-slate-600 mr-2 flex-shrink-0">e.</span>
-										<span className="text-slate-700">menumbuhkan, mengembangkan, dan menggerakkan prakarsa, partisipasi, swadaya, serta gotong royong masyarakat;</span>
-									</div>
-									<div className="flex items-start">
-										<span className="font-semibold text-slate-600 mr-2 flex-shrink-0">f.</span>
-										<span className="text-slate-700">meningkatkan kesejahteraan keluarga; dan</span>
-									</div>
-									<div className="flex items-start">
-										<span className="font-semibold text-slate-600 mr-2 flex-shrink-0">g.</span>
-										<span className="text-slate-700">meningkatkan kualitas sumber daya manusia.</span>
-									</div>
-								</div>
-							</div>
+							</details>
 						</div>
-					</AccordionSection>
-
-					<AccordionSection
-						title="Jenis Lembaga Kemasyarakatan Desa"
-						icon={LuBookOpen}
-						color="purple"
-					>
-						<div className="space-y-4">
-							<div>
-								<p className="font-bold text-slate-900 mb-3">Pasal 6</p>
-								<p className="font-medium text-slate-800 mb-2">(1) Jenis LKD paling sedikit meliputi:</p>
-								<div className="ml-4 space-y-2">
-									<div className="flex items-start">
-										<span className="font-semibold text-slate-600 mr-2 flex-shrink-0">a.</span>
-										<span className="text-slate-700">Rukun Tetangga;</span>
-									</div>
-									<div className="flex items-start">
-										<span className="font-semibold text-slate-600 mr-2 flex-shrink-0">b.</span>
-										<span className="text-slate-700">Rukun Warga;</span>
-									</div>
-									<div className="flex items-start">
-										<span className="font-semibold text-slate-600 mr-2 flex-shrink-0">c.</span>
-										<span className="text-slate-700">Pemberdayaan Kesejahteraan Keluarga;</span>
-									</div>
-									<div className="flex items-start">
-										<span className="font-semibold text-slate-600 mr-2 flex-shrink-0">d.</span>
-										<span className="text-slate-700">Karang Taruna;</span>
-									</div>
-									<div className="flex items-start">
-										<span className="font-semibold text-slate-600 mr-2 flex-shrink-0">e.</span>
-										<span className="text-slate-700">Pos Pelayanan Terpadu; dan</span>
-									</div>
-									<div className="flex items-start">
-										<span className="font-semibold text-slate-600 mr-2 flex-shrink-0">f.</span>
-										<span className="text-slate-700">Lembaga Pemberdayaan Masyarakat.</span>
-									</div>
-								</div>
-							</div>
-							<div>
-								<p className="font-medium text-slate-800">(2) Pemerintah Desa dan masyarakat Desa dapat membentuk LKD selain sebagaimana dimaksud pada ayat (1) sesuai dengan perkembangan dan kebutuhan.</p>
-							</div>
-							<div>
-								<p className="font-medium text-slate-800">(3) Ketentuan lebih lanjut mengenai jenis LKD sebagaimana dimaksud pada ayat (1) ditetapkan dalam Peraturan Desa.</p>
-							</div>
-						</div>
-					</AccordionSection>
-
-					<AccordionSection
-						title="Tugas Spesifik Setiap Jenis LKD"
-						icon={LuBookOpen}
-						color="emerald"
-					>
-						<div className="space-y-6">
-							{/* RT dan RW */}
-							<div>
-								<p className="font-bold text-slate-900 mb-3">Pasal 7</p>
-								<p className="font-medium text-slate-800 mb-2">(1) Rukun Tetangga dan Rukun Warga sebagaimana dimaksud dalam Pasal 6 ayat (1) huruf a dan huruf b bertugas:</p>
-								<div className="ml-4 space-y-2">
-									<div className="flex items-start">
-										<span className="font-semibold text-slate-600 mr-2 flex-shrink-0">a.</span>
-										<span className="text-slate-700">membantu Kepala Desa dalam bidang pelayanan pemerintahan;</span>
-									</div>
-									<div className="flex items-start">
-										<span className="font-semibold text-slate-600 mr-2 flex-shrink-0">b.</span>
-										<span className="text-slate-700">membantu Kepala Desa dalam menyediakan data kependudukan dan perizinan; dan</span>
-									</div>
-									<div className="flex items-start">
-										<span className="font-semibold text-slate-600 mr-2 flex-shrink-0">c.</span>
-										<span className="text-slate-700">melaksanakan tugas lain yang diberikan oleh Kepala Desa.</span>
-									</div>
-								</div>
-							</div>
-
-							{/* PKK */}
-							<div className="pt-4 border-t border-slate-200">
-								<p className="font-medium text-slate-800 mb-2">(2) Pemberdayaan Kesejahteraan Keluarga sebagaimana dimaksud dalam Pasal 6 ayat (1) huruf c, bertugas membantu Kepala Desa dalam melaksanakan pemberdayaan kesejahteraan keluarga.</p>
-							</div>
-
-							{/* Karang Taruna */}
-							<div className="pt-4 border-t border-slate-200">
-								<p className="font-medium text-slate-800 mb-2">(3) Karang Taruna sebagaimana dimaksud dalam Pasal 6 ayat (1) huruf d, bertugas membantu Kepala Desa dalam menanggulangi masalah kesejahteraan sosial dan pengembangan generasi muda.</p>
-							</div>
-
-							{/* Posyandu */}
-							<div className="pt-4 border-t border-slate-200">
-								<p className="font-medium text-slate-800 mb-2">(4) Pos Pelayanan Terpadu sebagaimana dimaksud dalam Pasal 6 ayat (1) huruf e bertugas membantu Kepala Desa dalam peningkatan pelayanan kesehatan masyarakat Desa.</p>
-							</div>
-
-							{/* LPM */}
-							<div className="pt-4 border-t border-slate-200">
-								<p className="font-medium text-slate-800 mb-2">(5) Lembaga Pemberdayaan Masyarakat sebagaimana dimaksud dalam Pasal 6 ayat (1) huruf f, bertugas membantu Kepala Desa dalam menyerap aspirasi masyarakat terkait perencanaan pembangunan desa dan menggerakkan masyarakat dalam pelaksanaan pembangunan desa dengan swadaya gotong-royong.</p>
-							</div>
-						</div>
-					</AccordionSection>
-
-					<AccordionSection
-						title="Kepengurusan"
-						icon={LuBookOpen}
-						color="amber"
-					>
-						<div className="space-y-4">
-							<div>
-								<p className="font-bold text-slate-900 mb-3">Pasal 8</p>
-								<p className="font-medium text-slate-800 mb-2">(1) Pengurus LKD terdiri atas:</p>
-								<div className="ml-4 space-y-2">
-									<div className="flex items-start">
-										<span className="font-semibold text-amber-600 mr-2 flex-shrink-0">a.</span>
-										<span className="text-slate-700">ketua;</span>
-									</div>
-									<div className="flex items-start">
-										<span className="font-semibold text-amber-600 mr-2 flex-shrink-0">b.</span>
-										<span className="text-slate-700">sekretaris;</span>
-									</div>
-									<div className="flex items-start">
-										<span className="font-semibold text-amber-600 mr-2 flex-shrink-0">c.</span>
-										<span className="text-slate-700">bendahara; dan</span>
-									</div>
-									<div className="flex items-start">
-										<span className="font-semibold text-amber-600 mr-2 flex-shrink-0">d.</span>
-										<span className="text-slate-700">bidang sesuai dengan kebutuhan.</span>
-									</div>
-								</div>
-							</div>
-							<div>
-								<p className="font-medium text-slate-800">(2) Ketentuan lebih lanjut mengenai pengurus LKD sebagaimana dimaksud pada ayat (1) ditetapkan dengan Keputusan Kepala Desa.</p>
-							</div>
-							<div>
-								<p className="font-medium text-slate-800">(3) Pengurus LKD sebagaimana dimaksud pada ayat (1) memegang jabatan selama <span className="font-bold text-amber-700">5 (lima) tahun</span> terhitung sejak tanggal ditetapkan.</p>
-							</div>
-							<div>
-								<p className="font-medium text-slate-800">(4) Pengurus LKD sebagaimana dimaksud pada ayat (1) dapat menjabat paling banyak <span className="font-bold text-amber-700">2 (dua) kali masa jabatan</span> secara berturut-turut atau tidak secara berturut-turut.</p>
-							</div>
-							<div>
-								<p className="font-medium text-slate-800">(5) Pengurus LKD <span className="font-bold text-rose-600">dilarang merangkap jabatan</span> pada LKD lainnya dan <span className="font-bold text-rose-600">dilarang menjadi anggota</span> salah satu partai politik.</p>
-							</div>
-						</div>
-					</AccordionSection>
-				</div>
-							</div>
-						</details>
 					</section>
 				</div>
 
 				<aside className="flex min-w-0 flex-[1_1_300px] flex-col gap-8">
 					{/* ═══ Syarat verifikasi, dihitung dari data lembaga aktif ═══ */}
 					<section className="overflow-hidden rounded-lg border border-slate-200 bg-white">
-						<div className="flex items-start justify-between gap-3 px-5 pb-4 pt-5">
-							<div>
-								<h2 className="text-base font-semibold text-slate-900">Syarat verifikasi</h2>
-								<p className="mt-1 text-[13px] text-slate-500">Dihitung dari semua lembaga aktif</p>
+						<div className="px-5 pb-4 pt-5">
+							<div className="flex items-start justify-between gap-3">
+								<div>
+									<h2 className="text-base font-semibold text-slate-900">Syarat verifikasi</h2>
+									<p className="mt-1 text-[13px] text-slate-500">Dihitung dari semua lembaga aktif</p>
+								</div>
+								<p className="whitespace-nowrap text-sm tabular-nums text-slate-500">
+									<span className="text-2xl font-semibold text-slate-900">{syaratLengkap}</span> / {syarat.length}
+								</p>
 							</div>
-							<p className="text-sm tabular-nums text-slate-500">
-								<span className="text-xl font-medium text-slate-900">{syaratLengkap}</span> / {syarat.length}
+							<div className="mt-4 flex h-1.5 gap-1">
+								{syarat.map((s) => (
+									<span key={s.judul} className={`flex-1 rounded-full ${s.kurang === 0 ? "bg-emerald-600" : "bg-slate-200"}`} />
+								))}
+							</div>
+							<p className={`mt-3 text-[13px] ${syaratLengkap === syarat.length ? "text-emerald-700" : "text-slate-600"}`}>
+								{syaratLengkap === syarat.length
+									? "Semua syarat terpenuhi. Lembaga siap diverifikasi."
+									: `${syarat.length - syaratLengkap} syarat belum terpenuhi. Lengkapi agar lembaga bisa diverifikasi.`}
 							</p>
 						</div>
-						<div className="flex h-1 gap-0.5 px-5">
-							{syarat.map((s) => (
-								<span key={s.judul} className={`flex-1 rounded-[1px] ${s.kurang === 0 ? "bg-emerald-600" : "bg-slate-200"}`} />
-							))}
-						</div>
-						<ul className="mt-4 divide-y divide-slate-100 border-t border-slate-100">
-							{syarat.map((s) => {
+						{/* Yang belum lengkap tampil di atas: itu yang perlu dikerjakan operator. */}
+						<ul className="divide-y divide-slate-100 border-t border-slate-100">
+							{[...syarat].sort((a, b) => (a.kurang === 0) - (b.kurang === 0)).map((s) => {
 								const ok = s.kurang === 0;
 								return (
-									<li key={s.judul} className="flex items-start gap-3 px-5 py-4">
-										<span
-											className={`mt-0.5 flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-[4px] ${
-												ok ? "bg-emerald-600 text-white" : "bg-white ring-1 ring-inset ring-slate-300"
-											}`}
-										>
-											{ok && <LuCheck className="h-3.5 w-3.5" strokeWidth={2.5} />}
-										</span>
-										<div className="min-w-0 flex-1">
-											<p className={`text-sm font-medium ${ok ? "text-slate-500" : "text-slate-900"}`}>{s.judul}</p>
-											<p className="mt-0.5 text-[13px] text-slate-500">{s.ket}</p>
+									<li key={s.judul} className="px-5 py-4">
+										{/* Judul + status satu baris, keterangan di bawah selebar kartu: tidak terjepit kolom sempit. */}
+										<div className="flex items-baseline justify-between gap-3">
+											<p className={`text-[15px] font-semibold leading-snug ${ok ? "text-slate-500" : "text-slate-900"}`}>{s.judul}</p>
+											{ok ? (
+												<span className="inline-flex flex-shrink-0 items-center gap-1 text-xs font-medium text-emerald-700">
+													<LuCheck className="h-3.5 w-3.5" strokeWidth={2.5} />
+													Lengkap
+												</span>
+											) : (
+												<span className="flex-shrink-0 whitespace-nowrap text-xs font-medium tabular-nums text-brand-700">
+													{s.kurang} {s.satuan} kurang
+												</span>
+											)}
 										</div>
-										<span className={`whitespace-nowrap text-[13px] tabular-nums ${ok ? "text-emerald-700" : "font-medium text-brand-700"}`}>
-											{ok ? "Lengkap" : `${s.kurang} ${s.satuan}`}
-										</span>
+										<p className="mt-1 text-xs leading-relaxed text-slate-500">{s.ket}</p>
 									</li>
 								);
 							})}
@@ -1236,36 +972,6 @@ A			pakah Anda yakin ingin membentuk Karang Taruna ${wilayahLabel} ${desaName}?`
 					</section>
 
 					<AktivitasLog mode="all" />
-
-					{/* ═══ Dokumen peraturan ═══ */}
-					<section className="overflow-hidden rounded-lg border border-slate-200 bg-white">
-						<div className="px-5 pb-3 pt-5">
-							<h2 className="text-base font-semibold text-slate-900">Dokumen peraturan</h2>
-							<p className="mt-1 text-[13px] text-slate-500">Dasar hukum lembaga kemasyarakatan</p>
-						</div>
-						<ul className="divide-y divide-slate-100 border-t border-slate-100">
-							{DOKUMEN_PERATURAN.map((d) => (
-								<li key={d.href}>
-									<a
-										href={d.href}
-										target="_blank"
-										rel="noopener noreferrer"
-										className="group flex items-center gap-4 px-5 py-3 transition-colors hover:bg-slate-50 focus-visible:bg-slate-50 focus-visible:outline-none"
-									>
-										<span className="w-16 flex-shrink-0 font-mono text-[13px] font-medium tabular-nums text-slate-900">{d.nomor}</span>
-										<span className="min-w-0 flex-1">
-											<span className="block truncate text-sm text-slate-900">{d.judul}</span>
-											<span className="block text-xs text-slate-500">{d.jenis}</span>
-										</span>
-										<LuDownload
-											aria-hidden="true"
-											className="h-4 w-4 flex-shrink-0 text-slate-400 transition-colors group-hover:text-slate-900"
-										/>
-									</a>
-								</li>
-							))}
-						</ul>
-					</section>
 				</aside>
 			</div>
 
@@ -1411,84 +1117,232 @@ A			pakah Anda yakin ingin membentuk Karang Taruna ${wilayahLabel} ${desaName}?`
 	);
 }
 
-// Accordion Section Component
-function AccordionSection({ title, children, icon: Icon, color = "blue" }) {
-	const [isOpen, setIsOpen] = useState(false);
+const LEMBAGA_WAJIB = [
+	["RT & RW", "Pelayanan pemerintahan dan data kependudukan"],
+	["PKK", "Pemberdayaan kesejahteraan keluarga"],
+	["Karang Taruna", "Kesejahteraan sosial dan generasi muda"],
+	["Posyandu", "Pelayanan kesehatan masyarakat"],
+	["LPM", "Perencanaan pembangunan dan gotong royong"],
+];
 
-	const colorClasses = {
-		blue: {
-			border: 'border-slate-200',
-			bg: 'bg-slate-50',
-			hover: 'hover:bg-slate-100',
-			text: 'text-slate-700',
-			icon: 'text-slate-600',
-		},
-		indigo: {
-			border: 'border-slate-200',
-			bg: 'bg-slate-50',
-			hover: 'hover:bg-slate-100',
-			text: 'text-slate-700',
-			icon: 'text-slate-600',
-		},
-		purple: {
-			border: 'border-slate-200',
-			bg: 'bg-slate-50',
-			hover: 'hover:bg-slate-100',
-			text: 'text-slate-700',
-			icon: 'text-slate-600',
-		},
-		emerald: {
-			border: 'border-slate-200',
-			bg: 'bg-slate-50',
-			hover: 'hover:bg-slate-100',
-			text: 'text-slate-700',
-			icon: 'text-slate-600',
-		},
-		amber: {
-			border: 'border-amber-200',
-			bg: 'bg-amber-50',
-			hover: 'hover:bg-amber-100',
-			text: 'text-amber-700',
-			icon: 'text-amber-600',
-		},
-	};
+const SYARAT_PEMBENTUKAN = [
+	"Berasaskan Pancasila dan UUD 1945",
+	"Berkedudukan di desa setempat",
+	"Bermanfaat dan dibutuhkan masyarakat",
+	"Memiliki kepengurusan tetap",
+	"Memiliki sekretariat tetap",
+	"Tidak berafiliasi partai politik",
+];
 
-	const classes = colorClasses[color] || colorClasses.blue;
+const KETENTUAN_PENGURUS = [
+	["5 tahun", "Masa jabatan pengurus"],
+	["Maks. 2 periode", "Berturut-turut atau tidak"],
+	["Tidak rangkap", "Jabatan LKD lain atau partai politik"],
+];
 
-	return (
-		<div className={`border-b ${classes.border} last:border-b-0`}>
-			<button
-				onClick={() => setIsOpen(!isOpen)}
-				className={`w-full px-6 py-4 flex items-center justify-between ${classes.bg} ${classes.hover} transition-colors`}
-			>
-				<div className="flex items-center space-x-3">
-					{Icon && <Icon className={`w-5 h-5 ${classes.icon}`} />}
-					<span className={`font-semibold ${classes.text} text-left`}>{title}</span>
-				</div>
-				{isOpen ? (
-					<LuChevronUp className={`w-5 h-5 ${classes.icon}`} />
-				) : (
-					<LuChevronDown className={`w-5 h-5 ${classes.icon}`} />
-				)}
-			</button>
-			{isOpen && (
-				<div className="px-6 py-5 bg-white animate-slideDown">
-					{children}
-				</div>
-			)}
-		</div>
-	);
-}
+// Teks Permendagri 18/2018. Ayat bernomor hanya bila pasal punya lebih dari satu ayat.
+const PASAL_LKD = [
+	{
+		judul: "Pembentukan dan penetapan",
+		pasal: [
+			{
+				no: 3,
+				ayat: [
+					{ t: "LKD dibentuk atas prakarsa Pemerintah Desa dan masyarakat." },
+					{
+						t: "Pembentukan LKD sebagaimana dimaksud pada ayat (1) dengan memenuhi persyaratan:",
+						butir: [
+							"berasaskan Pancasila dan Undang-Undang Dasar Negara Republik Indonesia Tahun 1945;",
+							"berkedudukan di Desa setempat;",
+							"keberadaannya bermanfaat dan dibutuhkan masyarakat Desa;",
+							"memiliki kepengurusan yang tetap;",
+							"memiliki sekretariat yang bersifat tetap; dan",
+							"tidak berafiliasi kepada partai politik.",
+						],
+					},
+					{ t: "Ketentuan lebih lanjut mengenai Pembentukan LKD sebagaimana dimaksud pada ayat (1) diatur dengan Peraturan Desa." },
+				],
+			},
+		],
+	},
+	{
+		judul: "Tugas dan fungsi",
+		pasal: [
+			{
+				no: 4,
+				ayat: [
+					{
+						t: "LKD bertugas:",
+						butir: [
+							"melakukan pemberdayaan masyarakat Desa;",
+							"ikut serta dalam perencanaan dan pelaksanaan pembangunan; dan",
+							"meningkatkan pelayanan masyarakat Desa.",
+						],
+					},
+					{ t: "Dalam melaksanakan tugas sebagaimana dimaksud pada ayat (1) huruf b, LKD mengusulkan program dan kegiatan kepada Pemerintah Desa." },
+				],
+			},
+			{
+				no: 5,
+				ayat: [
+					{
+						t: "Dalam melaksanakan tugas sebagaimana dimaksud dalam Pasal 4, LKD memiliki fungsi:",
+						butir: [
+							"menampung dan menyalurkan aspirasi masyarakat;",
+							"menanamkan dan memupuk rasa persatuan dan kesatuan masyarakat;",
+							"meningkatkan kualitas dan mempercepat pelayanan Pemerintah Desa kepada masyarakat Desa;",
+							"menyusun rencana, melaksanakan, mengendalikan, melestarikan, dan mengembangkan hasil pembangunan secara partisipatif;",
+							"menumbuhkan, mengembangkan, dan menggerakkan prakarsa, partisipasi, swadaya, serta gotong royong masyarakat;",
+							"meningkatkan kesejahteraan keluarga; dan",
+							"meningkatkan kualitas sumber daya manusia.",
+						],
+					},
+				],
+			},
+		],
+	},
+	{
+		judul: "Jenis lembaga",
+		pasal: [
+			{
+				no: 6,
+				ayat: [
+					{
+						t: "Jenis LKD paling sedikit meliputi:",
+						butir: [
+							"Rukun Tetangga;",
+							"Rukun Warga;",
+							"Pemberdayaan Kesejahteraan Keluarga;",
+							"Karang Taruna;",
+							"Pos Pelayanan Terpadu; dan",
+							"Lembaga Pemberdayaan Masyarakat.",
+						],
+					},
+					{ t: "Pemerintah Desa dan masyarakat Desa dapat membentuk LKD selain sebagaimana dimaksud pada ayat (1) sesuai dengan perkembangan dan kebutuhan." },
+					{ t: "Ketentuan lebih lanjut mengenai jenis LKD sebagaimana dimaksud pada ayat (1) ditetapkan dalam Peraturan Desa." },
+				],
+			},
+		],
+	},
+	{
+		judul: "Tugas setiap jenis lembaga",
+		pasal: [
+			{
+				no: 7,
+				ayat: [
+					{
+						t: "Rukun Tetangga dan Rukun Warga sebagaimana dimaksud dalam Pasal 6 ayat (1) huruf a dan huruf b bertugas:",
+						butir: [
+							"membantu Kepala Desa dalam bidang pelayanan pemerintahan;",
+							"membantu Kepala Desa dalam menyediakan data kependudukan dan perizinan; dan",
+							"melaksanakan tugas lain yang diberikan oleh Kepala Desa.",
+						],
+					},
+					{ t: "Pemberdayaan Kesejahteraan Keluarga sebagaimana dimaksud dalam Pasal 6 ayat (1) huruf c, bertugas membantu Kepala Desa dalam melaksanakan pemberdayaan kesejahteraan keluarga." },
+					{ t: "Karang Taruna sebagaimana dimaksud dalam Pasal 6 ayat (1) huruf d, bertugas membantu Kepala Desa dalam menanggulangi masalah kesejahteraan sosial dan pengembangan generasi muda." },
+					{ t: "Pos Pelayanan Terpadu sebagaimana dimaksud dalam Pasal 6 ayat (1) huruf e bertugas membantu Kepala Desa dalam peningkatan pelayanan kesehatan masyarakat Desa." },
+					{ t: "Lembaga Pemberdayaan Masyarakat sebagaimana dimaksud dalam Pasal 6 ayat (1) huruf f, bertugas membantu Kepala Desa dalam menyerap aspirasi masyarakat terkait perencanaan pembangunan desa dan menggerakkan masyarakat dalam pelaksanaan pembangunan desa dengan swadaya gotong-royong." },
+				],
+			},
+		],
+	},
+	{
+		judul: "Kepengurusan",
+		pasal: [
+			{
+				no: 8,
+				ayat: [
+					{ t: "Pengurus LKD terdiri atas:", butir: ["ketua;", "sekretaris;", "bendahara; dan", "bidang sesuai dengan kebutuhan."] },
+					{ t: "Ketentuan lebih lanjut mengenai pengurus LKD sebagaimana dimaksud pada ayat (1) ditetapkan dengan Keputusan Kepala Desa." },
+					{ t: "Pengurus LKD sebagaimana dimaksud pada ayat (1) memegang jabatan selama 5 (lima) tahun terhitung sejak tanggal ditetapkan." },
+					{ t: "Pengurus LKD sebagaimana dimaksud pada ayat (1) dapat menjabat paling banyak 2 (dua) kali masa jabatan secara berturut-turut atau tidak secara berturut-turut." },
+					{ t: "Pengurus LKD dilarang merangkap jabatan pada LKD lainnya dan dilarang menjadi anggota salah satu partai politik." },
+				],
+			},
+		],
+	},
+];
 
 const DOKUMEN_PERATURAN = [
-	{ jenis: "Permendagri", nomor: "18/2018", judul: "Lembaga Kemasyarakatan Desa", href: "/peraturan/Permendagri No. 18 Tahun 2018.pdf" },
-	{ jenis: "Permendagri", nomor: "26/2020", judul: "Tibum, Tranmas, dan Linmas", href: "/peraturan/Permendagri-26-Thn-2020-ttg-Linmas.pdf" },
-	{ jenis: "Permendagri", nomor: "36/2020", judul: "Gerakan PKK", href: "/peraturan/PERMENDAGRI_36_TAHUN_2020 (1).pdf" },
-	{ jenis: "Permendagri", nomor: "11/2023", judul: "Sarana prasarana Linmas", href: "/peraturan/Permendagri Nomor 11 Tahun 2023.pdf" },
-	{ jenis: "Permendagri", nomor: "13/2024", judul: "Posyandu", href: "/peraturan/Permendagri No 13 Tahun 2024.pdf" },
-	{ jenis: "Perda Kab. Bogor", nomor: "9/2011", judul: "Lembaga Kemasyarakatan", href: "/peraturan/perda no 9 tahun 2011.pdf" },
-	{ jenis: "Perbup Bogor", nomor: "31/2012", judul: "Pembentukan LPM, RT, dan RW", href: "/peraturan/Perbup 31 Tahun 2012 - Tata Cara Pembentukan LPM Desa, Kel, RW dan RT.pdf" },
+	{
+		tingkat: "Pusat",
+		dokumen: [
+			{ jenis: "Permendagri", no: 18, tahun: 2018, judul: "Lembaga Kemasyarakatan Desa", href: "/peraturan/Permendagri No. 18 Tahun 2018.pdf" },
+			{ jenis: "Permendagri", no: 26, tahun: 2020, judul: "Tibum, Tranmas, dan Linmas", href: "/peraturan/Permendagri-26-Thn-2020-ttg-Linmas.pdf" },
+			{ jenis: "Permendagri", no: 36, tahun: 2020, judul: "Gerakan PKK", href: "/peraturan/PERMENDAGRI_36_TAHUN_2020 (1).pdf" },
+			{ jenis: "Permendagri", no: 11, tahun: 2023, judul: "Sarana prasarana Linmas", href: "/peraturan/Permendagri Nomor 11 Tahun 2023.pdf" },
+			{ jenis: "Permendagri", no: 13, tahun: 2024, judul: "Posyandu", href: "/peraturan/Permendagri No 13 Tahun 2024.pdf" },
+		],
+	},
+	{
+		tingkat: "Kabupaten Bogor",
+		dokumen: [
+			{ jenis: "Perda", no: 9, tahun: 2011, judul: "Lembaga Kemasyarakatan", href: "/peraturan/perda no 9 tahun 2011.pdf" },
+			{ jenis: "Perbup", no: 31, tahun: 2012, judul: "Pembentukan LPM, RT, dan RW", href: "/peraturan/Perbup 31 Tahun 2012 - Tata Cara Pembentukan LPM Desa, Kel, RW dan RT.pdf" },
+		],
+	},
 ];
+
+/** Daftar peraturan dalam <dialog> native: Esc, fokus, dan backdrop diurus browser. */
+function DokumenPeraturanModal({ dialogRef }) {
+	const tutup = () => dialogRef.current?.close();
+	return (
+		<dialog
+			ref={dialogRef}
+			aria-labelledby="judul-peraturan"
+			// Klik di backdrop (di luar panel) menutup modal.
+			onClick={(e) => e.target === e.currentTarget && tutup()}
+			className="m-auto w-[calc(100%-2rem)] max-w-xl overflow-hidden rounded-xl bg-white p-0 shadow-2xl backdrop:bg-slate-900/50 backdrop:backdrop-blur-sm"
+		>
+			<div className="flex max-h-[calc(100dvh-4rem)] flex-col">
+				<div className="flex items-start justify-between gap-4 border-b border-slate-200 px-5 py-4">
+					<div>
+						<h2 id="judul-peraturan" className="text-base font-semibold text-slate-900">Peraturan terkait kelembagaan</h2>
+						<p className="mt-1 text-[13px] text-slate-500">Dasar hukum lembaga kemasyarakatan. Dokumen dibuka di tab baru (PDF).</p>
+					</div>
+					<button
+						type="button"
+						onClick={tutup}
+						aria-label="Tutup"
+						className="rounded-md p-1.5 text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-900"
+					>
+						<LuX className="h-5 w-5" />
+					</button>
+				</div>
+				<div className="overflow-y-auto">
+					{DOKUMEN_PERATURAN.map((grup) => (
+						<div key={grup.tingkat}>
+							<p className="sticky top-0 border-b border-slate-100 bg-slate-50 px-5 py-2 text-xs font-medium text-slate-500">{grup.tingkat}</p>
+							<ul className="divide-y divide-slate-100">
+								{grup.dokumen.map((d) => (
+									<li key={d.href}>
+										<a
+											href={d.href}
+											target="_blank"
+											rel="noopener noreferrer"
+											className="group flex items-center gap-3 px-5 py-3 transition-colors hover:bg-slate-50 focus-visible:bg-slate-50 focus-visible:outline-none"
+										>
+											<span className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-md bg-slate-100 text-slate-500 transition-colors group-hover:bg-white group-hover:text-slate-900 group-hover:ring-1 group-hover:ring-slate-200">
+												<LuFileText className="h-4 w-4" />
+											</span>
+											<span className="min-w-0 flex-1">
+												<span className="block text-sm font-medium text-slate-900">{d.judul}</span>
+												<span className="block text-xs tabular-nums text-slate-500">
+													{d.jenis} No. {d.no} Tahun {d.tahun}
+												</span>
+											</span>
+											<LuDownload aria-hidden="true" className="h-4 w-4 flex-shrink-0 text-slate-400 transition-colors group-hover:text-slate-900" />
+										</a>
+									</li>
+								))}
+							</ul>
+						</div>
+					))}
+				</div>
+			</div>
+		</dialog>
+	);
+}
 
 // Kotak status: bentuk yang sama dengan Peta Lembaga, jadi register dan peta terbaca satu bahasa.
 const STATUS_TONE = {

@@ -91,7 +91,7 @@ export default defineConfig({
 				// pemasang PWA ikut mengunduh three.js walau tak pernah membuka /jelajah.
 				globIgnores: ['**/node_modules/**/*', '**/three-*.js', '**/KantorScene-*.js', '**/audio/jelajah/**'],
 				// Exclude static file paths from navigateFallback to let nginx/backend handle them
-				navigateFallbackDenylist: [/^\/api\//, /^\/storage\//, /^\/uploads\//, /^\/public\//, /\/version\.json$/],
+				navigateFallbackDenylist: [/^\/api\//, /^\/storage\//, /^\/uploads\//, /^\/public\//, /^\/peraturan\//, /\.pdf$/i, /\/version\.json$/],
 				// Custom SW will be injected by inject-custom-sw.js script
 				runtimeCaching: [
 					{
